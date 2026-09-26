@@ -33,26 +33,26 @@ Tags: `@smoke` (fast critical path), `@regression` (all functional), `@security`
 
 ## Write / normalization
 
-| ID              | Scenario                                           | Pre                             | Expected                                                                 | Status        |
-| --------------- | -------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------ | ------------- |
-| WR-001          | Create new field                                   | C                               | 201, tenant/user/`EMAIL`/int key_version, message "PII write successful" | Implemented   |
-| WR-002          | Replace existing                                   | C                               | 200; read returns new value                                              | Implemented   |
-| WR-003          | Field case-insensitive (`eMail`)                   | C                               | returned/read as `EMAIL`                                                 | Implemented   |
-| WR-004 ×4       | Each required field missing                        | C                               | 422; nothing persisted                                                   | Implemented   |
-| WR-005 ×3, 005b | Empty user_id/field/value/tenant_id                | C                               | 422                                                                      | Implemented   |
-| WR-006          | tenant 65 / user 129 / field 65 / value 1025 chars | C                               | 422 each; nothing persisted                                              | Implemented   |
-| WR-007          | user_id 128 + NAME value 1024 chars                | C                               | 201; read back equal                                                     | Implemented   |
-| WR-008          | Email without `@`                                  | C                               | 400 `VALIDATION_ERROR`; not persisted                                    | Implemented   |
-| WR-009          | Phone 7 / 16 / 0 digits                            | C                               | 400 `VALIDATION_ERROR`; not persisted                                    | Implemented   |
-| WR-010          | Unsupported field                                  | C                               | 400/403/404/422 error                                                    | Tolerant Q-07 |
-| WR-011          | Wrong JSON types                                   | C                               | 422                                                                      | Implemented   |
-| WR-012          | Malformed JSON (validly signed)                    | C                               | 422                                                                      | Implemented   |
-| WR-013          | Whitespace-only NAME                               | C                               | 400/422; not persisted                                                   | Tolerant Q-10 |
-| NRM-001         | Email `  MiXeD@...  `                              | C                               | read = trimmed lowercase                                                 | Implemented   |
-| NRM-002         | Phone `+91 (987) 654-3210` style                   | C, PH                           | read = digits only                                                       | Implemented   |
-| NRM-003         | Name with extra spaces                             | C                               | trimmed, single spaces, case preserved                                   | Implemented   |
-| NRM-004         | 8- and 15-digit phones                             | C, `PII_TEST_PHONE_8/15_DIGITS` | accepted and normalized                                                  | Implemented   |
-| NRM-005         | Already-normalized email                           | C                               | unchanged                                                                | Implemented   |
+| ID              | Scenario                                           | Pre                             | Expected                                                                 | Status                                    |
+| --------------- | -------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------ | ----------------------------------------- |
+| WR-001          | Create new field                                   | C                               | 201, tenant/user/`EMAIL`/int key_version, message "PII write successful" | Implemented                               |
+| WR-002          | Replace existing                                   | C                               | 200; read returns new value                                              | Implemented                               |
+| WR-003          | Field case-insensitive (`eMail`)                   | C                               | returned/read as `EMAIL`                                                 | Implemented                               |
+| WR-004 ×4       | Each required field missing                        | C                               | 422; nothing persisted                                                   | Implemented                               |
+| WR-005 ×3, 005b | Empty user_id/field/value/tenant_id                | C                               | 422                                                                      | Implemented                               |
+| WR-006          | tenant 65 / user 129 / field 65 / value 1025 chars | C                               | 422 each; nothing persisted                                              | Implemented                               |
+| WR-007          | user_id 128 + NAME value 1024 chars                | C                               | 201; read back equal                                                     | Implemented                               |
+| WR-008          | Email without `@`                                  | C                               | 400 `VALIDATION_ERROR`; not persisted                                    | Implemented                               |
+| WR-009          | Phone 7 / 16 / 0 digits                            | C                               | 400 `VALIDATION_ERROR`; not persisted                                    | Implemented                               |
+| WR-010          | Unsupported field                                  | C                               | 400/403/404/422 error                                                    | Tolerant Q-07                             |
+| WR-011          | Wrong JSON types                                   | C                               | 422                                                                      | Implemented                               |
+| WR-012          | Malformed JSON (validly signed)                    | C                               | 422                                                                      | Implemented                               |
+| WR-013          | Whitespace-only NAME                               | C                               | 400/422; not persisted                                                   | Tolerant Q-10                             |
+| NRM-001         | Email `  MiXeD@...  `                              | C                               | read = trimmed lowercase                                                 | Implemented                               |
+| NRM-002         | Phone `+91 (987) 654-3210` style                   | C, PH                           | read = digits only                                                       | Implemented                               |
+| NRM-003         | Name with extra spaces                             | C                               | trimmed, single spaces, case preserved                                   | Implemented                               |
+| NRM-004         | 8- and 15-digit phones                             | C, `PII_TEST_PHONE_8/15_DIGITS` | accepted and normalized                                                  | Optional (skipped: 10-digit numbers only) |
+| NRM-005         | Already-normalized email                           | C                               | unchanged                                                                | Implemented                               |
 
 ## Read
 

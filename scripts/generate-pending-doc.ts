@@ -52,10 +52,8 @@ const SETTINGS: Record<string, { from: string; unblocks: string }> = {
   },
   PII_TEST_PHONES: {
     from: 'QA lead / Backend',
-    unblocks: 'Phone, search-by-phone and temporary-phone tests',
+    unblocks: 'Phone, search-by-phone and temporary-phone tests (2+ approved 10-digit numbers)',
   },
-  PII_TEST_PHONE_8_DIGITS: { from: 'QA lead / Backend', unblocks: 'PII-NRM-004 (8-digit boundary)' },
-  PII_TEST_PHONE_15_DIGITS: { from: 'QA lead / Backend', unblocks: 'PII-NRM-004 (15-digit boundary)' },
   PII_NON_SEARCHABLE_FIELD: { from: 'Backend (Q-18)', unblocks: 'PII-SR-012' },
   PII_BATCH_MAX_ITEMS: {
     from: 'Backend',
@@ -91,14 +89,16 @@ const SETTINGS: Record<string, { from: string; unblocks: string }> = {
 const UNBLOCK: Record<string, string> = {
   'Q-12':
     'Set `PII_ENABLE_TTL_EXPIRY_TEST=true` in `.env` — only in an environment with a short minimum lifetime',
-  'Q-14': 'Code change after Dev answers — see the `PENDING_Q14_ANSWER` marker',
+  'Q-14': 'Code change once Dev confirms Phase 1 vs Phase 2 (Q-38) — see the `PENDING_Q14_ANSWER` marker',
   'Q-17': 'Code change after Dev provides a not-ready hook — see the `PENDING_Q17_ANSWER` marker',
   'Q-18': 'Set `PII_NON_SEARCHABLE_FIELD` in `.env`',
-  'Q-21': 'Code change after Dev answers — see the `PENDING_Q21_ANSWER` marker',
-  'Q-22': 'Set `PII_MAX_BODY_BYTES` in `.env`',
+  'Q-21': 'Code change once Dev confirms Phase 1 vs Phase 2 (Q-38) — see the `PENDING_Q21_ANSWER` marker',
+  'Q-22':
+    'Set `PII_MAX_BODY_BYTES` in `.env` (now 1048576 from tech doc v3 §12.4 — runs once the service is reachable)',
   'Q-23': 'Set `PII_SIGNATURE_HELPER_MUST_BE_DISABLED=true` in `.env` (non-development environments)',
   'Q-24': 'Nothing — runs automatically when the service exposes `/openapi.json`',
-  'Q-26': 'Fill in the `findAuditEventsByRequestId` query in `config/db-queries.json`',
+  'Q-26':
+    'Read-only MongoDB access (audit is in MongoDB per tech doc v3 §39) + a Mongo check in the framework — Q-35',
 };
 
 /** Code markers (`// PENDING_…`) left in test files where a code change is needed. */
@@ -244,7 +244,7 @@ export function buildPendingDoc(): string {
     '',
     `1. [ ] Test environment URL and environment name, plus VPN / network access — section 1`,
     `2. [ ] Three caller IDs, after registering our three public keys — section 1`,
-    `3. [ ] Two non-production tenant IDs, an approved email domain, approved test phones (incl. 8- and 15-digit) — section 1`,
+    `3. [ ] Two non-production tenant IDs, an approved email domain, and 2–3 approved 10-digit test phone numbers — section 1`,
     `4. [ ] Environment limits: bulk-read size, search default, temporary-phone lifetime, max body size — section 1`,
     `5. [ ] Database: type, host, port, name, a read-only login — section 1`,
     `6. [ ] Database table and column names (${dbTokens.size} placeholders) — section 2`,

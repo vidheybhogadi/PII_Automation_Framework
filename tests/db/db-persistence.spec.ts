@@ -197,7 +197,8 @@ test.describe('Database persistence', { tag: ['@db', '@regression'] }, () => {
     if (!db.has('findAuditEventsByRequestId')) {
       blockedBy(
         'Q-26',
-        'Audit table schema and whether it stores X-Request-Id are undocumented; supply findAuditEventsByRequestId.',
+        'Per tech doc v3 §39 the audit trail is in MongoDB (audit_trails: action, request_id), not SQL. Needs read-only ' +
+          'MongoDB access and a Mongo check in the framework (Q-35); until then this stays waiting.',
       );
       return;
     }

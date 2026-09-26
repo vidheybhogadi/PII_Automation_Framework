@@ -4,7 +4,7 @@
  * retries are bounded and only for retry-safe endpoints; nothing sensitive reaches logs.
  */
 import { expect, test } from '@playwright/test';
-import { generateKeyPairSync } from 'node:crypto';
+import { createHash, generateKeyPairSync } from 'node:crypto';
 import { inspect } from 'node:util';
 import { Ed25519Signer, verifyBodySignature } from '../../src/auth/ed25519-signer';
 import { HEADER, serializeBody } from '../../src/clients/base-api-client';
@@ -58,12 +58,17 @@ test.describe('UNIT PiiClient wire behaviour (local capture server)', () => {
     expect(req!.headers['content-length']).toBe(String(req!.body.length));
   });
 
-  test('UT-CLI-002 Every request carries the four documented headers with correct values', async () => {
+  test('UT-CLI-002 Every request carries the documented headers (guide + tech doc) with correct values', async () => {
     await client.readPii({ tenant_id: 't', user_id: 'u', field_names: ['EMAIL'] });
     const headers = server.requests[0]!.headers;
     expect(headers['content-type']).toBe('application/json');
     expect(headers['x-pii-caller-id']).toBe(CALLER);
     expect(isUuidV4(headers['x-request-id'] as string)).toBe(true);
+    // Tech doc v3 §11.1: the same UUIDv4 under X-PII-Request-Id, and the hex SHA-256 of the exact body bytes.
+    expect(headers['x-pii-request-id']).toBe(headers['x-request-id']);
+    expect(headers['x-pii-body-hash']).toBe(
+      createHash('sha256').update(server.requests[0]!.body).digest('hex'),
+    );
     expect(headers['x-pii-signature']).toMatch(/^[A-Za-z0-9+/]{86}==$/);
     expect(server.requests[0]!.method).toBe('POST');
     expect(server.requests[0]!.url).toBe('/api/v1/pii/read');
@@ -91,6 +96,7 @@ test.describe('UNIT PiiClient wire behaviour (local capture server)', () => {
     expect(req.method).toBe('GET');
     expect(req.headers['x-pii-signature']).toBeUndefined();
     expect(req.headers['x-pii-caller-id']).toBeUndefined();
+    expect(req.headers['x-pii-body-hash']).toBeUndefined();
     expect(req.body.length).toBe(0);
   });
 
@@ -103,6 +109,7 @@ test.describe('UNIT PiiClient wire behaviour (local capture server)', () => {
     expect(headers['content-type']).toBeUndefined();
     expect(headers['x-pii-caller-id']).toBeUndefined();
     expect(headers['x-request-id']).toBeUndefined();
+    expect(headers['x-pii-request-id']).toBeUndefined(); // "no request ID" removes both spellings
   });
 
   test('UT-CLI-007 Tests can deliberately send a body that differs from what was signed', async () => {

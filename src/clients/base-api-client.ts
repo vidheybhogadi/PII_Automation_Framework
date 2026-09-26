@@ -14,6 +14,7 @@
  *   3. The SAME bodyBytes Buffer is handed to Axios as the request body. Nothing re-serializes it.
  */
 import axios, { type AxiosResponse } from 'axios';
+import { createHash } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
 import type { Ed25519Signer } from '../auth/ed25519-signer';
 import type { Logger } from '../utils/logger';
@@ -23,10 +24,18 @@ import { withRetry, type RetryPolicy } from '../utils/retry';
 import { ApiResponse } from './api-response';
 import { buildPath, type EndpointDefinition, type HttpMethod } from './endpoints';
 
+/**
+ * Request headers. The Integration Guide documents Caller-Id, X-Request-Id and Signature. The tech doc v3
+ * (§11.1) documents X-PII-Request-Id and a required X-PII-Body-Hash (hex SHA-256 of the body) instead.
+ * Until Dev confirms which contract is deployed (Q-30), every request carries BOTH request-ID headers (same
+ * UUIDv4) and the body hash. A service that does not expect a header ignores it.
+ */
 export const HEADER = {
   CONTENT_TYPE: 'Content-Type',
   CALLER_ID: 'X-PII-Caller-Id',
   REQUEST_ID: 'X-Request-Id',
+  PII_REQUEST_ID: 'X-PII-Request-Id',
+  BODY_HASH: 'X-PII-Body-Hash',
   SIGNATURE: 'X-PII-Signature',
 } as const;
 export type AuthHeaderName = (typeof HEADER)[keyof typeof HEADER];
@@ -126,6 +135,7 @@ export class BaseApiClient {
     const headers: Record<string, string> = {};
     if (bodyBytes !== undefined) headers[HEADER.CONTENT_TYPE] = JSON_CONTENT_TYPE;
     headers[HEADER.REQUEST_ID] = requestId;
+    headers[HEADER.PII_REQUEST_ID] = requestId;
 
     const identity = this.options.identity;
     if (endpoint.authenticated && !tamper.unauthenticated) {
@@ -143,11 +153,21 @@ export class BaseApiClient {
           ? signer.signRawBodyWithoutDigest(bytesToSign)
           : signer.signBody(bytesToSign);
       headers[HEADER.CALLER_ID] = identity.callerId;
+      // The digest the caller attests to (tech doc §12): of the SIGNED bytes, so a body changed after signing
+      // is caught as a hash mismatch.
+      headers[HEADER.BODY_HASH] = createHash('sha256').update(bytesToSign).digest('hex');
       headers[HEADER.SIGNATURE] = signature;
     }
-    if (tamper.unauthenticated) delete headers[HEADER.REQUEST_ID];
+    if (tamper.unauthenticated) {
+      delete headers[HEADER.REQUEST_ID];
+      delete headers[HEADER.PII_REQUEST_ID];
+    }
 
-    for (const name of tamper.omitHeaders ?? []) delete headers[name];
+    for (const name of tamper.omitHeaders ?? []) {
+      delete headers[name];
+      // "No request ID" means neither spelling of it.
+      if (name === HEADER.REQUEST_ID) delete headers[HEADER.PII_REQUEST_ID];
+    }
     Object.assign(headers, tamper.headers ?? {});
 
     return {

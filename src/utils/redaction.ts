@@ -25,6 +25,10 @@ const SENSITIVE_KEYS = new Set(
     'privatekeypem',
     'signature',
     'x-pii-signature',
+    // Unkeyed SHA-256 of a body that contains PII: dictionary-attackable (tech doc v3 §29.2), never logged.
+    'x-pii-body-hash',
+    'body_hash',
+    'bodyhash',
     'password',
     'db_password',
     'secret',

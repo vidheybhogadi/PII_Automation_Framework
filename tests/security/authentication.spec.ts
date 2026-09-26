@@ -246,8 +246,9 @@ test.describe('Authentication (Ed25519)', { tag: ['@security', '@regression'] },
   });
 
   test('PII-AUTH-021 Sending the same request ID twice (expected behaviour not documented yet)', async () => {
-    // PENDING_Q14_ANSWER: when Dev says what happens to a reused X-Request-Id (rejected / accepted /
-    // de-duplicated), replace this blockedBy(…) with that check.
+    // PENDING_Q14_ANSWER: tech doc v3 §11.1/§15 says request IDs are NOT checked for reuse in its Phase 1 (both
+    // requests succeed) and are rejected with 401 once Phase 2 replay protection is on. When Dev confirms which
+    // phase QA runs (Q-38), replace this blockedBy(…) with that check.
     blockedBy(
       'Q-14',
       'Guide requires a fresh ID per call but does not define server behaviour on reuse (reject vs accept).',
@@ -255,8 +256,9 @@ test.describe('Authentication (Ed25519)', { tag: ['@security', '@regression'] },
   });
 
   test('PII-AUTH-022 Re-sending a captured signed request (replay) (expected behaviour not documented yet)', async () => {
-    // PENDING_Q21_ANSWER: when Dev says whether replayed signed requests must be rejected, replace this
-    // blockedBy(…) with a replay check (send the same signed request twice; expect the agreed status).
+    // PENDING_Q21_ANSWER: tech doc v3 §15 accepts replay as a known Phase 1 risk (a captured request can be
+    // re-sent until the caller's key is rotated); Phase 2 (§21) rejects it with 401. When Dev confirms the phase
+    // (Q-38), replace this blockedBy(…) with a replay check (same signed request twice; expect the agreed status).
     blockedBy(
       'Q-21',
       'Signature covers only the body (no timestamp/nonce/path). Replay protection is undocumented.',

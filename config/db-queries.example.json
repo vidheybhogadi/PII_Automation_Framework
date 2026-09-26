@@ -1,15 +1,15 @@
 {
   "$comment": [
-    "TEMPLATE ONLY. The PII service's database schema is NOT documented in the integration guide.",
-    "Copy to config/db-queries.json (git-ignored) and replace every PENDING_… placeholder with the table/column names confirmed by the PII backend team (Q-03). A query that still contains PENDING_ is treated as not configured.",
-    "Rules: read-only SELECT/WITH only; one statement; bind params with the engine's placeholders ($1.. for postgres, ? for mysql);",
-    "'params' lists the named parameters in placeholder order; each query MUST return the column aliases listed in docs/database-setup.md.",
-    "Set a query to null if it cannot be supported; dependent DB tests then fail with an actionable message."
+    "TEMPLATE. Copy to config/db-queries.json (git-ignored) and replace every remaining PENDING_… placeholder. A query that still contains PENDING_ is treated as not configured and never runs.",
+    "Filled from tech doc v3 §24 (PostgreSQL): user_pii_field_value(user_id, field_name, ciphertext, nonce, auth_tag, key_version, lookup_token). Confirm with Dev that this schema is what QA runs (Q-30).",
+    "Still pending: the tech doc's table has NO tenant column (Q-37), so PENDING_TENANT_COL stays until Dev says how tenants are stored. Temporary phones and encryption keys are not in the tech doc (Q-30).",
+    "findAuditEventsByRequestId is null: per tech doc §39 the audit trail lives in MongoDB (collection audit_trails, fields action + request_id), not in SQL. PII-DB-007 needs read-only MongoDB access, which the framework does not support yet (Q-35).",
+    "Rules: read-only SELECT/WITH only; one statement; $1.. placeholders for postgres; 'params' lists named parameters in placeholder order; each query MUST return the column aliases in docs/database-setup.md."
   ],
   "engine": "postgres",
   "queries": {
     "findPiiRecords": {
-      "sql": "SELECT PENDING_TENANT_COL AS tenant_id, PENDING_USER_COL AS user_id, PENDING_FIELD_COL AS field, PENDING_CIPHERTEXT_COL AS encrypted_value, PENDING_KEY_VERSION_COL AS key_version FROM PENDING_PII_TABLE WHERE PENDING_TENANT_COL = $1 AND PENDING_USER_COL = $2 AND PENDING_FIELD_COL = $3",
+      "sql": "SELECT PENDING_TENANT_COL AS tenant_id, user_id AS user_id, field_name AS field, ciphertext AS encrypted_value, key_version AS key_version FROM user_pii_field_value WHERE PENDING_TENANT_COL = $1 AND user_id = $2 AND field_name = $3",
       "params": ["tenant_id", "user_id", "field"]
     },
     "findTransientPhone": {
@@ -20,9 +20,6 @@
       "sql": "SELECT PENDING_TENANT_COL AS tenant_id, PENDING_CALLER_COL AS caller_id, PENDING_STATUS_COL AS status, PENDING_REVOKED_AT_COL AS revoked_at, PENDING_WRAPPED_KEY_COL AS encrypted_key_material FROM PENDING_FREE_TEXT_KEY_TABLE WHERE PENDING_ID_COL = $1",
       "params": ["key_id"]
     },
-    "findAuditEventsByRequestId": {
-      "sql": "SELECT PENDING_EVENT_TYPE_COL AS event_type FROM PENDING_AUDIT_TABLE WHERE PENDING_REQUEST_ID_COL = $1",
-      "params": ["request_id"]
-    }
+    "findAuditEventsByRequestId": null
   }
 }

@@ -55,7 +55,7 @@ PII_Automation_Framework/
 │   ├── security/                     44 signing · permissions · tenant isolation · leak protection
 │   ├── contract/                     5  responses match the documented format
 │   ├── db/                           7  data is encrypted in the database
-│   └── unit/                         81 self-tests of the framework itself (no service needed)
+│   └── unit/                         82 self-tests of the framework itself (no service needed)
 │
 ├── src/                            THE FRAMEWORK: reusable code the tests are built on
 │   ├── clients/                      talks to the service
@@ -157,7 +157,7 @@ test(
 
 ```bash
 npm ci && npx playwright install chromium
-npm run verify                     # 81 self-tests → "81 passed"
+npm run verify                     # 82 self-tests → "82 passed"
 npm run report:demo && npm run report:open -- --demo    # sample report (made-up data)
 ```
 
@@ -215,10 +215,10 @@ More: [docs/reporting.md](docs/reporting.md).
 
 | Part                 | Tests | Status                                                                                                                      |
 | -------------------- | :---: | --------------------------------------------------------------------------------------------------------------------------- |
-| Framework self-tests |  81   | all passing                                                                                                                 |
+| Framework self-tests |  82   | all passing                                                                                                                 |
 | Report tests         |  47   | all passing                                                                                                                 |
 | PII service tests    |  133  | written; **not yet run against a real service**: waiting on the items in [PENDING-PLACEHOLDERS.md](PENDING-PLACEHOLDERS.md) |
 
 [Pending placeholders](PENDING-PLACEHOLDERS.md) · [Test cases (Excel)](docs/test-cases.xlsx) · [Setup](docs/setup-guide.md) · [Commands](docs/execution-guide.md) · [Test scenarios](docs/test-scenarios.md) ·
-[Open questions](docs/known-gaps-and-questions.md) · [Architecture](docs/framework-architecture.md) ·
+[Open questions](docs/known-gaps-and-questions.md) · [Tech doc v3 analysis](docs/tech-doc-v3-analysis.md) · [Architecture](docs/framework-architecture.md) ·
 [Database](docs/database-setup.md) · [Troubleshooting](docs/troubleshooting.md)

@@ -15,10 +15,10 @@ environment), then run `npm run check-env`. Find any leftover with `grep -rn PEN
 
 1. [ ] Test environment URL and environment name, plus VPN / network access — section 1
 2. [ ] Three caller IDs, after registering our three public keys — section 1
-3. [ ] Two non-production tenant IDs, an approved email domain, approved test phones (incl. 8- and 15-digit) — section 1
+3. [ ] Two non-production tenant IDs, an approved email domain, and 2–3 approved 10-digit test phone numbers — section 1
 4. [ ] Environment limits: bulk-read size, search default, temporary-phone lifetime, max body size — section 1
 5. [ ] Database: type, host, port, name, a read-only login — section 1
-6. [ ] Database table and column names (18 placeholders) — section 2
+6. [ ] Database table and column names (11 placeholders) — section 2
 7. [ ] Answers to the open questions behind 10 waiting tests and 13 temporary expectations — sections 3–4
 
 **From Dev (confirmations, not values):**
@@ -39,11 +39,11 @@ environment), then run `npm run check-env`. Find any leftover with `grep -rn PEN
 
 | Group | Count | Where |
 |---|:-:|---|
-| [1. Settings](#1-settings-env) | 25 | `.env.example` → your `.env` |
-| [2. Database names](#2-database-table-and-column-names) | 18 | `config/db-queries.example.json` → `config/db-queries.json` |
+| [1. Settings](#1-settings-env) | 21 | `.env.example` → your `.env` |
+| [2. Database names](#2-database-table-and-column-names) | 11 | `config/db-queries.example.json` → `config/db-queries.json` |
 | [3. Tests waiting on an answer](#3-tests-waiting-on-an-answer-do-not-run-yet) | 10 | test files |
 | [4. Temporary expectations](#4-temporary-expectations-run-but-accept-several-answers) | 13 | test files |
-| [5. CI settings](#5-ci-settings-github-environment) | 20 | GitHub → Settings → Environments |
+| [5. CI settings](#5-ci-settings-github-environment) | 18 | GitHub → Settings → Environments |
 | [6. Code placeholders](#6-code-placeholders-in-tests) | 3 | test files (`// PENDING_…` comments) |
 
 ## 1. Settings (`.env`)
@@ -60,23 +60,19 @@ Copy `.env.example` to `.env`, then replace each value below.
 | `PII_TEST_TENANT_ID` | `PENDING_TEST_TENANT_ID` | `.env.example:36` | Backend | All service tests (non-production tenant) | — (not set) |
 | `PII_TEST_TENANT_ID_SECONDARY` | `PENDING_TEST_TENANT_ID_SECONDARY` | `.env.example:37` | Backend | Tenant isolation tests (PII-TI-*, PII-DB-003) | — (not set) |
 | `PII_TEST_EMAIL_DOMAIN` | `PENDING_TEST_EMAIL_DOMAIN` | `.env.example:40` | Backend / Security | Every test that saves or searches an email | — (not set) |
-| `PII_TEST_PHONES` | `PENDING_APPROVED_TEST_PHONES` | `.env.example:42` | QA lead / Backend | Phone, search-by-phone and temporary-phone tests | — (not set) |
-| `PII_TEST_PHONE_8_DIGITS` | `PENDING_TEST_PHONE_8_DIGITS` | `.env.example:44` | QA lead / Backend | PII-NRM-004 (8-digit boundary) | — (not set) |
-| `PII_TEST_PHONE_15_DIGITS` | `PENDING_TEST_PHONE_15_DIGITS` | `.env.example:45` | QA lead / Backend | PII-NRM-004 (15-digit boundary) | — (not set) |
-| `PII_NON_SEARCHABLE_FIELD` | `PENDING_Q18_NON_SEARCHABLE_FIELD` | `.env.example:49` | Backend (Q-18) | PII-SR-012 | — (not set) |
-| `PII_BATCH_MAX_ITEMS` | `PENDING_BATCH_MAX_ITEMS` | `.env.example:53` | Backend | PII-BR-004 / BR-005 use the real limit (guide value 50 until then) | `50` |
-| `PII_SEARCH_DEFAULT_LIMIT` | `PENDING_SEARCH_DEFAULT_LIMIT` | `.env.example:54` | Backend | PII-SR-008 uses the real default (guide value 10 until then) | `10` |
-| `PII_TRANSIENT_TTL_MIN_SECONDS` | `PENDING_TRANSIENT_TTL_MIN_SECONDS` | `.env.example:55` | Backend | PII-TR-008 uses the real minimum (guide value 300 until then) | `300` |
-| `PII_TRANSIENT_TTL_MAX_SECONDS` | `PENDING_TRANSIENT_TTL_MAX_SECONDS` | `.env.example:56` | Backend | PII-TR-008 uses the real maximum (guide value 604800 until then) | `604800` |
-| `PII_MAX_BODY_BYTES` | `PENDING_Q22_MAX_BODY_BYTES` | `.env.example:58` | Backend (Q-22) | PII-SEC-002 | — (not set) |
-| `PII_ENABLE_TTL_EXPIRY_TEST` | `PENDING_Q12_SHORT_TTL_ENVIRONMENT` | `.env.example:63` | Backend (Q-12): a short-lifetime environment | PII-TR-012 | `false` |
-| `PII_SIGNATURE_HELPER_MUST_BE_DISABLED` | `PENDING_Q23_SIGNATURE_HELPER_DISABLED` | `.env.example:65` | Backend (Q-23) | PII-SEC-003 | `false` |
-| `DB_ENGINE` | `PENDING_DB_ENGINE` | `.env.example:69` | Backend / DBA (Q-03) | All @db tests and the POC database step | `none` |
-| `DB_HOST` | `PENDING_DB_HOST` | `.env.example:70` | Backend / DBA | All @db tests | — (not set) |
-| `DB_PORT` | `PENDING_DB_PORT` | `.env.example:71` | Backend / DBA | All @db tests | — (not set) |
-| `DB_NAME` | `PENDING_DB_NAME` | `.env.example:72` | Backend / DBA | All @db tests | — (not set) |
-| `DB_USER` | `PENDING_DB_READONLY_USER` | `.env.example:74` | Backend / DBA (read-only user) | All @db tests | — (not set) |
-| `DB_PASSWORD` | `PENDING_DB_READONLY_PASSWORD` | `.env.example:75` | Backend / DBA (read-only user) | All @db tests | — (not set) |
+| `PII_TEST_PHONES` | `PENDING_APPROVED_10_DIGIT_TEST_PHONES` | `.env.example:42` | QA lead / Backend | Phone, search-by-phone and temporary-phone tests (2+ approved 10-digit numbers) | — (not set) |
+| `PII_NON_SEARCHABLE_FIELD` | `PENDING_Q18_NON_SEARCHABLE_FIELD` | `.env.example:50` | Backend (Q-18) | PII-SR-012 | — (not set) |
+| `PII_BATCH_MAX_ITEMS` | `PENDING_BATCH_MAX_ITEMS` | `.env.example:54` | Backend | PII-BR-004 / BR-005 use the real limit (guide value 50 until then) | `50` |
+| `PII_SEARCH_DEFAULT_LIMIT` | `PENDING_SEARCH_DEFAULT_LIMIT` | `.env.example:55` | Backend | PII-SR-008 uses the real default (guide value 10 until then) | `10` |
+| `PII_TRANSIENT_TTL_MIN_SECONDS` | `PENDING_TRANSIENT_TTL_MIN_SECONDS` | `.env.example:56` | Backend | PII-TR-008 uses the real minimum (guide value 300 until then) | `300` |
+| `PII_TRANSIENT_TTL_MAX_SECONDS` | `PENDING_TRANSIENT_TTL_MAX_SECONDS` | `.env.example:57` | Backend | PII-TR-008 uses the real maximum (guide value 604800 until then) | `604800` |
+| `PII_ENABLE_TTL_EXPIRY_TEST` | `PENDING_Q12_SHORT_TTL_ENVIRONMENT` | `.env.example:64` | Backend (Q-12): a short-lifetime environment | PII-TR-012 | `false` |
+| `PII_SIGNATURE_HELPER_MUST_BE_DISABLED` | `PENDING_Q23_SIGNATURE_HELPER_DISABLED` | `.env.example:66` | Backend (Q-23) | PII-SEC-003 | `false` |
+| `DB_HOST` | `PENDING_DB_HOST` | `.env.example:71` | Backend / DBA | All @db tests | — (not set) |
+| `DB_PORT` | `PENDING_DB_PORT` | `.env.example:72` | Backend / DBA | All @db tests | — (not set) |
+| `DB_NAME` | `PENDING_DB_NAME` | `.env.example:73` | Backend / DBA | All @db tests | — (not set) |
+| `DB_USER` | `PENDING_DB_READONLY_USER` | `.env.example:75` | Backend / DBA (read-only user) | All @db tests | — (not set) |
+| `DB_PASSWORD` | `PENDING_DB_READONLY_PASSWORD` | `.env.example:76` | Backend / DBA (read-only user) | All @db tests | — (not set) |
 
 **Also on our side (not a placeholder):** after the caller IDs arrive, create the three key pairs with
 `npm run keys:generate -- secrets/<primary|secondary|limited>-caller` and send the `.pub.pem` files to the
@@ -89,13 +85,9 @@ Copy `config/db-queries.example.json` to `config/db-queries.json` and replace ea
 
 | Placeholder | First used at | Meaning |
 |---|---|---|
-| `PENDING_TENANT_COL` | `config/db-queries.example.json:12` | column: tenant |
-| `PENDING_USER_COL` | `config/db-queries.example.json:12` | column: user |
-| `PENDING_FIELD_COL` | `config/db-queries.example.json:12` | column: field |
-| `PENDING_CIPHERTEXT_COL` | `config/db-queries.example.json:12` | column: ciphertext |
-| `PENDING_KEY_VERSION_COL` | `config/db-queries.example.json:12` | column: key version |
-| `PENDING_PII_TABLE` | `config/db-queries.example.json:12` | table: pii |
+| `PENDING_TENANT_COL` | `config/db-queries.example.json:5` | column: tenant |
 | `PENDING_CALLER_COL` | `config/db-queries.example.json:16` | column: caller |
+| `PENDING_CIPHERTEXT_COL` | `config/db-queries.example.json:16` | column: ciphertext |
 | `PENDING_EXPIRES_COL` | `config/db-queries.example.json:16` | column: expires |
 | `PENDING_CONSUMED_COL` | `config/db-queries.example.json:16` | column: consumed |
 | `PENDING_TRANSIENT_TABLE` | `config/db-queries.example.json:16` | table: transient |
@@ -104,9 +96,6 @@ Copy `config/db-queries.example.json` to `config/db-queries.json` and replace ea
 | `PENDING_REVOKED_AT_COL` | `config/db-queries.example.json:20` | column: revoked at |
 | `PENDING_WRAPPED_KEY_COL` | `config/db-queries.example.json:20` | column: wrapped key |
 | `PENDING_FREE_TEXT_KEY_TABLE` | `config/db-queries.example.json:20` | table: free text key |
-| `PENDING_EVENT_TYPE_COL` | `config/db-queries.example.json:24` | column: event type |
-| `PENDING_AUDIT_TABLE` | `config/db-queries.example.json:24` | table: audit |
-| `PENDING_REQUEST_ID_COL` | `config/db-queries.example.json:24` | column: request id |
 
 ## 3. Tests waiting on an answer (do not run yet)
 
@@ -116,15 +105,15 @@ with the real check (or set the matching setting from section 1).
 | Question | Test | Where | What we need to know | How it gets unblocked |
 |---|---|---|---|---|
 | Q-12 | PII-TR-012 | `tests/transient/transient-phone.spec.ts:333` | TTL expiry testing. Min TTL is 300 s in dev. Is there a short-TTL test environment or a test clock? | Set `PII_ENABLE_TTL_EXPIRY_TEST=true` in `.env` — only in an environment with a short minimum lifetime |
-| Q-14 | PII-AUTH-021 | `tests/security/authentication.spec.ts:252` | Reused X-Request-Id: rejected, accepted, or deduplicated? | Code change after Dev answers — see the `PENDING_Q14_ANSWER` marker |
-| Q-17 | PII-HLT-002 | `tests/health/health.spec.ts:25` | How to put the service in a not-ready state for testing the 503 readiness response? | Code change after Dev provides a not-ready hook — see the `PENDING_Q17_ANSWER` marker |
+| Q-14 | PII-AUTH-021 | `tests/security/authentication.spec.ts:253` | Reused X-Request-Id: rejected, accepted, or deduplicated? | Code change once Dev confirms Phase 1 vs Phase 2 (Q-38) — see the `PENDING_Q14_ANSWER` marker |
+| Q-17 | PII-HLT-002 | `tests/health/health.spec.ts:26` | How to put the service in a not-ready state for testing the 503 readiness response? | Code change after Dev provides a not-ready hook — see the `PENDING_Q17_ANSWER` marker |
 | Q-18 | PII-SR-012 | `tests/pii/search-pii.spec.ts:233` | Which catalog fields are not searchable, and the rejection status? | Set `PII_NON_SEARCHABLE_FIELD` in `.env` |
-| Q-21 | PII-AUTH-022 | `tests/security/authentication.spec.ts:261` | Replay protection. The signature covers only the body — not method, path, caller ID, request ID or a timest… | Code change after Dev answers — see the `PENDING_Q21_ANSWER` marker |
-| Q-22 | PII-SEC-002 | `tests/security/response-security.spec.ts:42` | Configured maximum body size (413) per environment. | Set `PII_MAX_BODY_BYTES` in `.env` |
+| Q-21 | PII-AUTH-022 | `tests/security/authentication.spec.ts:263` | Replay protection. The signature covers only the body — not method, path, caller ID, request ID or a timest… | Code change once Dev confirms Phase 1 vs Phase 2 (Q-38) — see the `PENDING_Q21_ANSWER` marker |
+| Q-22 | PII-SEC-002 | `tests/security/response-security.spec.ts:42` | Configured maximum body size (413) per environment. | Set `PII_MAX_BODY_BYTES` in `.env` (now 1048576 from tech doc v3 §12.4 — runs once the service is reachable) |
 | Q-23 | PII-SEC-003 | `tests/security/response-security.spec.ts:60` | Is POST /docs/signature disabled in QA/staging? (Guide: "Do not expose… in production.") | Set `PII_SIGNATURE_HELPER_MUST_BE_DISABLED=true` in `.env` (non-development environments) |
 | Q-24 | PII-CON-001 | `tests/contract/contract.spec.ts:50` | Is /openapi.json exposed in QA/staging? | Nothing — runs automatically when the service exposes `/openapi.json` |
 | Q-24 | PII-CON-002 | `tests/contract/contract.spec.ts:67` | Is /openapi.json exposed in QA/staging? | Nothing — runs automatically when the service exposes `/openapi.json` |
-| Q-26 | PII-DB-007 | `tests/db/db-persistence.spec.ts:199` | Audit table schema for PII_BATCH_READ; does it store X-Request-Id? | Fill in the `findAuditEventsByRequestId` query in `config/db-queries.json` |
+| Q-26 | PII-DB-007 | `tests/db/db-persistence.spec.ts:199` | Audit table schema for PII_BATCH_READ; does it store X-Request-Id? | Read-only MongoDB access (audit is in MongoDB per tech doc v3 §39) + a Mongo check in the framework — Q-35 |
 
 ## 4. Temporary expectations (run, but accept several answers)
 
@@ -158,21 +147,19 @@ Set these in GitHub → Settings → Environments → `qa` before running the in
 | `PII_TEST_TENANT_ID_SECONDARY` | Variable | `.github/workflows/pii-api-tests.yml:84` |
 | `PII_TEST_EMAIL_DOMAIN` | Variable | `.github/workflows/pii-api-tests.yml:85` |
 | `PII_TEST_PHONES` | Secret | `.github/workflows/pii-api-tests.yml:86` |
-| `PII_TEST_PHONE_8_DIGITS` | Secret | `.github/workflows/pii-api-tests.yml:87` |
-| `PII_TEST_PHONE_15_DIGITS` | Secret | `.github/workflows/pii-api-tests.yml:88` |
-| `PII_CALLER_PRIMARY_ID` | Variable | `.github/workflows/pii-api-tests.yml:90` |
-| `PII_CALLER_SECONDARY_ID` | Variable | `.github/workflows/pii-api-tests.yml:91` |
-| `PII_CALLER_LIMITED_ID` | Variable | `.github/workflows/pii-api-tests.yml:92` |
-| `PII_CALLER_PRIMARY_PRIVATE_KEY` | Secret | `.github/workflows/pii-api-tests.yml:95` |
-| `PII_CALLER_SECONDARY_PRIVATE_KEY` | Secret | `.github/workflows/pii-api-tests.yml:96` |
-| `PII_CALLER_LIMITED_PRIVATE_KEY` | Secret | `.github/workflows/pii-api-tests.yml:97` |
-| `DB_ENGINE` | Variable | `.github/workflows/pii-api-tests.yml:98` |
-| `DB_HOST` | Variable | `.github/workflows/pii-api-tests.yml:99` |
-| `DB_PORT` | Variable | `.github/workflows/pii-api-tests.yml:100` |
-| `DB_NAME` | Variable | `.github/workflows/pii-api-tests.yml:101` |
-| `DB_USER` | Variable | `.github/workflows/pii-api-tests.yml:102` |
-| `DB_READONLY_PASSWORD` | Secret | `.github/workflows/pii-api-tests.yml:103` |
-| `DB_QUERIES_JSON` | Secret | `.github/workflows/pii-api-tests.yml:115` |
+| `PII_CALLER_PRIMARY_ID` | Variable | `.github/workflows/pii-api-tests.yml:88` |
+| `PII_CALLER_SECONDARY_ID` | Variable | `.github/workflows/pii-api-tests.yml:89` |
+| `PII_CALLER_LIMITED_ID` | Variable | `.github/workflows/pii-api-tests.yml:90` |
+| `PII_CALLER_PRIMARY_PRIVATE_KEY` | Secret | `.github/workflows/pii-api-tests.yml:93` |
+| `PII_CALLER_SECONDARY_PRIVATE_KEY` | Secret | `.github/workflows/pii-api-tests.yml:94` |
+| `PII_CALLER_LIMITED_PRIVATE_KEY` | Secret | `.github/workflows/pii-api-tests.yml:95` |
+| `DB_ENGINE` | Variable | `.github/workflows/pii-api-tests.yml:96` |
+| `DB_HOST` | Variable | `.github/workflows/pii-api-tests.yml:97` |
+| `DB_PORT` | Variable | `.github/workflows/pii-api-tests.yml:98` |
+| `DB_NAME` | Variable | `.github/workflows/pii-api-tests.yml:99` |
+| `DB_USER` | Variable | `.github/workflows/pii-api-tests.yml:100` |
+| `DB_READONLY_PASSWORD` | Secret | `.github/workflows/pii-api-tests.yml:101` |
+| `DB_QUERIES_JSON` | Secret | `.github/workflows/pii-api-tests.yml:113` |
 
 ## 6. Code placeholders in tests
 
@@ -181,6 +168,6 @@ These tests cannot be finished with a setting: the expected behaviour itself is 
 
 | Marker | Where | What to do |
 |---|---|---|
-| `PENDING_Q17_ANSWER` | `tests/health/health.spec.ts:22` | when Dev provides a way to make the service not ready (test hook or dedicated instance), replace this blockedBy(…) with a call to /health/ready that expects 503 SERVICE_NOT_READY. |
-| `PENDING_Q14_ANSWER` | `tests/security/authentication.spec.ts:249` | when Dev says what happens to a reused X-Request-Id (rejected / accepted / de-duplicated), replace this blockedBy(…) with that check. |
-| `PENDING_Q21_ANSWER` | `tests/security/authentication.spec.ts:258` | when Dev says whether replayed signed requests must be rejected, replace this blockedBy(…) with a replay check (send the same signed request twice; expect the agreed status). |
+| `PENDING_Q17_ANSWER` | `tests/health/health.spec.ts:22` | tech doc v3 §63.9 returns 503 when a readiness check fails (e.g. PostgreSQL down), with body {status, checks}. When Dev provides a safe way to make QA not ready, replace this blockedBy(…) with a call to /health/ready that expects 503 (and the agreed body shape — Q-34). |
+| `PENDING_Q14_ANSWER` | `tests/security/authentication.spec.ts:249` | tech doc v3 §11.1/§15 says request IDs are NOT checked for reuse in its Phase 1 (both requests succeed) and are rejected with 401 once Phase 2 replay protection is on. When Dev confirms which phase QA runs (Q-38), replace this blockedBy(…) with that check. |
+| `PENDING_Q21_ANSWER` | `tests/security/authentication.spec.ts:259` | tech doc v3 §15 accepts replay as a known Phase 1 risk (a captured request can be re-sent until the caller's key is rotated); Phase 2 (§21) rejects it with 401. When Dev confirms the phase (Q-38), replace this blockedBy(…) with a replay check (same signed request twice; expect the agreed status). |

@@ -4,7 +4,6 @@
  */
 import { expectSuccess } from '../../src/assertions/response.assertions';
 import { expectSecretEquals } from '../../src/assertions/security.assertions';
-import { requireValue } from '../../src/config/config';
 import { formattedPhone, messyEmail, messyText } from '../../src/data/test-data-factory';
 import type { PiiClient } from '../../src/clients/pii-client';
 import { expect, onlyIfInScope, test } from '../../src/fixtures/test-fixtures';
@@ -88,16 +87,16 @@ test.describe('Normalization', { tag: ['@regression'] }, () => {
     config,
     cleanup,
   }) => {
-    const eight = requireValue(
-      config.testData.phone8Digits,
-      'PII_TEST_PHONE_8_DIGITS',
-      'PHONE 8-digit boundary test',
+    // Optional: the team tests with 10-digit numbers only. The 8/15-digit edges run only when approved
+    // numbers of exactly those lengths are configured; otherwise the test is skipped (never failed).
+    const eight = config.testData.phone8Digits;
+    const fifteen = config.testData.phone15Digits;
+    test.skip(
+      !eight || !fifteen,
+      'Only 10-digit test phone numbers are used, so the 8- and 15-digit limits are not tested. ' +
+        'To test them, set PII_TEST_PHONE_8_DIGITS and PII_TEST_PHONE_15_DIGITS to approved numbers.',
     );
-    const fifteen = requireValue(
-      config.testData.phone15Digits,
-      'PII_TEST_PHONE_15_DIGITS',
-      'PHONE 15-digit boundary test',
-    );
+    if (!eight || !fifteen) return;
     for (const digits of [eight, fifteen]) {
       await test.step(`${digits.length} digits`, async () => {
         const userId = data.userId(`nrm4d${digits.length}`);

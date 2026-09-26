@@ -111,4 +111,14 @@ test.describe('UNIT redaction & logger', () => {
     expect(target.lines()).toHaveLength(2);
     expect(JSON.stringify(second)).not.toContain(EMAIL);
   });
+
+  test('UT-RED-008 The body-hash header (an unkeyed hash of PII) is never logged, by key or as free text', () => {
+    const digest = 'a'.repeat(32) + '0123456789abcdef'.repeat(2);
+    const out = redact({ headers: { 'X-PII-Body-Hash': digest }, bodyHash: digest }) as Record<
+      string,
+      unknown
+    >;
+    expect(JSON.stringify(out)).not.toContain(digest);
+    expect(scrubText(`hash=${digest}`)).not.toContain(digest);
+  });
 });
