@@ -1,6 +1,6 @@
 /** UNIT — configuration parsing and actionable errors. */
 import { expect, test } from '@playwright/test';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { inspect } from 'node:util';
@@ -13,6 +13,8 @@ import {
   requireTenant,
 } from '../../src/config/config';
 import { ENDPOINT_KEYS } from '../../src/clients/endpoints';
+import { buildPendingDoc, PENDING_DOC } from '../../scripts/generate-pending-doc';
+import { pendingSettings } from '../../src/config/placeholders';
 import { RFC8032_TEST1_PRIVATE_KEY_PEM } from './helpers/test-keys';
 
 const keyDir = mkdtempSync(path.join(tmpdir(), 'pii-cfg-'));
@@ -144,4 +146,33 @@ test.describe('UNIT configuration', () => {
       'PII_TEST_PHONE_8_DIGITS',
     );
   });
+
+  test('UT-CFG-011 Settings still set to a PENDING_ placeholder count as not set and are never used', () => {
+    const env = {
+      PII_BASE_URL: 'PENDING_PII_BASE_URL',
+      PII_TEST_TENANT_ID: 'PENDING_TEST_TENANT_ID',
+      PII_BATCH_MAX_ITEMS: 'PENDING_BATCH_MAX_ITEMS',
+      PII_CALLER_PRIMARY_ID: 'PENDING_PRIMARY_CALLER_ID',
+      PII_CALLER_PRIMARY_PRIVATE_KEY_FILE: './secrets/does-not-exist.pem',
+      DB_ENGINE: 'PENDING_DB_ENGINE',
+    };
+    const config = loadConfig(env);
+    expect(config.baseUrl).toBeUndefined();
+    expect(config.tenants.primary).toBeUndefined();
+    expect(config.limits.batchMaxItems).toBe(50); // the guide's development value while pending
+    expect(config.callers.primary).toBeUndefined(); // a pending caller is "not configured", not broken
+    expect(config.db.engine).toBe('none');
+    expect(pendingSettings(env)).toEqual([
+      'DB_ENGINE',
+      'PII_BASE_URL',
+      'PII_BATCH_MAX_ITEMS',
+      'PII_CALLER_PRIMARY_ID',
+      'PII_TEST_TENANT_ID',
+    ]);
+  });
+});
+
+test('UT-DOC-001 PENDING-PLACEHOLDERS.md lists every placeholder and is up to date (npm run docs:pending)', () => {
+  const current = readFileSync(PENDING_DOC, 'utf8');
+  expect(current, 'PENDING-PLACEHOLDERS.md is stale — run: npm run docs:pending').toBe(buildPendingDoc());
 });

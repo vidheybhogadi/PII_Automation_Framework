@@ -2,7 +2,8 @@
 import { createContext, type ComponentChildren } from 'preact';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { scopeTests } from '../../core/analytics';
-import { areaInfo } from '../../core/catalog';
+import { ENDPOINT_GROUP_ORDER } from '../../core/catalog';
+import { endpointOf, plainEndpoint } from './plain';
 import type { ReportData, ReportTest, TestStatus } from '../../core/types';
 import { buildHash, EMPTY_FILTERS, parseHash, prefersReducedMotion, storage, type Filters } from './utils';
 
@@ -13,6 +14,10 @@ export type Accent = (typeof ACCENTS)[number];
 /** "Not run" = blocked, fixme, skipped or unknown. */
 export const NOT_RUN: TestStatus[] = ['BLOCKED', 'FIXME', 'SKIPPED', 'UNKNOWN'];
 
+const GROUP_RANK = (key: string): number => {
+  const i = (ENDPOINT_GROUP_ORDER as readonly string[]).indexOf(key);
+  return i < 0 ? ENDPOINT_GROUP_ORDER.length : i;
+};
 const RANK: Record<TestStatus, number> = { FAIL: 0, BLOCKED: 1, FIXME: 1, UNKNOWN: 2, SKIPPED: 2, PASS: 3 };
 
 export interface Toast {
@@ -35,7 +40,7 @@ export interface AppState {
   service: ReportTest[];
   /** Framework self-tests, summarised separately. */
   selfTests: ReportTest[];
-  /** Service tests after the test-list filters, sorted failed → waiting → passed. */
+  /** Service tests after the test-list filters, grouped by endpoint (failed → waiting → passed inside each). */
   list: ReportTest[];
   byKey: Map<string, ReportTest>;
   filters: Filters;
@@ -66,10 +71,10 @@ export function useApp(): AppState {
 
 function matches(t: ReportTest, f: Filters): boolean {
   if (f.statuses.length && !f.statuses.includes(t.status)) return false;
-  if (f.area && t.area !== f.area) return false;
+  if (f.endpoint && endpointOf(t) !== f.endpoint) return false;
   if (f.q) {
     const hay =
-      `${t.id} ${t.title} ${areaInfo(t.area).label} ${t.status} ${t.apiCalls.map((c) => c.errorCode ?? '').join(' ')}`.toLowerCase();
+      `${t.id} ${t.title} ${plainEndpoint(endpointOf(t)).name} ${t.endpoints.join(' ')} ${t.status} ${t.apiCalls.map((c) => c.errorCode ?? '').join(' ')}`.toLowerCase();
     if (
       !f.q
         .toLowerCase()
@@ -132,18 +137,21 @@ export function AppProvider({
     return report.tests.filter((t) => !inScope.has(t));
   }, [report, service]);
   const byKey = useMemo(() => new Map(report.tests.map((t) => [t.key, t])), [report]);
-  // Same order everywhere (table, details panel, J/K): failed → waiting → passed, then by ID.
+  // Same order everywhere (table, details panel, J/K): by endpoint, then failed → waiting → passed, then ID.
   const list = useMemo(
     () =>
       service
         .filter((t) => matches(t, filters))
         .sort(
-          (a, b) => RANK[a.status] - RANK[b.status] || a.id.localeCompare(b.id, undefined, { numeric: true }),
+          (a, b) =>
+            GROUP_RANK(endpointOf(a)) - GROUP_RANK(endpointOf(b)) ||
+            RANK[a.status] - RANK[b.status] ||
+            a.id.localeCompare(b.id, undefined, { numeric: true }),
         ),
     [service, filters],
   );
 
-  // Shareable URL: #status=FAIL&q=…&area=…&test=<key>
+  // Shareable URL: #status=FAIL&q=…&endpoint=…&test=<key>
   useEffect(() => {
     if (isPrint) return;
     const h = buildHash(filters, ui.drawer);

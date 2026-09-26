@@ -1,4 +1,4 @@
-/** Single-page report: Summary → What needs attention → How each area did → All tests → About this run. */
+/** Single-page report: Summary → What needs attention → How each endpoint did → All tests → About this run. */
 import {
   countStatuses,
   evaluateGates,
@@ -16,14 +16,19 @@ import { Boundary, TipLayer } from './components/ui';
 import { useHotkeys } from './hooks';
 import { Logo } from './icons';
 import { About } from './sections/About';
-import { Areas } from './sections/Areas';
+import { Endpoints } from './sections/Endpoints';
 import { Attention } from './sections/Attention';
 import { Summary, headline } from './sections/Summary';
 import { TestList } from './sections/TestList';
 import { NOT_RUN, useApp } from './store';
 import { fmtDateTime } from './utils';
 
-const SECTION_KEYS: Record<string, string> = { '1': 'attention', '2': 'areas', '3': 'tests', '4': 'about' };
+const SECTION_KEYS: Record<string, string> = {
+  '1': 'attention',
+  '2': 'endpoints',
+  '3': 'tests',
+  '4': 'about',
+};
 
 /** PDF cover page (print mode only). */
 function Cover() {
@@ -124,8 +129,8 @@ export function App() {
         <Boundary name="What needs attention">
           <Attention />
         </Boundary>
-        <Boundary name="How each area did">
-          <Areas />
+        <Boundary name="How each endpoint did">
+          <Endpoints />
         </Boundary>
         <Boundary name="All tests">
           <TestList />

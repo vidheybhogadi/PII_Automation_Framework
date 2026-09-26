@@ -269,17 +269,16 @@ export function GuideModal() {
             <b>The big sentence at the top</b> tells you the result in one line.
           </li>
           <li>
-            <b>The score</b> (0–100) summarises how healthy the run was. Green numbers are good.
+            <b>The score</b> (0–100%) summarises how healthy the run was. Green numbers are good.
           </li>
           <li>
             <b>What needs attention</b> lists anything that failed or couldn’t run — start there.
           </li>
           <li>
-            <b>How each area did</b> shows security checks and features separately. Click a card to see its
-            tests.
+            <b>How each endpoint did</b> has one tile per API endpoint. Click a tile to see its test cases.
           </li>
           <li>
-            <b>All tests</b> is the full list. Click any test for details.
+            <b>All tests</b> is the full list, grouped under each endpoint. Click any test for details.
           </li>
         </ol>
         <div class="row row--wrap">

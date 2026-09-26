@@ -4,7 +4,7 @@ import { formatDuration } from '../../../core/analytics';
 import type { TestStatus } from '../../../core/types';
 import { EmptyState, Section, StatusBadge } from '../components/ui';
 import { Icon } from '../icons';
-import { plainArea, plainTitle } from '../plain';
+import { endpointOf, plainEndpoint, plainTitle } from '../plain';
 import { NOT_RUN, useApp } from '../store';
 import { isTypingTarget } from '../utils';
 
@@ -17,7 +17,7 @@ const TABS: { label: string; statuses: TestStatus[] }[] = [
 ];
 
 export function TestList() {
-  const { service, list, filters, setFilters, openTest, isPrint, ui } = useApp();
+  const { report, service, list, filters, setFilters, openTest, isPrint, ui } = useApp();
   const anyOverlay = ui.palette || ui.shortcuts || ui.guide || ui.methodology;
   // The page belongs to the current filters: new filters start at page 1 in the same render (no reset
   // effect that could race a quick ← / → key press).
@@ -57,16 +57,37 @@ export function TestList() {
 
   const sorted = list;
   // PDF: every non-passing test plus up to 150 passing ones (the full list is in results.csv).
-  const rows = isPrint
-    ? [
-        ...sorted.filter((t) => t.status !== 'PASS'),
-        ...sorted.filter((t) => t.status === 'PASS').slice(0, 150),
-      ]
-    : sorted.slice(page * PAGE, page * PAGE + PAGE);
+  // PDF: every non-passing test plus up to 150 passing ones, still grouped by endpoint (full list: results.csv).
+  const rows = useMemo(() => {
+    if (!isPrint) return sorted.slice(page * PAGE, page * PAGE + PAGE);
+    let passes = 0;
+    return sorted.filter((t) => t.status !== 'PASS' || passes++ < 150);
+  }, [sorted, isPrint, page]);
+  // Consecutive rows of the same endpoint form one headed group.
+  const groups = useMemo(() => {
+    const out: { endpoint: string; tests: typeof rows; continued: boolean }[] = [];
+    for (const t of rows) {
+      const ep = endpointOf(t);
+      const last = out[out.length - 1];
+      if (last && last.endpoint === ep) last.tests.push(t);
+      else out.push({ endpoint: ep, tests: [t], continued: false });
+    }
+    const first = out[0];
+    if (first && !isPrint && page > 0) {
+      const prev = sorted[page * PAGE - 1];
+      first.continued = Boolean(prev && endpointOf(prev) === first.endpoint);
+    }
+    return out;
+  }, [rows, sorted, page, isPrint]);
+  const totalFor = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const t of sorted) m.set(endpointOf(t), (m.get(endpointOf(t)) ?? 0) + 1);
+    return m;
+  }, [sorted]);
   const count = (st: TestStatus[]) =>
     st.length ? service.filter((t) => st.includes(t.status)).length : service.length;
   const activeTab = TABS.findIndex((t) => t.statuses.join() === filters.statuses.join());
-  const areaName = filters.area ? plainArea(filters.area).name : '';
+  const endpointName = filters.endpoint ? plainEndpoint(filters.endpoint).name : '';
   // Longest executed test — scales the small time bars.
   const slowest = useMemo(
     () =>
@@ -98,14 +119,14 @@ export function TestList() {
               </button>
             ))}
           </div>
-          {areaName && (
+          {endpointName && (
             <button
               class="chip"
               aria-pressed="true"
-              onClick={() => setFilters((f) => ({ ...f, area: '' }))}
-              aria-label={`Remove area filter ${areaName}`}
+              onClick={() => setFilters((f) => ({ ...f, endpoint: '' }))}
+              aria-label={`Remove endpoint filter ${endpointName}`}
             >
-              {areaName} <Icon name="x" size={12} />
+              {endpointName} <Icon name="x" size={12} />
             </button>
           )}
           <label class="search">
@@ -131,48 +152,65 @@ export function TestList() {
               <thead>
                 <tr>
                   <th scope="col">Result</th>
-                  <th scope="col">Test</th>
-                  <th scope="col">Area</th>
+                  <th scope="col">Test case</th>
                   <th scope="col" class="num">
                     Time
                   </th>
                 </tr>
               </thead>
-              <tbody>
-                {rows.map((t) => (
-                  <tr
-                    key={t.key}
-                    data-status={t.status}
-                    tabIndex={0}
-                    onClick={() => openTest(t.key)}
-                    onKeyDown={(e) => e.key === 'Enter' && openTest(t.key)}
-                    aria-label={`${t.id}: ${t.status}`}
-                  >
-                    <td>
-                      <StatusBadge status={t.status} />
-                    </td>
-                    <td>
-                      <div class="test-name">{plainTitle(t.title)}</div>
-                      <div class="xsmall faint mono">{t.id}</div>
-                    </td>
-                    <td>
-                      <span class="tag">{plainArea(t.area).name}</span>
-                    </td>
-                    <td class="num nowrap tabular">
-                      {t.status === 'PASS' || t.status === 'FAIL' ? (
-                        <span class="timecell">
-                          <span class="timebar" aria-hidden="true">
-                            <span style={{ width: `${Math.max(4, (t.durationMs / slowest) * 100)}%` }} />
+              {groups.map((g) => {
+                const ep = plainEndpoint(g.endpoint, report.endpoints);
+                return (
+                  <tbody key={`${g.endpoint}-${g.tests[0]?.key}`}>
+                    <tr class="group-row">
+                      <th scope="colgroup" colSpan={3}>
+                        <span class="group-row__inner">
+                          <span class="group-row__icon">
+                            <Icon name={ep.icon} size={15} />
                           </span>
-                          {formatDuration(t.durationMs)}
+                          <span class="group-row__name">{ep.name}</span>
+                          {ep.method && <span class={`method method--${ep.method}`}>{ep.method}</span>}
+                          <code class="group-row__path">{ep.path}</code>
+                          <span class="group-row__count">
+                            {totalFor.get(g.endpoint)} test{totalFor.get(g.endpoint) === 1 ? '' : 's'}
+                            {g.continued ? ' · continued' : ''}
+                          </span>
                         </span>
-                      ) : (
-                        <span class="faint">—</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
+                      </th>
+                    </tr>
+                    {g.tests.map((t) => (
+                      <tr
+                        key={t.key}
+                        data-status={t.status}
+                        tabIndex={0}
+                        onClick={() => openTest(t.key)}
+                        onKeyDown={(e) => e.key === 'Enter' && openTest(t.key)}
+                        aria-label={`${t.id}: ${t.status}`}
+                      >
+                        <td>
+                          <StatusBadge status={t.status} />
+                        </td>
+                        <td>
+                          <div class="test-name">{plainTitle(t.title)}</div>
+                          <div class="xsmall faint mono">{t.id}</div>
+                        </td>
+                        <td class="num nowrap tabular">
+                          {t.status === 'PASS' || t.status === 'FAIL' ? (
+                            <span class="timecell">
+                              <span class="timebar" aria-hidden="true">
+                                <span style={{ width: `${Math.max(4, (t.durationMs / slowest) * 100)}%` }} />
+                              </span>
+                              {formatDuration(t.durationMs)}
+                            </span>
+                          ) : (
+                            <span class="faint">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                );
+              })}
             </table>
           </div>
         )}

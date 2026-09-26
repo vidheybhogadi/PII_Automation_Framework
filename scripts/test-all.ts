@@ -4,7 +4,8 @@
  *   2. collect results        (reporting/collector → reports/latest/run-data.json, written by Playwright)
  *   3. generate analytics + HTML dashboard + run history + archive
  *   4. generate the PDF
- *   5. print artifact locations
+ *   5. refresh the test-case sheet (docs/test-cases.xlsx) with this run's results
+ *   6. print artifact locations
  * Exits with the TEST exit code (report generation never masks test failures).
  */
 import { spawnSync } from 'node:child_process';
@@ -18,7 +19,7 @@ async function main(): Promise<number> {
   const args = process.argv.slice(2).map((a) => (a.startsWith('--reporter=') ? `${a},${COLLECTOR}` : a));
   // Service tests only by default: framework self-tests belong to `npm run verify`, not to service reports.
   if (!args.some((a) => a === '--project' || a.startsWith('--project='))) args.unshift('--project=api');
-  console.log(`\n▶ 1/4 Running tests: playwright test ${args.join(' ')}\n`);
+  console.log(`\n▶ 1/5 Running tests: playwright test ${args.join(' ')}\n`);
   const run = spawnSync('npx', ['playwright', 'test', ...args], {
     cwd: ROOT,
     stdio: 'inherit',
@@ -26,17 +27,24 @@ async function main(): Promise<number> {
   });
   const testExit = run.status ?? 1;
 
-  console.log('\n▶ 2/4 Collected results: reports/latest/run-data.json');
-  console.log('▶ 3/4 Generating analytics + dashboard');
+  console.log('\n▶ 2/5 Collected results: reports/latest/run-data.json');
+  console.log('▶ 3/5 Generating analytics + dashboard');
   const { outDir } = await generate({ archive: true });
 
-  console.log('▶ 4/4 Generating PDF');
+  console.log('▶ 4/5 Generating PDF');
   try {
     const pdf = await exportPdf(outDir);
     console.log(`  PDF: ${path.relative(ROOT, pdf)}`);
   } catch (e) {
     console.error(`  PDF generation failed (dashboard is still available): ${(e as Error).message}`);
   }
+  console.log('▶ 5/5 Updating the test-case sheet (docs/test-cases.xlsx)');
+  const sheet = spawnSync('npx', ['tsx', 'scripts/generate-test-cases-xlsx.ts'], {
+    cwd: ROOT,
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+  });
+  if (sheet.status !== 0) console.error('  Test-case sheet was not updated (the report is unaffected).');
   console.log(
     `\n  Artifacts: ${path.relative(ROOT, PATHS.out)}/ (index.html, report.pdf, results.json, results.csv, summary.txt, data/)`,
   );

@@ -13,6 +13,7 @@ import path from 'node:path';
 import { ENDPOINT_KEYS, type EndpointKey } from '../clients/endpoints';
 import { Secret } from '../utils/secret';
 import { CALLER_ROLES, envSchema, type CallerRole, type RawEnv } from './env-schema';
+import { withoutPlaceholders } from './placeholders';
 
 export type { CallerRole } from './env-schema';
 
@@ -174,7 +175,8 @@ export function loadConfig(
   env: NodeJS.ProcessEnv = process.env,
   baseDir: string = process.cwd(),
 ): FrameworkConfig {
-  const parsed = envSchema.safeParse(env);
+  // PENDING_… dummies (values still owed by the backend team) count as unset.
+  const parsed = envSchema.safeParse(withoutPlaceholders(env));
   if (!parsed.success) {
     // Report variable names and the rule that failed — never the received value (it may be a secret).
     const problems = parsed.error.issues.map((i) => `  - ${i.path.join('.')}: ${i.message}`).join('\n');

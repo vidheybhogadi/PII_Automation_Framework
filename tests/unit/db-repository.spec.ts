@@ -122,4 +122,23 @@ test.describe('UNIT DB layer', () => {
     expect(err?.message).toContain('DB_NAME');
     expect(err?.message).toContain('DB_PASSWORD');
   });
+
+  test('UT-DB-008 A query that still contains a PENDING_ placeholder counts as not configured and never runs', async () => {
+    const adapter = new FakeAdapter([]);
+    const repo = new PiiRepository(
+      adapter,
+      parseQueryCatalog({
+        engine: 'postgres',
+        queries: {
+          findAuditEventsByRequestId: {
+            sql: 'SELECT PENDING_EVENT_TYPE_COL AS event_type FROM PENDING_AUDIT_TABLE WHERE PENDING_REQUEST_ID_COL = $1',
+            params: ['request_id'],
+          },
+        },
+      }),
+    );
+    expect(repo.has('findAuditEventsByRequestId')).toBe(false);
+    await expect(repo.findAuditEventsByRequestId('r')).rejects.toBeInstanceOf(DbQueryNotConfiguredError);
+    expect(adapter.calls).toHaveLength(0);
+  });
 });

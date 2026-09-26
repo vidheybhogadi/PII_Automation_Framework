@@ -16,6 +16,7 @@ import { readFileSync } from 'node:fs';
 import { z } from 'zod';
 import { formatZodIssues } from '../assertions/response.assertions';
 import { DbConfigError, assertReadOnlySql, type DbAdapter } from './db-adapter';
+import { PENDING_PREFIX } from '../config/placeholders';
 
 // ---- Catalog ------------------------------------------------------------------------------------
 export const QUERY_NAMES = [
@@ -135,7 +136,8 @@ export type AuditEventRow = z.infer<typeof auditEventRowSchema>;
 export class DbQueryNotConfiguredError extends DbConfigError {
   constructor(readonly queryName: QueryName) {
     super(
-      `DB query "${queryName}" is not defined in the SQL catalog (DB_QUERIES_FILE). Obtain the correct SQL ` +
+      `DB query "${queryName}" is not defined in the SQL catalog (DB_QUERIES_FILE), or still holds a PENDING_ ` +
+        `placeholder. Obtain the correct SQL ` +
         `from the PII backend team; required column aliases are listed in docs/database-setup.md.`,
     );
     this.name = 'DbQueryNotConfiguredError';
@@ -152,8 +154,10 @@ export class PiiRepository {
     }
   }
 
+  /** A query counts as configured only when it exists and holds no PENDING_ placeholder. */
   has(name: QueryName): boolean {
-    return Boolean(this.catalog.queries[name]);
+    const entry = this.catalog.queries[name];
+    return Boolean(entry) && !entry?.sql.includes(PENDING_PREFIX);
   }
 
   private async run<S extends z.ZodType>(
@@ -162,7 +166,7 @@ export class PiiRepository {
     rowSchema: S,
   ): Promise<z.infer<S>[]> {
     const entry = this.catalog.queries[name];
-    if (!entry) throw new DbQueryNotConfiguredError(name);
+    if (!entry || entry.sql.includes(PENDING_PREFIX)) throw new DbQueryNotConfiguredError(name);
     const params = entry.params.map((p) => args[p]);
     const rows = await this.adapter.query(entry.sql, params);
     return rows.map((row, index) => {

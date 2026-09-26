@@ -34,7 +34,7 @@ test.describe('REPORT UI — at a glance', () => {
     await expect(page.getByRole('button', { name: `Waiting: ${c.waiting}` })).toBeVisible();
     await expect(page.getByRole('button', { name: `Total: ${c.total}` })).toBeVisible();
     await expect(page.getByRole('img', { name: /Health score \d+% out of 100%/ })).toBeVisible();
-    for (const title of ['What needs attention', 'How each area did', 'All tests', 'About this run']) {
+    for (const title of ['What needs attention', 'How each endpoint did', 'All tests', 'About this run']) {
       await expect(page.getByRole('heading', { name: title, level: 2 })).toBeVisible();
     }
     expect(errors).toEqual([]);
@@ -56,17 +56,31 @@ test.describe('REPORT UI — at a glance', () => {
     await expect(drawer).toBeHidden();
   });
 
-  test('RPT-UI-003 area cards group security checks and features; clicking one filters the test list', async ({
+  test("RPT-UI-003 one tile per endpoint; clicking one shows only that endpoint's test cases under its heading", async ({
     page,
   }) => {
     await openReport(page, FIXTURES.demo);
-    await expect(page.locator('#areas')).toContainText('Security checks');
-    await expect(page.locator('#areas')).toContainText('Features');
-    await page.getByRole('button', { name: /^Permissions:/ }).click();
-    await expect(page.getByRole('button', { name: 'Remove area filter Permissions' })).toBeVisible();
-    const rows = page.locator('#tests tbody tr');
-    await expect(rows.first()).toContainText('Permissions');
-    expect(await rows.count()).toBe(12);
+    const tiles = page.locator('#endpoints .area');
+    await expect(tiles).toHaveCount(12); // 11 endpoints + "Across endpoints"
+    await expect(page.locator('#endpoints')).toContainText('/api/v1/pii/read');
+    await expect(page.locator('#endpoints')).not.toContainText('Security checks');
+    await page.getByRole('button', { name: /^Read PII:/ }).click();
+    await expect(page.getByRole('button', { name: 'Remove endpoint filter Read PII' })).toBeVisible();
+    const headings = page.locator('#tests tr.group-row');
+    await expect(headings).toHaveCount(1);
+    await expect(headings.first()).toContainText('Read PII');
+    await expect(headings.first()).toContainText('POST');
+    await expect(page.locator('#tests tbody tr[data-status]')).toHaveCount(15);
+  });
+
+  test("RPT-UI-003b all tests are listed under endpoint headings, in the guide's endpoint order", async ({
+    page,
+  }) => {
+    await openReport(page, FIXTURES.demo);
+    const first = page.locator('#tests tr.group-row').first();
+    await expect(first).toContainText('Health check');
+    await expect(first).toContainText('/health/ready');
+    await expect(page.locator('#tests tr.group-row').nth(1)).toContainText('Save PII');
   });
 
   test('RPT-UI-004 test list: tabs, search, pagination, open details', async ({ page }) => {
@@ -74,14 +88,14 @@ test.describe('REPORT UI — at a glance', () => {
     const c = counts();
     const tests = page.locator('#tests');
     await tests.scrollIntoViewIfNeeded();
-    await expect(tests.locator('tbody tr')).toHaveCount(20);
+    await expect(tests.locator('tbody tr[data-status]')).toHaveCount(20);
     await expect(tests.locator('.pagination')).toContainText(`1–20 of ${c.total}`);
     await tests.getByRole('button', { name: /^Failed/ }).click();
-    await expect(tests.locator('tbody tr')).toHaveCount(c.fail);
+    await expect(tests.locator('tbody tr[data-status]')).toHaveCount(c.fail);
     await tests.getByRole('button', { name: /^All/ }).click();
     await tests.getByRole('searchbox', { name: 'Search tests' }).fill('AUTH-018');
-    await expect(tests.locator('tbody tr')).toHaveCount(1);
-    await tests.locator('tbody tr').first().click();
+    await expect(tests.locator('tbody tr[data-status]')).toHaveCount(1);
+    await tests.locator('tbody tr[data-status]').first().click();
     await expect(page.locator('.drawer')).toContainText('PII-AUTH-018');
   });
 });
@@ -159,7 +173,7 @@ test.describe('REPORT UI — look & feel', () => {
 
     for (const [key, id] of [
       ['1', 'attention'],
-      ['2', 'areas'],
+      ['2', 'endpoints'],
       ['3', 'tests'],
     ] as const) {
       await page.keyboard.press(key);
@@ -168,7 +182,7 @@ test.describe('REPORT UI — look & feel', () => {
     await page.keyboard.press('0');
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 
-    const rows = page.locator('#tests tbody tr');
+    const rows = page.locator('#tests tbody tr[data-status]');
     await page.keyboard.press('f');
     await expect(rows).toHaveCount(c.fail);
     await page.keyboard.press('w');
@@ -260,7 +274,7 @@ test.describe('REPORT UI — honest states', () => {
     const start = Date.now();
     const errors = await openReport(page, FIXTURES.large);
     expect(Date.now() - start).toBeLessThan(15_000);
-    await expect(page.locator('#tests tbody tr')).toHaveCount(20);
+    await expect(page.locator('#tests tbody tr[data-status]')).toHaveCount(20);
     await expect(page.locator('#tests .pagination')).toContainText(
       `of ${serviceTests(FIXTURES.large).length}`,
     );
@@ -271,7 +285,8 @@ test.describe('REPORT UI — honest states', () => {
 test.describe('REPORT UI — privacy & accessibility', () => {
   test('RPT-UI-030 injected PII / secrets never reach the page or any output file', async ({ page }) => {
     await openReport(page, FIXTURES.redaction);
-    await page.locator('#tests tbody tr').first().click();
+    // Open a failed test: its details include the (scrubbed) technical error message.
+    await page.locator('#tests tbody tr[data-status="FAIL"]').first().click();
     await page.getByText('Technical error message').click();
     const html = await page.content();
     const files = [

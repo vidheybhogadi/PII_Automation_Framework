@@ -7,15 +7,15 @@ and never contains personal data.
 
 ## What’s on the page
 
-The top bar links straight to each part (Summary · Problems · Areas · Tests · About) and highlights where you are.
+The top bar links straight to each part (Summary · Problems · Endpoints · Tests · About) and highlights where you are.
 
-| Block                         | What it tells you                                                                                                                                                                                                                                                                  |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Summary**                   | A coloured banner: a status pill (“Needs attention”, “All clear”, “Service unreachable”, “Service not tested”), one plain sentence with the answer, four big numbers (Passed · Failed · Waiting · Total), one bar, “vs last run” and the **health score** speedometer (0–100%).    |
-| **01 · What needs attention** | One card per failure showing the area, whether it is critical, and **Expected → Got** side by side. Below that, one card for checks waiting on backend answers, with the question IDs. If the service was unreachable you see **one** clear message instead of dozens of failures. |
-| **02 · How each area did**    | A tile per area with a ring and a pass percentage, grouped into **Security checks** and **Features**, arranged so rows are always even. Click a tile to see its tests.                                                                                                             |
-| **03 · All tests**            | The full list: tabs (All · Failed · Waiting · Passed), search, a coloured edge on failed and waiting rows, and a small bar showing each test’s duration. Click any row for details.                                                                                                |
-| **04 · About this run**       | Environment, time, duration, typical response time, framework self-test result, leftover test data and commit.                                                                                                                                                                     |
+| Block                          | What it tells you                                                                                                                                                                                                                                                                                           |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Summary**                    | A coloured banner: a status pill (“Needs attention”, “All clear”, “Service unreachable”, “Service not tested”), one plain sentence with the answer, four big numbers (Passed · Failed · Waiting · Total), one bar, “vs last run” and the **health score** speedometer (0–100%).                             |
+| **01 · What needs attention**  | One card per failure showing the endpoint (name, method, path), whether it is critical, and **Expected → Got** side by side. Below that, one card for checks waiting on backend answers, with the question IDs. If the service was unreachable you see **one** clear message instead of dozens of failures. |
+| **02 · How each endpoint did** | One tile per API endpoint (name, method and path) with a ring and a pass percentage, plus “Across endpoints” for checks that span several. Click a tile to see its test cases.                                                                                                                              |
+| **03 · All tests**             | The full list, **grouped under a heading per endpoint**: tabs (All · Failed · Waiting · Passed), search, a coloured edge on failed and waiting rows, and a small bar showing each test’s duration. Click any row for details.                                                                               |
+| **04 · About this run**        | Environment, time, duration, typical response time, framework self-test result, leftover test data and commit.                                                                                                                                                                                              |
 
 Also on the page: light, dark and auto themes; six accent colours; a floating quick-action bar whose last button
 folds it away (back-to-top only appears once you scroll); and Export (PDF, CSV, JSON, Slack/ClickUp summary).
@@ -75,10 +75,13 @@ Playwright run ─▶ reporting/collector  (allow-listed, sanitized)  ─▶ rep
 
 ## Screenshots
 
-|                                     |                                        |
-| ----------------------------------- | -------------------------------------- |
-| ![](screenshots/02-report-dark.png) | ![](screenshots/03-test-details.png)   |
-| ![](screenshots/04-areas-dark.png)  | ![](screenshots/05-dock-collapsed.png) |
-| ![](screenshots/06-mobile.png)      | ![](screenshots/07-real-run.png)       |
+|                                        |                                        |
+| -------------------------------------- | -------------------------------------- |
+| ![](screenshots/02-report-dark.png)    | ![](screenshots/03-test-details.png)   |
+| ![](screenshots/04-endpoints-dark.png) | ![](screenshots/05-dock-collapsed.png) |
+| ![](screenshots/06-mobile.png)         | ![](screenshots/07-real-run.png)       |
 
 Screenshots 01–06 use demo data. Screenshot 07 is a real local run where only the framework self-tests ran.
+
+The same endpoint grouping is used in [test-cases.xlsx](test-cases.xlsx): a Summary tab, an “All test cases” tab
+with a heading per endpoint, and one tab per endpoint.

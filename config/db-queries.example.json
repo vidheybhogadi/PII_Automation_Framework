@@ -1,7 +1,7 @@
 {
   "$comment": [
     "TEMPLATE ONLY. The PII service's database schema is NOT documented in the integration guide.",
-    "Copy to config/db-queries.json (git-ignored) and replace every <PLACEHOLDER> with SQL confirmed by the PII backend team.",
+    "Copy to config/db-queries.json (git-ignored) and replace every PENDING_… placeholder with the table/column names confirmed by the PII backend team (Q-03). A query that still contains PENDING_ is treated as not configured.",
     "Rules: read-only SELECT/WITH only; one statement; bind params with the engine's placeholders ($1.. for postgres, ? for mysql);",
     "'params' lists the named parameters in placeholder order; each query MUST return the column aliases listed in docs/database-setup.md.",
     "Set a query to null if it cannot be supported; dependent DB tests then fail with an actionable message."
@@ -9,17 +9,20 @@
   "engine": "postgres",
   "queries": {
     "findPiiRecords": {
-      "sql": "SELECT <tenant_col> AS tenant_id, <user_col> AS user_id, <field_col> AS field, <ciphertext_col> AS encrypted_value, <key_version_col> AS key_version FROM <pii_table> WHERE <tenant_col> = $1 AND <user_col> = $2 AND <field_col> = $3",
+      "sql": "SELECT PENDING_TENANT_COL AS tenant_id, PENDING_USER_COL AS user_id, PENDING_FIELD_COL AS field, PENDING_CIPHERTEXT_COL AS encrypted_value, PENDING_KEY_VERSION_COL AS key_version FROM PENDING_PII_TABLE WHERE PENDING_TENANT_COL = $1 AND PENDING_USER_COL = $2 AND PENDING_FIELD_COL = $3",
       "params": ["tenant_id", "user_id", "field"]
     },
     "findTransientPhone": {
-      "sql": "SELECT <tenant_col> AS tenant_id, <caller_col> AS caller_id, <ciphertext_col> AS encrypted_value, <expires_col> AS expires_at, (<consumed_col> IS NOT NULL) AS is_consumed FROM <transient_table> WHERE <id_col> = $1",
+      "sql": "SELECT PENDING_TENANT_COL AS tenant_id, PENDING_CALLER_COL AS caller_id, PENDING_CIPHERTEXT_COL AS encrypted_value, PENDING_EXPIRES_COL AS expires_at, (PENDING_CONSUMED_COL IS NOT NULL) AS is_consumed FROM PENDING_TRANSIENT_TABLE WHERE PENDING_ID_COL = $1",
       "params": ["transient_id"]
     },
     "findFreeTextKey": {
-      "sql": "SELECT <tenant_col> AS tenant_id, <caller_col> AS caller_id, <status_col> AS status, <revoked_at_col> AS revoked_at, <wrapped_key_col> AS encrypted_key_material FROM <free_text_key_table> WHERE <id_col> = $1",
+      "sql": "SELECT PENDING_TENANT_COL AS tenant_id, PENDING_CALLER_COL AS caller_id, PENDING_STATUS_COL AS status, PENDING_REVOKED_AT_COL AS revoked_at, PENDING_WRAPPED_KEY_COL AS encrypted_key_material FROM PENDING_FREE_TEXT_KEY_TABLE WHERE PENDING_ID_COL = $1",
       "params": ["key_id"]
     },
-    "findAuditEventsByRequestId": null
+    "findAuditEventsByRequestId": {
+      "sql": "SELECT PENDING_EVENT_TYPE_COL AS event_type FROM PENDING_AUDIT_TABLE WHERE PENDING_REQUEST_ID_COL = $1",
+      "params": ["request_id"]
+    }
   }
 }

@@ -1,5 +1,5 @@
 /** Browser utilities: downloads, clipboard, URL-hash state, safe storage, formatting. */
-import type { AreaKey, TestStatus } from '../../core/types';
+import type { TestStatus } from '../../core/types';
 
 export const STORAGE_PREFIX = 'pii-sentinel:';
 
@@ -57,20 +57,21 @@ export async function copyText(text: string): Promise<boolean> {
 /** Test-list filters. */
 export interface Filters {
   statuses: TestStatus[];
-  area: AreaKey | '';
+  /** Endpoint key, e.g. "writePii" ('' = all endpoints). */
+  endpoint: string;
   q: string;
 }
 
-export const EMPTY_FILTERS: Filters = { statuses: [], area: '', q: '' };
+export const EMPTY_FILTERS: Filters = { statuses: [], endpoint: '', q: '' };
 
-/** Hash format: #status=FAIL,BLOCKED&area=authentication&q=…&test=<key> */
+/** Hash format: #status=FAIL,BLOCKED&endpoint=writePii&q=…&test=<key> */
 export function parseHash(hash: string): { filters: Filters; test: string | null } {
   const p = new URLSearchParams(hash.replace(/^#/, ''));
   return {
     test: p.get('test'),
     filters: {
       statuses: (p.get('status') ?? '').split(',').filter(Boolean) as TestStatus[],
-      area: (p.get('area') ?? '') as AreaKey | '',
+      endpoint: p.get('endpoint') ?? '',
       q: p.get('q') ?? '',
     },
   };
@@ -79,7 +80,7 @@ export function parseHash(hash: string): { filters: Filters; test: string | null
 export function buildHash(f: Filters, test: string | null): string {
   const p = new URLSearchParams();
   if (f.statuses.length) p.set('status', f.statuses.join(','));
-  if (f.area) p.set('area', f.area);
+  if (f.endpoint) p.set('endpoint', f.endpoint);
   if (f.q) p.set('q', f.q);
   if (test) p.set('test', test);
   const q = p.toString();

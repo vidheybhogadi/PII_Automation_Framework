@@ -38,7 +38,9 @@
     "report:demo-data": "tsx reporting/fixtures/generate-demo-data.ts",
     "report:test": "playwright test --config reporting/tests/playwright.config.ts",
     "report:playwright": "playwright show-report reports/html",
-    "docs:traceability": "tsx reporting/generator/traceability-doc.ts && prettier --write docs/requirements-traceability.md"
+    "docs:traceability": "tsx reporting/generator/traceability-doc.ts && prettier --write docs/requirements-traceability.md",
+    "docs:testcases": "tsx scripts/generate-test-cases-xlsx.ts",
+    "docs:pending": "tsx scripts/generate-pending-doc.ts"
   },
   "dependencies": {
     "axios": "1.20.0",
@@ -55,6 +57,7 @@
     "esbuild": "0.28.2",
     "eslint": "9.39.5",
     "eslint-config-prettier": "10.1.8",
+    "exceljs": "^4.4.0",
     "globals": "17.12.0",
     "preact": "10.29.8",
     "prettier": "3.9.9",

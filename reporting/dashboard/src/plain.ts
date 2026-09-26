@@ -1,112 +1,57 @@
 /** Plain-English names for everything a reader sees. The report avoids jargon; technical terms stay in tooltips. */
-import type { AreaKey } from '../../core/types';
+import { CROSS_ENDPOINT, ENDPOINT_DESCRIPTIONS, primaryEndpoint } from '../../core/catalog';
+import type { EndpointInfo, ReportTest } from '../../core/types';
 
-export interface PlainArea {
+export interface PlainEndpoint {
+  key: string;
+  /** Short friendly name, e.g. "Save PII". */
   name: string;
-  /** One short sentence: what "passing" means for this area. */
+  /** What the endpoint does, in one line. */
   means: string;
-  group: 'security' | 'features';
+  method: string;
+  path: string;
   icon: string;
 }
 
-export const PLAIN_AREAS: Partial<Record<AreaKey, PlainArea>> = {
-  authentication: {
-    name: 'Request signing',
-    means: 'Only signed, untampered requests are accepted',
-    group: 'security',
-    icon: 'signature',
-  },
-  authorization: {
-    name: 'Permissions',
-    means: 'Each caller can only do what it is allowed to',
-    group: 'security',
-    icon: 'key',
-  },
-  tenantIsolation: {
-    name: 'Tenant isolation',
-    means: 'One customer’s data never leaks to another',
-    group: 'security',
-    icon: 'users',
-  },
-  database: {
-    name: 'Encrypted storage',
-    means: 'Data is stored locked, against the right person',
-    group: 'security',
-    icon: 'database',
-  },
-  responseSecurity: {
-    name: 'Leak protection',
-    means: 'No personal data in errors, logs or caches',
-    group: 'security',
-    icon: 'eyeOff',
-  },
-  poc: {
-    name: 'End-to-end check',
-    means: 'Save → store encrypted → read back works',
-    group: 'security',
-    icon: 'route',
-  },
-  write: {
-    name: 'Saving data',
-    means: 'Personal data can be created and updated',
-    group: 'features',
-    icon: 'zap',
-  },
-  read: {
-    name: 'Reading data',
-    means: 'Stored data is returned correctly',
-    group: 'features',
-    icon: 'search',
-  },
-  search: {
-    name: 'Search',
-    means: 'People can be found by email or phone',
-    group: 'features',
-    icon: 'search',
-  },
-  batch: {
-    name: 'Bulk read',
-    means: 'Many people can be read in one request',
-    group: 'features',
-    icon: 'layers',
-  },
-  normalization: {
-    name: 'Data clean-up',
-    means: 'Emails, phones and names are tidied consistently',
-    group: 'features',
-    icon: 'sparkles',
-  },
-  transient: {
-    name: 'Temporary phones',
-    means: 'Short-lived phone numbers work and expire safely',
-    group: 'features',
-    icon: 'clock',
-  },
-  freeText: {
-    name: 'Encryption keys',
-    means: 'Keys can be issued, read and revoked',
-    group: 'features',
-    icon: 'lock',
-  },
-  contract: {
-    name: 'API contract',
-    means: 'Responses match the documented format',
-    group: 'features',
-    icon: 'requirement',
-  },
-  health: {
-    name: 'Service health',
-    means: 'The service reports that it is ready',
-    group: 'features',
-    icon: 'activity',
-  },
+const NAMES: Record<string, [string, string]> = {
+  healthReady: ['Health check', 'activity'],
+  writePii: ['Save PII', 'zap'],
+  readPii: ['Read PII', 'search'],
+  searchPii: ['Search PII', 'search'],
+  batchReadPii: ['Bulk read PII', 'layers'],
+  createTransientPhone: ['Create temporary phone', 'clock'],
+  resolveTransientPhone: ['Look up temporary phone', 'clock'],
+  promoteTransientPhone: ['Promote temporary phone', 'clock'],
+  createFreeTextKey: ['Create encryption key', 'key'],
+  readFreeTextKey: ['Read encryption key', 'key'],
+  revokeFreeTextKey: ['Revoke encryption key', 'key'],
+  [CROSS_ENDPOINT]: ['Across endpoints', 'route'],
 };
 
-export function plainArea(key: AreaKey): PlainArea {
-  return (
-    PLAIN_AREAS[key] ?? { name: 'Other checks', means: 'Additional checks', group: 'features', icon: 'box' }
-  );
+export function plainEndpoint(key: string, endpoints: readonly EndpointInfo[] = []): PlainEndpoint {
+  const [name, icon] = NAMES[key] ?? [key, 'box'];
+  const info = endpoints.find((e) => e.key === key);
+  if (key === CROSS_ENDPOINT)
+    return {
+      key,
+      name,
+      icon,
+      method: '',
+      path: 'several endpoints',
+      means: 'Checks that span several or all endpoints',
+    };
+  return {
+    key,
+    name,
+    icon,
+    method: info?.method ?? 'POST',
+    path: info?.path ?? '',
+    means: info?.description ?? ENDPOINT_DESCRIPTIONS[key] ?? '',
+  };
 }
+
+/** The endpoint heading a test is listed under. */
+export const endpointOf = (t: ReportTest): string => primaryEndpoint(t.endpoints);
 
 /** "PII-WR-001 creating a new field returns 201 …" → "Creating a new field returns 201 …" */
 export function plainTitle(title: string): string {

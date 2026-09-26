@@ -55,7 +55,7 @@ PII_Automation_Framework/
 │   ├── security/                     44 signing · permissions · tenant isolation · leak protection
 │   ├── contract/                     5  responses match the documented format
 │   ├── db/                           7  data is encrypted in the database
-│   └── unit/                         78 self-tests of the framework itself (no service needed)
+│   └── unit/                         81 self-tests of the framework itself (no service needed)
 │
 ├── src/                            THE FRAMEWORK: reusable code the tests are built on
 │   ├── clients/                      talks to the service
@@ -78,7 +78,7 @@ PII_Automation_Framework/
 │   ├── collector/                    plugs into Playwright; records results with no personal data
 │   ├── generator/                    turns results into the report page, history and PDF
 │   ├── dashboard/src/                the report page itself (Preact + CSS)
-│   │   ├── sections/                   Summary · What needs attention · Areas · All tests · About
+│   │   ├── sections/                   Summary · What needs attention · Endpoints · All tests · About
 │   │   ├── components/                 speedometer, rings, top bar, test details panel, dialogs
 │   │   └── styles/                     colours, light/dark themes, print/PDF layout
 │   ├── core/                         shared logic: health score, statuses, data scrubbing, exports
@@ -92,11 +92,13 @@ PII_Automation_Framework/
 │   └── generate-caller-keypair.ts    creates a key pair for a calling app
 │
 ├── docs/                           DETAILED GUIDES (setup, scenarios, open questions…)
+│   └── test-cases.xlsx               ALL TEST CASES in Excel, grouped by endpoint (npm run docs:testcases)
 ├── config/db-queries.example.json  template for database queries (copy to db-queries.json)
 ├── test-data/                      intentionally empty: all data is generated at runtime
 ├── .github/workflows/              CI: checks every pull request; service tests on demand
 │
-├── .env.example                    settings template (placeholders only)
+├── .env.example                    settings template: PENDING_… dummies for everything still owed by Dev
+├── PENDING-PLACEHOLDERS.md         EVERY PENDING PLACEHOLDER, where it is, who provides it (npm run docs:pending)
 ├── playwright.config.ts            test runner: projects (unit / api), timeouts, reporters
 └── package.json                    libraries and every npm command
 ```
@@ -106,14 +108,15 @@ PDFs, history) · `test-results/` (per-test logs) · `node_modules/`.
 
 ### Where to go when you want to…
 
-| …                            | go to                                             |
-| ---------------------------- | ------------------------------------------------- |
-| add or change a test         | `tests/<area>/…spec.ts`                           |
-| call an endpoint differently | `src/clients/pii-client.ts`                       |
-| change an expected response  | `src/models/`                                     |
-| add a setting                | `src/config/env-schema.ts` + `.env.example`       |
-| change the report's look     | `reporting/dashboard/src/` (`npm run report:dev`) |
-| change health-score weights  | `reporting/config/report-config.json`             |
+| …                            | go to                                                    |
+| ---------------------------- | -------------------------------------------------------- |
+| add or change a test         | `tests/<area>/…spec.ts`                                  |
+| see every test case in Excel | `docs/test-cases.xlsx` (refreshed by `npm run test:all`) |
+| call an endpoint differently | `src/clients/pii-client.ts`                              |
+| change an expected response  | `src/models/`                                            |
+| add a setting                | `src/config/env-schema.ts` + `.env.example`              |
+| change the report's look     | `reporting/dashboard/src/` (`npm run report:dev`)        |
+| change health-score weights  | `reporting/config/report-config.json`                    |
 
 ---
 
@@ -154,7 +157,7 @@ test(
 
 ```bash
 npm ci && npx playwright install chromium
-npm run verify                     # 78 self-tests → "78 passed"
+npm run verify                     # 81 self-tests → "81 passed"
 npm run report:demo && npm run report:open -- --demo    # sample report (made-up data)
 ```
 
@@ -179,8 +182,8 @@ Subsets: `npm run test:all -- --grep @smoke` · one test: `npx playwright test -
 
 - **Banner**: the answer in one sentence, four numbers, and a **health score** speedometer (0–100%)
 - **01 What needs attention**: each failure as **Expected → Got**, plus checks waiting on the backend
-- **02 How each area did**: a tile per area; click one to see its tests
-- **03 All tests**: full list with search; click a row for details
+- **02 How each endpoint did**: one tile per endpoint (method + path); click one to see its test cases
+- **03 All tests**: every test case under a heading per endpoint, with search; click a row for details
 - **04 About this run**: environment, time, duration
 
 **Keyboard shortcuts** (press `?` in the report):
@@ -210,12 +213,12 @@ More: [docs/reporting.md](docs/reporting.md).
 
 ## Status and docs
 
-| Part                 | Tests | Status                                                         |
-| -------------------- | :---: | -------------------------------------------------------------- |
-| Framework self-tests |  78   | all passing                                                    |
-| Report tests         |  46   | all passing                                                    |
-| PII service tests    |  133  | written; **not yet run against a real service** (needs access) |
+| Part                 | Tests | Status                                                                                                                      |
+| -------------------- | :---: | --------------------------------------------------------------------------------------------------------------------------- |
+| Framework self-tests |  81   | all passing                                                                                                                 |
+| Report tests         |  47   | all passing                                                                                                                 |
+| PII service tests    |  133  | written; **not yet run against a real service**: waiting on the items in [PENDING-PLACEHOLDERS.md](PENDING-PLACEHOLDERS.md) |
 
-[Setup](docs/setup-guide.md) · [Commands](docs/execution-guide.md) · [Test scenarios](docs/test-scenarios.md) ·
+[Pending placeholders](PENDING-PLACEHOLDERS.md) · [Test cases (Excel)](docs/test-cases.xlsx) · [Setup](docs/setup-guide.md) · [Commands](docs/execution-guide.md) · [Test scenarios](docs/test-scenarios.md) ·
 [Open questions](docs/known-gaps-and-questions.md) · [Architecture](docs/framework-architecture.md) ·
 [Database](docs/database-setup.md) · [Troubleshooting](docs/troubleshooting.md)

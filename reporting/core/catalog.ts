@@ -270,6 +270,33 @@ export function endpointsForId(id: string, area: AreaKey): string[] {
   return ENDPOINT_OVERRIDES[id] ?? AREA_DEFAULT_ENDPOINTS[area] ?? [];
 }
 
+/** Group key for tests that exercise several (3+) or no specific endpoints, e.g. "every endpoint rejects…". */
+export const CROSS_ENDPOINT = 'crossEndpoint';
+
+/** Display order of endpoint groups: the guide's endpoint order, then cross-endpoint. */
+export const ENDPOINT_GROUP_ORDER = [
+  'healthReady',
+  'writePii',
+  'readPii',
+  'searchPii',
+  'batchReadPii',
+  'createTransientPhone',
+  'resolveTransientPhone',
+  'promoteTransientPhone',
+  'createFreeTextKey',
+  'readFreeTextKey',
+  'revokeFreeTextKey',
+  CROSS_ENDPOINT,
+] as const;
+
+/**
+ * The endpoint a test belongs under: its first mapped endpoint (the one it mainly tests), or CROSS_ENDPOINT
+ * when it spans 3+ endpoints or none. Used by the report and by docs/test-cases.xlsx so both group alike.
+ */
+export function primaryEndpoint(endpoints: readonly string[]): string {
+  return endpoints.length === 0 || endpoints.length > 2 ? CROSS_ENDPOINT : (endpoints[0] as string);
+}
+
 /** Resolve a TestRef against a set of known IDs. */
 export function matchesRef(id: string, ref: TestRef): boolean {
   return ref.endsWith('*') ? id.startsWith(ref.slice(0, -1)) : id === ref;

@@ -9,12 +9,12 @@ import {
 } from '../../../core/analytics';
 import { EmptyState, Section } from '../components/ui';
 import { Icon } from '../icons';
-import { plainArea, plainTitle } from '../plain';
+import { endpointOf, plainEndpoint, plainTitle } from '../plain';
 import { NOT_RUN, useApp } from '../store';
 import { plural } from '../utils';
 
 export function Attention() {
-  const { service, openTest, showTests } = useApp();
+  const { report, service, openTest, showTests } = useApp();
   const [showAll, setShowAll] = useState(false);
   const preflight = useMemo(() => preflightFailures(service), [service]);
   const failures = useMemo(
@@ -76,7 +76,7 @@ export function Attention() {
           )}
 
           {shown.map((f) => {
-            const area = plainArea(f.test.area);
+            const ep = plainEndpoint(endpointOf(f.test), report.endpoints);
             return (
               <button
                 key={f.test.key}
@@ -85,8 +85,9 @@ export function Attention() {
               >
                 <span class="problem__top">
                   <span class="problem__area">
-                    <Icon name={area.icon} size={14} />
-                    {area.name}
+                    <Icon name={ep.icon} size={14} />
+                    {ep.name}
+                    {ep.method && <span class="problem__path">{`${ep.method} ${ep.path}`}</span>}
                   </span>
                   {f.test.severity === 'critical' && <span class="sev">Critical</span>}
                   <Icon name="chevronRight" size={16} class="problem__go" />

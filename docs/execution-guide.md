@@ -2,32 +2,34 @@
 
 ## Commands
 
-| Command                                 | Runs                                                               |
-| --------------------------------------- | ------------------------------------------------------------------ |
-| `npm run verify`                        | typecheck + lint + format check + unit tests (no service)          |
-| `npm run test:unit`                     | framework self-tests only (no service, no .env)                    |
-| `npm run test:api`                      | all integration tests against `PII_BASE_URL`                       |
-| `npm run test:poc`                      | POC-001 (Write → DB → Read)                                        |
-| `npm run test:smoke`                    | `@smoke` critical path (15 tests)                                  |
-| `npm run test:regression`               | `@regression` (all functional)                                     |
-| `npm run test:security`                 | `@security` (auth, authz, tenant isolation, response security)     |
-| `npm run test:db`                       | `@db` (needs DB config)                                            |
-| `npm run test:debug`                    | integration tests, 1 worker, no retries, redacted logs to console  |
-| `npm test`                              | unit + integration                                                 |
-| `npm run test:list`                     | list all tests without running                                     |
-| `npm run test:all`                      | tests → dashboard → history → PDF (see docs/reporting.md)          |
-| `npm run report`                        | PII Sentinel dashboard from the last run → `reports/qa-report`     |
-| `npm run report:pdf`                    | programmatic PDF of the dashboard                                  |
-| `npm run report:open`                   | open the latest report (`-- --demo` opens the demo report)         |
-| `npm run report:demo`                   | sample report + PDF from made-up DEMO data → `reports/demo-report` |
-| `npm run report:dev`                    | live preview while editing the report's design                     |
-| `npm run report:test`                   | tests for the report itself                                        |
-| `npm run report:clean`                  | delete generated reports (`-- --all` also deletes run history)     |
-| `npm run report:playwright`             | Playwright's raw HTML report (`reports/html`)                      |
-| `npm run check-env`                     | validate `.env` and send one signed probe per caller               |
-| `npm run keys:generate -- <path>`       | create an Ed25519 caller key pair (`<path>.pem` + `.pub.pem`)      |
-| `npm run typecheck` / `lint` / `format` | code checks and formatting                                         |
-| `npm run docs:traceability`             | regenerate `docs/requirements-traceability.md`                     |
+| Command                                 | Runs                                                                                      |
+| --------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `npm run verify`                        | typecheck + lint + format check + unit tests (no service)                                 |
+| `npm run test:unit`                     | framework self-tests only (no service, no .env)                                           |
+| `npm run test:api`                      | all integration tests against `PII_BASE_URL`                                              |
+| `npm run test:poc`                      | POC-001 (Write → DB → Read)                                                               |
+| `npm run test:smoke`                    | `@smoke` critical path (15 tests)                                                         |
+| `npm run test:regression`               | `@regression` (all functional)                                                            |
+| `npm run test:security`                 | `@security` (auth, authz, tenant isolation, response security)                            |
+| `npm run test:db`                       | `@db` (needs DB config)                                                                   |
+| `npm run test:debug`                    | integration tests, 1 worker, no retries, redacted logs to console                         |
+| `npm test`                              | unit + integration                                                                        |
+| `npm run test:list`                     | list all tests without running                                                            |
+| `npm run test:all`                      | tests → dashboard → history → PDF (see docs/reporting.md)                                 |
+| `npm run report`                        | PII Sentinel dashboard from the last run → `reports/qa-report`                            |
+| `npm run report:pdf`                    | programmatic PDF of the dashboard                                                         |
+| `npm run report:open`                   | open the latest report (`-- --demo` opens the demo report)                                |
+| `npm run report:demo`                   | sample report + PDF from made-up DEMO data → `reports/demo-report`                        |
+| `npm run report:dev`                    | live preview while editing the report's design                                            |
+| `npm run report:test`                   | tests for the report itself                                                               |
+| `npm run report:clean`                  | delete generated reports (`-- --all` also deletes run history)                            |
+| `npm run report:playwright`             | Playwright's raw HTML report (`reports/html`)                                             |
+| `npm run check-env`                     | validate `.env` and send one signed probe per caller                                      |
+| `npm run keys:generate -- <path>`       | create an Ed25519 caller key pair (`<path>.pem` + `.pub.pem`)                             |
+| `npm run typecheck` / `lint` / `format` | code checks and formatting                                                                |
+| `npm run docs:pending`                  | rebuild `PENDING-PLACEHOLDERS.md`: every placeholder still owed by Dev and where it is    |
+| `npm run docs:testcases`                | rebuild `docs/test-cases.xlsx`: every test case grouped by endpoint, with the last result |
+| `npm run docs:traceability`             | regenerate `docs/requirements-traceability.md`                                            |
 
 Useful Playwright options (append after `--`):
 

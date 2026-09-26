@@ -1114,40 +1114,7 @@
   background: var(--blocked-soft);
 }
 
-/* ---- How each area did: balanced tile grid ------------------------------------------------------- */
-.area-group + .area-group {
-  margin-top: var(--sp-8);
-}
-.area-group__title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 0.78rem;
-  font-weight: 760;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-2);
-  margin-bottom: 14px;
-}
-.area-group__icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 9px;
-  display: grid;
-  place-items: center;
-  color: var(--accent-ink);
-  background: var(--accent-soft);
-}
-.area-group__line {
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, var(--line-strong), transparent);
-}
-.area-group__score {
-  font-size: 0.72rem;
-  letter-spacing: 0.04em;
-  color: var(--muted);
-}
+/* ---- How each endpoint did: balanced tile grid ------------------------------------------------------- */
 .area-grid {
   display: grid;
   grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
@@ -1276,6 +1243,29 @@
   margin-top: 8px;
   padding-top: 12px;
   border-top: 1px solid var(--line);
+}
+.endpoint-path {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+.endpoint-path code {
+  font-size: 0.74rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.problem__path {
+  margin-left: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--faint);
 }
 .area__count {
   font-size: var(--fs-sm);
@@ -1426,6 +1416,54 @@
 }
 .table tbody tr[data-status='FAIL'] {
   background: color-mix(in oklch, var(--fail) 5%, transparent);
+}
+/* Endpoint heading rows inside the test table */
+.table tbody tr.group-row,
+.table tbody tr.group-row:hover {
+  cursor: default;
+  background: var(--accent-softer);
+}
+.table tbody tr.group-row th {
+  padding: 12px 14px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--line-strong);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text);
+}
+.table tbody + tbody tr.group-row th {
+  border-top: 10px solid transparent;
+  background-clip: padding-box;
+}
+.group-row__inner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.group-row__icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+}
+.group-row__name {
+  font-size: var(--fs-md);
+  font-weight: 720;
+}
+.group-row__path {
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+.group-row__count {
+  margin-left: auto;
+  font-size: var(--fs-xs);
+  font-weight: 650;
+  color: var(--muted);
 }
 .timecell {
   display: inline-flex;

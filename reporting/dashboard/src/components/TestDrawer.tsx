@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'preact/hooks';
 import { analyzeFailure, FAILURE_PATTERNS, formatDuration } from '../../../core/analytics';
 import { sanitizeText } from '../../../core/sanitize';
 import { Icon } from '../icons';
-import { plainArea, plainTitle } from '../plain';
+import { endpointOf, plainEndpoint, plainTitle } from '../plain';
 import { useApp } from '../store';
 import { copyText, fmtDateTime, isTypingTarget } from '../utils';
 import { KV, Method, RequestId, StatusBadge } from './ui';
@@ -16,7 +16,7 @@ const IMPORTANCE: Record<string, string> = {
 };
 
 export function TestDrawer() {
-  const { ui, byKey, list, openTest, setUi, toast } = useApp();
+  const { report, ui, byKey, list, openTest, setUi, toast } = useApp();
   const test = ui.drawer ? byKey.get(ui.drawer) : undefined;
   const ref = useRef<HTMLDivElement>(null);
   const idx = useMemo(() => (test ? list.findIndex((t) => t.key === test.key) : -1), [test, list]);
@@ -64,7 +64,7 @@ export function TestDrawer() {
   const failure = test.status === 'FAIL' ? analyzeFailure(test) : null;
   const preflight = test.annotations.find((a) => a.type === 'preflight');
   const waiting = test.annotations.filter((a) => ['blocked', 'fixme', 'skip'].includes(a.type));
-  const area = plainArea(test.area);
+  const ep = plainEndpoint(endpointOf(test), report.endpoints);
   const calls = test.apiCalls.filter((c) => c.phase !== 'preflight');
 
   return (
@@ -121,8 +121,10 @@ export function TestDrawer() {
           </h3>
           <div class="row row--wrap" style={{ gap: 6 }}>
             <span class="tag">
-              <Icon name={area.icon} size={12} /> {area.name}
+              <Icon name={ep.icon} size={12} /> {ep.name}
             </span>
+            {ep.method && <span class={`method method--${ep.method}`}>{ep.method}</span>}
+            <span class="tag tag--mono">{ep.path}</span>
             <span class="tag tag--mono">{test.id}</span>
           </div>
         </div>
@@ -192,7 +194,7 @@ export function TestDrawer() {
             <div class="subhead">Details</div>
             <KV
               items={[
-                ['What it checks', area.means],
+                ['Endpoint', `${ep.name} — ${ep.means}`],
                 ['Importance', IMPORTANCE[test.severity] ?? test.severity],
                 [
                   'Duration',

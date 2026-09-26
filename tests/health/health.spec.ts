@@ -19,6 +19,8 @@ test.describe('Health / readiness', { tag: ['@regression'] }, () => {
   );
 
   test('PII-HLT-002 Health check returns 503 SERVICE_NOT_READY when the service is not ready', async () => {
+    // PENDING_Q17_ANSWER: when Dev provides a way to make the service not ready (test hook or dedicated
+    // instance), replace this blockedBy(…) with a call to /health/ready that expects 503 SERVICE_NOT_READY.
     blockedBy(
       'Q-17',
       'A not-ready state cannot be induced safely from automation; needs a test hook or dedicated instance.',

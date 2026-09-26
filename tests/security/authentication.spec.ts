@@ -246,6 +246,8 @@ test.describe('Authentication (Ed25519)', { tag: ['@security', '@regression'] },
   });
 
   test('PII-AUTH-021 Sending the same request ID twice (expected behaviour not documented yet)', async () => {
+    // PENDING_Q14_ANSWER: when Dev says what happens to a reused X-Request-Id (rejected / accepted /
+    // de-duplicated), replace this blockedBy(…) with that check.
     blockedBy(
       'Q-14',
       'Guide requires a fresh ID per call but does not define server behaviour on reuse (reject vs accept).',
@@ -253,6 +255,8 @@ test.describe('Authentication (Ed25519)', { tag: ['@security', '@regression'] },
   });
 
   test('PII-AUTH-022 Re-sending a captured signed request (replay) (expected behaviour not documented yet)', async () => {
+    // PENDING_Q21_ANSWER: when Dev says whether replayed signed requests must be rejected, replace this
+    // blockedBy(…) with a replay check (send the same signed request twice; expect the agreed status).
     blockedBy(
       'Q-21',
       'Signature covers only the body (no timestamp/nonce/path). Replay protection is undocumented.',

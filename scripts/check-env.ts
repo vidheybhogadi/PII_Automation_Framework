@@ -14,6 +14,7 @@ import { Ed25519Signer } from '../src/auth/ed25519-signer';
 import { createPiiClient } from '../src/clients/client-factory';
 import { assertIntegrationConfig, loadConfig } from '../src/config/config';
 import { CALLER_ROLES } from '../src/config/env-schema';
+import { pendingSettings } from '../src/config/placeholders';
 import { Logger } from '../src/utils/logger';
 
 dotenv.config({ path: path.resolve(process.cwd(), process.env.ENV_FILE ?? '.env'), quiet: true });
@@ -25,6 +26,12 @@ async function main(): Promise<void> {
   const warn = (m: string) => console.log(`  ⚠ ${m}`);
 
   console.log(`Environment: ${config.environment}`);
+  const pending = pendingSettings(process.env);
+  if (pending.length)
+    warn(
+      `${pending.length} setting(s) still hold a PENDING_ placeholder (waiting on the backend team; see ` +
+        `PENDING-PLACEHOLDERS.md): ${pending.join(', ')}`,
+    );
   assertIntegrationConfig(config);
   ok(`PII_BASE_URL set (${config.baseUrl})`);
   ok(
