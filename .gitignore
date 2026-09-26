@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Secrets — NEVER commit these
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+config/db-queries.json
+config/db-queries.*.json
+!config/db-queries.example.json
+
+# Test output (may contain request IDs / masked identifiers — keep out of git)
+reports/
+test-results/
+playwright-report/
+blob-report/
+
+# OS / editor
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
+reporting/dashboard/dist/
+
+# Claude Code local lock file
+.claude/scheduled_tasks.lock

@@ -1,0 +1,136 @@
+/* ============================================================================================
+   Print / PDF — used by `npm run report:pdf` (Playwright, ?mode=print) and the browser print fallback.
+   ============================================================================================ */
+@page {
+  size: A4;
+  margin: 14mm 12mm 16mm;
+}
+
+.print-only,
+.cover {
+  display: none;
+}
+
+.cover {
+  min-height: 250mm;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 18mm 10mm 10mm;
+  break-after: page;
+}
+.cover__brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-weight: 750;
+  font-size: 1.4rem;
+}
+.cover__title {
+  font-size: 2.6rem;
+  font-weight: 780;
+  letter-spacing: -0.035em;
+  margin-top: 30mm;
+}
+.cover__headline {
+  font-size: 1.35rem;
+  font-weight: 650;
+  margin-top: 8mm;
+}
+.cover__meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 24px;
+  margin-top: 18mm;
+}
+.cover__meta dt {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--faint);
+  font-weight: 700;
+}
+.cover__meta dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+}
+.cover__foot {
+  font-size: 0.75rem;
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+html[data-print='true'] .cover {
+  display: flex;
+}
+html[data-print='true'] body {
+  background: #fff;
+}
+html[data-print='true'] .bg,
+html[data-print='true'] .topbar,
+html[data-print='true'] .dock,
+html[data-print='true'] .progress-line,
+html[data-print='true'] .no-print {
+  display: none !important;
+}
+html[data-print='true'] .content {
+  padding: 0;
+  max-width: none;
+  gap: 8mm;
+}
+html[data-print='true'] .glass {
+  background: #fff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  border: 1px solid oklch(50% 0.03 262 / 0.18);
+}
+html[data-print='true'] .glass::before {
+  display: none;
+}
+html[data-print='true'] #tests {
+  break-before: page;
+}
+html[data-print='true'] .hero__glow {
+  display: none;
+}
+html[data-print='true'] .glass,
+html[data-print='true'] tr,
+html[data-print='true'] .area,
+html[data-print='true'] .fact,
+html[data-print='true'] .alert-card {
+  break-inside: avoid;
+}
+html[data-print='true'] .demo-ribbon {
+  position: static;
+}
+html[data-print='true'] .table-wrap {
+  overflow: visible;
+}
+html[data-print='true'] * {
+  animation: none !important;
+  transition: none !important;
+}
+
+@media print {
+  .bg,
+  .topbar,
+  .dock,
+  .progress-line,
+  .no-print {
+    display: none !important;
+  }
+  .glass {
+    backdrop-filter: none;
+    box-shadow: none;
+    background: #fff;
+    border: 1px solid #dde;
+  }
+  .glass::before {
+    display: none;
+  }
+  .glass,
+  tr {
+    break-inside: avoid;
+  }
+}

@@ -1,0 +1,119 @@
+{
+  "runId": "demo-run-137",
+  "label": "DEMO Run #137 (smoke)",
+  "startedAt": "2026-09-21T10:00:00.000Z",
+  "durationMs": 3755,
+  "environment": "qa (demo)",
+  "dataSource": "DEMO",
+  "profile": "projects=api · grep=@smoke",
+  "scope": "service",
+  "dataLeftBehind": 13,
+  "counts": { "total": 15, "PASS": 15, "FAIL": 0, "SKIPPED": 0, "BLOCKED": 0, "FIXME": 0, "UNKNOWN": 0 },
+  "passRate": 1,
+  "latency": { "avg": 130.68571428571428, "p50": 128, "p95": 251.6 },
+  "endpointPassRate": {
+    "healthReady": 1,
+    "writePii": 1,
+    "readPii": 1,
+    "searchPii": 1,
+    "batchReadPii": 1,
+    "createTransientPhone": 1,
+    "resolveTransientPhone": 1,
+    "promoteTransientPhone": 1,
+    "createFreeTextKey": 1,
+    "readFreeTextKey": 1,
+    "revokeFreeTextKey": 1
+  },
+  "tests": {
+    "api::contract/contract.spec.ts::Contract › PII-CON-001 The API description (OpenAPI) is available and lists every documented endpoint": {
+      "id": "PII-CON-001",
+      "s": "PASS",
+      "d": 362,
+      "r": 0
+    },
+    "api::free-text/free-text-keys.spec.ts::Free-text key lifecycle › PII-FT-001 Creating an encryption key returns 201 and an active 256-bit AES-256-GCM key that must not be cached": {
+      "id": "PII-FT-001",
+      "s": "PASS",
+      "d": 586,
+      "r": 0
+    },
+    "api::free-text/free-text-keys.spec.ts::Free-text key lifecycle › PII-FT-003 Revoking a key marks it REVOKED with a time, and it can no longer be read": {
+      "id": "PII-FT-003",
+      "s": "PASS",
+      "d": 545,
+      "r": 0
+    },
+    "api::health/health.spec.ts::Health / readiness › PII-HLT-001 Health check returns 200 when the service is ready, without needing a signature": {
+      "id": "PII-HLT-001",
+      "s": "PASS",
+      "d": 1103,
+      "r": 0
+    },
+    "api::pii/batch-read.spec.ts::PII batch read › PII-BR-001 Bulk read of 2 users × 2 fields returns all 4 values": {
+      "id": "PII-BR-001",
+      "s": "PASS",
+      "d": 674,
+      "r": 0
+    },
+    "api::pii/normalization.spec.ts::Normalization › PII-NRM-001 Emails are saved without surrounding spaces and in lower case": {
+      "id": "PII-NRM-001",
+      "s": "PASS",
+      "d": 727,
+      "r": 0
+    },
+    "api::pii/read-pii.spec.ts::PII read › PII-RD-001 Reading one field of a user returns its value": {
+      "id": "PII-RD-001",
+      "s": "PASS",
+      "d": 935,
+      "r": 0
+    },
+    "api::pii/search-pii.spec.ts::PII search › PII-SR-001 Searching by exact email returns only user IDs, no personal data": {
+      "id": "PII-SR-001",
+      "s": "PASS",
+      "d": 462,
+      "r": 0
+    },
+    "api::pii/write-pii.spec.ts::PII write / upsert › PII-WR-001 Saving a new field returns 201 with tenant, user, field name and encryption key version": {
+      "id": "PII-WR-001",
+      "s": "PASS",
+      "d": 564,
+      "r": 0
+    },
+    "api::poc/email-write-db-read.poc.spec.ts::POC Write -> DB -> Read (EMAIL) › POC-001 End to end: an email is cleaned up, stored encrypted for the right tenant and user, and read back": {
+      "id": "POC-001",
+      "s": "PASS",
+      "d": 799,
+      "r": 0
+    },
+    "api::security/authentication.spec.ts::Authentication (Ed25519) › PII-AUTH-001 A correctly signed request is accepted (baseline for all signing tests)": {
+      "id": "PII-AUTH-001",
+      "s": "PASS",
+      "d": 566,
+      "r": 0
+    },
+    "api::security/tenant-isolation.spec.ts::Tenant isolation › PII-TI-001 The same user ID in two tenants keeps two independent values": {
+      "id": "PII-TI-001",
+      "s": "PASS",
+      "d": 755,
+      "r": 0
+    },
+    "api::transient/transient-phone.spec.ts::Transient phone lifecycle › PII-TR-001 Creating a temporary phone returns 201, an ID, and an expiry time of now + lifetime": {
+      "id": "PII-TR-001",
+      "s": "PASS",
+      "d": 613,
+      "r": 0
+    },
+    "api::transient/transient-phone.spec.ts::Transient phone lifecycle › PII-TR-002 Looking up a temporary phone returns the cleaned-up number, marked as not to be cached": {
+      "id": "PII-TR-002",
+      "s": "PASS",
+      "d": 421,
+      "r": 0
+    },
+    "api::transient/transient-phone.spec.ts::Transient phone lifecycle › PII-TR-006 Promoting saves it as the user’s permanent phone (created=true), uses it up, and it can be read": {
+      "id": "PII-TR-006",
+      "s": "PASS",
+      "d": 772,
+      "r": 0
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "$comment": [
+    "TEMPLATE ONLY. The PII service's database schema is NOT documented in the integration guide.",
+    "Copy to config/db-queries.json (git-ignored) and replace every <PLACEHOLDER> with SQL confirmed by the PII backend team.",
+    "Rules: read-only SELECT/WITH only; one statement; bind params with the engine's placeholders ($1.. for postgres, ? for mysql);",
+    "'params' lists the named parameters in placeholder order; each query MUST return the column aliases listed in docs/database-setup.md.",
+    "Set a query to null if it cannot be supported; dependent DB tests then fail with an actionable message."
+  ],
+  "engine": "postgres",
+  "queries": {
+    "findPiiRecords": {
+      "sql": "SELECT <tenant_col> AS tenant_id, <user_col> AS user_id, <field_col> AS field, <ciphertext_col> AS encrypted_value, <key_version_col> AS key_version FROM <pii_table> WHERE <tenant_col> = $1 AND <user_col> = $2 AND <field_col> = $3",
+      "params": ["tenant_id", "user_id", "field"]
+    },
+    "findTransientPhone": {
+      "sql": "SELECT <tenant_col> AS tenant_id, <caller_col> AS caller_id, <ciphertext_col> AS encrypted_value, <expires_col> AS expires_at, (<consumed_col> IS NOT NULL) AS is_consumed FROM <transient_table> WHERE <id_col> = $1",
+      "params": ["transient_id"]
+    },
+    "findFreeTextKey": {
+      "sql": "SELECT <tenant_col> AS tenant_id, <caller_col> AS caller_id, <status_col> AS status, <revoked_at_col> AS revoked_at, <wrapped_key_col> AS encrypted_key_material FROM <free_text_key_table> WHERE <id_col> = $1",
+      "params": ["key_id"]
+    },
+    "findAuditEventsByRequestId": null
+  }
+}

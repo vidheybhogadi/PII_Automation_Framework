@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en" data-source="{{DATA_SOURCE}}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="generator" content="PII Sentinel" />
+    <meta name="report-generated-at" content="{{GENERATED_AT}}" />
+    <!-- Static, self-contained report: no external requests of any kind. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self' file:; style-src 'self' 'unsafe-inline' file:; font-src 'self' file: data:; img-src 'self' data: blob: file:; connect-src 'self'; base-uri 'none'; form-action 'none'"
+    />
+    <meta name="referrer" content="no-referrer" />
+    <title>{{TITLE}}</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%234f8cff'/%3E%3Cstop offset='1' stop-color='%237b5cff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M16 2 4 7v8c0 7.5 5.1 13.4 12 15 6.9-1.6 12-7.5 12-15V7z' fill='url(%23g)'/%3E%3Cpath d='M11 16.5l3.5 3.5L21.5 13' fill='none' stroke='white' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <script src="assets/boot.js"></script>
+    <link rel="stylesheet" href="assets/app.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to report content</a>
+    <div id="app" aria-busy="true">
+      <div class="boot">
+        <div class="boot__brand"><span class="boot__logo"></span><span>PII Sentinel</span></div>
+        <div class="boot__grid">
+          <div class="skeleton skeleton--hero"></div>
+          <div class="skeleton"></div>
+          <div class="skeleton"></div>
+          <div class="skeleton"></div>
+          <div class="skeleton"></div>
+          <div class="skeleton skeleton--wide"></div>
+        </div>
+        <p class="boot__hint">Loading report…</p>
+      </div>
+    </div>
+    <noscript>
+      <div class="noscript">
+        This report needs JavaScript. The raw results are also available in <code>results.csv</code> and
+        <code>results.json</code>.
+      </div>
+    </noscript>
+    <script src="data/report-data.js"></script>
+    <script src="assets/app.js"></script>
+  </body>
+</html>

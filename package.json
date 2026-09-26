@@ -1,0 +1,69 @@
+{
+  "name": "aisle-pii-api-automation",
+  "version": "1.0.0",
+  "private": true,
+  "description": "API automation framework for the Aisle PII service (Milestone 1: service-level testing).",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "test": "playwright test",
+    "test:unit": "playwright test --project=unit",
+    "test:api": "playwright test --project=api",
+    "test:smoke": "playwright test --project=api --grep @smoke",
+    "test:regression": "playwright test --project=api --grep @regression",
+    "test:security": "playwright test --project=api --grep @security",
+    "test:db": "playwright test --project=api --grep @db",
+    "test:poc": "playwright test --project=api --grep @poc",
+    "test:debug": "PII_LOG_TO_CONSOLE=true LOG_LEVEL=debug playwright test --project=api --workers=1 --retries=0 --reporter=list",
+    "test:list": "playwright test --list",
+    "check-env": "tsx scripts/check-env.ts",
+    "keys:generate": "tsx scripts/generate-caller-keypair.ts",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p reporting/dashboard && tsc --noEmit -p reporting/tests",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "verify": "npm run typecheck && npm run lint && npm run format:check && npm run test:unit",
+    "test:all": "tsx scripts/test-all.ts",
+    "report": "tsx reporting/generator/generate.ts",
+    "report:latest": "tsx reporting/generator/generate.ts && tsx reporting/generator/tools.ts open",
+    "report:build": "tsx reporting/generator/tools.ts build",
+    "report:pdf": "tsx reporting/generator/export-pdf.ts",
+    "report:open": "tsx reporting/generator/tools.ts open",
+    "report:dev": "tsx reporting/generator/tools.ts dev",
+    "report:clean": "tsx reporting/generator/tools.ts clean",
+    "report:demo": "tsx reporting/generator/generate.ts --demo && tsx reporting/generator/export-pdf.ts --demo",
+    "report:demo-data": "tsx reporting/fixtures/generate-demo-data.ts",
+    "report:test": "playwright test --config reporting/tests/playwright.config.ts",
+    "report:playwright": "playwright show-report reports/html",
+    "docs:traceability": "tsx reporting/generator/traceability-doc.ts && prettier --write docs/requirements-traceability.md"
+  },
+  "dependencies": {
+    "axios": "1.20.0",
+    "dotenv": "17.4.2",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@eslint/js": "9.39.5",
+    "@fontsource-variable/inter": "5.3.0",
+    "@fontsource-variable/jetbrains-mono": "5.3.0",
+    "@playwright/test": "1.63.0",
+    "@types/node": "24.19.0",
+    "esbuild": "0.28.2",
+    "eslint": "9.39.5",
+    "eslint-config-prettier": "10.1.8",
+    "globals": "17.12.0",
+    "preact": "10.29.8",
+    "prettier": "3.9.9",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.70.1"
+  },
+  "optionalDependencies": {
+    "mysql2": "3.24.4",
+    "pg": "8.23.0"
+  }
+}

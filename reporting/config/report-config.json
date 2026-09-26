@@ -1,0 +1,92 @@
+{
+  "$comment": "PII Sentinel report configuration: quality gates, health-score weights/cap/bands, and how many past runs to keep for 'vs last run'.",
+  "gates": [
+    {
+      "key": "functional",
+      "label": "Functional",
+      "areas": [
+        "health",
+        "contract",
+        "write",
+        "read",
+        "search",
+        "batch",
+        "normalization",
+        "transient",
+        "freeText"
+      ],
+      "critical": true,
+      "warnOnNotExecuted": true
+    },
+    {
+      "key": "authentication",
+      "label": "Authentication",
+      "areas": ["authentication"],
+      "critical": true,
+      "warnOnNotExecuted": true
+    },
+    {
+      "key": "authorization",
+      "label": "Authorization",
+      "areas": ["authorization"],
+      "critical": true,
+      "warnOnNotExecuted": true
+    },
+    {
+      "key": "tenant",
+      "label": "Tenant isolation",
+      "areas": ["tenantIsolation"],
+      "critical": true,
+      "warnOnNotExecuted": true
+    },
+    {
+      "key": "db",
+      "label": "DB validation",
+      "areas": ["database", "poc"],
+      "critical": true,
+      "warnOnNotExecuted": true
+    },
+    {
+      "key": "security",
+      "label": "Response security",
+      "areas": ["responseSecurity"],
+      "critical": true,
+      "warnOnNotExecuted": true
+    },
+    {
+      "key": "framework",
+      "label": "Framework self-tests",
+      "areas": ["framework"],
+      "critical": false,
+      "warnOnNotExecuted": false
+    }
+  ],
+  "health": {
+    "weights": {
+      "passRate": 0.5,
+      "criticalPassRate": 0.25,
+      "completion": 0.15,
+      "endpointCoverage": 0.1
+    },
+    "capOnCriticalFailure": 69,
+    "bands": [
+      {
+        "label": "Healthy",
+        "min": 90
+      },
+      {
+        "label": "Stable",
+        "min": 75
+      },
+      {
+        "label": "At risk",
+        "min": 60
+      },
+      {
+        "label": "Critical",
+        "min": 0
+      }
+    ]
+  },
+  "historyLimit": 30
+}

@@ -1,0 +1,227 @@
+/* ============================================================================================
+   PII Sentinel — design tokens
+   Themes: data-theme="light|dark" · Accents: data-accent="azure|violet|emerald|rose|amber|cyan"
+   Colours use OKLCH so every accent keeps similar perceived lightness (consistent contrast).
+   ============================================================================================ */
+
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('../../../../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2')
+    format('woff2-variations');
+}
+@font-face {
+  font-family: 'JetBrains Mono Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 800;
+  src: url('../../../../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2')
+    format('woff2-variations');
+}
+
+:root {
+  --font-sans:
+    'Inter Variable', ui-sans-serif, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui,
+    sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --r-xs: 8px;
+  --r-sm: 11px;
+  --r-md: 16px;
+  --r-lg: 22px;
+  --r-xl: 28px;
+  --r-pill: 999px;
+
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+
+  --fs-xs: 0.72rem;
+  --fs-sm: 0.8125rem;
+  --fs-md: 0.9rem;
+  --fs-lg: 1.05rem;
+  --fs-xl: 1.3rem;
+  --fs-2xl: 1.75rem;
+  --fs-3xl: 2.4rem;
+  --fs-display: clamp(2.2rem, 1.4rem + 2.6vw, 3.6rem);
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast: 140ms;
+  --dur: 240ms;
+  --dur-slow: 520ms;
+
+  --topbar-h: 64px;
+  --content-max: 1240px;
+
+  /* accent hue — overridden per accent */
+  --accent-h: 255;
+  --accent-c: 0.19;
+  --accent2-h: 290;
+}
+
+[data-accent='azure'] {
+  --accent-h: 255;
+  --accent-c: 0.19;
+  --accent2-h: 290;
+}
+[data-accent='violet'] {
+  --accent-h: 293;
+  --accent-c: 0.2;
+  --accent2-h: 330;
+}
+[data-accent='emerald'] {
+  --accent-h: 162;
+  --accent-c: 0.15;
+  --accent2-h: 200;
+}
+[data-accent='rose'] {
+  --accent-h: 12;
+  --accent-c: 0.19;
+  --accent2-h: 340;
+}
+[data-accent='amber'] {
+  --accent-h: 70;
+  --accent-c: 0.16;
+  --accent2-h: 30;
+}
+[data-accent='cyan'] {
+  --accent-h: 215;
+  --accent-c: 0.14;
+  --accent2-h: 250;
+}
+
+/* ---------------------------------------------------------------- LIGHT ---------------------- */
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+  --bg: oklch(96.6% 0.012 var(--accent-h));
+  --bg-2: oklch(93.5% 0.02 var(--accent-h));
+  --text: oklch(21% 0.03 262);
+  --text-2: oklch(40% 0.03 262);
+  --muted: oklch(52% 0.025 262);
+  --faint: oklch(66% 0.02 262);
+  --line: oklch(50% 0.03 262 / 0.12);
+  --line-strong: oklch(50% 0.03 262 / 0.22);
+
+  --glass: oklch(100% 0 0 / 0.58);
+  --card: oklch(99.5% 0.004 var(--accent-h) / 0.9);
+  --card-strong: oklch(99.8% 0.003 var(--accent-h) / 0.94);
+  --glass-strong: oklch(100% 0 0 / 0.78);
+  --glass-soft: oklch(100% 0 0 / 0.38);
+  --glass-edge: oklch(100% 0 0 / 0.85);
+  --glass-edge-2: oklch(100% 0 0 / 0.25);
+  --glass-inner: inset 0 1px 0 oklch(100% 0 0 / 0.9), inset 0 -1px 0 oklch(50% 0.03 262 / 0.06);
+  --shadow-sm: 0 1px 2px oklch(30% 0.05 262 / 0.06), 0 2px 8px oklch(30% 0.05 262 / 0.05);
+  --shadow:
+    0 1px 1px oklch(30% 0.05 262 / 0.04), 0 8px 24px -6px oklch(30% 0.06 262 / 0.12),
+    0 24px 48px -24px oklch(30% 0.06 262 / 0.18);
+  --shadow-lg: 0 30px 80px -20px oklch(25% 0.08 262 / 0.35), 0 8px 24px -8px oklch(25% 0.06 262 / 0.2);
+
+  --accent: oklch(58% var(--accent-c) var(--accent-h));
+  --accent-strong: oklch(50% var(--accent-c) var(--accent-h));
+  --accent-ink: oklch(45% var(--accent-c) var(--accent-h));
+  --accent-soft: oklch(58% var(--accent-c) var(--accent-h) / 0.12);
+  --accent-softer: oklch(58% var(--accent-c) var(--accent-h) / 0.07);
+  --accent-2: oklch(60% 0.18 var(--accent2-h));
+  --on-accent: oklch(99% 0 0);
+
+  --pass: oklch(60% 0.15 152);
+  --pass-ink: oklch(42% 0.12 152);
+  --pass-soft: oklch(60% 0.15 152 / 0.13);
+  --fail: oklch(58% 0.21 25);
+  --fail-ink: oklch(46% 0.19 25);
+  --fail-soft: oklch(58% 0.21 25 / 0.12);
+  --blocked: oklch(72% 0.15 70);
+  --blocked-ink: oklch(48% 0.12 60);
+  --blocked-soft: oklch(72% 0.15 70 / 0.16);
+  --skipped: oklch(62% 0.02 262);
+  --skipped-ink: oklch(42% 0.02 262);
+  --skipped-soft: oklch(62% 0.02 262 / 0.14);
+  --fixme: oklch(58% 0.17 300);
+  --fixme-ink: oklch(45% 0.16 300);
+  --fixme-soft: oklch(58% 0.17 300 / 0.12);
+  --unknown: oklch(70% 0.01 262);
+  --unknown-ink: oklch(45% 0.01 262);
+  --unknown-soft: oklch(70% 0.01 262 / 0.14);
+  --info: oklch(60% 0.14 235);
+  --info-soft: oklch(60% 0.14 235 / 0.12);
+
+  --blob-1: oklch(78% 0.13 var(--accent-h) / 0.55);
+  --blob-2: oklch(82% 0.11 var(--accent2-h) / 0.45);
+  --blob-3: oklch(88% 0.09 180 / 0.45);
+  --grid-line: oklch(40% 0.03 262 / 0.05);
+  --noise-opacity: 0.035;
+  --chart-grid: oklch(40% 0.03 262 / 0.09);
+  --scrim: oklch(25% 0.03 262 / 0.28);
+}
+
+/* ---------------------------------------------------------------- DARK ----------------------- */
+[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: oklch(15.5% 0.022 var(--accent-h));
+  --bg-2: oklch(19% 0.03 var(--accent-h));
+  --text: oklch(95% 0.008 262);
+  --text-2: oklch(84% 0.012 262);
+  --muted: oklch(70% 0.02 262);
+  --faint: oklch(56% 0.02 262);
+  --line: oklch(100% 0 0 / 0.08);
+  --line-strong: oklch(100% 0 0 / 0.15);
+
+  --glass: oklch(26% 0.025 262 / 0.5);
+  --card: oklch(21.5% 0.026 262 / 0.9);
+  --card-strong: oklch(22.5% 0.028 262 / 0.94);
+  --glass-strong: oklch(24% 0.028 262 / 0.82);
+  --glass-soft: oklch(30% 0.025 262 / 0.3);
+  --glass-edge: oklch(100% 0 0 / 0.16);
+  --glass-edge-2: oklch(100% 0 0 / 0.03);
+  --glass-inner: inset 0 1px 0 oklch(100% 0 0 / 0.08), inset 0 -1px 0 oklch(0% 0 0 / 0.2);
+  --shadow-sm: 0 1px 2px oklch(0% 0 0 / 0.4);
+  --shadow: 0 1px 1px oklch(0% 0 0 / 0.3), 0 12px 32px -8px oklch(0% 0 0 / 0.55);
+  --shadow-lg: 0 40px 100px -20px oklch(0% 0 0 / 0.75), 0 8px 24px -8px oklch(0% 0 0 / 0.5);
+
+  --accent: oklch(70% var(--accent-c) var(--accent-h));
+  --accent-strong: oklch(76% var(--accent-c) var(--accent-h));
+  --accent-ink: oklch(80% calc(var(--accent-c) * 0.85) var(--accent-h));
+  --accent-soft: oklch(70% var(--accent-c) var(--accent-h) / 0.17);
+  --accent-softer: oklch(70% var(--accent-c) var(--accent-h) / 0.09);
+  --accent-2: oklch(72% 0.16 var(--accent2-h));
+  --on-accent: oklch(16% 0.03 262);
+
+  --pass: oklch(74% 0.16 152);
+  --pass-ink: oklch(82% 0.13 152);
+  --pass-soft: oklch(74% 0.16 152 / 0.16);
+  --fail: oklch(70% 0.19 25);
+  --fail-ink: oklch(80% 0.13 25);
+  --fail-soft: oklch(70% 0.19 25 / 0.17);
+  --blocked: oklch(80% 0.14 75);
+  --blocked-ink: oklch(86% 0.11 80);
+  --blocked-soft: oklch(80% 0.14 75 / 0.16);
+  --skipped: oklch(68% 0.02 262);
+  --skipped-ink: oklch(80% 0.02 262);
+  --skipped-soft: oklch(68% 0.02 262 / 0.16);
+  --fixme: oklch(72% 0.15 300);
+  --fixme-ink: oklch(82% 0.11 300);
+  --fixme-soft: oklch(72% 0.15 300 / 0.17);
+  --unknown: oklch(60% 0.01 262);
+  --unknown-ink: oklch(76% 0.01 262);
+  --unknown-soft: oklch(60% 0.01 262 / 0.18);
+  --info: oklch(72% 0.13 235);
+  --info-soft: oklch(72% 0.13 235 / 0.16);
+
+  --blob-1: oklch(45% 0.16 var(--accent-h) / 0.5);
+  --blob-2: oklch(40% 0.15 var(--accent2-h) / 0.42);
+  --blob-3: oklch(38% 0.09 190 / 0.35);
+  --grid-line: oklch(100% 0 0 / 0.028);
+  --noise-opacity: 0.05;
+  --chart-grid: oklch(100% 0 0 / 0.07);
+  --scrim: oklch(5% 0.02 262 / 0.6);
+}

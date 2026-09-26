@@ -1,0 +1,165 @@
+# PII service API automation.
+# - Pull requests: static checks + unit tests only (no secrets exposed to PR code from forks).
+# - Manual / scheduled runs: integration suites against a chosen environment using GitHub Environment secrets.
+name: PII API tests
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment (GitHub Environment name holding the secrets)
+        type: choice
+        options: [qa, staging]
+        default: qa
+      suite:
+        description: npm script to run
+        type: choice
+        options: [test:smoke, test:regression, test:security, test:db, test:api]
+        default: test:smoke
+  schedule:
+    - cron: '0 3 * * 1-5' # weekdays 03:00 UTC, regression on qa
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pii-api-${{ github.ref }}-${{ inputs.environment || 'qa' }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run verify
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-report
+          path: reports/
+          retention-days: 7
+
+  report-tests:
+    # Tests the reporting layer (dashboard UI, exports, PDF, redaction) against SYNTHETIC fixtures.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run report:test
+      - name: Demo dashboard + PDF (clearly labelled DEMO DATA)
+        run: npm run report:demo
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: report-tests
+          path: |
+            reports/report-tests-html/
+            reports/demo-report/
+          retention-days: 7
+
+  integration:
+    if: github.event_name != 'pull_request'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: ${{ inputs.environment || 'qa' }}
+    env:
+      CI: 'true'
+      PII_ENVIRONMENT: ${{ inputs.environment || 'qa' }}
+      PII_BASE_URL: ${{ vars.PII_BASE_URL }}
+      PII_TEST_TENANT_ID: ${{ vars.PII_TEST_TENANT_ID }}
+      PII_TEST_TENANT_ID_SECONDARY: ${{ vars.PII_TEST_TENANT_ID_SECONDARY }}
+      PII_TEST_EMAIL_DOMAIN: ${{ vars.PII_TEST_EMAIL_DOMAIN }}
+      PII_TEST_PHONES: ${{ secrets.PII_TEST_PHONES }}
+      PII_TEST_PHONE_8_DIGITS: ${{ secrets.PII_TEST_PHONE_8_DIGITS }}
+      PII_TEST_PHONE_15_DIGITS: ${{ secrets.PII_TEST_PHONE_15_DIGITS }}
+      PII_SIGNATURE_HELPER_MUST_BE_DISABLED: 'true'
+      PII_CALLER_PRIMARY_ID: ${{ vars.PII_CALLER_PRIMARY_ID }}
+      PII_CALLER_SECONDARY_ID: ${{ vars.PII_CALLER_SECONDARY_ID }}
+      PII_CALLER_LIMITED_ID: ${{ vars.PII_CALLER_LIMITED_ID }}
+      # Private keys are secrets (PEM text or base64 of PEM). They never appear in logs:
+      # GitHub masks secret values, and the framework never prints keys.
+      PII_CALLER_PRIMARY_PRIVATE_KEY: ${{ secrets.PII_CALLER_PRIMARY_PRIVATE_KEY }}
+      PII_CALLER_SECONDARY_PRIVATE_KEY: ${{ secrets.PII_CALLER_SECONDARY_PRIVATE_KEY }}
+      PII_CALLER_LIMITED_PRIVATE_KEY: ${{ secrets.PII_CALLER_LIMITED_PRIVATE_KEY }}
+      DB_ENGINE: ${{ vars.DB_ENGINE || 'none' }}
+      DB_HOST: ${{ vars.DB_HOST }}
+      DB_PORT: ${{ vars.DB_PORT }}
+      DB_NAME: ${{ vars.DB_NAME }}
+      DB_USER: ${{ vars.DB_USER }}
+      DB_PASSWORD: ${{ secrets.DB_READONLY_PASSWORD }}
+      DB_QUERIES_FILE: config/db-queries.json
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Write SQL catalog from secret (optional)
+        if: env.DB_ENGINE != 'none'
+        env:
+          DB_QUERIES_JSON: ${{ secrets.DB_QUERIES_JSON }}
+        run: printf '%s' "$DB_QUERIES_JSON" > config/db-queries.json
+      - name: Validate configuration
+        run: npm run check-env
+      - run: npx playwright install --with-deps chromium
+      - name: Restore run history (trends, comparisons, flaky detection)
+        uses: actions/cache/restore@v4
+        with:
+          path: reports/history
+          key: pii-history-${{ inputs.environment || 'qa' }}-${{ github.run_id }}
+          restore-keys: pii-history-${{ inputs.environment || 'qa' }}-
+      - name: Test → collect → analyse → dashboard → PDF
+        # test:all always generates the report, then exits with the TEST exit code.
+        run: |
+          case "${{ inputs.suite || 'test:regression' }}" in
+            test:smoke)      ARGS="--project=api --grep @smoke" ;;
+            test:security)   ARGS="--project=api --grep @security" ;;
+            test:db)         ARGS="--project=api --grep @db" ;;
+            test:regression) ARGS="--project=api --grep @regression" ;;
+            *)               ARGS="--project=api" ;;
+          esac
+          npm run test:all -- $ARGS
+      - name: Save run history
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: reports/history
+          key: pii-history-${{ inputs.environment || 'qa' }}-${{ github.run_id }}
+      - name: Job summary
+        if: always()
+        run: |
+          if [ -f reports/qa-report/summary.txt ]; then
+            { echo '```'; cat reports/qa-report/summary.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          # PII Sentinel dashboard: index.html, assets/, data/, report.pdf, results.json, results.csv, summary.txt.
+          # Contains only sanitized metadata — no bodies, traces, keys or personal data.
+          name: qa-report-${{ inputs.environment || 'qa' }}-${{ github.run_id }}
+          path: reports/qa-report/
+          retention-days: 30
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-raw-${{ inputs.environment || 'qa' }}-${{ github.run_id }}
+          path: |
+            reports/junit/
+            reports/json/
+            reports/latest/
+          retention-days: 14

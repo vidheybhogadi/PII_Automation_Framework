@@ -1,0 +1,1295 @@
+{
+  "runId": "demo-run-135",
+  "label": "DEMO Run #135",
+  "startedAt": "2026-09-19T10:00:00.000Z",
+  "durationMs": 31157,
+  "environment": "qa (demo)",
+  "dataSource": "DEMO",
+  "profile": "projects=api+unit",
+  "scope": "service",
+  "dataLeftBehind": 114,
+  "counts": { "total": 133, "PASS": 121, "FAIL": 3, "SKIPPED": 1, "BLOCKED": 8, "FIXME": 0, "UNKNOWN": 0 },
+  "passRate": 0.9758064516129032,
+  "latency": { "avg": 147.8733153638814, "p50": 128, "p95": 331.5 },
+  "endpointPassRate": {
+    "healthReady": 1,
+    "writePii": 0.9818181818181818,
+    "readPii": 1,
+    "searchPii": 0.9444444444444444,
+    "batchReadPii": 1,
+    "createTransientPhone": 0.9,
+    "resolveTransientPhone": 1,
+    "promoteTransientPhone": 0.875,
+    "createFreeTextKey": 1,
+    "readFreeTextKey": 1,
+    "revokeFreeTextKey": 1
+  },
+  "tests": {
+    "unit::unit/assertions.spec.ts::UNIT assertions › UT-AST-001 Success check returns the response data and verifies the message": {
+      "id": "UT-AST-001",
+      "s": "PASS",
+      "d": 8,
+      "r": 0
+    },
+    "unit::unit/assertions.spec.ts::UNIT assertions › UT-AST-002 A failed status or format check never prints response values": {
+      "id": "UT-AST-002",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/assertions.spec.ts::UNIT assertions › UT-AST-003 An IDs-only search result with any extra field is flagged (guards against leaks)": {
+      "id": "UT-AST-003",
+      "s": "PASS",
+      "d": 12,
+      "r": 0
+    },
+    "unit::unit/assertions.spec.ts::UNIT assertions › UT-AST-004 Error check verifies the error format and code; the server message is scrubbed in failures": {
+      "id": "UT-AST-004",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/assertions.spec.ts::UNIT assertions › UT-AST-005 A 422 response is accepted in either documented format, and nothing else": {
+      "id": "UT-AST-005",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/assertions.spec.ts::UNIT assertions › UT-AST-006 Field-list check names missing or extra fields, never their values": {
+      "id": "UT-AST-006",
+      "s": "PASS",
+      "d": 8,
+      "r": 0
+    },
+    "unit::unit/assertions.spec.ts::UNIT assertions › UT-AST-007 Comparing secret values prints fingerprints, never the values": {
+      "id": "UT-AST-007",
+      "s": "PASS",
+      "d": 5,
+      "r": 0
+    },
+    "unit::unit/assertions.spec.ts::UNIT assertions › UT-AST-008 Plain-text detection finds a value in text, hex, Base64 and raw bytes": {
+      "id": "UT-AST-008",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/assertions.spec.ts::UNIT assertions › UT-AST-009 Leak detection and the do-not-cache header check work": {
+      "id": "UT-AST-009",
+      "s": "PASS",
+      "d": 8,
+      "r": 0
+    },
+    "unit::unit/assertions.spec.ts::UNIT assertions › UT-AST-010 An encryption key must be exactly 32 bytes in standard Base64": {
+      "id": "UT-AST-010",
+      "s": "PASS",
+      "d": 6,
+      "r": 0
+    },
+    "unit::unit/config.spec.ts::UNIT configuration › UT-CFG-001 With no .env, settings load with their documented defaults": {
+      "id": "UT-CFG-001",
+      "s": "PASS",
+      "d": 33,
+      "r": 0
+    },
+    "unit::unit/config.spec.ts::UNIT configuration › UT-CFG-002 A valid .env loads correctly (URL tidied, phone list parsed)": {
+      "id": "UT-CFG-002",
+      "s": "PASS",
+      "d": 14,
+      "r": 0
+    },
+    "unit::unit/config.spec.ts::UNIT configuration › UT-CFG-003 All missing settings are reported at once, each with a hint": {
+      "id": "UT-CFG-003",
+      "s": "PASS",
+      "d": 36,
+      "r": 0
+    },
+    "unit::unit/config.spec.ts::UNIT configuration › UT-CFG-004 Invalid settings are rejected without printing the value": {
+      "id": "UT-CFG-004",
+      "s": "PASS",
+      "d": 5,
+      "r": 0
+    },
+    "unit::unit/config.spec.ts::UNIT configuration › UT-CFG-005 A private key can be given inline (with \\n line breaks) or Base64-encoded": {
+      "id": "UT-CFG-005",
+      "s": "PASS",
+      "d": 12,
+      "r": 0
+    },
+    "unit::unit/config.spec.ts::UNIT configuration › UT-CFG-006 Caller setup errors say what to fix and never contain key text": {
+      "id": "UT-CFG-006",
+      "s": "PASS",
+      "d": 8,
+      "r": 0
+    },
+    "unit::unit/config.spec.ts::UNIT configuration › UT-CFG-007 Printing the settings never shows keys or the database password": {
+      "id": "UT-CFG-007",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/config.spec.ts::UNIT configuration › UT-CFG-008 Required-setting checks explain exactly what is missing": {
+      "id": "UT-CFG-008",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/config.spec.ts::UNIT configuration › UT-CFG-009 Endpoint scope accepts a subset and rejects unknown endpoint names": {
+      "id": "UT-CFG-009",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/config.spec.ts::UNIT configuration › UT-CFG-010 On/off switches, lifetime limits and 8/15-digit test phones are validated": {
+      "id": "UT-CFG-010",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/db-repository.spec.ts::UNIT DB layer › UT-DB-001 Only single read-only queries (SELECT / WITH) are allowed": {
+      "id": "UT-DB-001",
+      "s": "PASS",
+      "d": 12,
+      "r": 0
+    },
+    "unit::unit/db-repository.spec.ts::UNIT DB layer › UT-DB-002 Query values are passed as parameters, never pasted into the SQL": {
+      "id": "UT-DB-002",
+      "s": "PASS",
+      "d": 35,
+      "r": 0
+    },
+    "unit::unit/db-repository.spec.ts::UNIT DB layer › UT-DB-003 A query result missing expected columns fails, naming only the columns": {
+      "id": "UT-DB-003",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/db-repository.spec.ts::UNIT DB layer › UT-DB-004 A missing database query fails with a clear message": {
+      "id": "UT-DB-004",
+      "s": "PASS",
+      "d": 11,
+      "r": 0
+    },
+    "unit::unit/db-repository.spec.ts::UNIT DB layer › UT-DB-005 The query file is checked for unknown parameters, write statements and the wrong database type": {
+      "id": "UT-DB-005",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/db-repository.spec.ts::UNIT DB layer › UT-DB-006 The example query file is valid and contains only read-only placeholders": {
+      "id": "UT-DB-006",
+      "s": "PASS",
+      "d": 6,
+      "r": 0
+    },
+    "unit::unit/db-repository.spec.ts::UNIT DB layer › UT-DB-007 Database access fails clearly when the database is not set up": {
+      "id": "UT-DB-007",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/ed25519-signer.spec.ts::UNIT Ed25519 signer › UT-SIG-001 The standard test key (RFC 8032) loads, and its public key matches the standard": {
+      "id": "UT-SIG-001",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/ed25519-signer.spec.ts::UNIT Ed25519 signer › UT-SIG-002 Signing reproduces the standard’s published example signature": {
+      "id": "UT-SIG-002",
+      "s": "PASS",
+      "d": 6,
+      "r": 0
+    },
+    "unit::unit/ed25519-signer.spec.ts::UNIT Ed25519 signer › UT-SIG-003 Our signature matches the integration guide’s Python example exactly": {
+      "id": "UT-SIG-003",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/ed25519-signer.spec.ts::UNIT Ed25519 signer › UT-SIG-004 The SHA-256 hash of the body is signed, not the body itself": {
+      "id": "UT-SIG-004",
+      "s": "PASS",
+      "d": 28,
+      "r": 0
+    },
+    "unit::unit/ed25519-signer.spec.ts::UNIT Ed25519 signer › UT-SIG-005 A signature is valid for the exact bytes it was made from": {
+      "id": "UT-SIG-005",
+      "s": "PASS",
+      "d": 9,
+      "r": 0
+    },
+    "unit::unit/ed25519-signer.spec.ts::UNIT Ed25519 signer › UT-SIG-006 A signature is invalid for different bytes": {
+      "id": "UT-SIG-006",
+      "s": "PASS",
+      "d": 9,
+      "r": 0
+    },
+    "unit::unit/ed25519-signer.spec.ts::UNIT Ed25519 signer › UT-SIG-007 Changing spaces, field order or line endings makes the signature invalid": {
+      "id": "UT-SIG-007",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/ed25519-signer.spec.ts::UNIT Ed25519 signer › UT-SIG-008 A signature made with a different key is invalid": {
+      "id": "UT-SIG-008",
+      "s": "PASS",
+      "d": 11,
+      "r": 0
+    },
+    "unit::unit/ed25519-signer.spec.ts::UNIT Ed25519 signer › UT-SIG-009 A signature is 64 bytes in standard Base64 (88 characters)": {
+      "id": "UT-SIG-009",
+      "s": "PASS",
+      "d": 10,
+      "r": 0
+    },
+    "unit::unit/ed25519-signer.spec.ts::UNIT Ed25519 signer › UT-SIG-010 The same key and bytes always give the same signature": {
+      "id": "UT-SIG-010",
+      "s": "PASS",
+      "d": 21,
+      "r": 0
+    },
+    "unit::unit/ed25519-signer.spec.ts::UNIT Ed25519 signer › UT-SIG-011 An empty body can be signed and verified": {
+      "id": "UT-SIG-011",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/ed25519-signer.spec.ts::UNIT Ed25519 signer › UT-SIG-012 A missing or invalid private key fails clearly without printing key text": {
+      "id": "UT-SIG-012",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/ed25519-signer.spec.ts::UNIT Ed25519 signer › UT-SIG-013 A protected private key is never exposed when printed or converted to JSON": {
+      "id": "UT-SIG-013",
+      "s": "PASS",
+      "d": 8,
+      "r": 0
+    },
+    "unit::unit/ed25519-signer.spec.ts::UNIT Ed25519 signer › UT-SIG-014 The public key is exported in the format the PII service registers": {
+      "id": "UT-SIG-014",
+      "s": "PASS",
+      "d": 10,
+      "r": 0
+    },
+    "unit::unit/endpoints-retry.spec.ts::UNIT endpoint inventory & utilities › UT-END-001 The endpoint list matches the guide: 11 endpoints, 10 signed plus 1 health check": {
+      "id": "UT-END-001",
+      "s": "PASS",
+      "d": 6,
+      "r": 0
+    },
+    "unit::unit/endpoints-retry.spec.ts::UNIT endpoint inventory & utilities › UT-END-002 The endpoints that must not be cached match the guide": {
+      "id": "UT-END-002",
+      "s": "PASS",
+      "d": 7,
+      "r": 0
+    },
+    "unit::unit/endpoints-retry.spec.ts::UNIT endpoint inventory & utilities › UT-END-003 URLs are built with encoded, required parameters": {
+      "id": "UT-END-003",
+      "s": "PASS",
+      "d": 5,
+      "r": 0
+    },
+    "unit::unit/endpoints-retry.spec.ts::UNIT endpoint inventory & utilities › UT-RTY-001 Retry waits grow each time, are capped, and are slightly randomised": {
+      "id": "UT-RTY-001",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/endpoints-retry.spec.ts::UNIT endpoint inventory & utilities › UT-RTY-002 Retrying stops on success or when attempts run out": {
+      "id": "UT-RTY-002",
+      "s": "PASS",
+      "d": 20,
+      "r": 0
+    },
+    "unit::unit/endpoints-retry.spec.ts::UNIT endpoint inventory & utilities › UT-CLN-001 Clean-up runs newest-first and honestly records failures and data left behind": {
+      "id": "UT-CLN-001",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/pii-client-wire.spec.ts::UNIT PiiClient wire behaviour (local capture server) › UT-CLI-001 The bytes sent are exactly the bytes that were signed": {
+      "id": "UT-CLI-001",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/pii-client-wire.spec.ts::UNIT PiiClient wire behaviour (local capture server) › UT-CLI-002 Every request carries the four documented headers with correct values": {
+      "id": "UT-CLI-002",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/pii-client-wire.spec.ts::UNIT PiiClient wire behaviour (local capture server) › UT-CLI-003 Every request gets a new, unique request ID": {
+      "id": "UT-CLI-003",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/pii-client-wire.spec.ts::UNIT PiiClient wire behaviour (local capture server) › UT-CLI-004 The search field name is safely encoded into the URL": {
+      "id": "UT-CLI-004",
+      "s": "PASS",
+      "d": 5,
+      "r": 0
+    },
+    "unit::unit/pii-client-wire.spec.ts::UNIT PiiClient wire behaviour (local capture server) › UT-CLI-005 The health check is sent without security headers or a body": {
+      "id": "UT-CLI-005",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/pii-client-wire.spec.ts::UNIT PiiClient wire behaviour (local capture server) › UT-CLI-006 Tests can remove headers, and no Content-Type is added behind their back": {
+      "id": "UT-CLI-006",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/pii-client-wire.spec.ts::UNIT PiiClient wire behaviour (local capture server) › UT-CLI-007 Tests can deliberately send a body that differs from what was signed": {
+      "id": "UT-CLI-007",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/pii-client-wire.spec.ts::UNIT PiiClient wire behaviour (local capture server) › UT-CLI-008 Tests can sign with another key or the wrong method while keeping the caller ID": {
+      "id": "UT-CLI-008",
+      "s": "PASS",
+      "d": 5,
+      "r": 0
+    },
+    "unit::unit/pii-client-wire.spec.ts::UNIT PiiClient wire behaviour (local capture server) › UT-CLI-009 Read-only calls retry on 503 with a new request ID, a limited number of times": {
+      "id": "UT-CLI-009",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/pii-client-wire.spec.ts::UNIT PiiClient wire behaviour (local capture server) › UT-CLI-010 Saves are never retried, and 401/403 responses are never retried": {
+      "id": "UT-CLI-010",
+      "s": "PASS",
+      "d": 5,
+      "r": 0
+    },
+    "unit::unit/pii-client-wire.spec.ts::UNIT PiiClient wire behaviour (local capture server) › UT-CLI-011 Non-JSON and empty responses are handled, and response bodies are never printed": {
+      "id": "UT-CLI-011",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/pii-client-wire.spec.ts::UNIT PiiClient wire behaviour (local capture server) › UT-CLI-012 Logs contain request details but no personal data, signatures or bodies": {
+      "id": "UT-CLI-012",
+      "s": "PASS",
+      "d": 7,
+      "r": 0
+    },
+    "unit::unit/pii-client-wire.spec.ts::UNIT PiiClient wire behaviour (local capture server) › UT-CLI-013 Calling a signed endpoint with no caller set up fails early with a clear message": {
+      "id": "UT-CLI-013",
+      "s": "PASS",
+      "d": 11,
+      "r": 0
+    },
+    "unit::unit/pii-client-wire.spec.ts::UNIT PiiClient wire behaviour (local capture server) › UT-CLI-014 Network errors are reported without the request body or headers": {
+      "id": "UT-CLI-014",
+      "s": "PASS",
+      "d": 16,
+      "r": 0
+    },
+    "unit::unit/pii-client-wire.spec.ts::UNIT PiiClient wire behaviour (local capture server) › UT-CLI-015 Every logged call is labelled as test, setup or verification": {
+      "id": "UT-CLI-015",
+      "s": "PASS",
+      "d": 6,
+      "r": 0
+    },
+    "unit::unit/redaction-logger.spec.ts::UNIT redaction & logger › UT-RED-001 The scrubber removes emails, phones, private keys and Base64 keys from text": {
+      "id": "UT-RED-001",
+      "s": "PASS",
+      "d": 23,
+      "r": 0
+    },
+    "unit::unit/redaction-logger.spec.ts::UNIT redaction & logger › UT-RED-002 The scrubber keeps request IDs and timestamps (needed to trace logs)": {
+      "id": "UT-RED-002",
+      "s": "PASS",
+      "d": 5,
+      "r": 0
+    },
+    "unit::unit/redaction-logger.spec.ts::UNIT redaction & logger › UT-RED-002b Only real calendar dates are kept; numbers that merely look like dates are scrubbed": {
+      "id": "UT-RED-002b",
+      "s": "PASS",
+      "d": 9,
+      "r": 0
+    },
+    "unit::unit/redaction-logger.spec.ts::UNIT redaction & logger › UT-RED-003 Sensitive fields are hidden at any depth, while safe details are kept": {
+      "id": "UT-RED-003",
+      "s": "PASS",
+      "d": 17,
+      "r": 0
+    },
+    "unit::unit/redaction-logger.spec.ts::UNIT redaction & logger › UT-RED-004 Hiding sensitive fields works for circular objects and error objects": {
+      "id": "UT-RED-004",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/redaction-logger.spec.ts::UNIT redaction & logger › UT-RED-005 The logger stores only scrubbed lines and respects the log level": {
+      "id": "UT-RED-005",
+      "s": "PASS",
+      "d": 16,
+      "r": 0
+    },
+    "unit::unit/redaction-logger.spec.ts::UNIT redaction & logger › UT-RED-006 Masked IDs show only a short start and end": {
+      "id": "UT-RED-006",
+      "s": "PASS",
+      "d": 28,
+      "r": 0
+    },
+    "unit::unit/redaction-logger.spec.ts::UNIT redaction & logger › UT-RED-007 Log lines copied from another logger are scrubbed again": {
+      "id": "UT-RED-007",
+      "s": "PASS",
+      "d": 8,
+      "r": 0
+    },
+    "unit::unit/test-data-factory.spec.ts::UNIT test data factory › UT-DAT-001 Run IDs have the prefix, a timestamp and a random part, and are safe to use as IDs": {
+      "id": "UT-DAT-001",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/test-data-factory.spec.ts::UNIT test data factory › UT-DAT-002 Generated user IDs and emails are unique across parallel workers and within length limits": {
+      "id": "UT-DAT-002",
+      "s": "PASS",
+      "d": 5,
+      "r": 0
+    },
+    "unit::unit/test-data-factory.spec.ts::UNIT test data factory › UT-DAT-003 Generated names are unique and already in clean form": {
+      "id": "UT-DAT-003",
+      "s": "PASS",
+      "d": 17,
+      "r": 0
+    },
+    "unit::unit/test-data-factory.spec.ts::UNIT test data factory › UT-DAT-004 Approved test phones are cleaned up, and invalid ones in .env are rejected": {
+      "id": "UT-DAT-004",
+      "s": "PASS",
+      "d": 6,
+      "r": 0
+    },
+    "unit::unit/test-data-factory.spec.ts::UNIT test data factory › UT-DAT-005 Expected clean-up results match the guide’s rules": {
+      "id": "UT-DAT-005",
+      "s": "PASS",
+      "d": 8,
+      "r": 0
+    },
+    "unit::unit/test-data-factory.spec.ts::UNIT test data factory › UT-DAT-006 Messy versions of a value clean up back to the original": {
+      "id": "UT-DAT-006",
+      "s": "PASS",
+      "d": 7,
+      "r": 0
+    },
+    "unit::unit/test-data-factory.spec.ts::UNIT test data factory › UT-DAT-007 Text of an exact length is generated correctly": {
+      "id": "UT-DAT-007",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "unit::unit/test-data-factory.spec.ts::UNIT test data factory › UT-DAT-008 The second test tenant must be set and different from the first": {
+      "id": "UT-DAT-008",
+      "s": "PASS",
+      "d": 4,
+      "r": 0
+    },
+    "api::contract/contract.spec.ts::Contract › PII-CON-001 The API description (OpenAPI) is available and lists every documented endpoint": {
+      "id": "PII-CON-001",
+      "s": "PASS",
+      "d": 510,
+      "r": 0
+    },
+    "api::contract/contract.spec.ts::Contract › PII-CON-002 The API description has no extra, undocumented endpoints": {
+      "id": "PII-CON-002",
+      "s": "PASS",
+      "d": 383,
+      "r": 0
+    },
+    "api::contract/contract.spec.ts::Contract › PII-CON-003 Save, read, search and bulk-read responses contain exactly the documented fields": {
+      "id": "PII-CON-003",
+      "s": "PASS",
+      "d": 624,
+      "r": 0
+    },
+    "api::contract/contract.spec.ts::Contract › PII-CON-004 Temporary-phone responses contain exactly the documented fields": {
+      "id": "PII-CON-004",
+      "s": "PASS",
+      "d": 656,
+      "r": 0
+    },
+    "api::contract/contract.spec.ts::Contract › PII-CON-005 Encryption-key responses and error responses contain exactly the documented fields": {
+      "id": "PII-CON-005",
+      "s": "PASS",
+      "d": 468,
+      "r": 0
+    },
+    "api::db/db-persistence.spec.ts::Database persistence › PII-DB-001 Saving a field again keeps one database row and changes its encrypted value": {
+      "id": "PII-DB-001",
+      "s": "PASS",
+      "d": 381,
+      "r": 0
+    },
+    "api::db/db-persistence.spec.ts::Database persistence › PII-DB-002 Phone and name are stored encrypted: neither the typed nor the cleaned-up text is in the database": {
+      "id": "PII-DB-002",
+      "s": "FAIL",
+      "d": 631,
+      "r": 0
+    },
+    "api::db/db-persistence.spec.ts::Database persistence › PII-DB-003 The same user ID in two tenants gives two separate rows, each tied to its own tenant": {
+      "id": "PII-DB-003",
+      "s": "PASS",
+      "d": 390,
+      "r": 0
+    },
+    "api::db/db-persistence.spec.ts::Database persistence › PII-DB-004 A save rejected for a bad signature (401) leaves nothing in the database": {
+      "id": "PII-DB-004",
+      "s": "PASS",
+      "d": 464,
+      "r": 0
+    },
+    "api::db/db-persistence.spec.ts::Database persistence › PII-DB-005 A temporary phone is stored encrypted, tied to its tenant, and marked used once promoted": {
+      "id": "PII-DB-005",
+      "s": "PASS",
+      "d": 896,
+      "r": 0
+    },
+    "api::db/db-persistence.spec.ts::Database persistence › PII-DB-006 A revoked encryption key is marked REVOKED and the key itself is not stored in readable form": {
+      "id": "PII-DB-006",
+      "s": "PASS",
+      "d": 491,
+      "r": 0
+    },
+    "api::db/db-persistence.spec.ts::Database persistence › PII-DB-007 Each bulk read writes one audit record (PII_BATCH_READ)": {
+      "id": "PII-DB-007",
+      "s": "BLOCKED",
+      "d": 0,
+      "r": 0
+    },
+    "api::free-text/free-text-keys.spec.ts::Free-text key lifecycle › PII-FT-001 Creating an encryption key returns 201 and an active 256-bit AES-256-GCM key that must not be cached": {
+      "id": "PII-FT-001",
+      "s": "PASS",
+      "d": 984,
+      "r": 0
+    },
+    "api::free-text/free-text-keys.spec.ts::Free-text key lifecycle › PII-FT-002 Reading an active key returns the same key, marked as not to be cached": {
+      "id": "PII-FT-002",
+      "s": "PASS",
+      "d": 764,
+      "r": 0
+    },
+    "api::free-text/free-text-keys.spec.ts::Free-text key lifecycle › PII-FT-003 Revoking a key marks it REVOKED with a time, and it can no longer be read": {
+      "id": "PII-FT-003",
+      "s": "PASS",
+      "d": 1324,
+      "r": 0
+    },
+    "api::free-text/free-text-keys.spec.ts::Free-text key lifecycle › PII-FT-004 Revoking a key that is already revoked returns 404": {
+      "id": "PII-FT-004",
+      "s": "PASS",
+      "d": 865,
+      "r": 0
+    },
+    "api::free-text/free-text-keys.spec.ts::Free-text key lifecycle › PII-FT-005 A different caller cannot read or revoke the key (404), and the key stays active": {
+      "id": "PII-FT-005",
+      "s": "PASS",
+      "d": 700,
+      "r": 0
+    },
+    "api::free-text/free-text-keys.spec.ts::Free-text key lifecycle › PII-FT-006 The key cannot be read or revoked through a different tenant (404)": {
+      "id": "PII-FT-006",
+      "s": "PASS",
+      "d": 924,
+      "r": 0
+    },
+    "api::free-text/free-text-keys.spec.ts::Free-text key lifecycle › PII-FT-007 Unknown key ID returns 404; a badly formed key ID or missing tenant returns 422": {
+      "id": "PII-FT-007",
+      "s": "PASS",
+      "d": 888,
+      "r": 0
+    },
+    "api::free-text/free-text-keys.spec.ts::Free-text key lifecycle › PII-FT-008 Every new key gets its own ID and its own key value": {
+      "id": "PII-FT-008",
+      "s": "PASS",
+      "d": 1897,
+      "r": 0
+    },
+    "api::free-text/free-text-keys.spec.ts::Free-text key lifecycle › PII-FT-009 The returned key really works to encrypt and decrypt data (AES-256-GCM)": {
+      "id": "PII-FT-009",
+      "s": "PASS",
+      "d": 2015,
+      "r": 0
+    },
+    "api::free-text/free-text-keys.spec.ts::Free-text key lifecycle › PII-FT-010 Key values never appear in logs or report files": {
+      "id": "PII-FT-010",
+      "s": "PASS",
+      "d": 725,
+      "r": 0
+    },
+    "api::health/health.spec.ts::Health / readiness › PII-HLT-001 Health check returns 200 when the service is ready, without needing a signature": {
+      "id": "PII-HLT-001",
+      "s": "PASS",
+      "d": 906,
+      "r": 0
+    },
+    "api::health/health.spec.ts::Health / readiness › PII-HLT-002 Health check returns 503 SERVICE_NOT_READY when the service is not ready": {
+      "id": "PII-HLT-002",
+      "s": "BLOCKED",
+      "d": 0,
+      "r": 0
+    },
+    "api::pii/batch-read.spec.ts::PII batch read › PII-BR-001 Bulk read of 2 users × 2 fields returns all 4 values": {
+      "id": "PII-BR-001",
+      "s": "PASS",
+      "d": 276,
+      "r": 0
+    },
+    "api::pii/batch-read.spec.ts::PII batch read › PII-BR-002 Bulk read leaves out fields a user does not have": {
+      "id": "PII-BR-002",
+      "s": "PASS",
+      "d": 604,
+      "r": 0
+    },
+    "api::pii/batch-read.spec.ts::PII batch read › PII-BR-003 The whole bulk read fails (404) if one user has none of the requested fields": {
+      "id": "PII-BR-003",
+      "s": "PASS",
+      "d": 896,
+      "r": 0
+    },
+    "api::pii/batch-read.spec.ts::PII batch read › PII-BR-004 A bulk read of exactly the maximum size (users × fields) is accepted": {
+      "id": "PII-BR-004",
+      "s": "PASS",
+      "d": 17419,
+      "r": 0
+    },
+    "api::pii/batch-read.spec.ts::PII batch read › PII-BR-005 A bulk read one item over the maximum size is rejected": {
+      "id": "PII-BR-005",
+      "s": "PASS",
+      "d": 2536,
+      "r": 0
+    },
+    "api::pii/batch-read.spec.ts::PII batch read › PII-BR-006 Repeated user IDs or fields in a bulk read are returned only once": {
+      "id": "PII-BR-006",
+      "s": "PASS",
+      "d": 1120,
+      "r": 0
+    },
+    "api::pii/batch-read.spec.ts::PII batch read › PII-BR-007 Bulk reads over the request limits (too many users or fields) are rejected": {
+      "id": "PII-BR-007",
+      "s": "PASS",
+      "d": 636,
+      "r": 0
+    },
+    "api::pii/normalization.spec.ts::Normalization › PII-NRM-001 Emails are saved without surrounding spaces and in lower case": {
+      "id": "PII-NRM-001",
+      "s": "PASS",
+      "d": 484,
+      "r": 0
+    },
+    "api::pii/normalization.spec.ts::Normalization › PII-NRM-002 Phones are saved as digits only (spaces, dashes, brackets and + removed)": {
+      "id": "PII-NRM-002",
+      "s": "PASS",
+      "d": 774,
+      "r": 0
+    },
+    "api::pii/normalization.spec.ts::Normalization › PII-NRM-003 Names are trimmed and repeated spaces collapsed; upper/lower case is kept": {
+      "id": "PII-NRM-003",
+      "s": "PASS",
+      "d": 584,
+      "r": 0
+    },
+    "api::pii/normalization.spec.ts::Normalization › PII-NRM-004 Phones with exactly 8 and exactly 15 digits (the allowed limits) are accepted": {
+      "id": "PII-NRM-004",
+      "s": "PASS",
+      "d": 1797,
+      "r": 0
+    },
+    "api::pii/normalization.spec.ts::Normalization › PII-NRM-005 Values that are already clean are saved unchanged": {
+      "id": "PII-NRM-005",
+      "s": "PASS",
+      "d": 971,
+      "r": 0
+    },
+    "api::pii/read-pii.spec.ts::PII read › PII-RD-001 Reading one field of a user returns its value": {
+      "id": "PII-RD-001",
+      "s": "PASS",
+      "d": 405,
+      "r": 0
+    },
+    "api::pii/read-pii.spec.ts::PII read › PII-RD-002 Reading several fields in one call returns all of them": {
+      "id": "PII-RD-002",
+      "s": "PASS",
+      "d": 772,
+      "r": 0
+    },
+    "api::pii/read-pii.spec.ts::PII read › PII-RD-003 Only the fields asked for are returned": {
+      "id": "PII-RD-003",
+      "s": "PASS",
+      "d": 725,
+      "r": 0
+    },
+    "api::pii/read-pii.spec.ts::PII read › PII-RD-004 Fields the user does not have are left out when at least one requested field exists": {
+      "id": "PII-RD-004",
+      "s": "PASS",
+      "d": 615,
+      "r": 0
+    },
+    "api::pii/read-pii.spec.ts::PII read › PII-RD-005 Returns 404 PII_NOT_FOUND when the user has none of the requested fields": {
+      "id": "PII-RD-005",
+      "s": "PASS",
+      "d": 575,
+      "r": 0
+    },
+    "api::pii/read-pii.spec.ts::PII read › PII-RD-006 Returns 404 PII_NOT_FOUND for a user that does not exist": {
+      "id": "PII-RD-006",
+      "s": "PASS",
+      "d": 1776,
+      "r": 0
+    },
+    "api::pii/read-pii.spec.ts::PII read › PII-RD-007 An empty list of fields to read is rejected (422)": {
+      "id": "PII-RD-007",
+      "s": "PASS",
+      "d": 351,
+      "r": 0
+    },
+    "api::pii/read-pii.spec.ts::PII read › PII-RD-008 A read request missing required fields is rejected (422)": {
+      "id": "PII-RD-008",
+      "s": "PASS",
+      "d": 584,
+      "r": 0
+    },
+    "api::pii/read-pii.spec.ts::PII read › PII-RD-009 The returned count matches the items, and every item belongs to the requested tenant and user": {
+      "id": "PII-RD-009",
+      "s": "PASS",
+      "d": 693,
+      "r": 0
+    },
+    "api::pii/search-pii.spec.ts::PII search › PII-SR-001 Searching by exact email returns only user IDs, no personal data": {
+      "id": "PII-SR-001",
+      "s": "PASS",
+      "d": 524,
+      "r": 0
+    },
+    "api::pii/search-pii.spec.ts::PII search › PII-SR-002 Search ignores upper/lower case and extra spaces in the value searched for": {
+      "id": "PII-SR-002",
+      "s": "PASS",
+      "d": 752,
+      "r": 0
+    },
+    "api::pii/search-pii.spec.ts::PII search › PII-SR-003 Searching a formatted phone (with spaces, dashes or brackets) finds the stored digits-only phone": {
+      "id": "PII-SR-003",
+      "s": "PASS",
+      "d": 1223,
+      "r": 0
+    },
+    "api::pii/search-pii.spec.ts::PII search › PII-SR-004 A search with no match returns an empty result (exact behaviour is open question Q-08)": {
+      "id": "PII-SR-004",
+      "s": "PASS",
+      "d": 459,
+      "r": 0
+    },
+    "api::pii/search-pii.spec.ts::PII search › PII-SR-005 All users sharing the same email are returned": {
+      "id": "PII-SR-005",
+      "s": "PASS",
+      "d": 1169,
+      "r": 0
+    },
+    "api::pii/search-pii.spec.ts::PII search › PII-SR-006 With more matches than the limit, only \"limit\" results come back, marked truncated": {
+      "id": "PII-SR-006",
+      "s": "PASS",
+      "d": 617,
+      "r": 0
+    },
+    "api::pii/search-pii.spec.ts::PII search › PII-SR-007 When matches exactly equal the limit, the result is still marked truncated (\"reached the limit\")": {
+      "id": "PII-SR-007",
+      "s": "FAIL",
+      "d": 614,
+      "r": 0
+    },
+    "api::pii/search-pii.spec.ts::PII search › PII-SR-008 The default limit is used when no limit is given": {
+      "id": "PII-SR-008",
+      "s": "PASS",
+      "d": 2669,
+      "r": 0
+    },
+    "api::pii/search-pii.spec.ts::PII search › PII-SR-009 A limit outside 1–100 is rejected (422)": {
+      "id": "PII-SR-009",
+      "s": "PASS",
+      "d": 742,
+      "r": 0
+    },
+    "api::pii/search-pii.spec.ts::PII search › PII-SR-010 Asking for values returns tenant, user, field and the cleaned-up value": {
+      "id": "PII-SR-010",
+      "s": "PASS",
+      "d": 1508,
+      "r": 0
+    },
+    "api::pii/search-pii.spec.ts::PII search › PII-SR-011 A search request with missing or invalid fields is rejected (422)": {
+      "id": "PII-SR-011",
+      "s": "PASS",
+      "d": 1247,
+      "r": 0
+    },
+    "api::pii/search-pii.spec.ts::PII search › PII-SR-012 Searching a field that is not searchable is rejected": {
+      "id": "PII-SR-012",
+      "s": "BLOCKED",
+      "d": 0,
+      "r": 0
+    },
+    "api::pii/write-pii.spec.ts::PII write / upsert › PII-WR-001 Saving a new field returns 201 with tenant, user, field name and encryption key version": {
+      "id": "PII-WR-001",
+      "s": "PASS",
+      "d": 694,
+      "r": 0
+    },
+    "api::pii/write-pii.spec.ts::PII write / upsert › PII-WR-002 Saving a field that already exists replaces it (200), and reading returns the new value": {
+      "id": "PII-WR-002",
+      "s": "PASS",
+      "d": 834,
+      "r": 0
+    },
+    "api::pii/write-pii.spec.ts::PII write / upsert › PII-WR-003 Field names work in any case and come back in upper case (email → EMAIL)": {
+      "id": "PII-WR-003",
+      "s": "PASS",
+      "d": 1200,
+      "r": 0
+    },
+    "api::pii/write-pii.spec.ts::PII write / upsert › PII-WR-004 Save request without \"tenant_id\" is rejected (422) and nothing is saved": {
+      "id": "PII-WR-004",
+      "s": "PASS",
+      "d": 754,
+      "r": 0
+    },
+    "api::pii/write-pii.spec.ts::PII write / upsert › PII-WR-004 Save request without \"user_id\" is rejected (422) and nothing is saved": {
+      "id": "PII-WR-004",
+      "s": "PASS",
+      "d": 543,
+      "r": 0
+    },
+    "api::pii/write-pii.spec.ts::PII write / upsert › PII-WR-004 Save request without \"field\" is rejected (422) and nothing is saved": {
+      "id": "PII-WR-004",
+      "s": "PASS",
+      "d": 281,
+      "r": 0
+    },
+    "api::pii/write-pii.spec.ts::PII write / upsert › PII-WR-004 Save request without \"value\" is rejected (422) and nothing is saved": {
+      "id": "PII-WR-004",
+      "s": "PASS",
+      "d": 1476,
+      "r": 0
+    },
+    "api::pii/write-pii.spec.ts::PII write / upsert › PII-WR-005 Save request with an empty \"user_id\" is rejected (422)": {
+      "id": "PII-WR-005",
+      "s": "PASS",
+      "d": 543,
+      "r": 0
+    },
+    "api::pii/write-pii.spec.ts::PII write / upsert › PII-WR-005 Save request with an empty \"field\" is rejected (422)": {
+      "id": "PII-WR-005",
+      "s": "PASS",
+      "d": 1321,
+      "r": 0
+    },
+    "api::pii/write-pii.spec.ts::PII write / upsert › PII-WR-005 Save request with an empty \"value\" is rejected (422)": {
+      "id": "PII-WR-005",
+      "s": "PASS",
+      "d": 567,
+      "r": 0
+    },
+    "api::pii/write-pii.spec.ts::PII write / upsert › PII-WR-005b Save request with an empty tenant_id is rejected (422)": {
+      "id": "PII-WR-005b",
+      "s": "PASS",
+      "d": 629,
+      "r": 0
+    },
+    "api::pii/write-pii.spec.ts::PII write / upsert › PII-WR-006 Values longer than the documented maximum are rejected (422)": {
+      "id": "PII-WR-006",
+      "s": "PASS",
+      "d": 466,
+      "r": 0
+    },
+    "api::pii/write-pii.spec.ts::PII write / upsert › PII-WR-007 Values exactly at the documented maximum are accepted (user ID 128, name 1024 characters)": {
+      "id": "PII-WR-007",
+      "s": "PASS",
+      "d": 1058,
+      "r": 0
+    },
+    "api::pii/write-pii.spec.ts::PII write / upsert › PII-WR-008 An email without \"@\" is rejected (400 VALIDATION_ERROR)": {
+      "id": "PII-WR-008",
+      "s": "PASS",
+      "d": 665,
+      "r": 0
+    },
+    "api::pii/write-pii.spec.ts::PII write / upsert › PII-WR-009 A phone that does not have 8–15 digits after clean-up is rejected (400 VALIDATION_ERROR)": {
+      "id": "PII-WR-009",
+      "s": "PASS",
+      "d": 632,
+      "r": 0
+    },
+    "api::pii/write-pii.spec.ts::PII write / upsert › PII-WR-010 An unknown field name is rejected (exact status is open question Q-07)": {
+      "id": "PII-WR-010",
+      "s": "PASS",
+      "d": 1230,
+      "r": 0
+    },
+    "api::pii/write-pii.spec.ts::PII write / upsert › PII-WR-011 Wrong data types (e.g. a number instead of text) are rejected (422)": {
+      "id": "PII-WR-011",
+      "s": "PASS",
+      "d": 2194,
+      "r": 0
+    },
+    "api::pii/write-pii.spec.ts::PII write / upsert › PII-WR-012 Broken JSON is rejected (422), even when correctly signed": {
+      "id": "PII-WR-012",
+      "s": "PASS",
+      "d": 1603,
+      "r": 0
+    },
+    "api::pii/write-pii.spec.ts::PII write / upsert › PII-WR-013 A value made only of spaces is rejected (exact status is open question Q-10)": {
+      "id": "PII-WR-013",
+      "s": "PASS",
+      "d": 257,
+      "r": 0
+    },
+    "api::poc/email-write-db-read.poc.spec.ts::POC Write -> DB -> Read (EMAIL) › POC-001 End to end: an email is cleaned up, stored encrypted for the right tenant and user, and read back": {
+      "id": "POC-001",
+      "s": "PASS",
+      "d": 757,
+      "r": 0
+    },
+    "api::security/authentication.spec.ts::Authentication (Ed25519) › PII-AUTH-001 A correctly signed request is accepted (baseline for all signing tests)": {
+      "id": "PII-AUTH-001",
+      "s": "PASS",
+      "d": 589,
+      "r": 0
+    },
+    "api::security/authentication.spec.ts::Authentication (Ed25519) › PII-AUTH-002 Request with no signature is rejected (401) and nothing is saved": {
+      "id": "PII-AUTH-002",
+      "s": "PASS",
+      "d": 571,
+      "r": 0
+    },
+    "api::security/authentication.spec.ts::Authentication (Ed25519) › PII-AUTH-003 Request with an empty signature is rejected (401) and nothing is saved": {
+      "id": "PII-AUTH-003",
+      "s": "PASS",
+      "d": 428,
+      "r": 0
+    },
+    "api::security/authentication.spec.ts::Authentication (Ed25519) › PII-AUTH-004 Signature that is not valid Base64 text is rejected (401) and nothing is saved": {
+      "id": "PII-AUTH-004",
+      "s": "PASS",
+      "d": 595,
+      "r": 0
+    },
+    "api::security/authentication.spec.ts::Authentication (Ed25519) › PII-AUTH-005 Signature of the wrong length (32 bytes instead of 64) is rejected (401) and nothing is saved": {
+      "id": "PII-AUTH-005",
+      "s": "PASS",
+      "d": 430,
+      "r": 0
+    },
+    "api::security/authentication.spec.ts::Authentication (Ed25519) › PII-AUTH-006 Random signature of the right length is rejected (401) and nothing is saved": {
+      "id": "PII-AUTH-006",
+      "s": "PASS",
+      "d": 574,
+      "r": 0
+    },
+    "api::security/authentication.spec.ts::Authentication (Ed25519) › PII-AUTH-007 Signature made with a key the service does not know is rejected (401) and nothing is saved": {
+      "id": "PII-AUTH-007",
+      "s": "PASS",
+      "d": 663,
+      "r": 0
+    },
+    "api::security/authentication.spec.ts::Authentication (Ed25519) › PII-AUTH-008 Body changed after signing (different user_id) is rejected (401) and nothing is saved": {
+      "id": "PII-AUTH-008",
+      "s": "PASS",
+      "d": 626,
+      "r": 0
+    },
+    "api::security/authentication.spec.ts::Authentication (Ed25519) › PII-AUTH-009 Body re-formatted after signing (only spaces added) is rejected (401) and nothing is saved": {
+      "id": "PII-AUTH-009",
+      "s": "PASS",
+      "d": 1524,
+      "r": 0
+    },
+    "api::security/authentication.spec.ts::Authentication (Ed25519) › PII-AUTH-010 Newline added to the body after signing is rejected (401) and nothing is saved": {
+      "id": "PII-AUTH-010",
+      "s": "PASS",
+      "d": 386,
+      "r": 0
+    },
+    "api::security/authentication.spec.ts::Authentication (Ed25519) › PII-AUTH-011 Body signed without hashing it first (wrong signing method) is rejected (401) and nothing is saved": {
+      "id": "PII-AUTH-011",
+      "s": "PASS",
+      "d": 743,
+      "r": 0
+    },
+    "api::security/authentication.spec.ts::Authentication (Ed25519) › PII-AUTH-012 Request with no caller ID header is rejected (401) and nothing is saved": {
+      "id": "PII-AUTH-012",
+      "s": "PASS",
+      "d": 753,
+      "r": 0
+    },
+    "api::security/authentication.spec.ts::Authentication (Ed25519) › PII-AUTH-013 Request with an unknown caller ID is rejected (401) and nothing is saved": {
+      "id": "PII-AUTH-013",
+      "s": "PASS",
+      "d": 754,
+      "r": 0
+    },
+    "api::security/authentication.spec.ts::Authentication (Ed25519) › PII-AUTH-014 Request with an empty caller ID is rejected (401) and nothing is saved": {
+      "id": "PII-AUTH-014",
+      "s": "PASS",
+      "d": 392,
+      "r": 0
+    },
+    "api::security/authentication.spec.ts::Authentication (Ed25519) › PII-AUTH-015 Request with no request ID header is rejected (401) and nothing is saved": {
+      "id": "PII-AUTH-015",
+      "s": "PASS",
+      "d": 1339,
+      "r": 0
+    },
+    "api::security/authentication.spec.ts::Authentication (Ed25519) › PII-AUTH-016 Request with no security headers at all is rejected (401) and nothing is saved": {
+      "id": "PII-AUTH-016",
+      "s": "PASS",
+      "d": 565,
+      "r": 0
+    },
+    "api::security/authentication.spec.ts::Authentication (Ed25519) › PII-AUTH-017 One caller’s key cannot be used to sign as a different caller (401)": {
+      "id": "PII-AUTH-017",
+      "s": "PASS",
+      "d": 1234,
+      "r": 0
+    },
+    "api::security/authentication.spec.ts::Authentication (Ed25519) › PII-AUTH-018 Request without a Content-Type header is rejected (exact status is open question Q-13)": {
+      "id": "PII-AUTH-018",
+      "s": "PASS",
+      "d": 524,
+      "r": 0
+    },
+    "api::security/authentication.spec.ts::Authentication (Ed25519) › PII-AUTH-019 A bad signature is caught before permissions are checked: 401 (not signed in), never 403": {
+      "id": "PII-AUTH-019",
+      "s": "PASS",
+      "d": 1195,
+      "r": 0
+    },
+    "api::security/authentication.spec.ts::Authentication (Ed25519) › PII-AUTH-020 Every /api/v1 endpoint rejects an unsigned request (401)": {
+      "id": "PII-AUTH-020",
+      "s": "PASS",
+      "d": 788,
+      "r": 0
+    },
+    "api::security/authentication.spec.ts::Authentication (Ed25519) › PII-AUTH-021 Sending the same request ID twice (expected behaviour not documented yet)": {
+      "id": "PII-AUTH-021",
+      "s": "BLOCKED",
+      "d": 0,
+      "r": 0
+    },
+    "api::security/authentication.spec.ts::Authentication (Ed25519) › PII-AUTH-022 Re-sending a captured signed request (replay) (expected behaviour not documented yet)": {
+      "id": "PII-AUTH-022",
+      "s": "BLOCKED",
+      "d": 0,
+      "r": 0
+    },
+    "api::security/authorization.spec.ts::Authorization (field permissions) › PII-AZ-001 Caller not allowed to save emails cannot save one (403) and nothing is saved": {
+      "id": "PII-AZ-001",
+      "s": "PASS",
+      "d": 365,
+      "r": 0
+    },
+    "api::security/authorization.spec.ts::Authorization (field permissions) › PII-AZ-002 Caller not allowed to read emails cannot read one (403)": {
+      "id": "PII-AZ-002",
+      "s": "PASS",
+      "d": 1543,
+      "r": 0
+    },
+    "api::security/authorization.spec.ts::Authorization (field permissions) › PII-AZ-003 Reading NAME (allowed) and EMAIL (not allowed) together is refused as a whole (403)": {
+      "id": "PII-AZ-003",
+      "s": "PASS",
+      "d": 257,
+      "r": 0
+    },
+    "api::security/authorization.spec.ts::Authorization (field permissions) › PII-AZ-004 Control check: the limited caller CAN read names, which it is allowed to do": {
+      "id": "PII-AZ-004",
+      "s": "PASS",
+      "d": 560,
+      "r": 0
+    },
+    "api::security/authorization.spec.ts::Authorization (field permissions) › PII-AZ-005 Control check: the limited caller CAN search emails when it does not ask for the values": {
+      "id": "PII-AZ-005",
+      "s": "PASS",
+      "d": 459,
+      "r": 0
+    },
+    "api::security/authorization.spec.ts::Authorization (field permissions) › PII-AZ-006 Searching emails AND asking for the values needs read permission too (403 without it)": {
+      "id": "PII-AZ-006",
+      "s": "PASS",
+      "d": 812,
+      "r": 0
+    },
+    "api::security/authorization.spec.ts::Authorization (field permissions) › PII-AZ-007 Caller not allowed to search phones cannot search them (403)": {
+      "id": "PII-AZ-007",
+      "s": "PASS",
+      "d": 635,
+      "r": 0
+    },
+    "api::security/authorization.spec.ts::Authorization (field permissions) › PII-AZ-008 Caller without bulk-read permission cannot use bulk read, even for names it may read (403)": {
+      "id": "PII-AZ-008",
+      "s": "PASS",
+      "d": 822,
+      "r": 0
+    },
+    "api::security/authorization.spec.ts::Authorization (field permissions) › PII-AZ-009 Caller not allowed to save phones cannot create or promote temporary phones (403)": {
+      "id": "PII-AZ-009",
+      "s": "FAIL",
+      "d": 360,
+      "r": 0
+    },
+    "api::security/authorization.spec.ts::Authorization (field permissions) › PII-AZ-010 Caller not allowed to read phones cannot look up a temporary phone (403)": {
+      "id": "PII-AZ-010",
+      "s": "PASS",
+      "d": 1132,
+      "r": 0
+    },
+    "api::security/authorization.spec.ts::Authorization (field permissions) › PII-AZ-011 Caller without encryption-key permission cannot create, read or revoke keys (403)": {
+      "id": "PII-AZ-011",
+      "s": "PASS",
+      "d": 1230,
+      "r": 0
+    },
+    "api::security/authorization.spec.ts::Authorization (field permissions) › PII-AZ-012 A 403 (not allowed) response is never retried automatically": {
+      "id": "PII-AZ-012",
+      "s": "PASS",
+      "d": 761,
+      "r": 0
+    },
+    "api::security/response-security.spec.ts::Response security › PII-SEC-001 Error messages never repeat the personal value that was sent": {
+      "id": "PII-SEC-001",
+      "s": "PASS",
+      "d": 427,
+      "r": 0
+    },
+    "api::security/response-security.spec.ts::Response security › PII-SEC-002 A request body over the size limit is rejected (413 BODY_TOO_LARGE)": {
+      "id": "PII-SEC-002",
+      "s": "BLOCKED",
+      "d": 0,
+      "r": 0
+    },
+    "api::security/response-security.spec.ts::Response security › PII-SEC-003 The development-only signing helper (/docs/signature) is switched off": {
+      "id": "PII-SEC-003",
+      "s": "BLOCKED",
+      "d": 0,
+      "r": 0
+    },
+    "api::security/response-security.spec.ts::Response security › PII-SEC-004 A full flow across many endpoints leaves no personal data, keys or signatures in the logs": {
+      "id": "PII-SEC-004",
+      "s": "PASS",
+      "d": 700,
+      "r": 0
+    },
+    "api::security/tenant-isolation.spec.ts::Tenant isolation › PII-TI-001 The same user ID in two tenants keeps two independent values": {
+      "id": "PII-TI-001",
+      "s": "PASS",
+      "d": 630,
+      "r": 0
+    },
+    "api::security/tenant-isolation.spec.ts::Tenant isolation › PII-TI-002 Data saved in tenant A cannot be read through tenant B (404)": {
+      "id": "PII-TI-002",
+      "s": "PASS",
+      "d": 1022,
+      "r": 0
+    },
+    "api::security/tenant-isolation.spec.ts::Tenant isolation › PII-TI-003 Search only looks inside the requested tenant": {
+      "id": "PII-TI-003",
+      "s": "PASS",
+      "d": 1820,
+      "r": 0
+    },
+    "api::security/tenant-isolation.spec.ts::Tenant isolation › PII-TI-004 A bulk read in tenant B cannot see tenant A’s users (404)": {
+      "id": "PII-TI-004",
+      "s": "PASS",
+      "d": 873,
+      "r": 0
+    },
+    "api::security/tenant-isolation.spec.ts::Tenant isolation › PII-TI-005 Changing a value in tenant A does not change it in tenant B": {
+      "id": "PII-TI-005",
+      "s": "PASS",
+      "d": 292,
+      "r": 0
+    },
+    "api::security/tenant-isolation.spec.ts::Tenant isolation › PII-TI-006 A different caller with read permission can read data in the same tenant (as documented)": {
+      "id": "PII-TI-006",
+      "s": "PASS",
+      "d": 1475,
+      "r": 0
+    },
+    "api::transient/transient-phone.spec.ts::Transient phone lifecycle › PII-TR-001 Creating a temporary phone returns 201, an ID, and an expiry time of now + lifetime": {
+      "id": "PII-TR-001",
+      "s": "PASS",
+      "d": 711,
+      "r": 0
+    },
+    "api::transient/transient-phone.spec.ts::Transient phone lifecycle › PII-TR-002 Looking up a temporary phone returns the cleaned-up number, marked as not to be cached": {
+      "id": "PII-TR-002",
+      "s": "PASS",
+      "d": 375,
+      "r": 0
+    },
+    "api::transient/transient-phone.spec.ts::Transient phone lifecycle › PII-TR-003 A different caller cannot look up or promote the temporary phone (404)": {
+      "id": "PII-TR-003",
+      "s": "PASS",
+      "d": 388,
+      "r": 0
+    },
+    "api::transient/transient-phone.spec.ts::Transient phone lifecycle › PII-TR-004 The temporary phone cannot be looked up or promoted through a different tenant (404)": {
+      "id": "PII-TR-004",
+      "s": "PASS",
+      "d": 560,
+      "r": 0
+    },
+    "api::transient/transient-phone.spec.ts::Transient phone lifecycle › PII-TR-005 Unknown temporary-phone ID returns 404; a badly formed ID returns 422": {
+      "id": "PII-TR-005",
+      "s": "PASS",
+      "d": 491,
+      "r": 0
+    },
+    "api::transient/transient-phone.spec.ts::Transient phone lifecycle › PII-TR-006 Promoting saves it as the user’s permanent phone (created=true), uses it up, and it can be read": {
+      "id": "PII-TR-006",
+      "s": "PASS",
+      "d": 546,
+      "r": 0
+    },
+    "api::transient/transient-phone.spec.ts::Transient phone lifecycle › PII-TR-007 Promoting replaces the user’s existing permanent phone (created=false)": {
+      "id": "PII-TR-007",
+      "s": "SKIPPED",
+      "d": 0,
+      "r": 0
+    },
+    "api::transient/transient-phone.spec.ts::Transient phone lifecycle › PII-TR-008 Lifetimes at the allowed minimum and maximum are accepted; outside them 400 VALIDATION_ERROR": {
+      "id": "PII-TR-008",
+      "s": "PASS",
+      "d": 599,
+      "r": 0
+    },
+    "api::transient/transient-phone.spec.ts::Transient phone lifecycle › PII-TR-009 A zero, negative or fractional lifetime is rejected": {
+      "id": "PII-TR-009",
+      "s": "PASS",
+      "d": 1101,
+      "r": 0
+    },
+    "api::transient/transient-phone.spec.ts::Transient phone lifecycle › PII-TR-010 An invalid phone number is rejected (400 VALIDATION_ERROR)": {
+      "id": "PII-TR-010",
+      "s": "PASS",
+      "d": 426,
+      "r": 0
+    },
+    "api::transient/transient-phone.spec.ts::Transient phone lifecycle › PII-TR-011 A temporary-phone request missing required fields is rejected (422)": {
+      "id": "PII-TR-011",
+      "s": "PASS",
+      "d": 346,
+      "r": 0
+    },
+    "api::transient/transient-phone.spec.ts::Transient phone lifecycle › PII-TR-012 An expired temporary phone cannot be looked up or promoted (404)": {
+      "id": "PII-TR-012",
+      "s": "BLOCKED",
+      "d": 0,
+      "r": 0
+    }
+  }
+}
