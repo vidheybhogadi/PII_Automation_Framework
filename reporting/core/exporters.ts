@@ -1,5 +1,5 @@
 /** CSV / JSON / chat-summary exporters. Browser-safe; operate on already-sanitized report data. */
-import { areaInfo } from './catalog';
+import { areaInfo, primaryEndpoint, suiteOf } from './catalog';
 import {
   countStatuses,
   evaluateGates,
@@ -11,13 +11,25 @@ import {
   passRate,
   scopeTests,
   SEVERITY_RANK,
+  testOutcome,
 } from './analytics';
 import type { ReportData, ReportTest } from './types';
 
 const CSV_COLUMNS: [string, (t: ReportTest) => string | number][] = [
   ['test_id', (t) => t.id],
+  ['endpoint', (t) => primaryEndpoint(t.endpoints)],
   ['title', (t) => t.title],
-  ['status', (t) => t.status],
+  ['status', (t) => testOutcome(t).outcome],
+  ['remarks', (t) => testOutcome(t).remark],
+  ['what_it_does', (t) => t.info?.what ?? ''],
+  ['why_it_matters', (t) => t.info?.why ?? ''],
+  ['steps', (t) => (t.info?.steps ?? []).map((s, i) => `${i + 1}. ${s}`).join(' ')],
+  ['expected_result', (t) => t.info?.expected ?? ''],
+  ['test_type', (t) => t.info?.type ?? ''],
+  ['suite', (t) => suiteOf(t.tags)],
+  ['priority', (t) => t.info?.priority ?? ''],
+  ['preconditions', (t) => t.info?.preconditions ?? ''],
+  ['raw_status', (t) => (t.notRun ? 'NOT_RUN' : t.status)],
   ['category', (t) => areaInfo(t.area).label],
   ['severity', (t) => t.severity],
   ['endpoints', (t) => t.endpoints.join(' ')],
@@ -69,7 +81,10 @@ export function resultsJson(report: ReportData, tests: readonly ReportTest[] = r
         key: t.key,
         id: t.id,
         title: t.title,
-        status: t.status,
+        status: testOutcome(t).outcome,
+        remarks: testOutcome(t).remark,
+        rawStatus: t.notRun ? 'NOT_RUN' : t.status,
+        description: t.info ?? null,
         area: t.area,
         severity: t.severity,
         endpoints: t.endpoints,

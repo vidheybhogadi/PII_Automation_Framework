@@ -250,12 +250,27 @@ export interface HistoryEntry {
 
 // ---- Final report --------------------------------------------------------------------------------
 
+/** Plain-English description of a test (from tests/catalog), shown in the report and the Excel sheet. */
+export interface TestDescription {
+  what: string;
+  why: string;
+  steps: string[];
+  expected: string;
+  type: 'Positive' | 'Negative' | 'Security' | 'Database' | 'Contract';
+  priority: 'Critical' | 'High' | 'Medium' | 'Low';
+  preconditions?: string;
+}
+
 export interface ReportTest extends CollectedTest {
   area: AreaKey;
   endpoints: string[];
   severity: Severity;
   kind: 'integration' | 'unit';
   milestone: string;
+  /** What the test does and why — absent only when no description has been written yet. */
+  info?: TestDescription;
+  /** True for tests that exist in the suite but were not part of this run (shown as "Not Tested"). */
+  notRun?: boolean;
 }
 
 export interface ReportData {
@@ -267,6 +282,8 @@ export interface ReportData {
     generatedAt: string;
     dataSource: DataSource;
     pdfFile: string | null;
+    /** The styled test-case workbook next to the report (same design as docs/test-cases.xlsx), if built. */
+    excelFile?: string | null;
   };
   run: RunInfo;
   environment: EnvironmentInfo;

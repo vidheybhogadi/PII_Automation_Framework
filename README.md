@@ -55,7 +55,7 @@ PII_Automation_Framework/
 │   ├── security/                     44 signing · permissions · tenant isolation · leak protection
 │   ├── contract/                     5  responses match the documented format
 │   ├── db/                           7  data is encrypted in the database
-│   └── unit/                         82 self-tests of the framework itself (no service needed)
+│   └── unit/                         83 self-tests of the framework itself (no service needed)
 │
 ├── src/                            THE FRAMEWORK: reusable code the tests are built on
 │   ├── clients/                      talks to the service
@@ -146,8 +146,43 @@ test(
 - **IDs** never change: `WR` write · `RD` read · `SR` search · `BR` bulk read · `AUTH` signing · `AZ` permissions ·
   `TI` tenant isolation · `DB` database · `UT` self-test.
 - **Tags** pick subsets: `@smoke` (15) · `@security` (45) · `@db` (8) · `@poc` (1) · `@regression` (132).
-- **Waiting on the backend team?** Call `blockedBy('Q-14', 'reason')` in the test. It shows as **Waiting**, never
-  as passed. Open questions: [docs/known-gaps-and-questions.md](docs/known-gaps-and-questions.md).
+- **Every test has a plain-English description** in `tests/catalog/<area>.ts`: what it does, why it matters, steps,
+  expected result, type, priority and preconditions. The report and the Excel sheet show it. **When you add a test,
+  add its entry there**; self-test UT-DOC-002 fails until you do.
+- **Waiting on the backend team?** Call `blockedBy('Q-14', 'reason')` in the test. It shows as **Not Tested** with
+  the reason, never as passed. Open questions: [docs/known-gaps-and-questions.md](docs/known-gaps-and-questions.md).
+
+### Adding a new test: where each column comes from
+
+Nothing is hard-coded: the Excel sheet and the report pick a new test up automatically from these three places.
+
+| Column                                                          | Comes from                                                                                                                                                                                                                                                                | Example                                      |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| **Endpoint** (its heading)                                      | The **ID prefix** (`PII-WR` → Save PII, `PII-RD` → Read PII, `PII-SR` → Search PII, `PII-BR` → Bulk read, `PII-TR` → Create temporary phone, `PII-FT` → Create encryption key, `PII-HLT` → Health check). To choose a different one, set `endpoint` in its catalog entry. | `endpoint: 'resolveTransientPhone'`          |
+| **Suite**                                                       | The test's **tag**: `@smoke` → Smoke, otherwise Regression                                                                                                                                                                                                                | `test('PII-RD-010 …', { tag: '@smoke' }, …)` |
+| **Type, priority, description, steps, expected, preconditions** | Its entry in **`tests/catalog/<area>.ts`**                                                                                                                                                                                                                                | see below                                    |
+
+```ts
+// tests/pii/read-pii.spec.ts
+test('PII-RD-010 Reading a phone returns the digits-only number', { tag: '@smoke' }, async ({ pii, data, tenant }) => {
+  // …
+});
+
+// tests/catalog/read.ts
+'PII-RD-010': {
+  what: 'Saves a formatted test phone for a fake user, then reads it back.',
+  why: 'Apps rely on getting the cleaned-up number back, not what the user typed.',
+  steps: ['Save a formatted test phone', 'Read the PHONE field', 'Compare the value'],
+  expected: '200 OK; the value is the digits-only phone number.',
+  type: 'Positive',
+  priority: 'High',
+  preconditions: 'Needs approved test phone numbers',
+  // endpoint: not needed — PII-RD already means "Read PII"
+},
+```
+
+Self-test **UT-DOC-002** fails, telling you exactly what's missing, if a test has no catalog entry, or if its endpoint
+can't be worked out from the ID (e.g. a new `PII-AZ` permission test must say `endpoint: 'readPii'` or similar).
 
 ---
 
@@ -157,7 +192,7 @@ test(
 
 ```bash
 npm ci && npx playwright install chromium
-npm run verify                     # 82 self-tests → "82 passed"
+npm run verify                     # 83 self-tests → "83 passed"
 npm run report:demo && npm run report:open -- --demo    # sample report (made-up data)
 ```
 
@@ -176,21 +211,34 @@ Subsets: `npm run test:all -- --grep @smoke` · one test: `npx playwright test -
 
 ---
 
+## Status: Pass / Fail / Not Tested
+
+The report and the Excel sheet use only three statuses, always for **every** test case:
+
+| Status           | Meaning                                                                                                                                                      |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ✔ **Pass**       | The test ran in the last run and passed                                                                                                                      |
+| ✘ **Fail**       | The test ran in the last run and failed (the reason shows as "Expected …, got …")                                                                            |
+| — **Not Tested** | Anything else: not part of the last run, waiting on a Dev answer, skipped for missing setup, or the service was unreachable. The reason is shown next to it. |
+
+So if you run one test, that test shows Pass or Fail and all the others show Not Tested.
+
 ## The report
 
-`reports/qa-report/index.html` (plus `report.pdf`, `results.csv`, `summary.txt`):
+`reports/qa-report/index.html` (plus `report.pdf`, `test-cases.xlsx`, `results.csv`, `summary.txt`). Export → **Excel (.xlsx)** downloads the same styled workbook as `docs/test-cases.xlsx`, with this run’s results:
 
 - **Banner**: the answer in one sentence, four numbers, and a **health score** speedometer (0–100%)
-- **01 What needs attention**: each failure as **Expected → Got**, plus checks waiting on the backend
+- **01 What needs attention**: each failure as **Expected → Got**, plus how many tests were not tested and why
 - **02 How each endpoint did**: one tile per endpoint (method + path); click one to see its test cases
-- **03 All tests**: every test case under a heading per endpoint, with search; click a row for details
+- **03 All tests**: every test case under a heading per endpoint, with a one-line description; click a row to see
+  what it does, why it matters, the steps and the expected result
 - **04 About this run**: environment, time, duration
 
 **Keyboard shortcuts** (press `?` in the report):
 
 | Key          | Action                | Key         | Action                         |
 | ------------ | --------------------- | ----------- | ------------------------------ |
-| `⌘/Ctrl K`   | search everything     | `F` `W` `A` | show Failed / Waiting / All    |
+| `⌘/Ctrl K`   | search everything     | `F` `W` `A` | show Fail / Not Tested / All   |
 | `/`          | search the test list  | `← →`       | previous / next page           |
 | `1`–`4`      | jump to section 01–04 | `J` `K`     | next / previous test (details) |
 | `0` / `Home` | back to top           | `E`         | export menu                    |
@@ -215,8 +263,8 @@ More: [docs/reporting.md](docs/reporting.md).
 
 | Part                 | Tests | Status                                                                                                                      |
 | -------------------- | :---: | --------------------------------------------------------------------------------------------------------------------------- |
-| Framework self-tests |  82   | all passing                                                                                                                 |
-| Report tests         |  47   | all passing                                                                                                                 |
+| Framework self-tests |  83   | all passing                                                                                                                 |
+| Report tests         |  48   | all passing                                                                                                                 |
 | PII service tests    |  133  | written; **not yet run against a real service**: waiting on the items in [PENDING-PLACEHOLDERS.md](PENDING-PLACEHOLDERS.md) |
 
 [Pending placeholders](PENDING-PLACEHOLDERS.md) · [Test cases (Excel)](docs/test-cases.xlsx) · [Setup](docs/setup-guide.md) · [Commands](docs/execution-guide.md) · [Test scenarios](docs/test-scenarios.md) ·

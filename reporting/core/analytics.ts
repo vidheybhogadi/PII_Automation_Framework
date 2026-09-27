@@ -96,9 +96,56 @@ export function latencyStats(values: readonly number[]): LatencyStats | null {
  * Default reporting scope: SERVICE (integration) tests whenever the run contains any, otherwise everything.
  * Framework self-tests never inflate service pass rates — they are reported as their own gate.
  */
-export function scopeTests<T extends { kind: 'integration' | 'unit' }>(tests: readonly T[]): T[] {
+export function scopeTests<T extends { kind: 'integration' | 'unit'; notRun?: boolean }>(
+  tests: readonly T[],
+): T[] {
+  // Only tests that were part of the run: health, gates, history and comparisons measure what actually ran.
+  const ran = tests.filter((t) => !t.notRun);
+  const service = ran.filter((t) => t.kind === 'integration');
+  return service.length ? service : ran;
+}
+
+/** Every service test in the suite, including ones not part of this run — for lists, tiles and exports. */
+export function catalogTests<T extends { kind: 'integration' | 'unit'; notRun?: boolean }>(
+  tests: readonly T[],
+): T[] {
   const service = tests.filter((t) => t.kind === 'integration');
-  return service.length ? service : [...tests];
+  return service.length ? service : tests.filter((t) => !t.notRun);
+}
+
+/** The three statuses a reader sees. Anything that did not really run and finish is "Not Tested". */
+export type Outcome = 'Pass' | 'Fail' | 'Not Tested';
+
+/** Pass / Fail / Not Tested plus a one-line reason (why it failed, or why it was not tested). */
+export function testOutcome(t: ReportTest): { outcome: Outcome; remark: string } {
+  const note = (type: string) => t.annotations.find((a) => a.type === type)?.description ?? '';
+  if (t.notRun) return { outcome: 'Not Tested', remark: 'Not part of this run' };
+  if (t.annotations.some((a) => a.type === 'preflight'))
+    return {
+      outcome: 'Not Tested',
+      remark: 'The PII service could not be reached, so this test could not run',
+    };
+  if (t.status === 'PASS') return { outcome: 'Pass', remark: '' };
+  if (t.status === 'FAIL') {
+    const f = analyzeFailure(t);
+    const remark =
+      f.expected && f.received
+        ? `Expected ${f.expected}, got ${f.received}`
+        : f.message
+            .split('\n')
+            .find((l) => l.trim().length > 0)
+            ?.trim() || FAILURE_PATTERNS[f.pattern].label;
+    return { outcome: 'Fail', remark: remark.slice(0, 300) };
+  }
+  if (t.status === 'BLOCKED' || t.status === 'FIXME') {
+    const why = note('blocked') || note('fixme');
+    return {
+      outcome: 'Not Tested',
+      remark: why ? `Waiting on Dev — ${why}` : 'Waiting on an answer from Dev',
+    };
+  }
+  if (t.status === 'SKIPPED') return { outcome: 'Not Tested', remark: note('skip') || 'Skipped in this run' };
+  return { outcome: 'Not Tested', remark: 'The run stopped before this test' };
 }
 
 export function scopeOf(tests: readonly { kind: 'integration' | 'unit' }[]): 'service' | 'all' {

@@ -2,6 +2,7 @@
 import { Component, type ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { maskRequestId, sanitizeText } from '../../../core/sanitize';
+import type { Outcome } from '../../../core/analytics';
 import type { TestStatus } from '../../../core/types';
 import { GLOSSARY } from '../glossary';
 import { useCountUp, useInView } from '../hooks';
@@ -11,11 +12,11 @@ import { copyText } from '../utils';
 
 // ---- Status: never colour alone — always icon + word --------------------------------------------------
 export const STATUS_META: Record<TestStatus, { label: string; icon: string; help: string }> = {
-  PASS: { label: 'Passed', icon: 'check', help: 'The check ran and everything was as expected.' },
-  FAIL: { label: 'Failed', icon: 'x', help: 'The check ran and something was not as expected.' },
+  PASS: { label: 'Pass', icon: 'check', help: 'The check ran and everything was as expected.' },
+  FAIL: { label: 'Fail', icon: 'x', help: 'The check ran and something was not as expected.' },
   SKIPPED: { label: 'Skipped', icon: 'skip', help: GLOSSARY.Skipped as string },
-  BLOCKED: { label: 'Waiting', icon: 'pause', help: GLOSSARY.Blocked as string },
-  FIXME: { label: 'Waiting', icon: 'pause', help: GLOSSARY.Fixme as string },
+  BLOCKED: { label: 'Not Tested', icon: 'pause', help: GLOSSARY.Blocked as string },
+  FIXME: { label: 'Not Tested', icon: 'pause', help: GLOSSARY.Fixme as string },
   UNKNOWN: { label: 'Not run', icon: 'minus', help: 'No result was recorded (the run stopped early).' },
 };
 
@@ -29,6 +30,31 @@ export function StatusBadge({ status, large }: { status: TestStatus; large?: boo
     >
       <Icon name={m.icon} size={large ? 15 : 12} stroke={2.6} />
       {m.label}
+    </span>
+  );
+}
+
+/** The three statuses a reader sees: Pass, Fail, Not Tested. Icon + word, never colour alone. */
+export const OUTCOME_META: Record<Outcome, { cls: string; icon: string; help: string }> = {
+  Pass: { cls: 'PASS', icon: 'check', help: 'The test ran and everything was as expected.' },
+  Fail: { cls: 'FAIL', icon: 'x', help: 'The test ran and something was not as expected.' },
+  'Not Tested': {
+    cls: 'SKIPPED',
+    icon: 'minus',
+    help: 'The test did not run in this run — see the reason (not part of this run, waiting on Dev, or skipped).',
+  },
+};
+
+export function OutcomeBadge({ outcome, large }: { outcome: Outcome; large?: boolean }) {
+  const m = OUTCOME_META[outcome];
+  return (
+    <span
+      class={`status status--${m.cls}${large ? ' status--lg' : ''}`}
+      data-help={m.help}
+      data-help-title={outcome}
+    >
+      <Icon name={m.icon} size={large ? 15 : 12} stroke={2.6} />
+      {outcome}
     </span>
   );
 }
@@ -334,7 +360,7 @@ export function CopyButton({ text, label = 'Copy' }: { text: string; label?: str
   const { toast } = useApp();
   return (
     <button
-      class="btn btn--icon btn--ghost btn--sm"
+      class="btn btn--icon btn--ghost btn--sm no-print"
       aria-label={label}
       title={label}
       onClick={async (e) => {

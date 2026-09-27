@@ -205,6 +205,8 @@ export default class PiiResultsReporter implements Reporter {
   }
 
   onEnd(result: FullResult): void {
+    // `playwright test --list` only lists tests; nothing ran, so the last real results must not be overwritten.
+    if (process.argv.includes('--list')) return;
     const rootDir = this.config.rootDir;
     const tests: CollectedTest[] = this.rootSuite.allTests().map((test) => this.collect(test, rootDir));
     const finishedAt = new Date();

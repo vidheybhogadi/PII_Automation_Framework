@@ -29,9 +29,9 @@ test.describe('REPORT UI — at a glance', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
       `${c.fail} of ${c.pass + c.fail} checks failed — needs attention.`,
     );
-    await expect(page.getByRole('button', { name: `Passed: ${c.pass}` })).toBeVisible();
-    await expect(page.getByRole('button', { name: `Failed: ${c.fail}` })).toBeVisible();
-    await expect(page.getByRole('button', { name: `Waiting: ${c.waiting}` })).toBeVisible();
+    await expect(page.getByRole('button', { name: `Pass: ${c.pass}` })).toBeVisible();
+    await expect(page.getByRole('button', { name: `Fail: ${c.fail}` })).toBeVisible();
+    await expect(page.getByRole('button', { name: `Not Tested: ${c.waiting}` })).toBeVisible();
     await expect(page.getByRole('button', { name: `Total: ${c.total}` })).toBeVisible();
     await expect(page.getByRole('img', { name: /Health score \d+% out of 100%/ })).toBeVisible();
     for (const title of ['What needs attention', 'How each endpoint did', 'All tests', 'About this run']) {
@@ -46,9 +46,14 @@ test.describe('REPORT UI — at a glance', () => {
     await openReport(page, FIXTURES.demo);
     const attention = page.locator('#attention');
     await expect(attention.locator('.alert-card--fail')).toHaveCount(counts().fail);
-    await expect(attention).toContainText('checks are waiting to run');
+    await expect(attention).toContainText('tests were not tested');
     await attention.getByRole('button', { name: /Request without a Content-Type header/ }).click();
     const drawer = page.getByRole('dialog', { name: /Request without a Content-Type header/ });
+    // Every test explains itself in plain language, for someone new to the project.
+    await expect(drawer).toContainText('What this test does');
+    await expect(drawer).toContainText('Why it matters');
+    await expect(drawer).toContainText('Expected result');
+    await expect(drawer).toContainText('Result of this run');
     await expect(drawer).toContainText('What went wrong');
     await expect(drawer).toContainText('Expected');
     await expect(drawer).toContainText('Where to look first');
@@ -83,6 +88,35 @@ test.describe('REPORT UI — at a glance', () => {
     await expect(page.locator('#tests tr.group-row').nth(1)).toContainText('Save PII');
   });
 
+  test('RPT-UI-003c group by endpoint, type, suite or none; the choice is remembered', async ({ page }) => {
+    await openReport(page, FIXTURES.demo);
+    const tests = page.locator('#tests');
+    const heads = tests.locator('tr.group-row');
+    const groupBy = (name: string) =>
+      tests.getByRole('group', { name: 'Group by' }).getByRole('button', { name, exact: true });
+
+    await expect(groupBy('Endpoint')).toHaveAttribute('aria-pressed', 'true'); // default
+    await expect(heads.first()).toContainText('Health check');
+
+    await groupBy('Type').click();
+    await expect(heads.first()).toContainText('Positive');
+    await expect(heads.first()).toContainText('Normal use works as expected');
+
+    await groupBy('Suite').click();
+    await expect(heads.first()).toContainText('Smoke');
+    await expect(tests.locator('tbody tr[data-status]').first().locator('.suite--Smoke')).toBeVisible();
+
+    await groupBy('None').click();
+    await expect(heads).toHaveCount(0); // a plain list, no headings
+    await expect(tests.locator('tbody tr[data-status]').first()).toContainText('PII-AUTH-001'); // sorted by ID
+
+    await page.reload();
+    await page.waitForFunction(
+      () => (window as unknown as { __PII_READY__?: boolean }).__PII_READY__ === true,
+    );
+    await expect(groupBy('None')).toHaveAttribute('aria-pressed', 'true'); // remembered
+  });
+
   test('RPT-UI-004 test list: tabs, search, pagination, open details', async ({ page }) => {
     await openReport(page, FIXTURES.demo);
     const c = counts();
@@ -90,7 +124,7 @@ test.describe('REPORT UI — at a glance', () => {
     await tests.scrollIntoViewIfNeeded();
     await expect(tests.locator('tbody tr[data-status]')).toHaveCount(20);
     await expect(tests.locator('.pagination')).toContainText(`1–20 of ${c.total}`);
-    await tests.getByRole('button', { name: /^Failed/ }).click();
+    await tests.getByRole('button', { name: /^Fail/ }).click();
     await expect(tests.locator('tbody tr[data-status]')).toHaveCount(c.fail);
     await tests.getByRole('button', { name: /^All/ }).click();
     await tests.getByRole('searchbox', { name: 'Search tests' }).fill('AUTH-018');

@@ -5,7 +5,7 @@
  *   npm run report:demo                # synthetic DEMO data → reports/demo-report/ (clearly labelled)
  *   tsx reporting/generator/generate.ts --input <file> --out <dir> [--no-history] [--archive] [--no-bundle]
  */
-import { cpSync, existsSync, readdirSync, readFileSync } from 'node:fs';
+import { cpSync, existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import {
   countStatuses,
@@ -19,9 +19,13 @@ import {
 } from '../core/analytics';
 import type { HistoryEntry } from '../core/types';
 import { buildReportData } from './build-report-data';
+import { listInventory, type InventoryTest } from './inventory';
 import { historyFileName, loadHistory, saveHistoryEntry } from './history';
 import { parseCollectedRun, parseReportConfig } from './schema';
 import { writeReport } from './write-report';
+import { buildTestCasesWorkbook, TEST_CASES_XLSX } from '../../scripts/generate-test-cases-xlsx';
+
+const EXCEL_FILE = 'test-cases.xlsx';
 
 export const ROOT = path.resolve(__dirname, '../..');
 export const PATHS = {
@@ -44,6 +48,16 @@ export interface GenerateOptions {
   archive?: boolean;
   bundle?: boolean;
   quiet?: boolean;
+  /**
+   * List every test in the suite, marking those not part of this run as "Not Tested". Default: on for a real
+   * run read from the default location (npm run report / test:all); off for demo data and explicit inputs.
+   */
+  includeNotRun?: boolean;
+  /**
+   * Also write test-cases.xlsx into the report folder (Export → Excel), built exactly like docs/test-cases.xlsx.
+   * Default: on for npm run report and the demo report; off for explicit inputs.
+   */
+  excel?: boolean;
 }
 
 function readJson(file: string, what: string): unknown {
@@ -93,8 +107,36 @@ export async function generate(
     : run.dataSource === 'DEMO'
       ? loadDemoHistory()
       : loadHistory(historyDir, config.historyLimit).entries;
-  const report = buildReportData(run, config, history.slice(-config.historyLimit));
+  const includeNotRun = opts.includeNotRun ?? (!demo && opts.input === undefined);
+  let inventory: InventoryTest[] = [];
+  if (includeNotRun) {
+    try {
+      inventory = listInventory(['api']);
+    } catch {
+      // Listing needs the Playwright CLI; without it the report simply shows the tests that ran.
+      inventory = [];
+    }
+  }
+  const report = buildReportData(run, config, history.slice(-config.historyLimit), new Date(), inventory);
+  let excel: Buffer | null = null;
+  if (opts.excel ?? opts.input === undefined) {
+    try {
+      ({ buffer: excel } = await buildTestCasesWorkbook({
+        runData: input,
+        notesFrom: demo ? undefined : TEST_CASES_XLSX,
+        inventory: inventory.length ? inventory : undefined,
+      }));
+      report.meta.excelFile = EXCEL_FILE;
+    } catch {
+      // Listing the tests needs the Playwright CLI; without it the report simply has no Excel export.
+      excel = null;
+    }
+  }
   const files = await writeReport(report, outDir, { bundle: opts.bundle });
+  if (excel) {
+    writeFileSync(path.join(outDir, EXCEL_FILE), excel);
+    files.push(path.join(outDir, EXCEL_FILE));
+  }
 
   let historyFile: string | null = null;
   if (run.dataSource === 'REAL' && useHistory) {
@@ -128,6 +170,10 @@ export async function generate(
     console.log(
       `  Data      : ${rel(path.join(outDir, 'data'))}/  ·  results.json  ·  results.csv  ·  summary.txt`,
     );
+    if (excel)
+      console.log(
+        `  Excel     : ${rel(path.join(outDir, EXCEL_FILE))}  (same design as docs/test-cases.xlsx)`,
+      );
     console.log(
       `  History   : ${historyFile ? rel(historyFile) : demo ? 'demo history (fixtures, read-only)' : 'not written'} (${history.length} previous run(s) loaded)`,
     );

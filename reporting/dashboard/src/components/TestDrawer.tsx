@@ -1,12 +1,13 @@
 /** Test details — plain language first, technical detail below. Only sanitized metadata is ever shown. */
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'preact/hooks';
-import { analyzeFailure, FAILURE_PATTERNS, formatDuration } from '../../../core/analytics';
+import { analyzeFailure, FAILURE_PATTERNS, formatDuration, testOutcome } from '../../../core/analytics';
+import { suiteOf } from '../../../core/catalog';
 import { sanitizeText } from '../../../core/sanitize';
 import { Icon } from '../icons';
 import { endpointOf, plainEndpoint, plainTitle } from '../plain';
 import { useApp } from '../store';
 import { copyText, fmtDateTime, isTypingTarget } from '../utils';
-import { KV, Method, RequestId, StatusBadge } from './ui';
+import { KV, Method, OutcomeBadge, RequestId } from './ui';
 
 const IMPORTANCE: Record<string, string> = {
   critical: 'Critical',
@@ -66,6 +67,8 @@ export function TestDrawer() {
   const waiting = test.annotations.filter((a) => ['blocked', 'fixme', 'skip'].includes(a.type));
   const ep = plainEndpoint(endpointOf(test), report.endpoints);
   const calls = test.apiCalls.filter((c) => c.phase !== 'preflight');
+  const outcome = testOutcome(test);
+  const info = test.info;
 
   return (
     <>
@@ -79,7 +82,7 @@ export function TestDrawer() {
       >
         <div class="drawer__head">
           <div class="row row--between">
-            <StatusBadge status={test.status} large />
+            <OutcomeBadge outcome={outcome.outcome} large />
             <div class="row" style={{ gap: 4 }}>
               <button
                 class="btn btn--icon btn--ghost"
@@ -130,6 +133,59 @@ export function TestDrawer() {
         </div>
 
         <div class="drawer__body">
+          <section class="about-test" aria-label="About this test">
+            {info ? (
+              <>
+                <div class="about-test__block">
+                  <div class="subhead">What this test does</div>
+                  <p>{info.what}</p>
+                </div>
+                <div class="about-test__block about-test__block--why">
+                  <div class="subhead">Why it matters</div>
+                  <p>{info.why}</p>
+                </div>
+                <div class="about-test__block">
+                  <div class="subhead">Steps</div>
+                  <ol class="about-test__steps">
+                    {info.steps.map((step, i) => (
+                      <li key={i}>{step}</li>
+                    ))}
+                  </ol>
+                </div>
+                <div class="about-test__block about-test__block--expected">
+                  <div class="subhead">Expected result</div>
+                  <p>{info.expected}</p>
+                </div>
+                <div class="about-test__chips">
+                  <span class="tag">{info.type}</span>
+                  <span class={`suite suite--${suiteOf(test.tags)}`}>{suiteOf(test.tags)}</span>
+                  <span class={`prio prio--${info.priority}`}>{info.priority} priority</span>
+                </div>
+                {info.preconditions && (
+                  <div class="about-test__pre">
+                    <Icon name="info" size={16} />
+                    <span>
+                      <b>Needs: </b>
+                      {info.preconditions}
+                    </span>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p class="muted small">No description has been written for this test yet (tests/catalog).</p>
+            )}
+          </section>
+
+          <section class={`result-box result-box--${outcome.outcome.replace(' ', '-')}`} aria-label="Result">
+            <div class="subhead">Result of this run</div>
+            <div class="row row--wrap" style={{ gap: 10 }}>
+              <OutcomeBadge outcome={outcome.outcome} />
+              <span class="small">
+                {outcome.outcome === 'Pass' ? 'Everything was as expected.' : outcome.remark}
+              </span>
+            </div>
+          </section>
+
           {preflight && (
             <div class="banner banner--fail">
               <Icon name="server" />
@@ -174,11 +230,11 @@ export function TestDrawer() {
             </section>
           )}
 
-          {waiting.length > 0 && (
+          {waiting.length > 0 && !test.notRun && (
             <div class="banner banner--warn">
               <Icon name="pause" />
               <div>
-                <b>Why this check didn’t run</b>
+                <b>Why this test was not tested</b>
                 <ul>
                   {waiting
                     .filter((a) => a.description)
@@ -195,7 +251,7 @@ export function TestDrawer() {
             <KV
               items={[
                 ['Endpoint', `${ep.name} — ${ep.means}`],
-                ['Importance', IMPORTANCE[test.severity] ?? test.severity],
+                ['Priority', info?.priority ?? IMPORTANCE[test.severity] ?? test.severity],
                 [
                   'Duration',
                   test.status === 'PASS' || test.status === 'FAIL' ? formatDuration(test.durationMs) : '—',
@@ -240,8 +296,8 @@ export function TestDrawer() {
           )}
 
           {test.steps.length > 0 && (
-            <section aria-label="Steps">
-              <div class="subhead">Steps</div>
+            <section aria-label="Execution log">
+              <div class="subhead">What happened (execution log)</div>
               <ol class="checklist">
                 {test.steps.map((s, i) => (
                   <li key={i}>

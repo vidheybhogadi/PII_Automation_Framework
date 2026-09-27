@@ -100,7 +100,7 @@ export function CommandPalette() {
       },
       {
         group: 'Quick actions',
-        label: 'Show tests waiting to run',
+        label: 'Show tests that were not tested',
         icon: 'pause',
         run: () => showTests({ statuses: NOT_RUN }),
       },
@@ -219,7 +219,7 @@ export const SHORTCUTS: [string, string][] = [
   ['/', 'Search the test list'],
   ['1 – 4', 'Jump to section 01–04'],
   ['0 or Home', 'Back to the top'],
-  ['F · W · A', 'Show Failed · Waiting · All tests'],
+  ['F · W · A', 'Show Fail · Not Tested · All tests'],
   ['← →', 'Previous / next page of tests'],
   ['J / K or ↓ ↑', 'Next / previous test (details open)'],
   ['E', 'Export menu'],

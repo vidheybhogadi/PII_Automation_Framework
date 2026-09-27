@@ -1,405 +1,486 @@
 /**
- * Builds docs/test-cases.xlsx — every test case organized by endpoint: a Summary tab, an "All test cases" tab
- * with a heading per endpoint, one tab per endpoint, and the framework self-tests.
+ * Builds docs/test-cases.xlsx — every PII service test case, grouped by API endpoint, on one sheet.
  *
- *   npm run docs:testcases
+ *   npm run docs:testcases          (also run automatically at the end of npm run test:all)
  *
- * The list comes from the real suite (`playwright test --list`), so the sheet can never drift from the code.
- * "Last result" is read from the latest recorded run (reports/latest/run-data.json) when one exists; tests that were
- * not part of that run say "Not run". Nothing is guessed.
+ * Fully dynamic:
+ *   - The test list comes from the code (`playwright test --list`), so new tests and new endpoints appear
+ *     automatically, in the right endpoint section.
+ *   - Descriptions (what / why / steps / expected / type / priority / preconditions) come from tests/catalog.
+ *     A test without one is flagged in the sheet, and self-test UT-DOC-002 fails until it is written.
+ *   - Status comes from the LAST run only: Pass, Fail, or Not Tested (with the reason). Tests that were not part of
+ *     the last run are Not Tested. Nothing is guessed.
+ *   - The "Tester Notes" column is carried over from the previous file, so manual notes survive regeneration.
+ *
+ * The same builder (buildTestCasesWorkbook) produces the Excel file in the HTML report's Export menu, so both
+ * files always look identical.
  */
 import ExcelJS from 'exceljs';
-import { execSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import {
-  areaForId,
-  CROSS_ENDPOINT,
-  ENDPOINT_GROUP_ORDER,
-  endpointsForId,
-  primaryEndpoint,
-} from '../reporting/core/catalog';
+import { testOutcome, type Outcome } from '../reporting/core/analytics';
+import { ENDPOINT_GROUP_ORDER, primaryEndpoint, suiteOf } from '../reporting/core/catalog';
+import type { ReportTest } from '../reporting/core/types';
 import { plainEndpoint } from '../reporting/dashboard/src/plain';
+import { enrichTests, resolveEndpoints } from '../reporting/generator/build-report-data';
+import { listInventory, type InventoryTest } from '../reporting/generator/inventory';
+import { parseCollectedRun } from '../reporting/generator/schema';
 import { ENDPOINTS } from '../src/clients/endpoints';
+import { TEST_CASES, type TestCaseInfo } from '../tests/catalog';
 
 const ROOT = path.resolve(__dirname, '..');
-const OUT = path.join(ROOT, 'docs/test-cases.xlsx');
+// Preview options (e.g. from demo data into a scratch file): --run <run-data.json> --out <file.xlsx>
+const argValue = (flag: string) => {
+  const i = process.argv.indexOf(flag);
+  return i > 0 ? process.argv[i + 1] : undefined;
+};
+export const TEST_CASES_XLSX = path.join(ROOT, 'docs/test-cases.xlsx');
+const SHEET = 'Test Cases';
 
-interface ListedTest {
-  id: string;
-  title: string;
-  file: string;
-  line: number;
-  project: string;
-  tags: string[];
-}
+// ---- Columns -----------------------------------------------------------------------------------------------
+const COLUMNS = [
+  { key: 'sno', header: 'S/No', width: 6 },
+  { key: 'id', header: 'TC ID', width: 14 },
+  { key: 'description', header: 'Test Case Description', width: 46 },
+  { key: 'why', header: 'Why It Matters', width: 38 },
+  { key: 'steps', header: 'Steps', width: 44 },
+  { key: 'expected', header: 'Expected Result', width: 40 },
+  { key: 'type', header: 'Type', width: 11 },
+  { key: 'suite', header: 'Suite', width: 12 },
+  { key: 'priority', header: 'Priority', width: 10 },
+  { key: 'pre', header: 'Preconditions', width: 28 },
+  { key: 'status', header: 'Status', width: 14 },
+  { key: 'remarks', header: 'Actual Result / Remarks', width: 32 },
+  { key: 'notes', header: 'Tester Notes', width: 26 },
+] as const;
+type ColKey = (typeof COLUMNS)[number]['key'];
+const COLS = COLUMNS.length;
+const col = (key: ColKey) => COLUMNS.findIndex((c) => c.key === key) + 1;
+const width = (key: ColKey) => COLUMNS[col(key) - 1]!.width;
 
-// ---- 1. The real test list ------------------------------------------------------------------------
-function listTests(): ListedTest[] {
-  const json = JSON.parse(
-    execSync('npx playwright test --list --reporter=json', {
-      cwd: ROOT,
-      encoding: 'utf8',
-      maxBuffer: 64 * 1024 * 1024,
-    }),
-  );
-  interface Spec {
-    title: string;
-    file: string;
-    line: number;
-    tags: string[];
-    tests: { projectName: string }[];
-  }
-  interface Suite {
-    specs?: Spec[];
-    suites?: Suite[];
-  }
-  const out: ListedTest[] = [];
-  const walk = (s: Suite) => {
-    for (const sp of s.specs ?? [])
-      for (const t of sp.tests)
-        out.push({
-          id: sp.title.split(' ')[0] ?? sp.title,
-          title: sp.title.replace(/^\S+\s/, ''),
-          file: sp.file,
-          line: sp.line,
-          project: t.projectName,
-          tags: sp.tags.map((x) => (x.startsWith('@') ? x : `@${x}`)),
-        });
-    for (const c of s.suites ?? []) walk(c);
-  };
-  for (const s of json.suites as Suite[]) walk(s);
-  return out;
-}
-
-// ---- 2. Facts read from the source: which open question (if any) a test waits on --------------------
-function openQuestions(tests: ListedTest[]): Map<string, string> {
-  const found = new Map<string, string>();
-  const files = new Set(tests.map((t) => t.file));
-  for (const f of files) {
-    const src = readFileSync(path.join(ROOT, 'tests', f), 'utf8');
-    // Split the file at each test(…) so a blockedBy() belongs to the test it is written in.
-    const chunks = src.split(/\n\s*test\(/);
-    for (const chunk of chunks) {
-      const id = /^\s*[`']?((?:PII|POC|UT)-[A-Z]*-?\d+[a-z]?)/.exec(chunk)?.[1];
-      const q = /blockedBy\(\s*'(Q-\d+)'/.exec(chunk)?.[1];
-      if (id && q) found.set(id, q);
-    }
-  }
-  return found;
-}
-
-// ---- 3. Last recorded result per test (never invented) ------------------------------------------------
-function lastResults(): { results: Map<string, string>; label: string } {
-  const file = path.join(ROOT, 'reports/latest/run-data.json');
-  const results = new Map<string, string>();
-  if (!existsSync(file)) return { results, label: 'no run recorded yet' };
-  const run = JSON.parse(readFileSync(file, 'utf8')) as {
-    run?: { startedAt?: string; environment?: string };
-    tests?: { id: string; title: string; status: string }[];
-  };
-  const word: Record<string, string> = {
-    PASS: 'Passed',
-    FAIL: 'Failed',
-    BLOCKED: 'Waiting',
-    FIXME: 'Waiting',
-    SKIPPED: 'Skipped',
-    UNKNOWN: 'Not run',
-  };
-  for (const t of run.tests ?? [])
-    results.set(`${t.id} ${t.title.replace(/^\S+\s/, '')}`, word[t.status] ?? t.status);
-  const when = run.run?.startedAt
-    ? new Date(run.run.startedAt).toISOString().slice(0, 16).replace('T', ' ')
-    : '';
-  return { results, label: `${run.run?.environment ?? ''} ${when} UTC`.trim() };
-}
-
-// ---- 4. Grouping and simple, rule-based columns -----------------------------------------------------
-/** Same rule as the report: the endpoint a test mainly tests, or "Across endpoints". */
-const endpointOfId = (id: string): string => primaryEndpoint(endpointsForId(id, areaForId(id)));
-
-function endpointLabel(key: string) {
-  const p = plainEndpoint(key);
-  if (key === CROSS_ENDPOINT) return { name: p.name, method: '—', path: 'several endpoints', means: p.means };
-  const e = ENDPOINTS[key as keyof typeof ENDPOINTS];
-  return { name: p.name, method: e.method, path: e.path, means: p.means };
-}
-
-/** Negative = the title says the request is refused or fails; undocumented behaviour = to be decided. */
-const typeOf = (title: string): 'Positive' | 'Negative' | 'To be decided' =>
-  /not documented yet/i.test(title)
-    ? 'To be decided'
-    : /\b(rejected|refused|cannot|never|fails|not found|40[0-9]|41[0-9]|422|503|invalid)\b/i.test(title)
-      ? 'Negative'
-      : 'Positive';
-
-const expectedStatus = (title: string): string =>
-  [...new Set(title.match(/\b(200|201|400|401|403|404|413|415|422|503)\b/g) ?? [])].join(' / ');
-
-// ---- 5. Workbook --------------------------------------------------------------------------------------
-const COLOR = {
-  ink: 'FF1F2937',
-  head: 'FF1E3A8A',
-  group: 'FFE0E7FF',
+// ---- Palette ------------------------------------------------------------------------------------------------
+const C = {
+  navy: 'FF1E293B',
+  slate: 'FF334155',
+  headerBg: 'FF475569',
+  band: 'FF1E3A8A',
+  bandSoft: 'FFDBEAFE',
+  bandInk: 'FF1E3A8A',
   zebra: 'FFF8FAFC',
   border: 'FFE2E8F0',
-  pass: 'FF15803D',
-  fail: 'FFB91C1C',
-  wait: 'FFB45309',
+  white: 'FFFFFFFF',
   muted: 'FF64748B',
   link: 'FF1D4ED8',
+  passBg: 'FFC6EFCE',
+  passInk: 'FF006100',
+  failBg: 'FFFFC7CE',
+  failInk: 'FF9C0006',
+  notBg: 'FFE5E7EB',
+  notInk: 'FF4B5563',
+  warnInk: 'FFB45309',
 };
-const thin = { style: 'thin' as const, color: { argb: COLOR.border } };
-const fill = (argb: string) => ({ type: 'pattern' as const, pattern: 'solid' as const, fgColor: { argb } });
+const PRIORITY_INK: Record<string, string> = {
+  Critical: 'FFB91C1C',
+  High: 'FFC2410C',
+  Medium: 'FF1D4ED8',
+  Low: 'FF6B7280',
+};
+const OUTCOME_STYLE: Record<Outcome, { label: string; bg: string; ink: string }> = {
+  Pass: { label: '✔ Pass', bg: C.passBg, ink: C.passInk },
+  Fail: { label: '✘ Fail', bg: C.failBg, ink: C.failInk },
+  'Not Tested': { label: '— Not Tested', bg: C.notBg, ink: C.notInk },
+};
+const fill = (argb: string): ExcelJS.Fill => ({ type: 'pattern', pattern: 'solid', fgColor: { argb } });
+const thin = { style: 'thin' as const, color: { argb: C.border } };
+const box = { top: thin, left: thin, bottom: thin, right: thin };
 
-function styleHeader(row: ExcelJS.Row) {
-  row.height = 22;
-  row.eachCell((c) => {
-    c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    c.fill = fill(COLOR.head);
-    c.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
-  });
+// ---- Last run: Pass / Fail / Not Tested per test -----------------------------------------------------------
+interface LastRun {
+  byKey: Map<string, ReportTest>;
+  label: string | null;
 }
 
-const resultColor = (v: string): string =>
-  v === 'Passed' ? COLOR.pass : v === 'Failed' ? COLOR.fail : v === 'Waiting' ? COLOR.wait : COLOR.muted;
+function loadLastRun(runData: string | null): LastRun {
+  if (!runData || !existsSync(runData)) return { byKey: new Map(), label: null };
+  try {
+    const run = parseCollectedRun(JSON.parse(readFileSync(runData, 'utf8')), path.relative(ROOT, runData));
+    const tests = enrichTests(run);
+    const when = new Date(run.run.startedAt);
+    const date = Number.isNaN(when.getTime())
+      ? run.run.startedAt
+      : `${when.toISOString().slice(0, 16).replace('T', ' ')} UTC`;
+    const secs = Math.round(run.run.durationMs / 100) / 10;
+    const label =
+      `Last run: ${date}  ·  environment ${run.run.environment}  ·  ` +
+      `${run.run.profile ?? 'all tests'}  ·  took ${secs}s`;
+    return { byKey: new Map(tests.map((t) => [t.key, t])), label };
+  } catch {
+    return { byKey: new Map(), label: null };
+  }
+}
 
-/** Excel sheet names: max 31 chars, no []:*?/\ */
-const sheetName = (s: string) => s.replace(/[[\]:*?/\\]/g, ' ').slice(0, 31);
+function outcomeFor(t: InventoryTest, last: LastRun): { outcome: Outcome; remark: string } {
+  const ran = last.byKey.get(t.key);
+  if (!ran)
+    return {
+      outcome: 'Not Tested',
+      remark: last.label ? 'Not part of the last run' : 'No run recorded yet',
+    };
+  return testOutcome(ran);
+}
 
-const CASE_COLUMNS: Partial<ExcelJS.Column>[] = [
-  { header: 'Test ID', key: 'id', width: 14 },
-  { header: 'Test case', key: 'title', width: 84 },
-  { header: 'Type', key: 'type', width: 13 },
-  { header: 'Expected status', key: 'status', width: 15 },
-  { header: 'Tags', key: 'tags', width: 22 },
-  { header: 'Open question', key: 'q', width: 13 },
-  { header: 'Last result', key: 'result', width: 12 },
-  { header: 'Source', key: 'source', width: 42 },
-];
-const LAST_COL = CASE_COLUMNS.length;
+// ---- Tester notes carried over from the previous file -------------------------------------------------------
+async function previousNotes(file: string | undefined): Promise<Map<string, string>> {
+  const notes = new Map<string, string>();
+  if (!file || !existsSync(file)) return notes;
+  try {
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.readFile(file);
+    const ws = wb.getWorksheet(SHEET);
+    if (!ws) return notes;
+    let idCol = 0;
+    let notesCol = 0;
+    const seen = new Map<string, number>();
+    ws.eachRow((row) => {
+      const values = row.values as unknown[];
+      const idIdx = values.findIndex((v) => v === 'TC ID');
+      const notesIdx = values.findIndex((v) => v === 'Tester Notes');
+      if (idIdx > 0 && notesIdx > 0) {
+        idCol = idIdx;
+        notesCol = notesIdx;
+        return;
+      }
+      if (!idCol) return;
+      const id = String(row.getCell(idCol).value ?? '').trim();
+      if (!/^(PII-[A-Z]+|POC)-\d+[a-z]?$/.test(id)) return;
+      const n = (seen.get(id) ?? 0) + 1;
+      seen.set(id, n);
+      const note = row.getCell(notesCol).text?.trim();
+      if (note) notes.set(`${id}#${n}`, note);
+    });
+  } catch {
+    /* unreadable previous file: start fresh */
+  }
+  return notes;
+}
 
-async function main() {
-  const all = listTests();
-  const service = all.filter((t) => t.project === 'api');
-  const unit = all.filter((t) => t.project === 'unit');
-  const questions = openQuestions(all);
-  const { results, label } = lastResults();
-  const result = (t: ListedTest) => results.get(`${t.id} ${t.title}`) ?? 'Not run';
+// ---- Layout helpers -----------------------------------------------------------------------------------------
+/** Excel does not auto-size wrapped rows in a generated file, so estimate the height from the text. */
+function rowHeight(texts: [string, number][]): number {
+  let lines = 1;
+  for (const [text, w] of texts) {
+    const perLine = Math.max(8, Math.floor(w * 1.15));
+    const n = text.split('\n').reduce((sum, part) => sum + Math.max(1, Math.ceil(part.length / perLine)), 0);
+    lines = Math.max(lines, n);
+  }
+  return Math.min(409, lines * 15 + 6);
+}
 
-  const groups = (ENDPOINT_GROUP_ORDER as readonly string[])
-    .map((key) => ({
-      key,
-      label: endpointLabel(key),
-      tests: service
-        .filter((t) => endpointOfId(t.id) === key)
-        .sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true })),
-    }))
-    .filter((g) => g.tests.length > 0);
+function band(ws: ExcelJS.Worksheet, rowNo: number, text: string, bg: string, ink: string, size: number) {
+  ws.mergeCells(rowNo, 1, rowNo, COLS);
+  const cell = ws.getCell(rowNo, 1);
+  cell.value = text;
+  cell.font = { bold: true, size, color: { argb: ink } };
+  cell.fill = fill(bg);
+  cell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+}
+
+// ---- Build ---------------------------------------------------------------------------------------------------
+export interface TestCasesWorkbookOptions {
+  /** The run to take Pass / Fail / Not Tested from (a collector run-data.json). Missing → all Not Tested. */
+  runData: string | null;
+  /** An earlier sheet whose Tester Notes are carried over. */
+  notesFrom?: string;
+  /** Test list; default: read from the code. */
+  inventory?: InventoryTest[];
+}
+
+/** Builds the styled "Test Cases" workbook and returns it as .xlsx bytes plus a one-line summary. */
+export async function buildTestCasesWorkbook(
+  opts: TestCasesWorkbookOptions,
+): Promise<{ buffer: Buffer; summary: string }> {
+  const inventory = opts.inventory ?? listInventory(['api']);
+  const last = loadLastRun(opts.runData);
+  const notes = await previousNotes(opts.notesFrom);
+
+  const endpointOfTest = (t: InventoryTest) => primaryEndpoint(resolveEndpoints(t.id));
+  const byEndpoint = new Map<string, InventoryTest[]>();
+  for (const t of inventory) {
+    const key = endpointOfTest(t);
+    byEndpoint.set(key, [...(byEndpoint.get(key) ?? []), t]);
+  }
+  // Known endpoints in the guide's order, then any new endpoint found in the tests.
+  const known = (ENDPOINT_GROUP_ORDER as readonly string[]).filter((k) => byEndpoint.has(k));
+  const extra = [...byEndpoint.keys()].filter((k) => !known.includes(k)).sort();
+  const groups = [...known, ...extra].map((key) => {
+    const p = plainEndpoint(key);
+    const def = ENDPOINTS[key as keyof typeof ENDPOINTS];
+    const tests = [...(byEndpoint.get(key) ?? [])].sort(
+      (a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }) || a.title.localeCompare(b.title),
+    );
+    return {
+      name: p.name,
+      method: def?.method ?? '',
+      path: def?.path ?? 'several endpoints',
+      means: p.means,
+      tests,
+      results: tests.map((t) => outcomeFor(t, last)),
+    };
+  });
+  const everyResult = groups.flatMap((g) => g.results);
+  const total = everyResult.length;
+  const pass = everyResult.filter((r) => r.outcome === 'Pass').length;
+  const failN = everyResult.filter((r) => r.outcome === 'Fail').length;
+  const notTested = total - pass - failN;
+  const rate = (p: number, f: number) => (p + f ? `${Math.round((p / (p + f)) * 1000) / 10}%` : 'N/A');
 
   const wb = new ExcelJS.Workbook();
   wb.creator = 'PII API automation';
   wb.created = new Date();
-
-  const addCaseRow = (ws: ExcelJS.Worksheet, t: ListedTest, zebra: boolean) => {
-    const res = result(t);
-    const r = ws.addRow({
-      id: t.id,
-      title: t.title,
-      type: typeOf(t.title),
-      status: expectedStatus(t.title),
-      tags: t.tags.join(' '),
-      q: questions.get(t.id) ?? '',
-      result: res,
-      source: `tests/${t.file}:${t.line}`,
-    });
-    r.alignment = { vertical: 'top', wrapText: true };
-    r.getCell('id').font = { name: 'Menlo', size: 10 };
-    r.getCell('result').font = { bold: true, color: { argb: resultColor(res) } };
-    r.getCell('source').font = { color: { argb: COLOR.muted }, size: 9 };
-    r.eachCell({ includeEmpty: true }, (c, col) => {
-      if (col > LAST_COL) return;
-      c.border = { bottom: thin };
-      if (zebra) c.fill = fill(COLOR.zebra);
-    });
-  };
-
-  const addEndpointHeading = (ws: ExcelJS.Worksheet, g: (typeof groups)[number]) => {
-    const e = g.label;
-    const row = ws.addRow([
-      `${e.name}  —  ${e.method === '—' ? '' : `${e.method} `}${e.path}  ·  ${g.tests.length} test${g.tests.length === 1 ? '' : 's'}`,
-    ]);
-    ws.mergeCells(row.number, 1, row.number, LAST_COL);
-    row.height = 24;
-    const c = row.getCell(1);
-    c.font = { bold: true, size: 12, color: { argb: COLOR.head } };
-    c.fill = fill(COLOR.group);
-    c.alignment = { vertical: 'middle' };
-  };
-
-  // ---- Summary: one row per endpoint, each linking to its tab
-  const sum = wb.addWorksheet('Summary', { views: [{ state: 'frozen', ySplit: 4 }] });
-  sum.columns = [
-    { width: 5 },
-    { width: 28 },
-    { width: 9 },
-    { width: 38 },
-    { width: 9 },
-    { width: 10 },
-    { width: 10 },
-    { width: 9 },
-    { width: 9 },
-    { width: 9 },
-  ];
-  sum.mergeCells('A1:J1');
-  sum.getCell('A1').value = 'PII Service — API test cases by endpoint';
-  sum.getCell('A1').font = { bold: true, size: 16, color: { argb: COLOR.ink } };
-  sum.mergeCells('A2:J2');
-  sum.getCell('A2').value =
-    `Generated from the code with "npm run docs:testcases" on ${new Date().toISOString().slice(0, 10)}. ` +
-    `Last result from: ${label}. Click an endpoint to open its tab.`;
-  sum.getCell('A2').font = { italic: true, color: { argb: COLOR.muted } };
-  const sh = sum.getRow(4);
-  sh.values = [
-    '#',
-    'Endpoint',
-    'Method',
-    'Path',
-    'Tests',
-    'Positive',
-    'Negative',
-    'Passed',
-    'Failed',
-    'Not run',
-  ];
-  styleHeader(sh);
-  const count = (tests: ListedTest[], pick: (t: ListedTest) => boolean) => tests.filter(pick).length;
-  groups.forEach((g, i) => {
-    const r = sum.addRow([
-      i + 1,
-      { text: g.label.name, hyperlink: `#'${sheetName(g.label.name)}'!A1` },
-      g.label.method,
-      g.label.path,
-      g.tests.length,
-      count(g.tests, (t) => typeOf(t.title) === 'Positive'),
-      count(g.tests, (t) => typeOf(t.title) === 'Negative'),
-      count(g.tests, (t) => result(t) === 'Passed'),
-      count(g.tests, (t) => result(t) === 'Failed'),
-      count(g.tests, (t) => !['Passed', 'Failed'].includes(result(t))),
-    ]);
-    r.getCell(2).font = { color: { argb: COLOR.link }, underline: true };
-    r.eachCell((c) => {
-      c.border = { bottom: thin };
-      if (i % 2) c.fill = fill(COLOR.zebra);
-    });
+  const ws = wb.addWorksheet(SHEET, {
+    views: [{ state: 'frozen', ySplit: 3, showGridLines: false }],
+    pageSetup: {
+      orientation: 'landscape',
+      paperSize: 9,
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+      margins: { left: 0.3, right: 0.3, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.2 },
+      printTitlesRow: '1:3',
+    },
+    headerFooter: { oddFooter: '&L&8PII Service — API Test Cases&R&8Page &P of &N' },
   });
-  // Totals: formulas with their values stored, so every viewer (Excel, Numbers, Quick Look) shows them.
-  const last = 4 + groups.length;
-  const total = (col: string, pick: (t: ListedTest) => boolean) => ({
-    formula: `SUM(${col}5:${col}${last})`,
-    result: service.filter(pick).length,
-  });
-  const tot = sum.addRow([
-    '',
-    'Total',
-    '',
-    '',
-    total('E', () => true),
-    total('F', (t) => typeOf(t.title) === 'Positive'),
-    total('G', (t) => typeOf(t.title) === 'Negative'),
-    total('H', (t) => result(t) === 'Passed'),
-    total('I', (t) => result(t) === 'Failed'),
-    total('J', (t) => !['Passed', 'Failed'].includes(result(t))),
-  ]);
-  tot.font = { bold: true };
-  tot.eachCell((c) => (c.border = { top: { style: 'medium', color: { argb: COLOR.head } } }));
-  sum.addRow([]);
-  sum.addRow(['', `Framework self-tests (no service needed): ${unit.length} — see the "Self-tests" tab.`]);
+  ws.columns = COLUMNS.map((c) => ({ key: c.key, width: c.width }));
 
-  // ---- All test cases: a heading per endpoint, its test cases underneath
-  const allWs = wb.addWorksheet('All test cases', { views: [{ state: 'frozen', ySplit: 1 }] });
-  allWs.columns = CASE_COLUMNS;
-  styleHeader(allWs.getRow(1));
-  for (const g of groups) {
-    addEndpointHeading(allWs, g);
-    g.tests.forEach((t, i) => addCaseRow(allWs, t, i % 2 === 1));
-  }
-
-  // ---- One tab per endpoint
-  for (const g of groups) {
-    const ws = wb.addWorksheet(sheetName(g.label.name), { views: [{ state: 'frozen', ySplit: 3 }] });
-    ws.columns = CASE_COLUMNS.map((c) => ({ key: c.key, width: c.width }));
-    const title = ws.addRow([
-      `${g.label.name}  —  ${g.label.method === '—' ? '' : `${g.label.method} `}${g.label.path}`,
-    ]);
-    ws.mergeCells(1, 1, 1, LAST_COL);
-    title.getCell(1).font = { bold: true, size: 14, color: { argb: COLOR.head } };
-    const sub = ws.addRow([
-      `${g.label.means}. ${g.tests.length} test case${g.tests.length === 1 ? '' : 's'}.`,
-    ]);
-    ws.mergeCells(2, 1, 2, LAST_COL);
-    sub.getCell(1).font = { italic: true, color: { argb: COLOR.muted } };
-    const header = ws.addRow(CASE_COLUMNS.map((c) => c.header as string));
-    styleHeader(header);
-    g.tests.forEach((t, i) => addCaseRow(ws, t, i % 2 === 1));
-    ws.autoFilter = { from: { row: 3, column: 1 }, to: { row: 3, column: LAST_COL } };
-    const back = ws.addRow([]);
-    back.getCell(1).value = { text: '← Back to Summary', hyperlink: "#'Summary'!A1" };
-    back.getCell(1).font = { color: { argb: COLOR.link }, underline: true };
-  }
-
-  // ---- Framework self-tests
-  const us = wb.addWorksheet('Self-tests', { views: [{ state: 'frozen', ySplit: 1 }] });
-  us.columns = [
-    { header: 'Component', key: 'component', width: 26 },
-    { header: 'Test ID', key: 'id', width: 14 },
-    { header: 'Test case', key: 'title', width: 90 },
-    { header: 'Last result', key: 'result', width: 12 },
-    { header: 'Source', key: 'source', width: 40 },
-  ];
-  styleHeader(us.getRow(1));
-  const COMPONENT: Record<string, string> = {
-    SIG: 'Request signing',
-    CLI: 'API client',
-    CFG: 'Settings (.env)',
-    AST: 'Assertions',
-    RED: 'Secret-hiding logger',
-    DAT: 'Test data',
-    DB: 'Database access',
-    END: 'Endpoint list',
-    RTY: 'Retries',
-    CLN: 'Clean-up',
-  };
-  [...unit]
-    .sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }))
-    .forEach((t, i) => {
-      const res = result(t);
-      const r = us.addRow({
-        component: COMPONENT[t.id.split('-')[1] ?? ''] ?? 'Framework',
-        id: t.id,
-        title: t.title,
-        result: res,
-        source: `tests/${t.file}:${t.line}`,
-      });
-      r.alignment = { vertical: 'top', wrapText: true };
-      r.getCell('id').font = { name: 'Menlo', size: 10 };
-      r.getCell('result').font = { bold: true, color: { argb: resultColor(res) } };
-      r.getCell('source').font = { color: { argb: COLOR.muted }, size: 9 };
-      r.eachCell((c) => {
-        c.border = { bottom: thin };
-        if (i % 2) c.fill = fill(COLOR.zebra);
-      });
-    });
-  us.autoFilter = { from: 'A1', to: 'E1' };
-
-  await wb.xlsx.writeFile(OUT);
-  console.log(
-    `Written ${path.relative(ROOT, OUT)} — ${service.length} API test cases under ${groups.length} endpoints ` +
-      `(one tab each), ${unit.length} self-tests. Last result from: ${label}.`,
+  // Rows 1–3: title, last run, totals (frozen at the top while scrolling).
+  band(ws, 1, 'PII Service — API Test Cases', C.navy, C.white, 18);
+  ws.getRow(1).height = 34;
+  band(
+    ws,
+    2,
+    last.label ?? 'No run recorded yet — every test shows Not Tested until the tests are run.',
+    C.slate,
+    C.white,
+    11,
   );
+  ws.getRow(2).height = 22;
+  const totals: [number, number, string, string, string][] = [
+    [1, 3, `Total test cases: ${total}`, C.bandSoft, C.bandInk],
+    [4, 5, `✔ Pass: ${pass}`, C.passBg, C.passInk],
+    [6, 7, `✘ Fail: ${failN}`, C.failBg, C.failInk],
+    [8, 10, `— Not Tested: ${notTested}`, C.notBg, C.notInk],
+    [11, 13, `Pass rate of tests run: ${rate(pass, failN)}`, C.bandSoft, C.bandInk],
+  ];
+  for (const [from, to, text, bg, ink] of totals) {
+    ws.mergeCells(3, from, 3, to);
+    const cell = ws.getCell(3, from);
+    cell.value = text;
+    cell.font = { bold: true, size: 12, color: { argb: ink } };
+    cell.fill = fill(bg);
+    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    cell.border = box;
+  }
+  ws.getRow(3).height = 26;
+
+  // Summary by endpoint (links are filled in once every section's row is known).
+  band(ws, 5, 'SUMMARY BY ENDPOINT', C.band, C.white, 12);
+  ws.getRow(5).height = 24;
+  const writeCells = (rowNo: number, spec: [number, number, ExcelJS.CellValue][]) => {
+    for (const [from, to, value] of spec) {
+      if (to > from) ws.mergeCells(rowNo, from, rowNo, to);
+      ws.getCell(rowNo, from).value = value;
+    }
+  };
+  writeCells(6, [
+    [1, 1, '#'],
+    [2, 3, 'Endpoint'],
+    [4, 5, 'Method and path'],
+    [6, 6, 'Test cases'],
+    [7, 7, 'Pass'],
+    [8, 8, 'Fail'],
+    [9, 9, 'Not Tested'],
+    [10, 10, 'Pass rate'],
+    [11, 13, 'Go to'],
+  ]);
+  for (let n = 1; n <= COLS; n += 1) {
+    const cell = ws.getCell(6, n);
+    cell.font = { bold: true, color: { argb: C.white } };
+    cell.fill = fill(C.headerBg);
+    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    cell.border = box;
+  }
+  ws.getRow(6).height = 22;
+
+  const summaryStart = 7;
+  let rowNo = summaryStart + groups.length + 2;
+  const sectionRows: number[] = [];
+
+  // One section per endpoint.
+  groups.forEach((g, gi) => {
+    const gPass = g.results.filter((r) => r.outcome === 'Pass').length;
+    const gFail = g.results.filter((r) => r.outcome === 'Fail').length;
+    const gNot = g.results.length - gPass - gFail;
+    sectionRows.push(rowNo);
+
+    ws.mergeCells(rowNo, 1, rowNo, COLS - 1);
+    const title = ws.getCell(rowNo, 1);
+    title.value =
+      `${gi + 1}.  ${g.name}     ${g.method ? `${g.method} ` : ''}${g.path}` +
+      `        ${g.tests.length} test cases  ·  ✔ ${gPass}  ·  ✘ ${gFail}  ·  — ${gNot}`;
+    title.font = { bold: true, size: 13, color: { argb: C.white } };
+    title.fill = fill(C.band);
+    title.alignment = { vertical: 'middle', indent: 1 };
+    const up = ws.getCell(rowNo, COLS);
+    up.value = { text: '↑ Summary', hyperlink: `#'${SHEET}'!A5` };
+    up.font = { bold: true, color: { argb: C.white }, underline: true };
+    up.fill = fill(C.band);
+    up.alignment = { vertical: 'middle', horizontal: 'center' };
+    ws.getRow(rowNo).height = 28;
+    rowNo += 1;
+
+    band(ws, rowNo, g.means ? `What this endpoint does: ${g.means}.` : '', C.bandSoft, C.bandInk, 10);
+    ws.getCell(rowNo, 1).font = { italic: true, size: 10, color: { argb: C.bandInk } };
+    ws.getRow(rowNo).height = 18;
+    rowNo += 1;
+
+    const header = ws.getRow(rowNo);
+    COLUMNS.forEach((c, i) => {
+      const cell = header.getCell(i + 1);
+      cell.value = c.header;
+      cell.font = { bold: true, color: { argb: C.white } };
+      cell.fill = fill(C.headerBg);
+      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+      cell.border = box;
+    });
+    header.height = 30;
+    rowNo += 1;
+
+    const occurrences = new Map<string, number>();
+    g.tests.forEach((t, i) => {
+      const info: TestCaseInfo | undefined = TEST_CASES[t.id];
+      const result = g.results[i]!;
+      const n = (occurrences.get(t.id) ?? 0) + 1;
+      occurrences.set(t.id, n);
+      const shortTitle = t.title.replace(/^\S+\s/, '');
+      const steps = (info?.steps ?? []).map((s, k) => `${k + 1}. ${s}`).join('\n');
+      const values: Record<ColKey, ExcelJS.CellValue> = {
+        sno: i + 1,
+        id: t.id,
+        description: {
+          richText: [
+            { text: shortTitle, font: { bold: true, color: { argb: 'FF0F172A' } } },
+            info
+              ? { text: `\n${info.what}`, font: { bold: false, color: { argb: 'FF334155' } } }
+              : {
+                  text: '\n⚠ Description not written yet — add it in tests/catalog',
+                  font: { italic: true, color: { argb: C.warnInk } },
+                },
+          ],
+        },
+        why: info?.why ?? '',
+        steps,
+        expected: info?.expected ?? '',
+        type: info?.type ?? '',
+        suite: suiteOf(t.tags),
+        priority: info?.priority ?? '',
+        pre: info?.preconditions ?? '',
+        status: OUTCOME_STYLE[result.outcome].label,
+        remarks: result.remark,
+        notes: notes.get(`${t.id}#${n}`) ?? '',
+      };
+      const row = ws.getRow(rowNo);
+      COLUMNS.forEach((c, k) => {
+        const cell = row.getCell(k + 1);
+        cell.value = values[c.key];
+        cell.alignment = {
+          vertical: 'top',
+          wrapText: true,
+          horizontal: ['sno', 'type', 'suite', 'priority', 'status'].includes(c.key) ? 'center' : 'left',
+        };
+        cell.border = box;
+        if (i % 2 === 1) cell.fill = fill(C.zebra);
+      });
+      row.getCell(col('id')).font = { name: 'Menlo', size: 10, bold: true };
+      row.getCell(col('suite')).font =
+        suiteOf(t.tags) === 'Smoke'
+          ? { bold: true, color: { argb: 'FF6D28D9' } }
+          : { color: { argb: C.muted } };
+      row.getCell(col('why')).font = { color: { argb: C.slate } };
+      const st = row.getCell(col('status'));
+      st.fill = fill(OUTCOME_STYLE[result.outcome].bg);
+      st.font = { bold: true, color: { argb: OUTCOME_STYLE[result.outcome].ink } };
+      row.getCell(col('priority')).font = {
+        bold: info?.priority === 'Critical' || info?.priority === 'High',
+        color: { argb: PRIORITY_INK[info?.priority ?? ''] ?? C.muted },
+      };
+      row.getCell(col('remarks')).font =
+        result.outcome === 'Fail'
+          ? { bold: true, color: { argb: C.failInk } }
+          : { italic: true, color: { argb: C.muted } };
+      row.height = rowHeight([
+        [`${shortTitle}\n${info?.what ?? ''}`, width('description')],
+        [info?.why ?? '', width('why')],
+        [steps, width('steps')],
+        [info?.expected ?? '', width('expected')],
+        [info?.preconditions ?? '', width('pre')],
+        [result.remark, width('remarks')],
+      ]);
+      rowNo += 1;
+    });
+    rowNo += 1; // gap between sections
+  });
+
+  // Summary rows, now that every section's first row is known.
+  groups.forEach((g, gi) => {
+    const r = summaryStart + gi;
+    const gPass = g.results.filter((x) => x.outcome === 'Pass').length;
+    const gFail = g.results.filter((x) => x.outcome === 'Fail').length;
+    const gNot = g.results.length - gPass - gFail;
+    const link = `#'${SHEET}'!A${sectionRows[gi]}`;
+    writeCells(r, [
+      [1, 1, gi + 1],
+      [2, 3, { text: g.name, hyperlink: link }],
+      [4, 5, `${g.method ? `${g.method} ` : ''}${g.path}`],
+      [6, 6, g.tests.length],
+      [7, 7, gPass],
+      [8, 8, gFail],
+      [9, 9, gNot],
+      [10, 10, rate(gPass, gFail)],
+      [11, 13, { text: `Go to section ${gi + 1} →`, hyperlink: link }],
+    ]);
+    ws.getRow(r).height = 20;
+    for (let n = 1; n <= COLS; n += 1) {
+      const cell = ws.getCell(r, n);
+      cell.border = box;
+      cell.alignment = { vertical: 'middle', horizontal: n === 2 || n === 4 ? 'left' : 'center' };
+      if (gi % 2 === 1) cell.fill = fill(C.zebra);
+    }
+    ws.getCell(r, 2).font = { bold: true, color: { argb: C.link }, underline: true };
+    ws.getCell(r, 4).font = { name: 'Menlo', size: 9, color: { argb: C.muted } };
+    ws.getCell(r, 7).font = { bold: true, color: { argb: C.passInk } };
+    ws.getCell(r, 8).font = { bold: true, color: { argb: gFail ? C.failInk : C.muted } };
+    ws.getCell(r, 9).font = { color: { argb: C.notInk } };
+    ws.getCell(r, 11).font = { color: { argb: C.link }, underline: true };
+  });
+
+  const buffer = Buffer.from(await wb.xlsx.writeBuffer());
+  const summary =
+    `${total} test cases in ${groups.length} endpoint sections ` +
+    `(Pass ${pass} · Fail ${failN} · Not Tested ${notTested}). ${last.label ?? 'No run recorded yet.'}`;
+  return { buffer, summary };
 }
 
-main().catch((e: unknown) => {
-  console.error(e instanceof Error ? e.message : e);
-  process.exit(1);
-});
+async function main() {
+  const out = path.resolve(ROOT, argValue('--out') ?? TEST_CASES_XLSX);
+  const runData = path.resolve(ROOT, argValue('--run') ?? 'reports/latest/run-data.json');
+  const { buffer, summary } = await buildTestCasesWorkbook({ runData, notesFrom: out });
+  writeFileSync(out, buffer);
+  console.log(`Written ${path.relative(ROOT, out)} — ${summary}`);
+}
+
+if (require.main === module) {
+  main().catch((e: unknown) => {
+    console.error(e instanceof Error ? e.message : e);
+    process.exit(1);
+  });
+}

@@ -9,18 +9,19 @@ and never contains personal data.
 
 The top bar links straight to each part (Summary · Problems · Endpoints · Tests · About) and highlights where you are.
 
-| Block                          | What it tells you                                                                                                                                                                                                                                                                                           |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Summary**                    | A coloured banner: a status pill (“Needs attention”, “All clear”, “Service unreachable”, “Service not tested”), one plain sentence with the answer, four big numbers (Passed · Failed · Waiting · Total), one bar, “vs last run” and the **health score** speedometer (0–100%).                             |
-| **01 · What needs attention**  | One card per failure showing the endpoint (name, method, path), whether it is critical, and **Expected → Got** side by side. Below that, one card for checks waiting on backend answers, with the question IDs. If the service was unreachable you see **one** clear message instead of dozens of failures. |
-| **02 · How each endpoint did** | One tile per API endpoint (name, method and path) with a ring and a pass percentage, plus “Across endpoints” for checks that span several. Click a tile to see its test cases.                                                                                                                              |
-| **03 · All tests**             | The full list, **grouped under a heading per endpoint**: tabs (All · Failed · Waiting · Passed), search, a coloured edge on failed and waiting rows, and a small bar showing each test’s duration. Click any row for details.                                                                               |
-| **04 · About this run**        | Environment, time, duration, typical response time, framework self-test result, leftover test data and commit.                                                                                                                                                                                              |
+| Block                          | What it tells you                                                                                                                                                                                                                                                                                                                                      |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Summary**                    | A coloured banner: a status pill (“Needs attention”, “All clear”, “Service unreachable”, “Service not tested”), one plain sentence with the answer, four big numbers (Pass · Fail · Not Tested · Total) for **every** test case, one bar, “vs last run” and the **health score** speedometer (0–100%).                                                 |
+| **01 · What needs attention**  | One card per failure showing the endpoint (name, method, path), whether it is critical, and **Expected → Got** side by side. Below that, one card saying how many tests were **not tested** and why (not part of this run, waiting on Dev, skipped). If the service was unreachable you see **one** clear message instead of dozens of failures.       |
+| **02 · How each endpoint did** | One tile per API endpoint (name, method and path) with a ring and a pass percentage, plus “Across endpoints” for checks that span several. Click a tile to see its test cases.                                                                                                                                                                         |
+| **03 · All tests**             | The full list, **grouped under a heading per endpoint**: tabs (All · Fail · Not Tested · Pass), a one-line description under each test, search, a coloured edge on failed rows, and a small bar showing each test’s duration. Click any row to see **what the test does, why it matters, its steps and expected result**, then the result of this run. |
+| **04 · About this run**        | Environment, time, duration, typical response time, framework self-test result, leftover test data and commit.                                                                                                                                                                                                                                         |
 
 Also on the page: light, dark and auto themes; six accent colours; a floating quick-action bar whose last button
-folds it away (back-to-top only appears once you scroll); and Export (PDF, CSV, JSON, Slack/ClickUp summary).
+folds it away (back-to-top only appears once you scroll); and Export (PDF, Excel, raw CSV, JSON, Slack/ClickUp summary). The Excel file is built by the same code as
+`docs/test-cases.xlsx`, so it has exactly the same design.
 
-**Keyboard:** `⌘/Ctrl K` search · `/` search tests · `1`–`4` sections · `0`/`Home` top · `F` `W` `A` failed / waiting /
+**Keyboard:** `⌘/Ctrl K` search · `/` search tests · `1`–`4` sections · `0`/`Home` top · `F` `W` `A` fail / not tested /
 all · `←` `→` pages · `J` `K` next / previous test · `E` export · `D` dark mode · `Q` quick-action bar · `Esc` close ·
 `?` all shortcuts.
 
@@ -66,7 +67,7 @@ the page or any file.
 ```
 Playwright run ─▶ reporting/collector  (allow-listed, sanitized)  ─▶ reports/latest/run-data.json
                ─▶ reporting/generator  (validate · enrich · history · self-check · bundle)
-               ─▶ reports/qa-report/  index.html · assets/ · data/ · report.pdf · results.csv · results.json · summary.txt
+               ─▶ reports/qa-report/  index.html · assets/ · data/ · report.pdf · test-cases.xlsx · results.csv · results.json · summary.txt
 ```
 
 - `reporting/core/` — data model, analytics, sanitizer, exporters (shared by the generator and the page)
@@ -83,5 +84,8 @@ Playwright run ─▶ reporting/collector  (allow-listed, sanitized)  ─▶ rep
 
 Screenshots 01–06 use demo data. Screenshot 07 is a real local run where only the framework self-tests ran.
 
-The same endpoint grouping is used in [test-cases.xlsx](test-cases.xlsx): a Summary tab, an “All test cases” tab
-with a heading per endpoint, and one tab per endpoint.
+The same endpoint grouping is used in [test-cases.xlsx](test-cases.xlsx): one “Test Cases” sheet with a linked
+summary at the top and a coloured section per endpoint. The report’s Export → Excel (.xlsx) gives the same file.
+
+**Statuses.** Only Pass, Fail and Not Tested are shown. Every test in the suite is always listed; tests that were not
+part of the run show as Not Tested and do **not** affect the health score, which measures only what ran.

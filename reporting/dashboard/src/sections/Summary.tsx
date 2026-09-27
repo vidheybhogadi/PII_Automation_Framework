@@ -2,7 +2,7 @@
 import { useMemo } from 'preact/hooks';
 import {
   compareRuns,
-  countStatuses,
+  emptyCounts,
   evaluateGates,
   executedCount,
   formatDuration,
@@ -17,7 +17,7 @@ import type { Counts } from '../../../core/types';
 import { Gauge, type Tone } from '../components/ui';
 import { useCountUp, useInView } from '../hooks';
 import { Icon } from '../icons';
-import { NOT_RUN, useApp } from '../store';
+import { NOT_RUN, outcomeOf, useApp } from '../store';
 import { fmtDateTime, plural } from '../utils';
 
 /** The one sentence a reader needs. Built only from recorded results. */
@@ -47,10 +47,10 @@ export function headline(
     };
   if (executed === 0)
     return {
-      text: `Nothing ran — ${plural(notRun, 'check is', 'checks are')} waiting.`,
+      text: `Nothing was tested — ${plural(notRun, 'test is', 'tests are')} not tested.`,
       tone: 'warn',
       icon: 'pause',
-      status: 'Waiting',
+      status: 'Not tested',
     };
   if (c.FAIL > 0)
     return {
@@ -61,7 +61,7 @@ export function headline(
     };
   if (notRun > 0)
     return {
-      text: `All ${executed} checks passed · ${plural(notRun, 'check is', 'checks are')} still waiting.`,
+      text: `All ${executed} checks passed · ${plural(notRun, 'test', 'tests')} not tested.`,
       tone: 'pass',
       icon: 'check',
       status: 'All clear',
@@ -113,8 +113,19 @@ function BigNumber({
 }
 
 export function Summary() {
-  const { report, service, showTests, setUi } = useApp();
-  const c = useMemo(() => countStatuses(service), [service]);
+  const { report, service, all, showTests, setUi } = useApp();
+  // Pass / Fail / Not Tested across EVERY test in the suite (tests not in this run count as Not Tested).
+  const c = useMemo(() => {
+    const counts = emptyCounts();
+    for (const t of all) {
+      const o = outcomeOf(t);
+      counts.total += 1;
+      if (o === 'Pass') counts.PASS += 1;
+      else if (o === 'Fail') counts.FAIL += 1;
+      else counts.SKIPPED += 1;
+    }
+    return counts;
+  }, [all]);
   const preflight = preflightFailures(service).length;
   const selfOnly = service.every((t) => t.kind === 'unit');
   const h = headline(c, preflight, selfOnly && c.total > 0);
@@ -133,10 +144,9 @@ export function Summary() {
   }, [report]);
 
   const segs: [string, number, string][] = [
-    ['Passed', c.PASS, 'pass'],
-    ['Failed', c.FAIL, 'fail'],
-    ['Waiting', c.BLOCKED + c.FIXME, 'warn'],
-    ['Not run', c.SKIPPED + c.UNKNOWN, 'muted'],
+    ['Pass', c.PASS, 'pass'],
+    ['Fail', c.FAIL, 'fail'],
+    ['Not Tested', notRun, 'muted'],
   ];
 
   return (
@@ -168,30 +178,30 @@ export function Summary() {
 
         <div class="stats">
           <BigNumber
-            label="Passed"
+            label="Pass"
             value={c.PASS}
             total={c.total}
             tone="pass"
             icon="check"
-            help="Checks that ran and were fine."
+            help="Tests that ran and passed."
             onClick={() => showTests({ statuses: ['PASS'] })}
           />
           <BigNumber
-            label="Failed"
+            label="Fail"
             value={c.FAIL}
             total={c.total}
             tone={c.FAIL ? 'fail' : 'muted'}
             icon="x"
-            help="Checks that ran and found a problem."
+            help="Tests that ran and found a problem."
             onClick={() => showTests({ statuses: ['FAIL'] })}
           />
           <BigNumber
-            label="Waiting"
+            label="Not Tested"
             value={notRun}
             total={c.total}
-            tone={notRun ? 'warn' : 'muted'}
-            icon="pause"
-            help="Checks that could not run yet — usually waiting on information from the backend team."
+            tone="muted"
+            icon="minus"
+            help="Tests that did not run in this run: not selected, skipped, or waiting on an answer from Dev."
             onClick={() => showTests({ statuses: NOT_RUN })}
           />
           <BigNumber
@@ -200,12 +210,12 @@ export function Summary() {
             total={c.total}
             tone="accent"
             icon="tests"
-            help="All checks in this run."
+            help="Every test case in the suite."
             onClick={() => showTests({})}
           />
         </div>
 
-        <div class="stackbar" role="img" aria-label={`${c.PASS} passed, ${c.FAIL} failed, ${notRun} waiting`}>
+        <div class="stackbar" role="img" aria-label={`${c.PASS} pass, ${c.FAIL} fail, ${notRun} not tested`}>
           {segs
             .filter(([, n]) => n > 0)
             .map(([name, n, tone]) => (

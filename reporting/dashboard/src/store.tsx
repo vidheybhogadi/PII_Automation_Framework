@@ -1,8 +1,8 @@
 /** App state for the single-page report: data, test-list filters, theme, overlays, toasts, URL state. */
 import { createContext, type ComponentChildren } from 'preact';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { scopeTests } from '../../core/analytics';
-import { ENDPOINT_GROUP_ORDER } from '../../core/catalog';
+import { catalogTests, scopeTests, testOutcome, type Outcome } from '../../core/analytics';
+import { ENDPOINT_GROUP_ORDER, suiteOf } from '../../core/catalog';
 import { endpointOf, plainEndpoint } from './plain';
 import type { ReportData, ReportTest, TestStatus } from '../../core/types';
 import { buildHash, EMPTY_FILTERS, parseHash, prefersReducedMotion, storage, type Filters } from './utils';
@@ -11,14 +11,56 @@ export type ThemeMode = 'light' | 'dark' | 'system';
 export const ACCENTS = ['azure', 'violet', 'emerald', 'rose', 'amber', 'cyan'] as const;
 export type Accent = (typeof ACCENTS)[number];
 
-/** "Not run" = blocked, fixme, skipped or unknown. */
+/** Filter value meaning "Not Tested" (anything that did not run to a pass or a fail). */
 export const NOT_RUN: TestStatus[] = ['BLOCKED', 'FIXME', 'SKIPPED', 'UNKNOWN'];
+
+/** Pass / Fail / Not Tested for a test — the only statuses a reader sees. */
+export const outcomeOf = (t: ReportTest): Outcome => testOutcome(t).outcome;
 
 const GROUP_RANK = (key: string): number => {
   const i = (ENDPOINT_GROUP_ORDER as readonly string[]).indexOf(key);
   return i < 0 ? ENDPOINT_GROUP_ORDER.length : i;
 };
-const RANK: Record<TestStatus, number> = { FAIL: 0, BLOCKED: 1, FIXME: 1, UNKNOWN: 2, SKIPPED: 2, PASS: 3 };
+const RANK: Record<Outcome, number> = { Fail: 0, 'Not Tested': 1, Pass: 2 };
+
+/** How the test list is grouped: by endpoint (default), test type, suite (Smoke/Regression), or not at all. */
+export type GroupBy = 'endpoint' | 'type' | 'suite' | 'none';
+export const GROUP_BY_OPTIONS: { value: GroupBy; label: string }[] = [
+  { value: 'endpoint', label: 'Endpoint' },
+  { value: 'type', label: 'Type' },
+  { value: 'suite', label: 'Suite' },
+  { value: 'none', label: 'None' },
+];
+export const TYPE_ORDER = ['Positive', 'Negative', 'Security', 'Database', 'Contract'] as const;
+const typeRank = (t: ReportTest): number => {
+  const i = (TYPE_ORDER as readonly string[]).indexOf(t.info?.type ?? '');
+  return i < 0 ? TYPE_ORDER.length : i;
+};
+
+/** The heading a test is listed under for the chosen grouping ('' = no heading). */
+export function groupKeyOf(t: ReportTest, groupBy: GroupBy): string {
+  if (groupBy === 'endpoint') return endpointOf(t);
+  if (groupBy === 'type') return t.info?.type ?? 'Not categorised';
+  if (groupBy === 'suite') return suiteOf(t.tags);
+  return '';
+}
+
+const byId = (a: ReportTest, b: ReportTest) =>
+  a.id.localeCompare(b.id, undefined, { numeric: true }) || a.title.localeCompare(b.title);
+
+/** One order for the table, the details panel and J/K: grouped headings first, then Fail → Not Tested → Pass, then ID. */
+function compareFor(groupBy: GroupBy) {
+  return (a: ReportTest, b: ReportTest): number => {
+    if (groupBy === 'none') return byId(a, b);
+    const group =
+      groupBy === 'endpoint'
+        ? GROUP_RANK(endpointOf(a)) - GROUP_RANK(endpointOf(b)) || endpointOf(a).localeCompare(endpointOf(b))
+        : groupBy === 'type'
+          ? typeRank(a) - typeRank(b)
+          : Number(suiteOf(a.tags) === 'Regression') - Number(suiteOf(b.tags) === 'Regression');
+    return group || RANK[outcomeOf(a)] - RANK[outcomeOf(b)] || byId(a, b);
+  };
+}
 
 export interface Toast {
   id: number;
@@ -40,7 +82,11 @@ export interface AppState {
   service: ReportTest[];
   /** Framework self-tests, summarised separately. */
   selfTests: ReportTest[];
-  /** Service tests after the test-list filters, grouped by endpoint (failed → waiting → passed inside each). */
+  /** Every service test in the suite, including ones not part of this run (Not Tested). */
+  all: ReportTest[];
+  groupBy: GroupBy;
+  setGroupBy: (g: GroupBy) => void;
+  /** All service tests after the test-list filters, grouped by endpoint (fail → not tested → pass inside each). */
   list: ReportTest[];
   byKey: Map<string, ReportTest>;
   filters: Filters;
@@ -70,11 +116,18 @@ export function useApp(): AppState {
 }
 
 function matches(t: ReportTest, f: Filters): boolean {
-  if (f.statuses.length && !f.statuses.includes(t.status)) return false;
+  if (f.statuses.length) {
+    const o = outcomeOf(t);
+    const wanted =
+      (o === 'Pass' && f.statuses.includes('PASS')) ||
+      (o === 'Fail' && f.statuses.includes('FAIL')) ||
+      (o === 'Not Tested' && f.statuses.some((s) => NOT_RUN.includes(s)));
+    if (!wanted) return false;
+  }
   if (f.endpoint && endpointOf(t) !== f.endpoint) return false;
   if (f.q) {
     const hay =
-      `${t.id} ${t.title} ${plainEndpoint(endpointOf(t)).name} ${t.endpoints.join(' ')} ${t.status} ${t.apiCalls.map((c) => c.errorCode ?? '').join(' ')}`.toLowerCase();
+      `${t.id} ${t.title} ${t.info?.what ?? ''} ${plainEndpoint(endpointOf(t)).name} ${t.endpoints.join(' ')} ${outcomeOf(t)} ${t.apiCalls.map((c) => c.errorCode ?? '').join(' ')}`.toLowerCase();
     if (
       !f.q
         .toLowerCase()
@@ -131,24 +184,25 @@ export function AppProvider({
     first.current = false;
   }, [resolvedTheme, accent, isPrint]);
 
+  // `service`: tests that ran (health, verdict, history). `all`: every service test, including Not Tested ones.
   const service = useMemo(() => scopeTests(report.tests), [report]);
+  const all = useMemo(() => catalogTests(report.tests), [report]);
   const selfTests = useMemo(() => {
-    const inScope = new Set(service);
-    return report.tests.filter((t) => !inScope.has(t));
-  }, [report, service]);
+    const inScope = new Set([...service, ...all]);
+    return report.tests.filter((t) => !t.notRun && !inScope.has(t));
+  }, [report, service, all]);
   const byKey = useMemo(() => new Map(report.tests.map((t) => [t.key, t])), [report]);
-  // Same order everywhere (table, details panel, J/K): by endpoint, then failed → waiting → passed, then ID.
+  const [groupBy, setGroupByState] = useState<GroupBy>(() => {
+    const saved = storage.get('groupBy') as GroupBy | null;
+    return !isPrint && saved && GROUP_BY_OPTIONS.some((o) => o.value === saved) ? saved : 'endpoint';
+  });
+  const setGroupBy = (g: GroupBy) => {
+    setGroupByState(g);
+    storage.set('groupBy', g);
+  };
   const list = useMemo(
-    () =>
-      service
-        .filter((t) => matches(t, filters))
-        .sort(
-          (a, b) =>
-            GROUP_RANK(endpointOf(a)) - GROUP_RANK(endpointOf(b)) ||
-            RANK[a.status] - RANK[b.status] ||
-            a.id.localeCompare(b.id, undefined, { numeric: true }),
-        ),
-    [service, filters],
+    () => all.filter((t) => matches(t, filters)).sort(compareFor(groupBy)),
+    [all, filters, groupBy],
   );
 
   // Shareable URL: #status=FAIL&q=…&endpoint=…&test=<key>
@@ -169,6 +223,9 @@ export function AppProvider({
   const value: AppState = {
     report,
     service,
+    all,
+    groupBy,
+    setGroupBy,
     selfTests,
     list,
     byKey,

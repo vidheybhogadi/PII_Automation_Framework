@@ -116,6 +116,8 @@
   --card: oklch(99.5% 0.004 var(--accent-h) / 0.9);
   --card-strong: oklch(99.8% 0.003 var(--accent-h) / 0.94);
   --glass-strong: oklch(100% 0 0 / 0.78);
+  --menu-bg: oklch(100% 0 0 / 0.98);
+  --menu-border: oklch(50% 0.03 262 / 0.18);
   --glass-soft: oklch(100% 0 0 / 0.38);
   --glass-edge: oklch(100% 0 0 / 0.85);
   --glass-edge-2: oklch(100% 0 0 / 0.25);
@@ -180,6 +182,8 @@
   --card: oklch(21.5% 0.026 262 / 0.9);
   --card-strong: oklch(22.5% 0.028 262 / 0.94);
   --glass-strong: oklch(24% 0.028 262 / 0.82);
+  --menu-bg: oklch(21% 0.028 262 / 0.98);
+  --menu-border: oklch(100% 0 0 / 0.14);
   --glass-soft: oklch(30% 0.025 262 / 0.3);
   --glass-edge: oklch(100% 0 0 / 0.16);
   --glass-edge-2: oklch(100% 0 0 / 0.03);

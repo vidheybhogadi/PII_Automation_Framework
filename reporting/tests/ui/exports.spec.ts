@@ -1,5 +1,6 @@
-/** Exports: CSV, JSON, copy summary, print mode, programmatic PDF. SYNTHETIC fixtures only. */
+/** Exports: Excel, CSV, JSON, copy summary, print mode, programmatic PDF. SYNTHETIC fixtures only. */
 import { expect, test } from '@playwright/test';
+import ExcelJS from 'exceljs';
 import { cpSync, existsSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { exportPdf } from '../../generator/export-pdf';
@@ -12,17 +13,52 @@ test.describe('REPORT UI — exports', () => {
     await page.getByRole('button', { name: 'Export', exact: true }).click();
     const [dl] = await Promise.all([
       page.waitForEvent('download'),
-      page.getByRole('menuitem', { name: /Spreadsheet \(CSV\)/ }).click(),
+      page.getByRole('menuitem', { name: /Raw data \(CSV\)/ }).click(),
     ]);
     const csv = readFileSync((await dl.path()) as string, 'utf8');
     const data = JSON.parse(readFileSync(path.join(FIXTURES.demo, 'data/report.json'), 'utf8')) as {
       tests: { kind: string }[];
     };
-    expect(csv.split('\n')[0]).toContain('test_id,title,status');
+    expect(csv.split('\n')[0]).toContain('test_id,endpoint,title,status,remarks,what_it_does,why_it_matters');
     // Exports the current view — default scope is service tests.
     expect(csv.trim().split('\n')).toHaveLength(
       data.tests.filter((t) => t.kind === 'integration').length + 1,
     );
+  });
+
+  test('RPT-EX-006 Excel export is the styled test-case workbook (same design as docs/test-cases.xlsx)', async ({
+    page,
+  }) => {
+    await openReport(page, FIXTURES.demo);
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
+    const [dl] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('menuitem', { name: /Excel \(\.xlsx\)/ }).click(),
+    ]);
+    expect(dl.suggestedFilename()).toBe('test-cases.xlsx');
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.readFile((await dl.path()) as string);
+    expect(wb.worksheets.map((w) => w.name)).toEqual(['Test Cases']);
+    const ws = wb.getWorksheet('Test Cases')!;
+    const texts: string[] = [];
+    ws.eachRow((r) =>
+      texts.push(r.values ? String((r.values as unknown[]).filter(Boolean).join(' | ')) : ''),
+    );
+    const all = texts.join('\n');
+    // Same header row, endpoint sections and statuses as the docs sheet.
+    expect(all).toContain('S/No | TC ID | Test Case Description');
+    expect(all).toContain('Tester Notes');
+    expect(all).toMatch(/Save PII/);
+    expect(all).toMatch(/\bFail\b/);
+    expect(all).toMatch(/\bPass\b/);
+    // Coloured status cells (the design), not plain values.
+    let styled = 0;
+    ws.eachRow((r) =>
+      r.eachCell((c) => {
+        if (c.text === 'Fail' && (c.fill as ExcelJS.FillPattern | undefined)?.fgColor?.argb) styled++;
+      }),
+    );
+    expect(styled).toBeGreaterThan(0);
   });
 
   test('RPT-EX-002 JSON export is valid, sanitized and labelled with its data source', async ({ page }) => {
@@ -38,7 +74,7 @@ test.describe('REPORT UI — exports', () => {
     };
     expect(json.dataSource).toBe('DEMO');
     expect(json.tests.length).toBeGreaterThan(0);
-    expect(json.tests.every((t) => t.status === 'FAIL')).toBe(true);
+    expect(json.tests.every((t) => t.status === 'Fail')).toBe(true);
     expect(dl.suggestedFilename()).toContain('-filtered');
   });
 

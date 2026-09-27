@@ -1,23 +1,52 @@
-/** "All tests" — one clean list: search, three status filters, pagination. Click a row for details. */
+/** "All tests" — every test in the suite, grouped by endpoint: Pass / Fail / Not Tested, a one-line description, search. */
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { formatDuration } from '../../../core/analytics';
+import { formatDuration, testOutcome } from '../../../core/analytics';
+import { suiteOf } from '../../../core/catalog';
 import type { TestStatus } from '../../../core/types';
-import { EmptyState, Section, StatusBadge } from '../components/ui';
+import { EmptyState, OutcomeBadge, Section } from '../components/ui';
 import { Icon } from '../icons';
-import { endpointOf, plainEndpoint, plainTitle } from '../plain';
-import { NOT_RUN, useApp } from '../store';
+import { plainEndpoint, plainTitle } from '../plain';
+import { GROUP_BY_OPTIONS, groupKeyOf, NOT_RUN, outcomeOf, useApp, type GroupBy } from '../store';
 import { isTypingTarget } from '../utils';
 
 const PAGE = 20;
 const TABS: { label: string; statuses: TestStatus[] }[] = [
   { label: 'All', statuses: [] },
-  { label: 'Failed', statuses: ['FAIL'] },
-  { label: 'Waiting', statuses: NOT_RUN },
-  { label: 'Passed', statuses: ['PASS'] },
+  { label: 'Fail', statuses: ['FAIL'] },
+  { label: 'Not Tested', statuses: NOT_RUN },
+  { label: 'Pass', statuses: ['PASS'] },
 ];
 
+const TYPE_HEAD: Record<string, { icon: string; note: string }> = {
+  Positive: { icon: 'check', note: 'Normal use works as expected' },
+  Negative: { icon: 'x', note: 'Wrong or incomplete input is refused' },
+  Security: { icon: 'shield', note: 'Signing, permissions, customer separation and leaks' },
+  Database: { icon: 'database', note: 'Checks the stored data directly' },
+  Contract: { icon: 'requirement', note: 'Replies match the documented format' },
+};
+const SUITE_HEAD: Record<string, { icon: string; note: string }> = {
+  Smoke: { icon: 'zap', note: 'Quick, most important checks (tag @smoke)' },
+  Regression: { icon: 'layers', note: 'The full check of every behaviour' },
+};
+
+/** Heading for a group in the chosen mode; null in "None" mode (a plain list). */
+function groupHeading(
+  key: string,
+  groupBy: GroupBy,
+  endpoints: Parameters<typeof plainEndpoint>[1],
+): { name: string; icon: string; method?: string; path?: string; note?: string } | null {
+  if (groupBy === 'none') return null;
+  if (groupBy === 'endpoint') {
+    const ep = plainEndpoint(key, endpoints);
+    return { name: ep.name, icon: ep.icon, method: ep.method, path: ep.path };
+  }
+  const meta = (groupBy === 'type' ? TYPE_HEAD : SUITE_HEAD)[key] ?? { icon: 'box', note: '' };
+  return { name: key, icon: meta.icon, note: meta.note };
+}
+
 export function TestList() {
-  const { report, service, list, filters, setFilters, openTest, isPrint, ui } = useApp();
+  const { report, service, all, list, filters, setFilters, openTest, isPrint, ui, groupBy, setGroupBy } =
+    useApp();
   const anyOverlay = ui.palette || ui.shortcuts || ui.guide || ui.methodology;
   // The page belongs to the current filters: new filters start at page 1 in the same render (no reset
   // effect that could race a quick ← / → key press).
@@ -63,29 +92,38 @@ export function TestList() {
     let passes = 0;
     return sorted.filter((t) => t.status !== 'PASS' || passes++ < 150);
   }, [sorted, isPrint, page]);
-  // Consecutive rows of the same endpoint form one headed group.
+  // Consecutive rows with the same heading (endpoint / type / suite) form one group; "None" = one group, no heading.
   const groups = useMemo(() => {
     const out: { endpoint: string; tests: typeof rows; continued: boolean }[] = [];
     for (const t of rows) {
-      const ep = endpointOf(t);
+      const key = groupKeyOf(t, groupBy);
       const last = out[out.length - 1];
-      if (last && last.endpoint === ep) last.tests.push(t);
-      else out.push({ endpoint: ep, tests: [t], continued: false });
+      if (last && last.endpoint === key) last.tests.push(t);
+      else out.push({ endpoint: key, tests: [t], continued: false });
     }
     const first = out[0];
     if (first && !isPrint && page > 0) {
       const prev = sorted[page * PAGE - 1];
-      first.continued = Boolean(prev && endpointOf(prev) === first.endpoint);
+      first.continued = Boolean(prev && groupKeyOf(prev, groupBy) === first.endpoint);
     }
     return out;
-  }, [rows, sorted, page, isPrint]);
+  }, [rows, sorted, page, isPrint, groupBy]);
   const totalFor = useMemo(() => {
     const m = new Map<string, number>();
-    for (const t of sorted) m.set(endpointOf(t), (m.get(endpointOf(t)) ?? 0) + 1);
+    for (const t of sorted) m.set(groupKeyOf(t, groupBy), (m.get(groupKeyOf(t, groupBy)) ?? 0) + 1);
     return m;
-  }, [sorted]);
+  }, [sorted, groupBy]);
   const count = (st: TestStatus[]) =>
-    st.length ? service.filter((t) => st.includes(t.status)).length : service.length;
+    !st.length
+      ? all.length
+      : all.filter((t) => {
+          const o = outcomeOf(t);
+          return o === 'Pass'
+            ? st.includes('PASS')
+            : o === 'Fail'
+              ? st.includes('FAIL')
+              : st.some((x) => NOT_RUN.includes(x));
+        }).length;
   const activeTab = TABS.findIndex((t) => t.statuses.join() === filters.statuses.join());
   const endpointName = filters.endpoint ? plainEndpoint(filters.endpoint).name : '';
   // Longest executed test — scales the small time bars.
@@ -104,10 +142,20 @@ export function TestList() {
       num="03"
       eyebrow="Details"
       title="All tests"
-      sub={`${service.length} checks in this run. Click any row for details.`}
+      sub={`${all.length} test cases${groupBy === 'none' ? ', sorted by ID' : `, grouped by ${groupBy === 'type' ? 'test type' : groupBy}`}. Click any row to see what it does and why.`}
     >
-      <div class="glass glass--pad">
+      <div class="glass glass--pad test-card">
         <div class="list-tools no-print">
+          <div class="groupby" role="group" aria-label="Group by">
+            <span class="groupby__label">Group by</span>
+            <div class="seg">
+              {GROUP_BY_OPTIONS.map((o) => (
+                <button key={o.value} aria-pressed={groupBy === o.value} onClick={() => setGroupBy(o.value)}>
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div class="seg" role="group" aria-label="Show">
             {TABS.map((t, i) => (
               <button
@@ -159,43 +207,57 @@ export function TestList() {
                 </tr>
               </thead>
               {groups.map((g) => {
-                const ep = plainEndpoint(g.endpoint, report.endpoints);
+                const head = groupHeading(g.endpoint, groupBy, report.endpoints);
+                const n = totalFor.get(g.endpoint) ?? 0;
                 return (
                   <tbody key={`${g.endpoint}-${g.tests[0]?.key}`}>
-                    <tr class="group-row">
-                      <th scope="colgroup" colSpan={3}>
-                        <span class="group-row__inner">
-                          <span class="group-row__icon">
-                            <Icon name={ep.icon} size={15} />
+                    {head && (
+                      <tr class="group-row">
+                        <th scope="colgroup" colSpan={3}>
+                          <span class="group-row__inner">
+                            <span class="group-row__icon">
+                              <Icon name={head.icon} size={15} />
+                            </span>
+                            <span class="group-row__name">{head.name}</span>
+                            {head.method && (
+                              <span class={`method method--${head.method}`}>{head.method}</span>
+                            )}
+                            {head.path && <code class="group-row__path">{head.path}</code>}
+                            {head.note && <span class="group-row__note">{head.note}</span>}
+                            <span class="group-row__count">
+                              {n} test{n === 1 ? '' : 's'}
+                              {g.continued ? ' · continued' : ''}
+                            </span>
                           </span>
-                          <span class="group-row__name">{ep.name}</span>
-                          {ep.method && <span class={`method method--${ep.method}`}>{ep.method}</span>}
-                          <code class="group-row__path">{ep.path}</code>
-                          <span class="group-row__count">
-                            {totalFor.get(g.endpoint)} test{totalFor.get(g.endpoint) === 1 ? '' : 's'}
-                            {g.continued ? ' · continued' : ''}
-                          </span>
-                        </span>
-                      </th>
-                    </tr>
+                        </th>
+                      </tr>
+                    )}
                     {g.tests.map((t) => (
                       <tr
                         key={t.key}
-                        data-status={t.status}
+                        data-status={outcomeOf(t) === 'Not Tested' ? 'NOT_TESTED' : t.status}
                         tabIndex={0}
                         onClick={() => openTest(t.key)}
                         onKeyDown={(e) => e.key === 'Enter' && openTest(t.key)}
-                        aria-label={`${t.id}: ${t.status}`}
+                        aria-label={`${t.id}: ${outcomeOf(t)}`}
                       >
                         <td>
-                          <StatusBadge status={t.status} />
+                          <OutcomeBadge outcome={outcomeOf(t)} />
                         </td>
                         <td>
                           <div class="test-name">{plainTitle(t.title)}</div>
-                          <div class="xsmall faint mono">{t.id}</div>
+                          {t.info && <div class="test-what">{t.info.what}</div>}
+                          <div class="test-meta">
+                            <span class="mono">{t.id}</span>
+                            {t.info && <span class={`prio prio--${t.info.priority}`}>{t.info.priority}</span>}
+                            {suiteOf(t.tags) === 'Smoke' && <span class="suite suite--Smoke">Smoke</span>}
+                            {outcomeOf(t) !== 'Pass' && testOutcome(t).remark !== 'Not part of this run' && (
+                              <span class="test-remark">{testOutcome(t).remark}</span>
+                            )}
+                          </div>
                         </td>
                         <td class="num nowrap tabular">
-                          {t.status === 'PASS' || t.status === 'FAIL' ? (
+                          {outcomeOf(t) !== 'Not Tested' ? (
                             <span class="timecell">
                               <span class="timebar" aria-hidden="true">
                                 <span style={{ width: `${Math.max(4, (t.durationMs / slowest) * 100)}%` }} />

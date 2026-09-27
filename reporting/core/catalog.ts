@@ -201,6 +201,8 @@ const AREA_DEFAULT_ENDPOINTS: Partial<Record<AreaKey, string[]>> = {
   normalization: ['writePii', 'readPii'],
   authentication: ['writePii'],
   poc: ['writePii', 'readPii'],
+  transient: ['createTransientPhone'],
+  freeText: ['createFreeTextKey'],
 };
 
 const T = { c: 'createTransientPhone', r: 'resolveTransientPhone', p: 'promoteTransientPhone' };
@@ -269,6 +271,12 @@ const ENDPOINT_OVERRIDES: Record<string, string[]> = {
 export function endpointsForId(id: string, area: AreaKey): string[] {
   return ENDPOINT_OVERRIDES[id] ?? AREA_DEFAULT_ENDPOINTS[area] ?? [];
 }
+
+/** Which suite a test belongs to: Smoke (tagged @smoke — the quick, most important checks) or Regression. */
+export type Suite = 'Smoke' | 'Regression';
+export const SUITES: readonly Suite[] = ['Smoke', 'Regression'];
+export const suiteOf = (tags: readonly string[]): Suite =>
+  tags.some((t) => t === '@smoke' || t === 'smoke') ? 'Smoke' : 'Regression';
 
 /** Group key for tests that exercise several (3+) or no specific endpoints, e.g. "every endpoint rejects…". */
 export const CROSS_ENDPOINT = 'crossEndpoint';

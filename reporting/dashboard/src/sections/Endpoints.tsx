@@ -1,12 +1,11 @@
 /** "How each endpoint did" — one tile per endpoint (method + path) with a ring; click to see its tests. */
 import { useMemo } from 'preact/hooks';
-import { countStatuses, executedCount, passRate } from '../../../core/analytics';
 import { ENDPOINT_GROUP_ORDER } from '../../../core/catalog';
 import type { ReportTest } from '../../../core/types';
 import { Ring, Section } from '../components/ui';
 import { Icon } from '../icons';
 import { endpointOf, plainEndpoint } from '../plain';
-import { useApp } from '../store';
+import { outcomeOf, useApp } from '../store';
 
 /** Columns that leave the fewest empty slots in the last row (12 → 4×3, 9 → 3×3, 8 → 4×2, 5 → 5). */
 export function balancedColumns(n: number, max = 5, min = 3): number {
@@ -26,19 +25,22 @@ export function balancedColumns(n: number, max = 5, min = 3): number {
 function EndpointCard({ endpoint, tests, index }: { endpoint: string; tests: ReportTest[]; index: number }) {
   const { report, showTests } = useApp();
   const p = plainEndpoint(endpoint, report.endpoints);
-  const c = countStatuses(tests);
-  const executed = executedCount(c);
+  // Pass / Fail / Not Tested, the same rule as the test list and the Excel sheet.
+  const pass = tests.filter((t) => outcomeOf(t) === 'Pass').length;
+  const fail = tests.filter((t) => outcomeOf(t) === 'Fail').length;
+  const c = { PASS: pass, FAIL: fail, total: tests.length };
+  const executed = pass + fail;
   const waiting = c.total - executed;
-  const rate = passRate(c);
+  const rate = executed ? pass / executed : null;
   const state = c.FAIL > 0 ? 'fail' : executed === 0 ? 'muted' : waiting > 0 ? 'warn' : 'pass';
   const label =
     c.FAIL > 0
       ? `${c.FAIL} failed`
       : executed === 0
-        ? 'Not run yet'
+        ? 'Not tested'
         : waiting > 0
-          ? 'Partly checked'
-          : 'All good';
+          ? 'Partly tested'
+          : 'All passed';
   return (
     <button
       class={`area glass glass--interactive area--${state}`}
@@ -78,14 +80,15 @@ function EndpointCard({ endpoint, tests, index }: { endpoint: string; tests: Rep
 }
 
 export function Endpoints() {
-  const { service } = useApp();
+  const { all } = useApp();
   const groups = useMemo(() => {
     const by = new Map<string, ReportTest[]>();
-    for (const t of service) by.set(endpointOf(t), [...(by.get(endpointOf(t)) ?? []), t]);
-    return (ENDPOINT_GROUP_ORDER as readonly string[])
-      .filter((k) => by.has(k))
-      .map((k) => ({ endpoint: k, tests: by.get(k) as ReportTest[] }));
-  }, [service]);
+    for (const t of all) by.set(endpointOf(t), [...(by.get(endpointOf(t)) ?? []), t]);
+    // Known endpoints in the guide's order, then any new endpoint found in the tests (so new tests always show).
+    const known = (ENDPOINT_GROUP_ORDER as readonly string[]).filter((k) => by.has(k));
+    const extra = [...by.keys()].filter((k) => !known.includes(k)).sort();
+    return [...known, ...extra].map((k) => ({ endpoint: k, tests: by.get(k) as ReportTest[] }));
+  }, [all]);
   if (groups.length === 0) return null;
   return (
     <Section

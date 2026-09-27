@@ -1,4 +1,4 @@
-/** "What needs attention" — failures first, then checks that are waiting. Plain language, click for details. */
+/** "What needs attention" — failures first, then what was not tested and why. Plain language, click for details. */
 import { useMemo, useState } from 'preact/hooks';
 import {
   analyzeFailure,
@@ -10,11 +10,11 @@ import {
 import { EmptyState, Section } from '../components/ui';
 import { Icon } from '../icons';
 import { endpointOf, plainEndpoint, plainTitle } from '../plain';
-import { NOT_RUN, useApp } from '../store';
+import { NOT_RUN, outcomeOf, useApp } from '../store';
 import { plural } from '../utils';
 
 export function Attention() {
-  const { report, service, openTest, showTests } = useApp();
+  const { report, service, all, openTest, showTests } = useApp();
   const [showAll, setShowAll] = useState(false);
   const preflight = useMemo(() => preflightFailures(service), [service]);
   const failures = useMemo(
@@ -25,8 +25,24 @@ export function Attention() {
         .map(analyzeFailure),
     [service, preflight],
   );
-  const waiting = useMemo(() => service.filter((t) => NOT_RUN.includes(t.status)), [service]);
+  // Not Tested = everything that did not run to a pass or fail (the unreachable-service case has its own card).
+  const waiting = useMemo(
+    () => all.filter((t) => outcomeOf(t) === 'Not Tested' && !preflight.includes(t)),
+    [all, preflight],
+  );
   const questions = useMemo(() => [...new Set(waiting.map(questionIdOf).filter(Boolean))], [waiting]);
+  const reasons = useMemo(() => {
+    const notInRun = waiting.filter((t) => t.notRun).length;
+    const onDev = waiting.filter((t) => t.status === 'BLOCKED' || t.status === 'FIXME').length;
+    const skipped = waiting.filter((t) => !t.notRun && t.status === 'SKIPPED').length;
+    const other = waiting.length - notInRun - onDev - skipped;
+    return [
+      [notInRun, 'not part of this run'],
+      [onDev, `waiting on an answer from Dev${questions.length ? ` (${questions.join(', ')})` : ''}`],
+      [skipped, 'skipped — need extra setup (e.g. another caller)'],
+      [other, 'stopped before running'],
+    ].filter(([n]) => (n as number) > 0) as [number, string][];
+  }, [waiting, questions]);
   const shown = showAll ? failures : failures.slice(0, 6);
   const nothing = failures.length === 0 && waiting.length === 0 && preflight.length === 0;
 
@@ -46,7 +62,7 @@ export function Attention() {
               </span>
             )}
             {waiting.length > 0 && (
-              <span class="count-pill__item count-pill__item--warn">{waiting.length} waiting</span>
+              <span class="count-pill__item count-pill__item--warn">{waiting.length} not tested</span>
             )}
           </span>
         )
@@ -129,22 +145,16 @@ export function Attention() {
               </span>
               <span class="grow">
                 <span class="alert-card__title">
-                  {plural(waiting.length, 'check is', 'checks are')} waiting to run
+                  {plural(waiting.length, 'test was', 'tests were')} not tested
                 </span>
-                <span class="alert-card__text">
-                  {questions.length
-                    ? 'They need answers from the backend team:'
-                    : 'They were skipped or could not run in this environment.'}
+                <span class="alert-card__text">Why:</span>
+                <span class="reason-list">
+                  {reasons.map(([n, why]) => (
+                    <span key={why} class="reason">
+                      <b>{n}</b> {why}
+                    </span>
+                  ))}
                 </span>
-                {questions.length > 0 && (
-                  <span class="qchips">
-                    {questions.map((q) => (
-                      <span key={q} class="qchip">
-                        {q}
-                      </span>
-                    ))}
-                  </span>
-                )}
               </span>
               <Icon name="chevronRight" size={18} class="faint" />
             </button>

@@ -2,6 +2,7 @@
 import { expect, test } from '@playwright/test';
 import {
   analyzeFailure,
+  catalogTests,
   compareRuns,
   countStatuses,
   evaluateGates,
@@ -13,6 +14,7 @@ import {
   sameProfile,
   scopeOf,
   scopeTests,
+  testOutcome,
   toHistoryEntry,
 } from '../../core/analytics';
 import type { HistoryEntry, ReportConfig, ReportData, ReportTest, TestStatus } from '../../core/types';
@@ -298,5 +300,40 @@ test.describe('REPORT analytics', () => {
       }),
     );
     expect(f).toMatchObject({ httpStatus: 403, errorCode: 'AUTHORIZATION_DENIED', requestId: 'test-id' });
+  });
+
+  test('RPT-AN-016 Pass / Fail / Not Tested: one rule, with the reason; tests not in the run never affect health', () => {
+    const pass = t('PII-WR-001', 'PASS');
+    const fail = t('PII-WR-008', 'FAIL', {
+      errors: [{ message: 'expected HTTP 400 but got POST /api/v1/pii -> HTTP 201' }],
+    });
+    const waiting = t('PII-AUTH-021', 'FIXME', {
+      annotations: [{ type: 'blocked', description: 'Q-14: reuse behaviour undocumented' }],
+    });
+    const skipped = t('PII-AZ-001', 'SKIPPED', {
+      annotations: [{ type: 'skip', description: 'Needs the "limited" caller' }],
+    });
+    const unreachable = t('PII-RD-001', 'FAIL', {
+      annotations: [{ type: 'preflight', description: 'down' }],
+    });
+    const notRun = t('PII-SR-001', 'SKIPPED', { notRun: true });
+
+    expect(testOutcome(pass)).toEqual({ outcome: 'Pass', remark: '' });
+    expect(testOutcome(fail)).toEqual({ outcome: 'Fail', remark: 'Expected 400, got HTTP 201' });
+    expect(testOutcome(waiting)).toEqual({
+      outcome: 'Not Tested',
+      remark: 'Waiting on Dev — Q-14: reuse behaviour undocumented',
+    });
+    expect(testOutcome(skipped)).toEqual({ outcome: 'Not Tested', remark: 'Needs the "limited" caller' });
+    expect(testOutcome(unreachable).outcome).toBe('Not Tested'); // never really tested
+    expect(testOutcome(notRun)).toEqual({ outcome: 'Not Tested', remark: 'Not part of this run' });
+
+    // A one-test run: the full list shows every test, but health and gates only see what ran.
+    const all = [pass, notRun];
+    expect(catalogTests(all)).toHaveLength(2);
+    expect(scopeTests(all)).toEqual([pass]);
+    expect(healthScore(scopeTests(all), endpointInventory(), cfg.health).score).toBe(
+      healthScore([pass], endpointInventory(), cfg.health).score,
+    );
   });
 });

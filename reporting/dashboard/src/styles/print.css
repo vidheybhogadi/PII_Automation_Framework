@@ -134,3 +134,80 @@ html[data-print='true'] * {
     break-inside: avoid;
   }
 }
+
+/* ---- PDF clean-up -----------------------------------------------------------------------------
+   Chromium's PDF output cannot draw see-through layers, shadows and glows cleanly: they turn into
+   grey boxes and stray coloured squares. On paper everything is solid, flat and without effects. */
+html[data-print='true'] .skip-link {
+  display: none !important;
+}
+@media print {
+  .skip-link,
+  .no-print {
+    display: none !important;
+  }
+}
+html[data-print='true'] *,
+html[data-print='true'] *::before,
+html[data-print='true'] *::after {
+  box-shadow: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html[data-print='true'] .stat,
+html[data-print='true'] .area,
+html[data-print='true'] .fact,
+html[data-print='true'] .hero__score {
+  background: #fff !important;
+}
+/* Decorative glows (endpoint tile corner, section number halo) */
+html[data-print='true'] .area::after,
+html[data-print='true'] .area::before {
+  display: none !important;
+}
+
+/* ---- Page breaks ------------------------------------------------------------------------------- */
+/* A heading never sits alone at the bottom of a page. */
+html[data-print='true'] .section-head,
+html[data-print='true'] .group-row,
+html[data-print='true'] thead {
+  break-after: avoid;
+}
+/* Big containers may flow across pages (otherwise the whole test list jumps to the next page and
+   leaves a blank one); small cards and single rows stay whole. */
+html[data-print='true'] .test-card,
+html[data-print='true'] .hero,
+html[data-print='true'] .section {
+  break-inside: auto;
+}
+html[data-print='true'] .test-card {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+html[data-print='true'] #tests {
+  break-before: page;
+}
+html[data-print='true'] #about {
+  break-before: page;
+}
+
+/* ---- Compact, complete test rows on paper ------------------------------------------------------ */
+html[data-print='true'] .table {
+  font-size: 0.8rem;
+}
+html[data-print='true'] .table td {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+html[data-print='true'] .test-what {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+  font-size: 0.78rem;
+}
+html[data-print='true'] .group-row td {
+  background: oklch(96% 0.02 255) !important;
+}

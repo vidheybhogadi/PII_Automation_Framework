@@ -11,6 +11,8 @@ import type {
   ReportData,
   ReportTest,
 } from '../core/types';
+import { testCaseInfo } from '../../tests/catalog';
+import type { InventoryTest } from './inventory';
 
 export const PRODUCT = 'PII Sentinel';
 export const SUBTITLE = 'Aisle PII API Quality & Security Intelligence';
@@ -58,12 +60,86 @@ export function enrichTests(run: CollectedRun): ReportTest[] {
         ...(c.phase ? { phase: c.phase } : {}),
       })),
       area,
-      endpoints: endpointsForId(t.id, area),
+      endpoints: resolveEndpoints(t.id),
       severity: severityFor(area),
       kind: area === 'framework' || t.project === 'unit' ? 'unit' : 'integration',
       milestone: 'M1',
+      ...describe(t.id),
     };
   });
+}
+
+/**
+ * The endpoints a test belongs to. Order of precedence:
+ *   1. `endpoint` in its tests/catalog entry (explicit — how a new test says where it belongs)
+ *   2. a per-test override in reporting/core/catalog.ts
+ *   3. the default for its ID prefix (PII-WR → Save PII, PII-RD → Read PII, …)
+ * The first entry is the heading it is listed under; none (or several) = "Across endpoints".
+ */
+export function resolveEndpoints(id: string): string[] {
+  const declared = testCaseInfo(id)?.endpoint;
+  if (declared === 'crossEndpoint') return [];
+  if (declared) return [declared];
+  return endpointsForId(id, areaForId(id));
+}
+
+/** Attach the plain-English description from tests/catalog (sanitized like every other text field). */
+function describe(id: string): Pick<ReportTest, 'info'> {
+  const info = testCaseInfo(id);
+  if (!info) return {};
+  return {
+    info: {
+      what: sanitizeText(info.what, 600),
+      why: sanitizeText(info.why, 600),
+      steps: info.steps.map((s) => sanitizeText(s, 300)),
+      expected: sanitizeText(info.expected, 800),
+      type: info.type,
+      priority: info.priority,
+      ...(info.preconditions ? { preconditions: sanitizeText(info.preconditions, 400) } : {}),
+    },
+  };
+}
+
+/**
+ * Tests that exist in the suite but were not part of this run, as "Not Tested" entries — so the report always
+ * lists every test. They are flagged `notRun` and excluded from health, gates, history and comparisons.
+ */
+export function notRunTests(inventory: readonly InventoryTest[], ran: readonly ReportTest[]): ReportTest[] {
+  const seen = new Set(ran.map((t) => t.key));
+  return inventory
+    .filter((t) => !seen.has(t.key))
+    .map((t) => {
+      const area = areaForId(t.id);
+      return {
+        key: t.key,
+        id: t.id,
+        title: sanitizeText(t.title, 300),
+        suite: sanitizeText(t.suite, 300),
+        file: t.file,
+        line: t.line,
+        project: t.project,
+        tags: t.tags,
+        status: 'SKIPPED' as const,
+        rawStatus: 'skipped',
+        outcome: 'skipped' as const,
+        durationMs: 0,
+        startedAt: null,
+        workerIndex: -1,
+        parallelIndex: -1,
+        retries: 0,
+        annotations: [{ type: 'not-run', description: 'Not part of this run' }],
+        errors: [],
+        steps: [],
+        apiCalls: [],
+        area,
+        endpoints: resolveEndpoints(t.id),
+        severity: severityFor(area),
+        kind: area === 'framework' || t.project === 'unit' ? ('unit' as const) : ('integration' as const),
+        milestone: 'M1',
+        notRun: true,
+        ...describe(t.id),
+      };
+    });
 }
 
 /** Data-completeness diagnostics shown as a banner (never fatal). */
@@ -104,8 +180,10 @@ export function buildReportData(
   config: ReportConfig,
   history: HistoryEntry[],
   generatedAt = new Date(),
+  inventory: readonly InventoryTest[] = [],
 ): ReportData {
-  const tests = enrichTests(run);
+  const ran = enrichTests(run);
+  const tests = [...ran, ...notRunTests(inventory, ran)];
   return {
     schemaVersion: 1,
     meta: {
@@ -115,6 +193,7 @@ export function buildReportData(
       generatedAt: generatedAt.toISOString(),
       dataSource: run.dataSource,
       pdfFile: null,
+      excelFile: null,
     },
     run: {
       ...run.run,
@@ -128,6 +207,6 @@ export function buildReportData(
     endpoints: endpointInventory(),
     config,
     history: history.filter((h) => h.runId !== run.run.runId && h.dataSource === run.dataSource),
-    diagnostics: diagnose(run, tests),
+    diagnostics: diagnose(run, ran),
   };
 }

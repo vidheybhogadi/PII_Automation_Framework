@@ -80,21 +80,24 @@ export function useHotkeys(h: HotkeyHandlers): void {
   }, []);
 }
 
-/** [scroll progress 0–1, scrolled past the first screen] */
-export function useScrollProgress(): [number, boolean] {
-  const [state, setState] = useState<[number, boolean]>([0, false]);
+/**
+ * True once the page is scrolled past `threshold` px. Re-renders ONLY when that flips — never on every scroll
+ * frame (per-frame re-renders made fast scrolling stutter).
+ */
+export function useScrolledPast(threshold = 500): boolean {
+  const [past, setPast] = useState(false);
   useEffect(() => {
     let raf = 0;
     const onScroll = () => {
       cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        const max = document.documentElement.scrollHeight - window.innerHeight;
-        setState([max > 0 ? window.scrollY / max : 0, window.scrollY > 500]);
-      });
+      raf = requestAnimationFrame(() => setPast(window.scrollY > threshold));
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-  return state;
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('scroll', onScroll);
+    };
+  }, [threshold]);
+  return past;
 }

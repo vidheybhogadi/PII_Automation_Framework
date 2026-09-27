@@ -84,6 +84,7 @@ svg {
 
 /* ---- Layered background: soft mesh blobs + faint grid + noise ---------------------------------- */
 .bg {
+  contain: strict;
   position: fixed;
   inset: 0;
   z-index: -1;
@@ -95,7 +96,6 @@ svg {
   position: absolute;
   border-radius: 50%;
   filter: blur(80px);
-  will-change: transform;
 }
 .bg__blob--1 {
   width: 52vw;
@@ -103,7 +103,6 @@ svg {
   left: -14vw;
   top: -18vw;
   background: radial-gradient(circle at 30% 30%, var(--blob-1), transparent 65%);
-  animation: drift-1 38s var(--ease-out) infinite alternate;
 }
 .bg__blob--2 {
   width: 46vw;
@@ -111,7 +110,6 @@ svg {
   right: -12vw;
   top: 18vh;
   background: radial-gradient(circle at 60% 40%, var(--blob-2), transparent 65%);
-  animation: drift-2 44s var(--ease-out) infinite alternate;
 }
 .bg__blob--3 {
   width: 40vw;
@@ -119,7 +117,6 @@ svg {
   left: 22vw;
   bottom: -22vw;
   background: radial-gradient(circle, var(--blob-3), transparent 65%);
-  animation: drift-3 52s var(--ease-out) infinite alternate;
 }
 .bg__grid {
   position: absolute;
@@ -129,27 +126,6 @@ svg {
     linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
   background-size: 56px 56px;
   mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%);
-}
-.bg__noise {
-  position: absolute;
-  inset: -50%;
-  opacity: var(--noise-opacity);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-@keyframes drift-1 {
-  to {
-    transform: translate3d(8vw, 6vh, 0) scale(1.08);
-  }
-}
-@keyframes drift-2 {
-  to {
-    transform: translate3d(-6vw, 10vh, 0) scale(0.94);
-  }
-}
-@keyframes drift-3 {
-  to {
-    transform: translate3d(5vw, -8vh, 0) scale(1.1);
-  }
 }
 
 /* ---- Page ------------------------------------------------------------------------------------ */
@@ -164,6 +140,14 @@ svg {
 }
 .section {
   scroll-margin-top: 90px;
+}
+/* Off-screen sections are not drawn until they come near the viewport — keeps fast scrolling smooth.
+   Screen only: print/PDF mode renders everything. */
+@media screen {
+  html:not([data-print='true']) .section {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 900px;
+  }
 }
 .row {
   display: flex;
@@ -302,4 +286,12 @@ svg {
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--line-strong) transparent;
+}
+
+/* Keep a lane free for the floating quick-action bar (bottom right) so it never covers content.
+   Only needed while the page is narrower than the content plus that lane on both sides. */
+@media screen and (min-width: 700px) and (max-width: 1420px) {
+  html:not([data-print='true']) .content {
+    padding-right: 84px;
+  }
 }

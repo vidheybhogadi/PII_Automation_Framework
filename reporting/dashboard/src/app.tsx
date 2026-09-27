@@ -60,7 +60,7 @@ function Cover() {
           <div>
             <dt>Checks</dt>
             <dd>
-              {c.PASS} passed · {c.FAIL} failed · {c.total - c.PASS - c.FAIL} waiting
+              {c.PASS} pass · {c.FAIL} fail · {c.total - c.PASS - c.FAIL} not tested
             </dd>
           </div>
           <div>

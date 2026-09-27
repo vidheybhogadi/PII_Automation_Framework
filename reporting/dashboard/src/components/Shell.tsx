@@ -1,7 +1,7 @@
 /** Page chrome: background, top bar (search · theme · export), floating dock, toasts. */
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { chatSummary, resultsJson, testsToCsv } from '../../../core/exporters';
-import { useScrollProgress } from '../hooks';
+import { useScrolledPast } from '../hooks';
 import { Icon, Logo } from '../icons';
 import { ACCENTS, useApp, type Accent, type ThemeMode } from '../store';
 import { copyText, download, storage } from '../utils';
@@ -13,7 +13,6 @@ export function Background() {
       <div class="bg__blob bg__blob--2" />
       <div class="bg__blob bg__blob--3" />
       <div class="bg__grid" />
-      <div class="bg__noise" />
     </div>
   );
 }
@@ -74,8 +73,8 @@ function ThemeMenu() {
         <Icon name="palette" />
       </button>
       {open && (
-        <div class="popover glass glass--strong" role="dialog" aria-label="Appearance">
-          <div class="seg" role="group" aria-label="Theme mode">
+        <div class="popover popover--theme glass glass--strong" role="dialog" aria-label="Appearance">
+          <div class="seg seg--fill" role="group" aria-label="Theme mode">
             {modes.map(([m, icon, label]) => (
               <button key={m} aria-pressed={mode === m} onClick={() => setMode(m)}>
                 <Icon name={icon} size={14} />
@@ -103,7 +102,7 @@ function ThemeMenu() {
 }
 
 function ExportMenu() {
-  const { report, service, list, filters, toast } = useApp();
+  const { report, service, all, list, filters, toast } = useApp();
   const [open, setOpen] = useState(false);
   const ref = useOutside(open, () => setOpen(false));
   useEffect(() => {
@@ -147,12 +146,23 @@ function ExportMenu() {
               <Icon name="printer" size={16} /> Print / save as PDF
             </button>
           )}
+          {report.meta.excelFile && (
+            <a
+              class="menu-item"
+              role="menuitem"
+              href={report.meta.excelFile}
+              download
+              onClick={() => setOpen(false)}
+            >
+              <Icon name="csv" size={16} /> Excel (.xlsx) <small>{all.length} tests</small>
+            </a>
+          )}
           <button
             class="menu-item"
             role="menuitem"
             onClick={act(() => download(`${base}.csv`, testsToCsv(rows), 'text/csv'))}
           >
-            <Icon name="csv" size={16} /> Spreadsheet (CSV) <small>{rows.length} tests</small>
+            <Icon name="csv" size={16} /> Raw data (CSV) <small>{rows.length} tests</small>
           </button>
           <button
             class="menu-item"
@@ -192,24 +202,39 @@ const NAV: [string, string][] = [
 function SectionNav() {
   const [active, setActive] = useState('summary');
   useEffect(() => {
-    let raf = 0;
-    const on = () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        const line = 140;
-        let current = 'summary';
-        for (const [id] of NAV) {
-          const el = document.getElementById(id);
-          if (el && el.getBoundingClientRect().top <= line) current = id;
-        }
-        if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4)
-          current = 'about';
-        setActive(current);
+    // Section positions are measured only when the layout changes, not on every scroll frame.
+    let tops: [string, number][] = [];
+    const measure = () => {
+      tops = NAV.map(([id]) => {
+        const el = document.getElementById(id);
+        return [id, el ? el.getBoundingClientRect().top + window.scrollY : Infinity] as [string, number];
       });
     };
-    window.addEventListener('scroll', on, { passive: true });
-    on();
-    return () => window.removeEventListener('scroll', on);
+    let raf = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const y = window.scrollY + 140;
+        let current = 'summary';
+        for (const [id, top] of tops) if (top <= y) current = id;
+        if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4)
+          current = 'about';
+        setActive(current); // same value → no re-render
+      });
+    };
+    const ro = new ResizeObserver(() => {
+      measure();
+      onScroll();
+    });
+    ro.observe(document.body);
+    measure();
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+      window.removeEventListener('scroll', onScroll);
+    };
   }, []);
   return (
     <nav class="snav" aria-label="Sections">
@@ -269,9 +294,26 @@ export function Topbar() {
 }
 
 export function ScrollProgress() {
-  const [progress] = useScrollProgress();
+  // Written straight to the element's style: no React re-render while scrolling.
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    let raf = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const max = document.documentElement.scrollHeight - window.innerHeight;
+        if (ref.current) ref.current.style.transform = `scaleX(${max > 0 ? window.scrollY / max : 0})`;
+      });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('scroll', onScroll);
+    };
+  }, []);
   return (
-    <div class="progress-line no-print" style={{ transform: `scaleX(${progress})` }} aria-hidden="true" />
+    <div ref={ref} class="progress-line no-print" style={{ transform: 'scaleX(0)' }} aria-hidden="true" />
   );
 }
 
@@ -281,7 +323,7 @@ export function ScrollProgress() {
  */
 export function Dock() {
   const { setUi, resolvedTheme, setMode } = useApp();
-  const [, scrolled] = useScrollProgress();
+  const scrolled = useScrolledPast(500);
   const [fs, setFs] = useState(false);
   // Remembered choice; on phones the bar starts folded so it never covers the content.
   const [collapsed, setCollapsed] = useState(() => {
