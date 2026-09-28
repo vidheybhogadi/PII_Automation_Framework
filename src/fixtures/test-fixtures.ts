@@ -37,7 +37,7 @@ export interface TestFixtures {
   /** A signer for a freshly generated key pair that is NOT registered with the service. */
   unregisteredSigner: Ed25519Signer;
   data: TestDataFactory;
-  /** Primary test tenant (PII_TEST_TENANT_ID). */
+  /** Primary test tenant: PII_TEST_TENANT_ID, or one generated for this run ("<run id>-app-a"). */
   tenant: string;
   cleanup: CleanupRegistry;
   /** Automatic: fails the test with a clear, recorded reason when the worker's readiness check failed. */

@@ -79,8 +79,10 @@ export const ENV_HELP: Record<string, string> = {
     'A SECOND registered caller ID with the same permissions as primary; used for caller-ownership isolation tests.',
   PII_CALLER_LIMITED_ID:
     'A registered caller ID with the restricted permission set described in docs/setup-guide.md §4.',
-  PII_TEST_TENANT_ID: 'Dedicated non-production tenant approved for automation (PII backend team / QA lead).',
-  PII_TEST_TENANT_ID_SECONDARY: 'A second approved non-production tenant, used for tenant-isolation tests.',
+  PII_TEST_TENANT_ID:
+    'Optional: a fixed non-production tenant (app) ID. When empty, each run generates one ("<run id>-app-a").',
+  PII_TEST_TENANT_ID_SECONDARY:
+    'Optional: a second, different tenant for tenant-isolation tests. When empty, each run generates "<run id>-app-b".',
   PII_TEST_EMAIL_DOMAIN:
     'Approved non-deliverable email domain for synthetic emails (e.g. a reserved .example domain).',
   PII_TEST_PHONES: 'Comma-separated list of team-approved TEST phone numbers (QA lead / compliance).',
@@ -253,7 +255,6 @@ export function assertIntegrationConfig(config: FrameworkConfig): void {
   const missing: string[] = [];
   if (!config.baseUrl) missing.push('PII_BASE_URL');
   if (!config.callers.primary) missing.push('PII_CALLER_PRIMARY_ID (+ PII_CALLER_PRIMARY_PRIVATE_KEY_FILE)');
-  if (!config.tenants.primary) missing.push('PII_TEST_TENANT_ID');
   if (!config.testData.emailDomain) missing.push('PII_TEST_EMAIL_DOMAIN');
   if (missing.length > 0) {
     throw new ConfigError(

@@ -39,7 +39,7 @@ environment), then run `npm run check-env`. Find any leftover with `grep -rn PEN
 
 | Group | Count | Where |
 |---|:-:|---|
-| [1. Settings](#1-settings-env) | 21 | `.env.example` → your `.env` |
+| [1. Settings](#1-settings-env) | 19 | `.env.example` → your `.env` |
 | [2. Database names](#2-database-table-and-column-names) | 11 | `config/db-queries.example.json` → `config/db-queries.json` |
 | [3. Tests waiting on an answer](#3-tests-waiting-on-an-answer-do-not-run-yet) | 10 | test files |
 | [4. Temporary expectations](#4-temporary-expectations-run-but-accept-several-answers) | 13 | test files |
@@ -57,22 +57,20 @@ Copy `.env.example` to `.env`, then replace each value below.
 | `PII_CALLER_PRIMARY_ID` | `PENDING_PRIMARY_CALLER_ID` | `.env.example:26` | Backend (register our primary public key) | All service tests (full-permission caller) | — (not set) |
 | `PII_CALLER_SECONDARY_ID` | `PENDING_SECONDARY_CALLER_ID` | `.env.example:29` | Backend (register our secondary public key) | Ownership tests: another caller cannot use my keys / temporary phones | — (not set) |
 | `PII_CALLER_LIMITED_ID` | `PENDING_LIMITED_CALLER_ID` | `.env.example:32` | Backend (register our limited public key with the restricted permissions) | 12 permission tests (PII-AZ-*) | — (not set) |
-| `PII_TEST_TENANT_ID` | `PENDING_TEST_TENANT_ID` | `.env.example:36` | Backend | All service tests (non-production tenant) | — (not set) |
-| `PII_TEST_TENANT_ID_SECONDARY` | `PENDING_TEST_TENANT_ID_SECONDARY` | `.env.example:37` | Backend | Tenant isolation tests (PII-TI-*, PII-DB-003) | — (not set) |
-| `PII_TEST_EMAIL_DOMAIN` | `PENDING_TEST_EMAIL_DOMAIN` | `.env.example:40` | Backend / Security | Every test that saves or searches an email | — (not set) |
-| `PII_TEST_PHONES` | `PENDING_APPROVED_10_DIGIT_TEST_PHONES` | `.env.example:42` | QA lead / Backend | Phone, search-by-phone and temporary-phone tests (2+ approved 10-digit numbers) | — (not set) |
-| `PII_NON_SEARCHABLE_FIELD` | `PENDING_Q18_NON_SEARCHABLE_FIELD` | `.env.example:50` | Backend (Q-18) | PII-SR-012 | — (not set) |
-| `PII_BATCH_MAX_ITEMS` | `PENDING_BATCH_MAX_ITEMS` | `.env.example:54` | Backend | PII-BR-004 / BR-005 use the real limit (guide value 50 until then) | `50` |
-| `PII_SEARCH_DEFAULT_LIMIT` | `PENDING_SEARCH_DEFAULT_LIMIT` | `.env.example:55` | Backend | PII-SR-008 uses the real default (guide value 10 until then) | `10` |
-| `PII_TRANSIENT_TTL_MIN_SECONDS` | `PENDING_TRANSIENT_TTL_MIN_SECONDS` | `.env.example:56` | Backend | PII-TR-008 uses the real minimum (guide value 300 until then) | `300` |
-| `PII_TRANSIENT_TTL_MAX_SECONDS` | `PENDING_TRANSIENT_TTL_MAX_SECONDS` | `.env.example:57` | Backend | PII-TR-008 uses the real maximum (guide value 604800 until then) | `604800` |
-| `PII_ENABLE_TTL_EXPIRY_TEST` | `PENDING_Q12_SHORT_TTL_ENVIRONMENT` | `.env.example:64` | Backend (Q-12): a short-lifetime environment | PII-TR-012 | `false` |
-| `PII_SIGNATURE_HELPER_MUST_BE_DISABLED` | `PENDING_Q23_SIGNATURE_HELPER_DISABLED` | `.env.example:66` | Backend (Q-23) | PII-SEC-003 | `false` |
-| `DB_HOST` | `PENDING_DB_HOST` | `.env.example:71` | Backend / DBA | All @db tests | — (not set) |
-| `DB_PORT` | `PENDING_DB_PORT` | `.env.example:72` | Backend / DBA | All @db tests | — (not set) |
-| `DB_NAME` | `PENDING_DB_NAME` | `.env.example:73` | Backend / DBA | All @db tests | — (not set) |
-| `DB_USER` | `PENDING_DB_READONLY_USER` | `.env.example:75` | Backend / DBA (read-only user) | All @db tests | — (not set) |
-| `DB_PASSWORD` | `PENDING_DB_READONLY_PASSWORD` | `.env.example:76` | Backend / DBA (read-only user) | All @db tests | — (not set) |
+| `PII_TEST_EMAIL_DOMAIN` | `PENDING_TEST_EMAIL_DOMAIN` | `.env.example:43` | Backend / Security | Every test that saves or searches an email | — (not set) |
+| `PII_TEST_PHONES` | `PENDING_APPROVED_10_DIGIT_TEST_PHONES` | `.env.example:45` | QA lead / Backend | Phone, search-by-phone and temporary-phone tests (2+ approved 10-digit numbers) | — (not set) |
+| `PII_NON_SEARCHABLE_FIELD` | `PENDING_Q18_NON_SEARCHABLE_FIELD` | `.env.example:53` | Backend (Q-18) | PII-SR-012 | — (not set) |
+| `PII_BATCH_MAX_ITEMS` | `PENDING_BATCH_MAX_ITEMS` | `.env.example:57` | Backend | PII-BR-004 / BR-005 use the real limit (guide value 50 until then) | `50` |
+| `PII_SEARCH_DEFAULT_LIMIT` | `PENDING_SEARCH_DEFAULT_LIMIT` | `.env.example:58` | Backend | PII-SR-008 uses the real default (guide value 10 until then) | `10` |
+| `PII_TRANSIENT_TTL_MIN_SECONDS` | `PENDING_TRANSIENT_TTL_MIN_SECONDS` | `.env.example:59` | Backend | PII-TR-008 uses the real minimum (guide value 300 until then) | `300` |
+| `PII_TRANSIENT_TTL_MAX_SECONDS` | `PENDING_TRANSIENT_TTL_MAX_SECONDS` | `.env.example:60` | Backend | PII-TR-008 uses the real maximum (guide value 604800 until then) | `604800` |
+| `PII_ENABLE_TTL_EXPIRY_TEST` | `PENDING_Q12_SHORT_TTL_ENVIRONMENT` | `.env.example:67` | Backend (Q-12): a short-lifetime environment | PII-TR-012 | `false` |
+| `PII_SIGNATURE_HELPER_MUST_BE_DISABLED` | `PENDING_Q23_SIGNATURE_HELPER_DISABLED` | `.env.example:69` | Backend (Q-23) | PII-SEC-003 | `false` |
+| `DB_HOST` | `PENDING_DB_HOST` | `.env.example:74` | Backend / DBA | All @db tests | — (not set) |
+| `DB_PORT` | `PENDING_DB_PORT` | `.env.example:75` | Backend / DBA | All @db tests | — (not set) |
+| `DB_NAME` | `PENDING_DB_NAME` | `.env.example:76` | Backend / DBA | All @db tests | — (not set) |
+| `DB_USER` | `PENDING_DB_READONLY_USER` | `.env.example:78` | Backend / DBA (read-only user) | All @db tests | — (not set) |
+| `DB_PASSWORD` | `PENDING_DB_READONLY_PASSWORD` | `.env.example:79` | Backend / DBA (read-only user) | All @db tests | — (not set) |
 
 **Also on our side (not a placeholder):** after the caller IDs arrive, create the three key pairs with
 `npm run keys:generate -- secrets/<primary|secondary|limited>-caller` and send the `.pub.pem` files to the

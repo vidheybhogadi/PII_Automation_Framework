@@ -143,17 +143,19 @@ export class TestDataFactory {
     return this.config.testData.phones.length;
   }
 
+  /**
+   * The tenant (the app a user's data belongs to, e.g. Aisle or Arike) used by the tests.
+   * PII_TEST_TENANT_ID when set; otherwise a made-up tenant for this run ("<run id>-app-a"). The run ID is shared
+   * by all workers, so every test in one run uses the same tenant, and no run reuses another run's tenant.
+   */
   tenant(): string {
-    return requireValue(this.config.tenants.primary, 'PII_TEST_TENANT_ID', 'Tenant-scoped scenarios');
+    return this.config.tenants.primary ?? `${this.runId}-app-a`;
   }
 
+  /** A second, different tenant for the "one app cannot see another app's data" tests ("<run id>-app-b" if not set). */
   secondaryTenant(): string {
-    const tenant = requireValue(
-      this.config.tenants.secondary,
-      'PII_TEST_TENANT_ID_SECONDARY',
-      'Tenant-isolation scenarios',
-    );
-    if (tenant === this.config.tenants.primary) {
+    const tenant = this.config.tenants.secondary ?? `${this.runId}-app-b`;
+    if (tenant === this.tenant()) {
       throw new ConfigError('PII_TEST_TENANT_ID_SECONDARY must differ from PII_TEST_TENANT_ID.');
     }
     return tenant;

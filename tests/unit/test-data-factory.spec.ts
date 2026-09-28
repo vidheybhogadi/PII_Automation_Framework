@@ -81,10 +81,18 @@ test.describe('UNIT test data factory', () => {
     expect(f.textOfLength(1025)).toHaveLength(1025);
   });
 
-  test('UT-DAT-008 The second test tenant must be set and different from the first', () => {
+  test('UT-DAT-008 Test tenants come from .env when set, otherwise are generated per run, and always differ', () => {
     const f = new TestDataFactory(config, 'qa-auto-x', 0);
     expect(f.tenant()).toBe('tenant-a');
     expect(f.secondaryTenant()).toBe('tenant-b');
+    // Not set (or still PENDING_): one made-up tenant pair per run, the same for every worker of that run.
+    const unset = loadConfig({ PII_TEST_TENANT_ID: 'PENDING_TEST_TENANT_ID' });
+    const w0 = new TestDataFactory(unset, 'qa-auto-20260928t101500-ab12', 0);
+    const w3 = new TestDataFactory(unset, 'qa-auto-20260928t101500-ab12', 3);
+    expect(w0.tenant()).toBe('qa-auto-20260928t101500-ab12-app-a');
+    expect(w0.secondaryTenant()).toBe('qa-auto-20260928t101500-ab12-app-b');
+    expect(w3.tenant()).toBe(w0.tenant());
+    expect(new TestDataFactory(unset, 'qa-auto-20260928t111500-cd34', 0).tenant()).not.toBe(w0.tenant());
     const same = new TestDataFactory(
       loadConfig({ PII_TEST_TENANT_ID: 't', PII_TEST_TENANT_ID_SECONDARY: 't' }),
       'qa-auto-x',

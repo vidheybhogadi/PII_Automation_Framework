@@ -65,14 +65,11 @@ test.describe('UNIT configuration', () => {
   test('UT-CFG-003 All missing settings are reported at once, each with a hint', () => {
     const err = errorOf(() => assertIntegrationConfig(loadConfig({})));
     expect(err).toBeInstanceOf(ConfigError);
-    for (const name of [
-      'PII_BASE_URL',
-      'PII_CALLER_PRIMARY_ID',
-      'PII_TEST_TENANT_ID',
-      'PII_TEST_EMAIL_DOMAIN',
-    ]) {
+    for (const name of ['PII_BASE_URL', 'PII_CALLER_PRIMARY_ID', 'PII_TEST_EMAIL_DOMAIN']) {
       expect(err.message).toContain(name);
     }
+    // Tenants are optional: each run generates its own when they are not set.
+    expect(err.message).not.toContain('PII_TEST_TENANT_ID');
     expect(err.message).toContain('docs/setup-guide.md');
   });
 

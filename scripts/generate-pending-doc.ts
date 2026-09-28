@@ -41,11 +41,6 @@ const SETTINGS: Record<string, { from: string; unblocks: string }> = {
     from: 'Backend (register our limited public key with the restricted permissions)',
     unblocks: '12 permission tests (PII-AZ-*)',
   },
-  PII_TEST_TENANT_ID: { from: 'Backend', unblocks: 'All service tests (non-production tenant)' },
-  PII_TEST_TENANT_ID_SECONDARY: {
-    from: 'Backend',
-    unblocks: 'Tenant isolation tests (PII-TI-*, PII-DB-003)',
-  },
   PII_TEST_EMAIL_DOMAIN: {
     from: 'Backend / Security',
     unblocks: 'Every test that saves or searches an email',

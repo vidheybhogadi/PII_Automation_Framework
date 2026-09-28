@@ -6,9 +6,9 @@ real PII service** (no environment access at build time). Unit tests (`UT-*`) **
 
 **Precondition codes**
 
-- **C** — core integration config: `PII_BASE_URL`, primary caller + key, `PII_TEST_TENANT_ID`, `PII_TEST_EMAIL_DOMAIN`; service ready (checked automatically per worker).
+- **C** — core integration config: `PII_BASE_URL`, primary caller + key, `PII_TEST_EMAIL_DOMAIN` (tenants are generated per run unless set); service ready (checked automatically per worker).
 - **PH** — `PII_TEST_PHONES` (approved numbers). **PH2** — at least 2 approved numbers.
-- **T2** — `PII_TEST_TENANT_ID_SECONDARY`. **S** — secondary caller. **L** — limited caller (permission set in `setup-guide.md` §4).
+- **T2** — a second tenant (generated per run, or `PII_TEST_TENANT_ID_SECONDARY`). **S** — secondary caller. **L** — limited caller (permission set in `setup-guide.md` §4).
 - **DB** — DB engine, read-only credentials, SQL catalog (`database-setup.md`).
 
 Tags: `@smoke` (fast critical path), `@regression` (all functional), `@security`, `@db`, `@poc`, `@contract`, `@slow`.
