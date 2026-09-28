@@ -176,6 +176,19 @@ function rowHeight(texts: [string, number][]): number {
   return Math.min(409, lines * 15 + 6);
 }
 
+/**
+ * A link to another cell of this sheet. Written as a HYPERLINK formula: a plain hyperlink to "#'Sheet'!A1" is
+ * stored by the Excel library as an external address, which desktop Excel tolerates but Excel for the web
+ * rejects ("This link may have an incorrect or missing address…").
+ */
+function sheetLink(text: string, row: number): ExcelJS.CellFormulaValue {
+  return {
+    formula: `HYPERLINK("#'${SHEET}'!A${row}","${text.replace(/"/g, '""')}")`,
+    result: text,
+    date1904: false,
+  };
+}
+
 function band(ws: ExcelJS.Worksheet, rowNo: number, text: string, bg: string, ink: string, size: number) {
   ws.mergeCells(rowNo, 1, rowNo, COLS);
   const cell = ws.getCell(rowNo, 1);
@@ -331,7 +344,7 @@ export async function buildTestCasesWorkbook(
     title.fill = fill(C.band);
     title.alignment = { vertical: 'middle', indent: 1 };
     const up = ws.getCell(rowNo, COLS);
-    up.value = { text: '↑ Summary', hyperlink: `#'${SHEET}'!A5` };
+    up.value = sheetLink('↑ Summary', 5);
     up.font = { bold: true, color: { argb: C.white }, underline: true };
     up.fill = fill(C.band);
     up.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -436,17 +449,17 @@ export async function buildTestCasesWorkbook(
     const gPass = g.results.filter((x) => x.outcome === 'Pass').length;
     const gFail = g.results.filter((x) => x.outcome === 'Fail').length;
     const gNot = g.results.length - gPass - gFail;
-    const link = `#'${SHEET}'!A${sectionRows[gi]}`;
+    const target = sectionRows[gi] as number;
     writeCells(r, [
       [1, 1, gi + 1],
-      [2, 3, { text: g.name, hyperlink: link }],
+      [2, 3, sheetLink(g.name, target)],
       [4, 5, `${g.method ? `${g.method} ` : ''}${g.path}`],
       [6, 6, g.tests.length],
       [7, 7, gPass],
       [8, 8, gFail],
       [9, 9, gNot],
       [10, 10, rate(gPass, gFail)],
-      [11, 13, { text: `Go to section ${gi + 1} →`, hyperlink: link }],
+      [11, 13, sheetLink(`Go to section ${gi + 1} →`, target)],
     ]);
     ws.getRow(r).height = 20;
     for (let n = 1; n <= COLS; n += 1) {

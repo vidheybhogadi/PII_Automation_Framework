@@ -30,6 +30,7 @@ import {
   type CollectedTest,
   type TestStatus,
 } from '../core/types';
+import { isPending } from '../../src/config/placeholders';
 
 interface Options {
   outputFile?: string;
@@ -247,8 +248,10 @@ export default class PiiResultsReporter implements Reporter {
           ? `Run #${ci.runNumber}`
           : `Local run ${this.startedAt.toISOString().slice(0, 16).replace('T', ' ')} UTC`,
         environment:
-          process.env.PII_ENVIRONMENT ??
-          (projects.every((p) => p === 'unit') ? 'local (no service)' : 'local'),
+          // A PENDING_ placeholder means "not set" — never show it as the environment name.
+          (process.env.PII_ENVIRONMENT && !isPending(process.env.PII_ENVIRONMENT)
+            ? process.env.PII_ENVIRONMENT
+            : undefined) ?? (projects.every((p) => p === 'unit') ? 'local (no service)' : 'local'),
         startedAt: this.startedAt.toISOString(),
         finishedAt: finishedAt.toISOString(),
         durationMs: result.duration ?? finishedAt.getTime() - this.startedAt.getTime(),

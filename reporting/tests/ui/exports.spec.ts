@@ -59,6 +59,17 @@ test.describe('REPORT UI — exports', () => {
       }),
     );
     expect(styled).toBeGreaterThan(0);
+    // Section links must work in Excel for the web: HYPERLINK formulas, never "#Sheet!A1" external links.
+    const formulas: string[] = [];
+    let externalLinks = 0;
+    ws.eachRow((r) =>
+      r.eachCell((c) => {
+        if (c.formula?.startsWith('HYPERLINK("#')) formulas.push(c.formula);
+        if ((c.value as { hyperlink?: string } | null)?.hyperlink) externalLinks++;
+      }),
+    );
+    expect(formulas.length).toBeGreaterThan(0);
+    expect(externalLinks).toBe(0);
   });
 
   test('RPT-EX-002 JSON export is valid, sanitized and labelled with its data source', async ({ page }) => {
