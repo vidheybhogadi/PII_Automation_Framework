@@ -6,16 +6,15 @@
  * - `require*()` helpers enforce PRESENCE at the moment a test actually needs a value, and throw a
  *   ConfigError that names the variable, explains why it is needed and where to obtain it.
  *
- * Secrets (private keys, DB password) are wrapped in `Secret` so they cannot leak through logs/reports.
+ * Secrets (the Aisle test token, the DB password) are wrapped in `Secret` so they cannot leak through
+ * logs, reports, error messages or `console.log(config)`.
  */
-import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { ENDPOINT_KEYS, type EndpointKey } from '../clients/endpoints';
+import { registerSecretValue } from '../utils/redaction';
 import { Secret } from '../utils/secret';
-import { CALLER_ROLES, envSchema, type CallerRole, type RawEnv } from './env-schema';
+import { envSchema, type RawEnv } from './env-schema';
 import { withoutPlaceholders } from './placeholders';
-
-export type { CallerRole } from './env-schema';
 
 export class ConfigError extends Error {
   constructor(message: string) {
@@ -24,38 +23,26 @@ export class ConfigError extends Error {
   }
 }
 
-export interface CallerCredentials {
-  readonly role: CallerRole;
-  readonly callerId: string;
-  readonly privateKeyPem: Secret;
-}
-
 export interface FrameworkConfig {
   readonly environment: RawEnv['PII_ENVIRONMENT'];
-  readonly baseUrl: string | undefined;
+  /** Aisle PII facade base URL, e.g. https://testa2.aisle.co/V1 (no trailing slash). */
+  readonly baseUrl: string;
+  /** The Aisle test token (Bearer). */
+  readonly token: Secret | undefined;
+  /** An expired Aisle test token, if Dev provided one (AISLE-AUTH-005). */
+  readonly expiredToken: Secret | undefined;
   readonly http: { timeoutMs: number; retryMaxAttempts: number; retryBaseDelayMs: number };
   readonly endpointsInScope: readonly EndpointKey[];
-  readonly callers: Readonly<Partial<Record<CallerRole, CallerCredentials>>>;
-  readonly tenants: { primary: string | undefined; secondary: string | undefined };
   readonly testData: {
     runPrefix: string;
     runId: string | undefined;
-    emailDomain: string | undefined;
+    /** Optional fixed test users (normally tests generate their own). */
+    userId: string | undefined;
+    otherUserId: string | undefined;
+    emailDomain: string;
     phones: readonly string[];
-    phone8Digits: string | undefined;
-    phone15Digits: string | undefined;
     unsupportedField: string;
-    nonSearchableField: string | undefined;
   };
-  readonly limits: {
-    batchMaxItems: number;
-    searchDefaultLimit: number;
-    transientTtlMinSeconds: number;
-    transientTtlMaxSeconds: number;
-    maxBodyBytes: number | undefined;
-    clockSkewToleranceSeconds: number;
-  };
-  readonly features: { ttlExpiryTest: boolean; signatureHelperMustBeDisabled: boolean };
   readonly db: {
     engine: RawEnv['DB_ENGINE'];
     host: string | undefined;
@@ -72,85 +59,24 @@ export interface FrameworkConfig {
 
 /** Where to get each value — reused in error messages and docs/setup-guide.md. */
 export const ENV_HELP: Record<string, string> = {
-  PII_BASE_URL: 'PII service base URL for the target environment (backend/DevOps team).',
-  PII_CALLER_PRIMARY_ID:
-    'Registered caller/service ID for the automation caller with full test permissions (PII backend team).',
-  PII_CALLER_SECONDARY_ID:
-    'A SECOND registered caller ID with the same permissions as primary; used for caller-ownership isolation tests.',
-  PII_CALLER_LIMITED_ID:
-    'A registered caller ID with the restricted permission set described in docs/setup-guide.md §4.',
-  PII_TEST_TENANT_ID:
-    'Optional: a fixed non-production tenant (app) ID. When empty, each run generates one ("<run id>-app-a").',
-  PII_TEST_TENANT_ID_SECONDARY:
-    'Optional: a second, different tenant for tenant-isolation tests. When empty, each run generates "<run id>-app-b".',
-  PII_TEST_EMAIL_DOMAIN:
-    'Approved non-deliverable email domain for synthetic emails (e.g. a reserved .example domain).',
-  PII_TEST_PHONES: 'Comma-separated list of team-approved TEST phone numbers (QA lead / compliance).',
-  PII_TEST_PHONE_8_DIGITS: 'An approved test phone number that has exactly 8 digits (boundary test).',
-  PII_TEST_PHONE_15_DIGITS: 'An approved test phone number that has exactly 15 digits (boundary test).',
-  PII_MAX_BODY_BYTES: "The service's configured maximum request body size in bytes (PII backend team).",
-  PII_NON_SEARCHABLE_FIELD: 'A field-catalog field that is NOT searchable (PII backend team).',
-  DB_ENGINE: 'Database technology used by the PII service: postgres | mysql (PII backend team / DBA).',
+  AISLE_BASE_URL: 'Aisle PII facade base URL (default https://testa2.aisle.co/V1, the verified staging).',
+  AISLE_TEST_TOKEN:
+    'The Aisle testing token, sent as "Authorization: Bearer …" (Aisle backend team). Keep it in .env or a CI secret.',
+  AISLE_EXPIRED_TEST_TOKEN: 'An expired Aisle test token for the expired-token test (Aisle backend team).',
+  AISLE_TEST_EMAIL_DOMAIN:
+    'Approved non-deliverable email domain for synthetic emails (default example.test).',
+  AISLE_TEST_PHONES:
+    'Comma-separated list of team-approved TEST phone numbers (QA lead / Aisle backend team).',
+  AISLE_TEST_USER_ID: 'Optional approved test user ID, only if Dev asks QA to use a fixed user.',
+  AISLE_TEST_OTHER_USER_ID: 'Optional second approved test user ID, for the cross-user test.',
+  DB_ENGINE: 'Database technology of the PII DB: postgres | mysql (Aisle / PII backend team).',
   DB_QUERIES_FILE:
-    'Path to the SQL catalog JSON (see config/db-queries.example.json and docs/database-setup.md).',
+    'Path to the read-only SQL catalog JSON (see config/db-queries.example.json and docs/database-setup.md).',
 };
 
 function describeVar(name: string): string {
   const help = ENV_HELP[name];
   return help ? `${name} — ${help}` : name;
-}
-
-/**
- * Accepts a private key as (a) PEM text, (b) PEM text with literal "\n" sequences (common in CI secret
- * stores and .env files), or (c) base64-encoded PEM text. The documented format is PEM (the guide's Python
- * example uses `load_pem_private_key(..., password=None)`), i.e. an unencrypted PKCS#8 PEM Ed25519 key.
- */
-export function normalizePrivateKeyText(raw: string): string {
-  let text = raw.trim();
-  if (!text.includes('-----BEGIN')) {
-    const decoded = Buffer.from(text, 'base64').toString('utf8');
-    if (decoded.includes('-----BEGIN')) text = decoded.trim();
-  }
-  return text.replace(/\\n/g, '\n').trim();
-}
-
-function resolveCaller(role: CallerRole, env: RawEnv, baseDir: string): CallerCredentials | undefined {
-  const upper = role.toUpperCase() as Uppercase<CallerRole>;
-  const idVar = `PII_CALLER_${upper}_ID` as const;
-  const fileVar = `PII_CALLER_${upper}_PRIVATE_KEY_FILE` as const;
-  const inlineVar = `PII_CALLER_${upper}_PRIVATE_KEY` as const;
-
-  const callerId = env[idVar];
-  const keyFile = env[fileVar];
-  const inlineKey = env[inlineVar];
-
-  if (!callerId && !keyFile && !inlineKey) return undefined;
-  if (!callerId) {
-    throw new ConfigError(`${fileVar}/${inlineVar} is set but ${idVar} is missing. ${describeVar(idVar)}`);
-  }
-  if (keyFile && inlineKey) {
-    throw new ConfigError(`Set only one of ${fileVar} or ${inlineVar} for caller "${role}", not both.`);
-  }
-  if (!keyFile && !inlineKey) {
-    throw new ConfigError(
-      `${idVar} is set but no private key was provided. Set ${fileVar} (path to an unencrypted PKCS#8 PEM ` +
-        `Ed25519 private key) or ${inlineVar} (PEM text or base64 of the PEM). Obtain it from your secret manager.`,
-    );
-  }
-
-  let pemText: string;
-  if (keyFile) {
-    const resolved = path.resolve(baseDir, keyFile);
-    try {
-      pemText = readFileSync(resolved, 'utf8');
-    } catch {
-      // Only the path is reported — never file contents.
-      throw new ConfigError(`${fileVar} points to "${resolved}", which could not be read.`);
-    }
-  } else {
-    pemText = inlineKey as string;
-  }
-  return { role, callerId, privateKeyPem: new Secret(normalizePrivateKeyText(pemText)) };
 }
 
 function parseEndpointScope(raw: string | undefined): EndpointKey[] {
@@ -169,9 +95,16 @@ function parseEndpointScope(raw: string | undefined): EndpointKey[] {
   return requested as EndpointKey[];
 }
 
+/** Wrap a secret and teach the log scrubber its exact value, so it is removed wherever it might appear. */
+function secret(value: string | undefined): Secret | undefined {
+  if (value === undefined) return undefined;
+  registerSecretValue(value);
+  return new Secret(value);
+}
+
 /**
  * Parse and validate environment variables. Pure function of `env` so it is unit-testable.
- * @param baseDir directory used to resolve relative key/queries file paths (default: project root).
+ * @param baseDir directory used to resolve the relative DB queries file path (default: project root).
  */
 export function loadConfig(
   env: NodeJS.ProcessEnv = process.env,
@@ -186,50 +119,25 @@ export function loadConfig(
   }
   const e = parsed.data;
 
-  if (e.PII_TRANSIENT_TTL_MIN_SECONDS > e.PII_TRANSIENT_TTL_MAX_SECONDS) {
-    throw new ConfigError(
-      'PII_TRANSIENT_TTL_MIN_SECONDS must not be greater than PII_TRANSIENT_TTL_MAX_SECONDS.',
-    );
-  }
-
-  const callers: Partial<Record<CallerRole, CallerCredentials>> = {};
-  for (const role of CALLER_ROLES) {
-    const creds = resolveCaller(role, e, baseDir);
-    if (creds) callers[role] = creds;
-  }
-
   return {
     environment: e.PII_ENVIRONMENT,
-    baseUrl: e.PII_BASE_URL?.replace(/\/+$/, ''),
+    baseUrl: e.AISLE_BASE_URL.replace(/\/+$/, ''),
+    token: secret(e.AISLE_TEST_TOKEN),
+    expiredToken: secret(e.AISLE_EXPIRED_TEST_TOKEN),
     http: {
       timeoutMs: e.PII_HTTP_TIMEOUT_MS,
       retryMaxAttempts: e.PII_RETRY_MAX_ATTEMPTS,
       retryBaseDelayMs: e.PII_RETRY_BASE_DELAY_MS,
     },
     endpointsInScope: parseEndpointScope(e.PII_ENDPOINTS_IN_SCOPE),
-    callers,
-    tenants: { primary: e.PII_TEST_TENANT_ID, secondary: e.PII_TEST_TENANT_ID_SECONDARY },
     testData: {
       runPrefix: e.PII_TEST_RUN_PREFIX,
       runId: e.PII_TEST_RUN_ID,
-      emailDomain: e.PII_TEST_EMAIL_DOMAIN?.toLowerCase(),
-      phones: e.PII_TEST_PHONES,
-      phone8Digits: e.PII_TEST_PHONE_8_DIGITS,
-      phone15Digits: e.PII_TEST_PHONE_15_DIGITS,
+      userId: e.AISLE_TEST_USER_ID,
+      otherUserId: e.AISLE_TEST_OTHER_USER_ID,
+      emailDomain: e.AISLE_TEST_EMAIL_DOMAIN.toLowerCase(),
+      phones: e.AISLE_TEST_PHONES,
       unsupportedField: e.PII_UNSUPPORTED_FIELD,
-      nonSearchableField: e.PII_NON_SEARCHABLE_FIELD,
-    },
-    limits: {
-      batchMaxItems: e.PII_BATCH_MAX_ITEMS,
-      searchDefaultLimit: e.PII_SEARCH_DEFAULT_LIMIT,
-      transientTtlMinSeconds: e.PII_TRANSIENT_TTL_MIN_SECONDS,
-      transientTtlMaxSeconds: e.PII_TRANSIENT_TTL_MAX_SECONDS,
-      maxBodyBytes: e.PII_MAX_BODY_BYTES,
-      clockSkewToleranceSeconds: e.PII_CLOCK_SKEW_TOLERANCE_SECONDS,
-    },
-    features: {
-      ttlExpiryTest: e.PII_ENABLE_TTL_EXPIRY_TEST,
-      signatureHelperMustBeDisabled: e.PII_SIGNATURE_HELPER_MUST_BE_DISABLED,
     },
     db: {
       engine: e.DB_ENGINE,
@@ -237,7 +145,7 @@ export function loadConfig(
       port: e.DB_PORT,
       database: e.DB_NAME,
       user: e.DB_USER,
-      password: e.DB_PASSWORD === undefined ? undefined : new Secret(e.DB_PASSWORD),
+      password: secret(e.DB_PASSWORD),
       ssl: e.DB_SSL,
       queriesFile: e.DB_QUERIES_FILE ? path.resolve(baseDir, e.DB_QUERIES_FILE) : undefined,
       connectTimeoutMs: e.DB_CONNECT_TIMEOUT_MS,
@@ -250,49 +158,23 @@ export function loadConfig(
 // Presence checks. Each throws an actionable ConfigError instead of letting a test fail obscurely.
 // ------------------------------------------------------------------------------------------------
 
-/** Values every integration (live service) test needs. Reports ALL missing values at once. */
+/** Values every live (Aisle staging) test needs. Reports ALL missing values at once. */
 export function assertIntegrationConfig(config: FrameworkConfig): void {
   const missing: string[] = [];
-  if (!config.baseUrl) missing.push('PII_BASE_URL');
-  if (!config.callers.primary) missing.push('PII_CALLER_PRIMARY_ID (+ PII_CALLER_PRIMARY_PRIVATE_KEY_FILE)');
-  if (!config.testData.emailDomain) missing.push('PII_TEST_EMAIL_DOMAIN');
+  if (!config.token) missing.push('AISLE_TEST_TOKEN');
   if (missing.length > 0) {
     throw new ConfigError(
-      'Integration tests cannot run — required configuration is missing:\n' +
-        missing.map((m) => `  - ${describeVar(m.split(' ')[0] as string)}`).join('\n') +
+      'Aisle API tests cannot run — required configuration is missing:\n' +
+        missing.map((m) => `  - ${describeVar(m)}`).join('\n') +
         '\nCopy .env.example to .env and fill in the values (see docs/setup-guide.md). ' +
         'Run `npm run check-env` to validate.',
     );
   }
 }
 
-export function requireBaseUrl(config: FrameworkConfig): string {
-  if (!config.baseUrl) throw new ConfigError(`Missing ${describeVar('PII_BASE_URL')}`);
-  return config.baseUrl;
-}
-
-export function requireCaller(config: FrameworkConfig, role: CallerRole): CallerCredentials {
-  const creds = config.callers[role];
-  if (!creds) {
-    const upper = role.toUpperCase();
-    throw new ConfigError(
-      `This test needs the "${role}" caller, which is not configured. Set PII_CALLER_${upper}_ID and ` +
-        `PII_CALLER_${upper}_PRIVATE_KEY_FILE. ${ENV_HELP[`PII_CALLER_${upper}_ID`] ?? ''}`,
-    );
-  }
-  return creds;
-}
-
-export function requireTenant(config: FrameworkConfig, which: 'primary' | 'secondary'): string {
-  const tenant = config.tenants[which];
-  if (!tenant) {
-    const name = which === 'primary' ? 'PII_TEST_TENANT_ID' : 'PII_TEST_TENANT_ID_SECONDARY';
-    throw new ConfigError(`Missing ${describeVar(name)}`);
-  }
-  if (which === 'secondary' && tenant === config.tenants.primary) {
-    throw new ConfigError('PII_TEST_TENANT_ID_SECONDARY must differ from PII_TEST_TENANT_ID.');
-  }
-  return tenant;
+export function requireToken(config: FrameworkConfig): Secret {
+  if (!config.token) throw new ConfigError(`Missing ${describeVar('AISLE_TEST_TOKEN')}`);
+  return config.token;
 }
 
 /** Generic helper: fail with an actionable message when an optional value is required by a test. */
@@ -303,10 +185,8 @@ export function requireValue<T>(value: T | undefined, envVar: string, purpose: s
   return value;
 }
 
-let cached: FrameworkConfig | undefined;
-
-/** Process-wide cached config (each Playwright worker is a separate process). */
-export function getConfig(): FrameworkConfig {
-  cached ??= loadConfig();
-  return cached;
+/** True when read-only DB validation is configured (engine, connection and query catalog). */
+export function isDbConfigured(config: FrameworkConfig): boolean {
+  const d = config.db;
+  return Boolean(d.engine !== 'none' && d.host && d.database && d.user && d.password && d.queriesFile);
 }

@@ -4,7 +4,9 @@
  *  1. KEY-BASED: object properties whose name is known to carry sensitive data are replaced entirely
  *     (value, phone, key, signature, password, ...). This is the primary control.
  *  2. PATTERN-BASED: free text (e.g. an error message returned by the server) is scrubbed for anything
- *     that LOOKS like an email, phone number, PEM block or long Base64 blob. This is a safety net only.
+ *     that LOOKS like an email, phone number, PEM block, Bearer token or long Base64 blob. A safety net.
+ *  3. EXACT: the configured secret values themselves (the Aisle test token, the DB password) are registered
+ *     at config load and removed from any text, whatever surrounds them.
  *
  * The logger runs every entry through both layers, so a mistake in one call site does not leak PII.
  */
@@ -24,11 +26,6 @@ const SENSITIVE_KEYS = new Set(
     'privatekey',
     'privatekeypem',
     'signature',
-    'x-pii-signature',
-    // Unkeyed SHA-256 of a body that contains PII: dictionary-attackable (tech doc v3 §29.2), never logged.
-    'x-pii-body-hash',
-    'body_hash',
-    'bodyhash',
     'password',
     'db_password',
     'secret',
@@ -45,6 +42,14 @@ const SENSITIVE_KEYS = new Set(
   ].map((k) => k.toLowerCase()),
 );
 
+/** Exact secret values (token, DB password) registered by the config loader. Never exported or logged. */
+const SECRET_VALUES = new Set<string>();
+
+/** Remove this exact value from every scrubbed text from now on. Values shorter than 8 chars are ignored. */
+export function registerSecretValue(value: string): void {
+  if (value.length >= 8) SECRET_VALUES.add(value);
+}
+
 export function isSensitiveKey(key: string): boolean {
   return SENSITIVE_KEYS.has(key.toLowerCase());
 }
@@ -57,6 +62,8 @@ const PEM_PATTERN = /-----BEGIN [A-Z ]+-----[\s\S]*?-----END [A-Z ]+-----/g;
 const EMAIL_PATTERN = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
 /** 8+ digits, optionally separated by space ( ) . - and an optional leading "+" — phone-like. */
 const PHONE_PATTERN = /\+?\d(?:[\s().-]*\d){7,}/g;
+/** "Bearer <anything>" — an Authorization value, whatever the token looks like. */
+const BEARER_PATTERN = /\bBearer\s+(?!\[REDACTED)[^\s"',;}]+/gi;
 /** Base64 runs of 40+ chars: 32-byte keys (44 chars) and 64-byte signatures (88 chars). */
 const BASE64_BLOB_PATTERN = /[A-Za-z0-9+/]{40,}={0,2}/g;
 
@@ -71,7 +78,10 @@ export function scrubText(input: string): string {
     return `\u0000${protectedTokens.length - 1}\u0000`;
   };
 
-  let text = input.replace(UUID_PATTERN, protect).replace(ISO_DATETIME_PATTERN, protect);
+  let text = input;
+  for (const value of SECRET_VALUES) text = text.split(value).join('[REDACTED_SECRET]');
+  text = text.replace(BEARER_PATTERN, 'Bearer [REDACTED_TOKEN]');
+  text = text.replace(UUID_PATTERN, protect).replace(ISO_DATETIME_PATTERN, protect);
   text = text
     .replace(PEM_PATTERN, '[REDACTED_PEM]')
     .replace(EMAIL_PATTERN, '[REDACTED_EMAIL]')

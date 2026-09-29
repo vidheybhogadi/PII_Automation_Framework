@@ -352,12 +352,6 @@ const P: Record<string, JSX.Element> = {
       <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
     </>
   ),
-  signature: (
-    <>
-      <path d="M3 17c3-5 5-11 7-11s-1 12 2 12c1.5 0 2.5-3 4-3s1.5 2 3 2 2-1 2-1" />
-      <path d="M3 21h18" />
-    </>
-  ),
   hash: (
     <>
       <path d="M5 9h14M5 15h14M10 3 8 21M16 3l-2 18" />

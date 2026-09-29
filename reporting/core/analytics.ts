@@ -113,17 +113,37 @@ export function catalogTests<T extends { kind: 'integration' | 'unit'; notRun?: 
   return service.length ? service : tests.filter((t) => !t.notRun);
 }
 
-/** The three statuses a reader sees. Anything that did not really run and finish is "Not Tested". */
-export type Outcome = 'Pass' | 'Fail' | 'Not Tested';
+/**
+ * The statuses a reader sees, in display / sort order (most urgent first):
+ *   Fail             — the test ran and found a problem (automation failure).
+ *   Security finding — the test ran and failed on a KNOWN security issue (annotation `security-finding`). Still a
+ *                      failure for gates and the verdict, but shown apart from ordinary failures.
+ *   Blocked          — cannot run until Dev answers / grants access (status BLOCKED/FIXME, or skipped with a
+ *                      `blocked` annotation). Neither a pass nor a failure.
+ *   Skipped          — skipped in this run for another reason (e.g. optional setup missing).
+ *   Not Tested       — not part of this run, the run stopped first, or the Aisle PII facade was unreachable.
+ *   Pass             — the test ran and everything was as expected.
+ */
+export const OUTCOMES = ['Fail', 'Security finding', 'Blocked', 'Skipped', 'Not Tested', 'Pass'] as const;
+export type Outcome = (typeof OUTCOMES)[number];
 
-/** Pass / Fail / Not Tested plus a one-line reason (why it failed, or why it was not tested). */
+/** Annotation marking a test that fails on a known, reported security issue (e.g. "BQ-08: …"). */
+export const SECURITY_FINDING_ANNOTATION = 'security-finding';
+export const SECURITY_FINDING_PREFIX = 'SECURITY FINDING (expected until Dev fixes it) — ';
+
+/** A failed test that carries a `security-finding` annotation. */
+export function isSecurityFinding(t: Pick<ReportTest, 'status' | 'annotations'>): boolean {
+  return t.status === 'FAIL' && t.annotations.some((a) => a.type === SECURITY_FINDING_ANNOTATION);
+}
+
+/** One of the statuses above plus a one-line reason (why it failed, is blocked, or was not tested). */
 export function testOutcome(t: ReportTest): { outcome: Outcome; remark: string } {
   const note = (type: string) => t.annotations.find((a) => a.type === type)?.description ?? '';
   if (t.notRun) return { outcome: 'Not Tested', remark: 'Not part of this run' };
   if (t.annotations.some((a) => a.type === 'preflight'))
     return {
       outcome: 'Not Tested',
-      remark: 'The PII service could not be reached, so this test could not run',
+      remark: 'The Aisle PII facade could not be reached, so this test could not run',
     };
   if (t.status === 'PASS') return { outcome: 'Pass', remark: '' };
   if (t.status === 'FAIL') {
@@ -135,17 +155,32 @@ export function testOutcome(t: ReportTest): { outcome: Outcome; remark: string }
             .split('\n')
             .find((l) => l.trim().length > 0)
             ?.trim() || FAILURE_PATTERNS[f.pattern].label;
+    if (isSecurityFinding(t)) {
+      // Only the (already sanitized) annotation text or the sanitized failure summary — never raw values.
+      const why = note(SECURITY_FINDING_ANNOTATION) || remark;
+      return { outcome: 'Security finding', remark: `${SECURITY_FINDING_PREFIX}${why}`.slice(0, 400) };
+    }
     return { outcome: 'Fail', remark: remark.slice(0, 300) };
   }
-  if (t.status === 'BLOCKED' || t.status === 'FIXME') {
-    const why = note('blocked') || note('fixme');
+  const blockedWhy = note('blocked') || note('fixme');
+  if (
+    t.status === 'BLOCKED' ||
+    t.status === 'FIXME' ||
+    (t.status === 'SKIPPED' && t.annotations.some((a) => a.type === 'blocked'))
+  )
     return {
-      outcome: 'Not Tested',
-      remark: why ? `Waiting on Dev — ${why}` : 'Waiting on an answer from Dev',
+      outcome: 'Blocked',
+      remark: `BLOCKED — ${blockedWhy || 'waiting on an answer from Dev'}`.slice(0, 400),
     };
-  }
-  if (t.status === 'SKIPPED') return { outcome: 'Not Tested', remark: note('skip') || 'Skipped in this run' };
+  if (t.status === 'SKIPPED') return { outcome: 'Skipped', remark: note('skip') || 'Skipped in this run' };
   return { outcome: 'Not Tested', remark: 'The run stopped before this test' };
+}
+
+/** How many tests have each outcome (every outcome present, zero when none). */
+export function outcomeCounts(tests: readonly ReportTest[]): Record<Outcome, number> {
+  const c = Object.fromEntries(OUTCOMES.map((o) => [o, 0])) as Record<Outcome, number>;
+  for (const t of tests) c[testOutcome(t).outcome] += 1;
+  return c;
 }
 
 export function scopeOf(tests: readonly { kind: 'integration' | 'unit' }[]): 'service' | 'all' {
@@ -284,8 +319,8 @@ export const FAILURE_PATTERNS: Record<FailurePatternKey, { label: string; invest
   CONNECTIVITY: {
     label: 'No HTTP response (connectivity)',
     investigate: [
-      'PII_BASE_URL and network/VPN access',
-      'Service health: GET /health/ready',
+      'AISLE_BASE_URL and network/VPN access',
+      'Facade health: GET /api/v1/pii-test/health/ready (needs the token)',
       'Firewall / DNS for the runner',
     ],
   },
@@ -296,14 +331,17 @@ export const FAILURE_PATTERNS: Record<FailurePatternKey, { label: string; invest
   UNEXPECTED_401: {
     label: 'Unexpected 401 (authentication)',
     investigate: [
-      'Caller ID registration',
-      'Private key matches the registered public key',
-      'Body bytes vs. signed bytes',
+      'AISLE_TEST_TOKEN is set, valid and not expired',
+      'Authorization header format (Bearer <token>)',
+      'Token accepted by this environment (e.g. staging vs. QA)',
     ],
   },
   UNEXPECTED_403: {
     label: 'Unexpected 403 (authorization)',
-    investigate: ['Caller field/action permissions (setup-guide §4)', 'FREE_TEXT capability grants'],
+    investigate: [
+      'Field/action access granted to the Aisle caller (see the BQ list)',
+      'FREE_TEXT capability grants',
+    ],
   },
   UNEXPECTED_404: {
     label: 'Unexpected 404 (not found)',
@@ -399,9 +437,7 @@ export function analyzeFailure(test: ReportTest): FailureInsight {
     )
   )
     pattern = 'CONNECTIVITY';
-  else if (
-    /ConfigError|DbConfigError|SignerError|is not configured|requires PII_|DB_ENGINE=none/.test(message)
-  )
+  else if (/ConfigError|DbConfigError|is not configured|DB_ENGINE=none/.test(message))
     pattern = 'CONFIGURATION';
   else if (/contract violation|keys differ from the documented contract/.test(message)) pattern = 'CONTRACT';
   else if (httpStatus !== null && httpStatus >= 500) pattern = 'SERVER_ERROR';
@@ -424,7 +460,7 @@ export function analyzeFailure(test: ReportTest): FailureInsight {
 
 export function questionIdOf(test: ReportTest): string | null {
   for (const a of test.annotations) {
-    const m = /\b(Q-\d+)\b/.exec(`${a.description ?? ''}`);
+    const m = /\b(B?Q-\d+)\b/.exec(`${a.description ?? ''}`);
     if (a.type === 'blocked' && m) return m[1] as string;
   }
   return null;
@@ -531,7 +567,7 @@ export function healthScore(
   const components: HealthComponent[] = [
     {
       key: 'passRate',
-      label: 'Pass rate',
+      label: 'API Pass Rate',
       value: passRate(counts),
       weight: cfg.weights.passRate,
       explain: 'Passed ÷ executed (passed + failed). Skipped/blocked tests are excluded here.',
@@ -552,7 +588,7 @@ export function healthScore(
     },
     {
       key: 'endpointCoverage',
-      label: 'Endpoint coverage',
+      label: 'Endpoint Coverage',
       value: integration.length ? ratio(covered, endpoints.length) : null,
       weight: cfg.weights.endpointCoverage,
       explain: `Endpoints that returned at least one HTTP response to a service test ÷ ${endpoints.length} documented endpoints.`,
@@ -563,7 +599,7 @@ export function healthScore(
     'score = Σ(weight × component) ÷ Σ(weight of available components) × 100; ' +
     `capped at ${cfg.capOnCriticalFailure} if any critical test failed; N/A when nothing executed.`;
 
-  // Nothing ran, or only the framework's own self-tests ran: that says nothing about the PII service.
+  // Nothing ran, or only the framework's own self-tests ran: that says nothing about the Aisle PII API.
   if (executedCount(counts) === 0 || integration.length === 0)
     return { score: null, band: 'N/A', components, capped: false, formula };
 

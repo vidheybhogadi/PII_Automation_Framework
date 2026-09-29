@@ -1,6 +1,8 @@
 # PII service API automation.
 # - Pull requests: static checks + unit tests only (no secrets exposed to PR code from forks).
-# - Manual / scheduled runs: integration suites against a chosen environment using GitHub Environment secrets.
+# - Daily 08:00 IST and manual runs: Aisle PII facade suites (QA → Aisle → PII service → DB) against a chosen
+#   environment, using GitHub Environment secrets (AISLE_TEST_TOKEN). The report is then emailed with every
+#   PDF page shown inline (scripts/send-report-mail.ts) to the REPORT_MAIL_TO list.
 name: PII API tests
 
 on:
@@ -10,21 +12,25 @@ on:
       environment:
         description: Target environment (GitHub Environment name holding the secrets)
         type: choice
-        options: [qa, staging]
-        default: qa
+        options: [staging, qa]
+        default: staging
       suite:
         description: npm script to run
         type: choice
-        options: [test:smoke, test:regression, test:security, test:db, test:api]
+        options: [test:smoke, test:phase1, test:regression, test:security, test:db, test:api]
         default: test:smoke
+      send_email:
+        description: Email the report to REPORT_MAIL_TO
+        type: boolean
+        default: true
   schedule:
-    - cron: '0 3 * * 1-5' # weekdays 03:00 UTC, regression on qa
+    - cron: '30 2 * * *' # every day 08:00 IST (02:30 UTC): full npm run test:all on the Aisle staging facade + email
 
 permissions:
   contents: read
 
 concurrency:
-  group: pii-api-${{ github.ref }}-${{ inputs.environment || 'qa' }}
+  group: pii-api-${{ github.ref }}-${{ inputs.environment || 'staging' }}
   cancel-in-progress: false
 
 jobs:
@@ -75,24 +81,17 @@ jobs:
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    environment: ${{ inputs.environment || 'qa' }}
+    environment: ${{ inputs.environment || 'staging' }}
     env:
       CI: 'true'
-      PII_ENVIRONMENT: ${{ inputs.environment || 'qa' }}
-      PII_BASE_URL: ${{ vars.PII_BASE_URL }}
-      PII_TEST_TENANT_ID: ${{ vars.PII_TEST_TENANT_ID }}
-      PII_TEST_TENANT_ID_SECONDARY: ${{ vars.PII_TEST_TENANT_ID_SECONDARY }}
-      PII_TEST_EMAIL_DOMAIN: ${{ vars.PII_TEST_EMAIL_DOMAIN }}
-      PII_TEST_PHONES: ${{ secrets.PII_TEST_PHONES }}
-      PII_SIGNATURE_HELPER_MUST_BE_DISABLED: 'true'
-      PII_CALLER_PRIMARY_ID: ${{ vars.PII_CALLER_PRIMARY_ID }}
-      PII_CALLER_SECONDARY_ID: ${{ vars.PII_CALLER_SECONDARY_ID }}
-      PII_CALLER_LIMITED_ID: ${{ vars.PII_CALLER_LIMITED_ID }}
-      # Private keys are secrets (PEM text or base64 of PEM). They never appear in logs:
-      # GitHub masks secret values, and the framework never prints keys.
-      PII_CALLER_PRIMARY_PRIVATE_KEY: ${{ secrets.PII_CALLER_PRIMARY_PRIVATE_KEY }}
-      PII_CALLER_SECONDARY_PRIVATE_KEY: ${{ secrets.PII_CALLER_SECONDARY_PRIVATE_KEY }}
-      PII_CALLER_LIMITED_PRIVATE_KEY: ${{ secrets.PII_CALLER_LIMITED_PRIVATE_KEY }}
+      PII_ENVIRONMENT: ${{ inputs.environment || 'staging' }}
+      # QA tests ONLY the Aisle PII facade (QA → Aisle → PII service → DB). No PII-service keys or tenants.
+      AISLE_BASE_URL: ${{ vars.AISLE_BASE_URL || 'https://testa2.aisle.co/V1' }}
+      # The Aisle test token is a secret: GitHub masks it, and the framework never prints it.
+      AISLE_TEST_TOKEN: ${{ secrets.AISLE_TEST_TOKEN }}
+      AISLE_EXPIRED_TEST_TOKEN: ${{ secrets.AISLE_EXPIRED_TEST_TOKEN }}
+      AISLE_TEST_EMAIL_DOMAIN: ${{ vars.AISLE_TEST_EMAIL_DOMAIN || 'example.test' }}
+      AISLE_TEST_PHONES: ${{ secrets.AISLE_TEST_PHONES }}
       DB_ENGINE: ${{ vars.DB_ENGINE || 'none' }}
       DB_HOST: ${{ vars.DB_HOST }}
       DB_PORT: ${{ vars.DB_PORT }}
@@ -112,20 +111,22 @@ jobs:
         env:
           DB_QUERIES_JSON: ${{ secrets.DB_QUERIES_JSON }}
         run: printf '%s' "$DB_QUERIES_JSON" > config/db-queries.json
+      # Before check-env so the failure email can still be built if configuration is wrong.
+      - run: npx playwright install --with-deps chromium
       - name: Validate configuration
         run: npm run check-env
-      - run: npx playwright install --with-deps chromium
       - name: Restore run history (trends, comparisons, flaky detection)
         uses: actions/cache/restore@v4
         with:
           path: reports/history
-          key: pii-history-${{ inputs.environment || 'qa' }}-${{ github.run_id }}
-          restore-keys: pii-history-${{ inputs.environment || 'qa' }}-
+          key: pii-history-${{ inputs.environment || 'staging' }}-${{ github.run_id }}
+          restore-keys: pii-history-${{ inputs.environment || 'staging' }}-
       - name: Test → collect → analyse → dashboard → PDF
         # test:all always generates the report, then exits with the TEST exit code.
         run: |
-          case "${{ inputs.suite || 'test:regression' }}" in
+          case "${{ inputs.suite || 'test:api' }}" in
             test:smoke)      ARGS="--project=api --grep @smoke" ;;
+            test:phase1)     ARGS="--project=api --grep @phase1" ;;
             test:security)   ARGS="--project=api --grep @security" ;;
             test:db)         ARGS="--project=api --grep @db" ;;
             test:regression) ARGS="--project=api --grep @regression" ;;
@@ -137,25 +138,36 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: reports/history
-          key: pii-history-${{ inputs.environment || 'qa' }}-${{ github.run_id }}
+          key: pii-history-${{ inputs.environment || 'staging' }}-${{ github.run_id }}
       - name: Job summary
         if: always()
         run: |
           if [ -f reports/qa-report/summary.txt ]; then
             { echo '```'; cat reports/qa-report/summary.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           fi
+      - name: Email the report (every PDF page inline, no attachment)
+        if: always() && (github.event_name == 'schedule' || inputs.send_email)
+        env:
+          # Microsoft 365: a service mailbox with SMTP AUTH enabled. Recipients: comma-separated, add more any time.
+          SMTP_HOST: ${{ vars.SMTP_HOST || 'smtp.office365.com' }}
+          SMTP_PORT: ${{ vars.SMTP_PORT || '587' }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          REPORT_MAIL_FROM: ${{ vars.REPORT_MAIL_FROM }}
+          REPORT_MAIL_TO: ${{ vars.REPORT_MAIL_TO || 'vidhey.bhogadi@infoedge.com' }}
+        run: npm run report:mail
       - if: always()
         uses: actions/upload-artifact@v4
         with:
           # PII Sentinel dashboard: index.html, assets/, data/, report.pdf, results.json, results.csv, summary.txt.
           # Contains only sanitized metadata — no bodies, traces, keys or personal data.
-          name: qa-report-${{ inputs.environment || 'qa' }}-${{ github.run_id }}
+          name: qa-report-${{ inputs.environment || 'staging' }}-${{ github.run_id }}
           path: reports/qa-report/
           retention-days: 30
       - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-raw-${{ inputs.environment || 'qa' }}-${{ github.run_id }}
+          name: playwright-raw-${{ inputs.environment || 'staging' }}-${{ github.run_id }}
           path: |
             reports/junit/
             reports/json/

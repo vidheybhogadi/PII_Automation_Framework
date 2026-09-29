@@ -1,269 +1,229 @@
-/** Guide §2 — POST /api/v1/pii (upsert). Authorization/authentication cases live in tests/security. */
+/**
+ * Save PII — POST /api/v1/pii-test through the Aisle facade.
+ * Expected results are OBSERVED on staging (docs/backend-open-questions.md). NAME is used because it is the
+ * field the Aisle caller can access today; EMAIL cases are gated at runtime (BQ-01).
+ */
 import {
   expectError,
-  expectRejected,
-  expectRequestValidationError,
+  expectStatus,
   expectSuccess,
+  expectValidationError,
 } from '../../src/assertions/response.assertions';
-import { expectSecretEquals } from '../../src/assertions/security.assertions';
-import { expectNotPersisted, seedField } from '../../src/fixtures/steps';
-import { expect, noteAssumption, onlyIfInScope, test } from '../../src/fixtures/test-fixtures';
+import { expectResponseDoesNotEcho, expectSecretEquals } from '../../src/assertions/security.assertions';
+import { BLOCKERS, expectNotPersisted, readValue, seedField } from '../../src/fixtures/steps';
+import {
+  blockIfAccessDenied,
+  expect,
+  noteAssumption,
+  onlyIfInScope,
+  test,
+} from '../../src/fixtures/test-fixtures';
 import { ERROR_CODES } from '../../src/models/common.models';
-import { LIMITS, PII_FIELDS, readPiiDataSchema, writePiiDataSchema } from '../../src/models/pii.models';
+import { batchReadDataSchema, LIMITS, PII_FIELDS, writePiiDataSchema } from '../../src/models/pii.models';
 
-test.describe('PII write / upsert', { tag: ['@regression'] }, () => {
+/** Tenant set by the facade itself (observed on staging). */
+const AISLE_TENANT = 'aisle';
+
+test.describe('Aisle facade — save PII', () => {
   onlyIfInScope('writePii', 'readPii');
 
   test(
-    'PII-WR-001 Saving a new field returns 201 with tenant, user, field name and encryption key version',
-    { tag: '@smoke' },
-    async ({ pii, data, tenant, cleanup }) => {
+    'AISLE-WR-001 Saving a name for a brand-new fake user returns 201 with the saved field details',
+    { tag: ['@smoke', '@phase1'] },
+    async ({ aisle, data, cleanup }) => {
       const userId = data.userId('wr1');
-      const res = await pii.writePii({
-        tenant_id: tenant,
-        user_id: userId,
-        field: PII_FIELDS.EMAIL,
-        value: data.email(),
-      });
-      cleanup.leaveBehind('PII EMAIL', `${tenant}/${userId}`);
-      const payload = expectSuccess(res, 201, writePiiDataSchema, 'PII write successful');
-      expect(payload).toMatchObject({ tenant_id: tenant, user_id: userId, field: 'EMAIL' });
-      expect(Number.isInteger(payload.key_version)).toBe(true);
+      const name = data.name();
+
+      const res = await aisle.writePii({ user_id: userId, field: PII_FIELDS.NAME, value: name });
+      cleanup.leaveBehind('PII NAME', userId);
+
+      const saved = expectSuccess(res, 201, writePiiDataSchema, 'PII write successful');
+      expect(saved).toMatchObject({ tenant_id: AISLE_TENANT, user_id: userId, field: PII_FIELDS.NAME });
+      expect(saved.key_version).toBeGreaterThanOrEqual(1);
+      expectResponseDoesNotEcho(res, name);
     },
   );
 
-  test('PII-WR-002 Saving a field that already exists replaces it (200), and reading returns the new value', async ({
-    pii,
+  test(
+    'AISLE-WR-002 Saving a name again replaces the old one (200), and read and bulk read both return the new name',
+    { tag: ['@smoke', '@phase1'] },
+    async ({ aisle, data, cleanup }) => {
+      const userId = data.userId('wr2');
+      await seedField(aisle, cleanup, { userId, field: PII_FIELDS.NAME, value: data.name() });
+      const newName = data.name();
+
+      const replace = await aisle.writePii({ user_id: userId, field: PII_FIELDS.NAME, value: newName });
+      const saved = expectSuccess(replace, 200, writePiiDataSchema, 'PII write successful');
+      expect(saved).toMatchObject({ tenant_id: AISLE_TENANT, user_id: userId, field: PII_FIELDS.NAME });
+
+      expectSecretEquals(await readValue(aisle, { userId, field: PII_FIELDS.NAME }), newName, 'read NAME');
+
+      const bulk = expectSuccess(
+        await aisle.batchRead({ user_ids: [userId], fields: [PII_FIELDS.NAME] }),
+        200,
+        batchReadDataSchema,
+      );
+      expect(bulk.count).toBe(1);
+      expect(bulk.items[0]?.user_id).toBe(userId);
+      expectSecretEquals(bulk.items[0]?.value, newName, 'bulk-read NAME');
+    },
+  );
+
+  test('AISLE-WR-003 Save requests with a missing or wrong-typed field are rejected (422) and the saved name stays the same', async ({
+    aisle,
     data,
-    tenant,
-    cleanup,
-  }) => {
-    const userId = data.userId('wr2');
-    await seedField(pii, cleanup, { tenant, userId, field: PII_FIELDS.EMAIL, value: data.email('old') });
-    const newEmail = data.email('new');
-
-    const replace = await pii.writePii({
-      tenant_id: tenant,
-      user_id: userId,
-      field: PII_FIELDS.EMAIL,
-      value: newEmail,
-    });
-    expectSuccess(replace, 200, writePiiDataSchema, 'PII write successful');
-
-    const read = expectSuccess(
-      await pii.readPii({ tenant_id: tenant, user_id: userId, field_names: [PII_FIELDS.EMAIL] }),
-      200,
-      readPiiDataSchema,
-    );
-    expect(read.count).toBe(1);
-    expectSecretEquals(read.items[0]?.value, newEmail, 'replaced EMAIL');
-  });
-
-  test('PII-WR-003 Field names work in any case and come back in upper case (email → EMAIL)', async ({
-    pii,
-    data,
-    tenant,
     cleanup,
   }) => {
     const userId = data.userId('wr3');
-    const res = await pii.writePii({
-      tenant_id: tenant,
+    const original = data.name();
+    await seedField(aisle, cleanup, { userId, field: PII_FIELDS.NAME, value: original });
+
+    const noValue = await aisle.call('writePii', { user_id: userId, field: PII_FIELDS.NAME });
+    expectValidationError(noValue, 'value');
+
+    const noUser = await aisle.call('writePii', { field: PII_FIELDS.NAME, value: data.name() });
+    expectValidationError(noUser, 'user_id');
+
+    const numberValue = await aisle.call('writePii', {
       user_id: userId,
-      field: 'eMail',
-      value: data.email(),
+      field: PII_FIELDS.NAME,
+      value: 12345,
     });
-    cleanup.leaveBehind('PII EMAIL', `${tenant}/${userId}`);
-    expect(expectSuccess(res, 201, writePiiDataSchema).field).toBe('EMAIL');
-    const read = expectSuccess(
-      await pii.readPii({ tenant_id: tenant, user_id: userId, field_names: ['EMAIL'] }),
-      200,
-      readPiiDataSchema,
-    );
-    expect(read.items[0]?.field).toBe('EMAIL');
-  });
+    expectValidationError(numberValue, 'value');
 
-  for (const missing of ['tenant_id', 'user_id', 'field', 'value'] as const) {
-    test(`PII-WR-004 Save request without "${missing}" is rejected (422) and nothing is saved`, async ({
-      pii,
-      data,
-      tenant,
-    }) => {
-      const userId = data.userId('wr4');
-      const payload: Record<string, string> = {
-        tenant_id: tenant,
-        user_id: userId,
-        field: 'NAME',
-        value: data.name(),
-      };
-      delete payload[missing];
-      expectRequestValidationError(await pii.call('writePii', payload));
-      if (missing !== 'tenant_id' && missing !== 'user_id') {
-        await expectNotPersisted(pii, { tenant, userId, field: 'NAME' });
-      }
-    });
-  }
-
-  for (const empty of ['user_id', 'field', 'value'] as const) {
-    test(`PII-WR-005 Save request with an empty "${empty}" is rejected (422)`, async ({
-      pii,
-      data,
-      tenant,
-    }) => {
-      const payload = {
-        tenant_id: tenant,
-        user_id: data.userId('wr5'),
-        field: 'NAME',
-        value: data.name(),
-        [empty]: '',
-      };
-      expectRequestValidationError(await pii.call('writePii', payload));
-    });
-  }
-
-  test('PII-WR-005b Save request with an empty tenant_id is rejected (422)', async ({ pii, data }) => {
-    expectRequestValidationError(
-      await pii.call('writePii', {
-        tenant_id: '',
-        user_id: data.userId('wr5b'),
-        field: 'NAME',
-        value: data.name(),
-      }),
+    expectSecretEquals(
+      await readValue(aisle, { userId, field: PII_FIELDS.NAME }),
+      original,
+      'NAME unchanged',
     );
   });
 
-  test('PII-WR-006 Values longer than the documented maximum are rejected (422)', async ({
-    pii,
-    data,
-    tenant,
-  }) => {
-    const base = { tenant_id: tenant, user_id: data.userId('wr6'), field: 'NAME', value: data.name() };
-    const cases = {
-      tenant_id: 't'.repeat(LIMITS.tenantId.max + 1),
-      user_id: `${data.userId('wr6')}-`.padEnd(LIMITS.userId.max + 1, 'x'),
-      field: 'F'.repeat(LIMITS.field.max + 1),
-      value: data.textOfLength(LIMITS.value.max + 1),
-    };
-    for (const [key, value] of Object.entries(cases)) {
-      await test.step(`${key} length ${value.length}`, async () => {
-        expectRequestValidationError(await pii.call('writePii', { ...base, [key]: value }));
-      });
-    }
-    await expectNotPersisted(pii, { tenant, userId: base.user_id, field: 'NAME' });
+  test('AISLE-WR-004 Saving an empty value is rejected (422)', async ({ aisle, data, cleanup }) => {
+    const userId = data.userId('wr4');
+    const original = data.name();
+    await seedField(aisle, cleanup, { userId, field: PII_FIELDS.NAME, value: original });
+
+    const res = await aisle.call('writePii', { user_id: userId, field: PII_FIELDS.NAME, value: '' });
+    expectValidationError(res, 'value');
+
+    expectSecretEquals(
+      await readValue(aisle, { userId, field: PII_FIELDS.NAME }),
+      original,
+      'NAME unchanged',
+    );
   });
 
-  test('PII-WR-007 Values exactly at the documented maximum are accepted (user ID 128, name 1024 characters)', async ({
-    pii,
+  test('AISLE-WR-005 Values exactly at the maximum length are accepted (user ID 128 characters, name 1,024 characters)', async ({
+    aisle,
     data,
-    tenant,
     cleanup,
   }) => {
-    const userId = `${data.userId('wr7')}-`.padEnd(LIMITS.userId.max, 'x');
+    noteAssumption('BQ-05', 'limits observed on staging (user ID 128, value 1,024) — to be confirmed by Dev');
+    const userId = data.userIdOfLength(LIMITS.userId.max);
+    const longName = data.textOfLength(LIMITS.value.max);
     expect(userId).toHaveLength(LIMITS.userId.max);
-    const value = data.textOfLength(LIMITS.value.max);
-    const res = await pii.writePii({ tenant_id: tenant, user_id: userId, field: 'NAME', value });
-    cleanup.leaveBehind('PII NAME', `${tenant}/${userId}`);
-    expectSuccess(res, 201, writePiiDataSchema);
-    const read = expectSuccess(
-      await pii.readPii({ tenant_id: tenant, user_id: userId, field_names: ['NAME'] }),
-      200,
-      readPiiDataSchema,
+    expect(longName).toHaveLength(LIMITS.value.max);
+
+    const res = await aisle.writePii({ user_id: userId, field: PII_FIELDS.NAME, value: longName });
+    cleanup.leaveBehind('PII NAME', userId);
+    expectSuccess(res, 201, writePiiDataSchema, 'PII write successful');
+
+    expectSecretEquals(
+      await readValue(aisle, { userId, field: PII_FIELDS.NAME }),
+      longName,
+      'max-length NAME',
     );
-    expectSecretEquals(read.items[0]?.value, value, '1024-char NAME');
   });
 
-  test('PII-WR-008 An email without "@" is rejected (400 VALIDATION_ERROR)', async ({
-    pii,
+  test('AISLE-WR-006 Values one character over the maximum are rejected (422) and nothing changes', async ({
+    aisle,
     data,
-    tenant,
+    cleanup,
   }) => {
-    const userId = data.userId('wr8');
-    const res = await pii.writePii({
-      tenant_id: tenant,
-      user_id: userId,
-      field: 'EMAIL',
-      value: `qa-${data.runId}-no-at-sign`,
+    noteAssumption('BQ-05', 'limits observed on staging (user ID 128, value 1,024) — to be confirmed by Dev');
+    const userId = data.userId('wr6');
+    const original = data.name();
+    await seedField(aisle, cleanup, { userId, field: PII_FIELDS.NAME, value: original });
+
+    const longUser = await aisle.call('writePii', {
+      user_id: data.userIdOfLength(LIMITS.userId.max + 1),
+      field: PII_FIELDS.NAME,
+      value: data.name(),
     });
-    expectError(res, 400, ERROR_CODES.VALIDATION_ERROR);
-    await expectNotPersisted(pii, { tenant, userId, field: 'EMAIL' });
+    expectValidationError(longUser, 'user_id');
+
+    const longValue = await aisle.call('writePii', {
+      user_id: userId,
+      field: PII_FIELDS.NAME,
+      value: data.textOfLength(LIMITS.value.max + 1),
+    });
+    expectValidationError(longValue, 'value');
+
+    expectSecretEquals(
+      await readValue(aisle, { userId, field: PII_FIELDS.NAME }),
+      original,
+      'NAME unchanged',
+    );
   });
 
-  test('PII-WR-009 A phone that does not have 8–15 digits after clean-up is rejected (400 VALIDATION_ERROR)', async ({
-    pii,
+  test('AISLE-WR-007 A request body that is not valid JSON is rejected (400 “Invalid JSON”)', async ({
+    aisle,
     data,
-    tenant,
+    cleanup,
   }) => {
-    const userId = data.userId('wr9');
-    // Synthetic INVALID values only (never stored): 7 digits, 16 digits, no digits.
-    for (const [label, value] of Object.entries({
-      sevenDigits: '123-4567',
-      sixteenDigits: '+1234 5678 9012 3456',
-      noDigits: 'not-a-phone',
-    })) {
-      await test.step(label, async () => {
-        expectError(
-          await pii.writePii({ tenant_id: tenant, user_id: userId, field: 'PHONE', value }),
-          400,
-          ERROR_CODES.VALIDATION_ERROR,
-        );
-      });
-    }
-    await expectNotPersisted(pii, { tenant, userId, field: 'PHONE' });
+    const userId = data.userId('wr7');
+    const original = data.name();
+    await seedField(aisle, cleanup, { userId, field: PII_FIELDS.NAME, value: original });
+
+    // Broken JSON (no value and no closing brace). Contains no personal data.
+    const broken = Buffer.from(`{"user_id": "${userId}", "field": "NAME", "value": `, 'utf8');
+    const res = await aisle.call('writePii', undefined, { tamper: { bodyBytes: broken } });
+    expectStatus(res, 400);
+    expect(res.json()).toMatchObject({
+      status: false,
+      error: 'Invalid JSON',
+      message: 'Request body must be valid JSON',
+    });
+
+    expectSecretEquals(
+      await readValue(aisle, { userId, field: PII_FIELDS.NAME }),
+      original,
+      'NAME unchanged',
+    );
   });
 
-  test('PII-WR-010 An unknown field name is rejected (exact status is open question Q-07)', async ({
-    pii,
+  test('AISLE-WR-008 Saving an unknown field name is refused (403 AUTHORIZATION_DENIED)', async ({
+    aisle,
     data,
-    tenant,
     config,
   }) => {
     noteAssumption(
-      'Q-07',
-      'Guide does not state the status for a field outside the catalog; 400/403/404/422 accepted.',
+      'BQ-12',
+      'observed 403 for an unknown field; whether it should be a validation error is Dev’s call',
     );
-    const userId = data.userId('wr10');
-    const field = config.testData.unsupportedField;
-    expectRejected(
-      await pii.writePii({ tenant_id: tenant, user_id: userId, field, value: 'x' }),
-      [400, 403, 404, 422],
-      'Q-07',
-    );
+    const res = await aisle.call('writePii', {
+      user_id: data.userId('wr8'),
+      field: config.testData.unsupportedField,
+      value: data.name(),
+    });
+    expectError(res, 403, ERROR_CODES.AUTHORIZATION_DENIED);
   });
 
-  test('PII-WR-011 Wrong data types (e.g. a number instead of text) are rejected (422)', async ({
-    pii,
-    data,
-    tenant,
-  }) => {
-    const base = { tenant_id: tenant, user_id: data.userId('wr11'), field: 'NAME', value: data.name() };
-    for (const [key, bad] of Object.entries({
-      value: 12345,
-      tenant_id: null,
-      user_id: ['a'],
-      field: { x: 1 },
-    })) {
-      await test.step(`${key} as ${JSON.stringify(bad)}`, async () => {
-        expectRequestValidationError(await pii.call('writePii', { ...base, [key]: bad }));
-      });
-    }
-  });
+  test('AISLE-WR-009 An email without “@” is rejected and nothing is saved', async ({ aisle, data }) => {
+    const userId = data.userId('wr9');
+    const notAnEmail = data.email('wr9').replace('@', '.at.');
 
-  test('PII-WR-012 Broken JSON is rejected (422), even when correctly signed', async ({ pii }) => {
-    const malformed = Buffer.from('{"tenant_id":"t","user_id":', 'utf8');
-    expectRequestValidationError(await pii.call('writePii', undefined, { tamper: { bodyBytes: malformed } }));
-  });
-
-  test('PII-WR-013 A value made only of spaces is rejected (exact status is open question Q-10)', async ({
-    pii,
-    data,
-    tenant,
-  }) => {
-    noteAssumption('Q-10', 'Whitespace-only NAME normalizes to empty; guide does not state 400 vs 422.');
-    const userId = data.userId('wr13');
-    expectRejected(
-      await pii.writePii({ tenant_id: tenant, user_id: userId, field: 'NAME', value: '     ' }),
-      [400, 422],
-      'Q-10',
+    const res = await aisle.writePii({ user_id: userId, field: PII_FIELDS.EMAIL, value: notAnEmail });
+    blockIfAccessDenied(
+      res,
+      BLOCKERS.email.id,
+      `${BLOCKERS.email.reason} (permission is checked first, BQ-14)`,
     );
-    await expectNotPersisted(pii, { tenant, userId, field: 'NAME' });
+    noteAssumption(
+      'BQ-01',
+      'expected 400 VALIDATION_ERROR for an email without "@" — to be confirmed by Dev',
+    );
+    expectStatus(res, [400, 422], 'invalid email rejected');
+    await expectNotPersisted(aisle, { userId, field: PII_FIELDS.EMAIL });
   });
 });

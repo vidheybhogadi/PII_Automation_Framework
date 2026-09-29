@@ -23,10 +23,6 @@ export function expectSecretEquals(actual: unknown, expected: string, label: str
   ).toBe(true);
 }
 
-export function expectSecretNotEquals(actual: string, other: string, label: string): void {
-  expect(actual !== other, `${label}: values unexpectedly identical (${fingerprint(actual)})`).toBe(true);
-}
-
 /** Documented: resolve / free-text create / free-text read responses carry `Cache-Control: no-store`. */
 export function expectNoStore(res: ApiResponse): void {
   const header = res.header('cache-control') ?? '';

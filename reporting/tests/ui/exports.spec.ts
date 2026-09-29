@@ -96,9 +96,10 @@ test.describe('REPORT UI — exports', () => {
     await page.getByRole('menuitem', { name: /Copy summary/ }).click();
     await expect(page.locator('.toast')).toContainText('Summary copied');
     const text = await page.evaluate(() => navigator.clipboard.readText());
-    expect(text).toContain('PII API Automation QA Summary');
+    expect(text).toContain('Aisle PII API Automation — QA Summary');
+    expect(text).toMatch(/Pass: \d+ {2}Fail: \d+ {2}Security finding: \d+ {2}Blocked: \d+/);
     expect(text).toContain('[DEMO DATA — NOT REAL]');
-    expect(text).toMatch(/Pass rate: \d+\.\d%/);
+    expect(text).toMatch(/API Pass Rate: \d+\.\d%/);
   });
 
   test('RPT-EX-004 print mode renders the cover page and hides on-screen controls', async ({ page }) => {

@@ -1,19 +1,15 @@
-/** UNIT — endpoint inventory (vs. the guide) and retry policy. */
+/** UNIT — endpoint inventory (Aisle facade) and retry policy. */
 import { expect, test } from '@playwright/test';
-import { ENDPOINTS, ENDPOINT_KEYS, buildPath } from '../../src/clients/endpoints';
+import { ENDPOINTS, ENDPOINT_KEYS, FACADE_PREFIX, buildPath } from '../../src/clients/endpoints';
 import { CleanupRegistry } from '../../src/utils/cleanup';
 import { backoffDelayMs, withRetry } from '../../src/utils/retry';
 
 test.describe('UNIT endpoint inventory & utilities', () => {
-  test('UT-END-001 The endpoint list matches the guide: 11 endpoints, 10 signed plus 1 health check', () => {
+  test('UT-END-001 The endpoint list is the Aisle facade: 11 endpoints, all under /api/v1/pii-test, all need the token', () => {
     expect(ENDPOINT_KEYS).toHaveLength(11);
-    const authenticated = Object.values(ENDPOINTS).filter((e) => e.authenticated);
-    expect(authenticated).toHaveLength(10);
-    authenticated.forEach((e) => expect(e.path.startsWith('/api/v1/')).toBe(true));
-    expect(ENDPOINTS.healthReady).toMatchObject({
-      method: 'GET',
-      path: '/health/ready',
-      authenticated: false,
+    Object.values(ENDPOINTS).forEach((e) => {
+      expect(e.authenticated, `${e.key} must require the Aisle Bearer token`).toBe(true);
+      expect(e.path.startsWith(FACADE_PREFIX)).toBe(true);
     });
     expect(
       Object.values(ENDPOINTS)
@@ -21,32 +17,46 @@ test.describe('UNIT endpoint inventory & utilities', () => {
         .sort(),
     ).toEqual(
       [
-        'GET /health/ready',
-        'POST /api/v1/pii',
-        'POST /api/v1/pii/read',
-        'POST /api/v1/pii/{field}/search',
-        'POST /api/v1/pii/batch/read',
-        'POST /api/v1/transient/phones',
-        'POST /api/v1/transient/phones/resolve',
-        'POST /api/v1/transient/phones/promote',
-        'POST /api/v1/free-text/keys',
-        'POST /api/v1/free-text/keys/read',
-        'POST /api/v1/free-text/keys/revoke',
+        'GET /api/v1/pii-test/health/ready',
+        'POST /api/v1/pii-test',
+        'POST /api/v1/pii-test/read',
+        'POST /api/v1/pii-test/{field}/search',
+        'POST /api/v1/pii-test/batch/read',
+        'POST /api/v1/pii-test/transient/phones',
+        'POST /api/v1/pii-test/transient/phones/resolve',
+        'POST /api/v1/pii-test/transient/phones/promote',
+        'POST /api/v1/pii-test/free-text/keys',
+        'POST /api/v1/pii-test/free-text/keys/read',
+        'POST /api/v1/pii-test/free-text/keys/revoke',
       ].sort(),
     );
   });
 
-  test('UT-END-002 The endpoints that must not be cached match the guide', () => {
-    const noStore = Object.values(ENDPOINTS)
-      .filter((e) => e.noStore)
+  test('UT-END-002 Only read-only endpoints may be retried automatically', () => {
+    const retrySafe = Object.values(ENDPOINTS)
+      .filter((e) => e.retrySafe)
       .map((e) => e.key)
       .sort();
-    expect(noStore).toEqual(['createFreeTextKey', 'readFreeTextKey', 'resolveTransientPhone']);
+    expect(retrySafe).toEqual(
+      [
+        'batchReadPii',
+        'healthReady',
+        'readFreeTextKey',
+        'readPii',
+        'resolveTransientPhone',
+        'searchPii',
+      ].sort(),
+    );
   });
 
   test('UT-END-003 URLs are built with encoded, required parameters', () => {
-    expect(buildPath('/api/v1/pii/{field}/search', { field: 'EMAIL' })).toBe('/api/v1/pii/EMAIL/search');
-    expect(() => buildPath('/api/v1/pii/{field}/search')).toThrow(/field/);
+    expect(buildPath('/api/v1/pii-test/{field}/search', { field: 'EMAIL' })).toBe(
+      '/api/v1/pii-test/EMAIL/search',
+    );
+    expect(buildPath('/api/v1/pii-test/{field}/search', { field: 'A/B' })).toBe(
+      '/api/v1/pii-test/A%2FB/search',
+    );
+    expect(() => buildPath('/api/v1/pii-test/{field}/search')).toThrow(/field/);
   });
 
   test('UT-RTY-001 Retry waits grow each time, are capped, and are slightly randomised', () => {

@@ -2,170 +2,135 @@
 
 # Pending placeholders
 
-Everything the framework still needs from the PII backend team is a **dummy placeholder** that starts with
-`PENDING_`. The framework treats a `PENDING_` value as **not set**: it is never sent to the service or the
-database, and tests that need it fail with a clear "missing setting" message (or show as **Waiting**).
+Architecture under test: **QA automation → Aisle PII facade → PII service → PII DB**.
+
+Everything the framework still needs from the backend team is either a **dummy placeholder** starting with
+`PENDING_` (treated as **not set**, never sent anywhere) or an **open question** in
+[docs/backend-open-questions.md](docs/backend-open-questions.md). Tests that depend on one show as
+**Blocked** in the report with the question ID — never as passed or failed.
 
 **To resolve one:** put the real value in your `.env` (or `config/db-queries.json`, or the GitHub
-environment), then run `npm run check-env`. Find any leftover with `grep -rn PENDING_ .env config tests`.
+environment), then run `npm run check-env`.
 
-## Everything required — checklist
+## Checklist
 
-**From Dev (values):**
+1. [ ] Aisle caller access to EMAIL, EMAIL search, temporary phones and free-text keys (BQ-01, BQ-02)
+2. [ ] Approved test phone numbers (BQ-03) — section 1
+3. [ ] Read-only DB access and the PII table/column layout (BQ-04) — sections 1–2 (6 DB placeholders)
+4. [ ] An expired Aisle test token, if possible (BQ-11) — `AISLE_EXPIRED_TEST_TOKEN`
+5. [ ] Answers to the open questions behind 34 blockable tests — sections 3–4
 
-1. [ ] Test environment URL and environment name, plus VPN / network access — section 1
-2. [ ] Three caller IDs, after registering our three public keys — section 1
-3. [ ] Two non-production tenant IDs, an approved email domain, and 2–3 approved 10-digit test phone numbers — section 1
-4. [ ] Environment limits: bulk-read size, search default, temporary-phone lifetime, max body size — section 1
-5. [ ] Database: type, host, port, name, a read-only login — section 1
-6. [ ] Database table and column names (11 placeholders) — section 2
-7. [ ] Answers to the open questions behind 10 waiting tests and 13 temporary expectations — sections 3–4
+## 1. Settings (`.env.example`)
 
-**From Dev (confirmations, not values):**
-
-8. [ ] The three callers have exactly the permissions in [setup-guide §4](docs/setup-guide.md) (the 12 permission tests depend on it)
-9. [ ] The approved test phone numbers are accepted by the service as valid
-10. [ ] The test environment is reachable from our machines and from CI (VPN, firewall, HTTPS certificate)
-11. [ ] The database accepts connections from our machines and CI, and whether it needs SSL (`DB_SSL`, default `true`)
-
-**On our side:**
-
-12. [ ] `cp .env.example .env` and replace every `PENDING_` value
-13. [ ] `npm run keys:generate -- secrets/primary-caller` (and `secondary-caller`, `limited-caller`); send the three `.pub.pem` files to Dev
-14. [ ] `cp config/db-queries.example.json config/db-queries.json` and replace every `PENDING_` name; keep `DB_QUERIES_FILE=config/db-queries.json`
-15. [ ] Replace the 3 code placeholders once their questions are answered — section 6
-16. [ ] Add the CI variables and secrets to the GitHub environment — section 5
-17. [ ] Run `npm run check-env` → `npm run test:poc` → `npm run test:smoke` → `npm run test:all`, and triage the first run with Dev
-
-| Group | Count | Where |
-|---|:-:|---|
-| [1. Settings](#1-settings-env) | 19 | `.env.example` → your `.env` |
-| [2. Database names](#2-database-table-and-column-names) | 11 | `config/db-queries.example.json` → `config/db-queries.json` |
-| [3. Tests waiting on an answer](#3-tests-waiting-on-an-answer-do-not-run-yet) | 10 | test files |
-| [4. Temporary expectations](#4-temporary-expectations-run-but-accept-several-answers) | 13 | test files |
-| [5. CI settings](#5-ci-settings-github-environment) | 18 | GitHub → Settings → Environments |
-| [6. Code placeholders](#6-code-placeholders-in-tests) | 3 | test files (`// PENDING_…` comments) |
-
-## 1. Settings (`.env`)
-
-Copy `.env.example` to `.env`, then replace each value below.
-
-| Setting | Placeholder | Where | Needed from | Unblocks | Used until then |
-|---|---|---|---|---|---|
-| `PII_ENVIRONMENT` | `PENDING_ENVIRONMENT_NAME` | `.env.example:11` | Backend / DevOps | Labels reports and CI runs with the right environment (local / dev / qa / staging) | `local` |
-| `PII_BASE_URL` | `PENDING_PII_BASE_URL` | `.env.example:13` | Backend / DevOps | All 133 service tests (address of the test environment) | — (not set) |
-| `PII_CALLER_PRIMARY_ID` | `PENDING_PRIMARY_CALLER_ID` | `.env.example:26` | Backend (register our primary public key) | All service tests (full-permission caller) | — (not set) |
-| `PII_CALLER_SECONDARY_ID` | `PENDING_SECONDARY_CALLER_ID` | `.env.example:29` | Backend (register our secondary public key) | Ownership tests: another caller cannot use my keys / temporary phones | — (not set) |
-| `PII_CALLER_LIMITED_ID` | `PENDING_LIMITED_CALLER_ID` | `.env.example:32` | Backend (register our limited public key with the restricted permissions) | 12 permission tests (PII-AZ-*) | — (not set) |
-| `PII_TEST_EMAIL_DOMAIN` | `PENDING_TEST_EMAIL_DOMAIN` | `.env.example:43` | Backend / Security | Every test that saves or searches an email | — (not set) |
-| `PII_TEST_PHONES` | `PENDING_APPROVED_10_DIGIT_TEST_PHONES` | `.env.example:45` | QA lead / Backend | Phone, search-by-phone and temporary-phone tests (2+ approved 10-digit numbers) | — (not set) |
-| `PII_NON_SEARCHABLE_FIELD` | `PENDING_Q18_NON_SEARCHABLE_FIELD` | `.env.example:53` | Backend (Q-18) | PII-SR-012 | — (not set) |
-| `PII_BATCH_MAX_ITEMS` | `PENDING_BATCH_MAX_ITEMS` | `.env.example:57` | Backend | PII-BR-004 / BR-005 use the real limit (guide value 50 until then) | `50` |
-| `PII_SEARCH_DEFAULT_LIMIT` | `PENDING_SEARCH_DEFAULT_LIMIT` | `.env.example:58` | Backend | PII-SR-008 uses the real default (guide value 10 until then) | `10` |
-| `PII_TRANSIENT_TTL_MIN_SECONDS` | `PENDING_TRANSIENT_TTL_MIN_SECONDS` | `.env.example:59` | Backend | PII-TR-008 uses the real minimum (guide value 300 until then) | `300` |
-| `PII_TRANSIENT_TTL_MAX_SECONDS` | `PENDING_TRANSIENT_TTL_MAX_SECONDS` | `.env.example:60` | Backend | PII-TR-008 uses the real maximum (guide value 604800 until then) | `604800` |
-| `PII_ENABLE_TTL_EXPIRY_TEST` | `PENDING_Q12_SHORT_TTL_ENVIRONMENT` | `.env.example:67` | Backend (Q-12): a short-lifetime environment | PII-TR-012 | `false` |
-| `PII_SIGNATURE_HELPER_MUST_BE_DISABLED` | `PENDING_Q23_SIGNATURE_HELPER_DISABLED` | `.env.example:69` | Backend (Q-23) | PII-SEC-003 | `false` |
-| `DB_HOST` | `PENDING_DB_HOST` | `.env.example:74` | Backend / DBA | All @db tests | — (not set) |
-| `DB_PORT` | `PENDING_DB_PORT` | `.env.example:75` | Backend / DBA | All @db tests | — (not set) |
-| `DB_NAME` | `PENDING_DB_NAME` | `.env.example:76` | Backend / DBA | All @db tests | — (not set) |
-| `DB_USER` | `PENDING_DB_READONLY_USER` | `.env.example:78` | Backend / DBA (read-only user) | All @db tests | — (not set) |
-| `DB_PASSWORD` | `PENDING_DB_READONLY_PASSWORD` | `.env.example:79` | Backend / DBA (read-only user) | All @db tests | — (not set) |
-
-**Also on our side (not a placeholder):** after the caller IDs arrive, create the three key pairs with
-`npm run keys:generate -- secrets/<primary|secondary|limited>-caller` and send the `.pub.pem` files to the
-backend team. The key-file paths in `.env.example` already point to `secrets/…-caller.pem`.
-
-## 2. Database table and column names
-
-Copy `config/db-queries.example.json` to `config/db-queries.json` and replace each name with the real one
-(Q-03). A query that still contains `PENDING_` counts as not configured and is never run.
-
-| Placeholder | First used at | Meaning |
-|---|---|---|
-| `PENDING_TENANT_COL` | `config/db-queries.example.json:5` | column: tenant |
-| `PENDING_CALLER_COL` | `config/db-queries.example.json:16` | column: caller |
-| `PENDING_CIPHERTEXT_COL` | `config/db-queries.example.json:16` | column: ciphertext |
-| `PENDING_EXPIRES_COL` | `config/db-queries.example.json:16` | column: expires |
-| `PENDING_CONSUMED_COL` | `config/db-queries.example.json:16` | column: consumed |
-| `PENDING_TRANSIENT_TABLE` | `config/db-queries.example.json:16` | table: transient |
-| `PENDING_ID_COL` | `config/db-queries.example.json:16` | column: id |
-| `PENDING_STATUS_COL` | `config/db-queries.example.json:20` | column: status |
-| `PENDING_REVOKED_AT_COL` | `config/db-queries.example.json:20` | column: revoked at |
-| `PENDING_WRAPPED_KEY_COL` | `config/db-queries.example.json:20` | column: wrapped key |
-| `PENDING_FREE_TEXT_KEY_TABLE` | `config/db-queries.example.json:20` | table: free text key |
-
-## 3. Tests waiting on an answer (do not run yet)
-
-Each is a `blockedBy(…)` call. The test shows as **Waiting** until the answer arrives; then replace the call
-with the real check (or set the matching setting from section 1).
-
-| Question | Test | Where | What we need to know | How it gets unblocked |
+| Setting | Placeholder | Where | From | Unblocks |
 |---|---|---|---|---|
-| Q-12 | PII-TR-012 | `tests/transient/transient-phone.spec.ts:333` | TTL expiry testing. Min TTL is 300 s in dev. Is there a short-TTL test environment or a test clock? | Set `PII_ENABLE_TTL_EXPIRY_TEST=true` in `.env` — only in an environment with a short minimum lifetime |
-| Q-14 | PII-AUTH-021 | `tests/security/authentication.spec.ts:253` | Reused X-Request-Id: rejected, accepted, or deduplicated? | Code change once Dev confirms Phase 1 vs Phase 2 (Q-38) — see the `PENDING_Q14_ANSWER` marker |
-| Q-17 | PII-HLT-002 | `tests/health/health.spec.ts:26` | How to put the service in a not-ready state for testing the 503 readiness response? | Code change after Dev provides a not-ready hook — see the `PENDING_Q17_ANSWER` marker |
-| Q-18 | PII-SR-012 | `tests/pii/search-pii.spec.ts:233` | Which catalog fields are not searchable, and the rejection status? | Set `PII_NON_SEARCHABLE_FIELD` in `.env` |
-| Q-21 | PII-AUTH-022 | `tests/security/authentication.spec.ts:263` | Replay protection. The signature covers only the body — not method, path, caller ID, request ID or a timest… | Code change once Dev confirms Phase 1 vs Phase 2 (Q-38) — see the `PENDING_Q21_ANSWER` marker |
-| Q-22 | PII-SEC-002 | `tests/security/response-security.spec.ts:42` | Configured maximum body size (413) per environment. | Set `PII_MAX_BODY_BYTES` in `.env` (now 1048576 from tech doc v3 §12.4 — runs once the service is reachable) |
-| Q-23 | PII-SEC-003 | `tests/security/response-security.spec.ts:60` | Is POST /docs/signature disabled in QA/staging? (Guide: "Do not expose… in production.") | Set `PII_SIGNATURE_HELPER_MUST_BE_DISABLED=true` in `.env` (non-development environments) |
-| Q-24 | PII-CON-001 | `tests/contract/contract.spec.ts:50` | Is /openapi.json exposed in QA/staging? | Nothing — runs automatically when the service exposes `/openapi.json` |
-| Q-24 | PII-CON-002 | `tests/contract/contract.spec.ts:67` | Is /openapi.json exposed in QA/staging? | Nothing — runs automatically when the service exposes `/openapi.json` |
-| Q-26 | PII-DB-007 | `tests/db/db-persistence.spec.ts:199` | Audit table schema for PII_BATCH_READ; does it store X-Request-Id? | Read-only MongoDB access (audit is in MongoDB per tech doc v3 §39) + a Mongo check in the framework — Q-35 |
+| `AISLE_TEST_PHONES` | `PENDING_APPROVED_TEST_PHONES` | `.env.example:35` | QA lead / Aisle backend (BQ-03) | Phone normalization and temporary-phone tests (approved numbers only) |
+| `DB_HOST` | `PENDING_DB_HOST` | `.env.example:44` | Aisle backend / DBA (BQ-04) | All @db tests and POC-003 |
+| `DB_PORT` | `PENDING_DB_PORT` | `.env.example:45` | Aisle backend / DBA (BQ-04) | All @db tests and POC-003 |
+| `DB_NAME` | `PENDING_DB_NAME` | `.env.example:46` | Aisle backend / DBA (BQ-04) | All @db tests and POC-003 |
+| `DB_USER` | `PENDING_DB_READONLY_USER` | `.env.example:48` | Aisle backend / DBA (BQ-04, read-only user) | All @db tests and POC-003 |
+| `DB_PASSWORD` | `PENDING_DB_READONLY_PASSWORD` | `.env.example:49` | Aisle backend / DBA (BQ-04, read-only user) | All @db tests and POC-003 |
 
-## 4. Temporary expectations (run, but accept several answers)
+## 2. Database query template (`config/db-queries.example.json`)
 
-The guide does not say exactly what the service returns here, so the test accepts every reasonable answer
-(for example "400 or 422"). When the question is answered, narrow the check to the exact answer.
+Copy to `config/db-queries.json` and replace every placeholder with names Dev confirms. A query that still
+contains `PENDING_` counts as not configured and never runs.
 
-| Question | Test | Where | What we need to know |
+| Placeholder | Where |
+|---|---|
+| `PENDING_TENANT_COL` | `config/db-queries.example.json:11` |
+| `PENDING_USER_COL` | `config/db-queries.example.json:11` |
+| `PENDING_FIELD_COL` | `config/db-queries.example.json:11` |
+| `PENDING_CIPHERTEXT_COL` | `config/db-queries.example.json:11` |
+| `PENDING_KEY_VERSION_COL` | `config/db-queries.example.json:11` |
+| `PENDING_PII_TABLE` | `config/db-queries.example.json:11` |
+
+## 3. Tests that can be blocked
+
+**static** = not run until the question is answered (`blockedBy`). **runtime** = runs, and marks itself
+Blocked only if staging still denies access (403) or the setting is missing — then runs for real once fixed.
+
+| Test | Waits on | Kind | Where |
 |---|---|---|---|
-| Q-07 | PII-WR-010 | `tests/pii/write-pii.spec.ts:220` | Status for a field name not in the catalog on write/read. |
-| Q-08 | PII-SR-004 | `tests/pii/search-pii.spec.ts:93` | Search with no match: 200 with count: 0, or 404 PII_NOT_FOUND? |
-| Q-09 | PII-SR-007 | `tests/pii/search-pii.spec.ts:146` | truncated semantics. Guide: true when matches _reach_ the effective limit. Is it count >= limit (literal re… |
-| Q-10 | PII-WR-013 | `tests/pii/write-pii.spec.ts:260` | Whitespace handling: is a whitespace-only value 400 or 422? Are tabs/newlines collapsed in NAME? |
-| Q-11 | PII-TR-009 | `tests/transient/transient-phone.spec.ts:270` | ttl_seconds = 0 / negative: 422 (schema) or 400 (domain)? |
-| Q-13 | PII-AUTH-018 | `tests/security/authentication.spec.ts:172` | Status when Content-Type is missing/wrong (400/401/415/422)? |
-| Q-16 | PII-DB-006 | `tests/db/db-persistence.spec.ts:176` | Does the PII table store key_version; is free-text key material stored wrapped/encrypted? |
-| Q-16 | POC-001 | `tests/poc/email-write-db-read.poc.spec.ts:81` | Does the PII table store key_version; is free-text key material stored wrapped/encrypted? |
-| Q-18 | PII-SR-012 | `tests/pii/search-pii.spec.ts:239` | Which catalog fields are not searchable, and the rejection status? |
-| Q-19 | PII-BR-005 | `tests/pii/batch-read.spec.ts:147` | Status when batch item count > batch_max_items, or user_ids > 200 / fields > 64. |
-| Q-19 | PII-BR-007 | `tests/pii/batch-read.spec.ts:198` | Status when batch item count > batch_max_items, or user_ids > 200 / fields > 64. |
-| Q-20 | PII-BR-006 | `tests/pii/batch-read.spec.ts:164` | Do duplicate pairs count toward batch_max_items before de-duplication? |
-| Q-25 | PII-DB-005 | `tests/db/db-persistence.spec.ts:150` | Are consumed transient mappings flagged or deleted? |
+| AISLE-AUTH-003 | BQ-17 | runtime | `tests/security/authentication.spec.ts:58` |
+| AISLE-AUTH-004 | BQ-09 | runtime | `tests/security/authentication.spec.ts:71` |
+| AISLE-AUTH-005 | BQ-11 | runtime | `tests/security/authentication.spec.ts:106` |
+| AISLE-BR-003 | BQ-18 | runtime | `tests/pii/batch-read.spec.ts:56` |
+| AISLE-CON-002 | BQ-09 | runtime | `tests/contract/contract.spec.ts:64` |
+| AISLE-DB-001 | BQ-04 | runtime | `tests/db/db-persistence.spec.ts:19` |
+| AISLE-DB-002 | BQ-04 | runtime | `tests/db/db-persistence.spec.ts:44` |
+| AISLE-DB-003 | BQ-04 | runtime | `tests/db/db-persistence.spec.ts:68` |
+| AISLE-FT-001 | BQ-02 | runtime | `tests/free-text/free-text-keys.spec.ts:21` |
+| AISLE-FT-002 | BQ-02 | runtime | `tests/free-text/free-text-keys.spec.ts:42` |
+| AISLE-FT-003 | BQ-02 | runtime | `tests/free-text/free-text-keys.spec.ts:56` |
+| AISLE-HLT-001 | BQ-15 | runtime | `tests/health/health.spec.ts:9` |
+| AISLE-NRM-002 | BQ-03 | static | `tests/pii/normalization.spec.ts:23` |
+| AISLE-NRM-003 | BQ-03 | static | `tests/pii/normalization.spec.ts:27` |
+| AISLE-RD-002 | BQ-01 | runtime | `tests/pii/read-pii.spec.ts:42` |
+| AISLE-SEC-001 | BQ-06 | runtime | `tests/security/response-security.spec.ts:18` |
+| AISLE-SEC-002 | BQ-08 | runtime | `tests/security/response-security.spec.ts:63` |
+| AISLE-SEC-004 | BQ-07 | static | `tests/security/response-security.spec.ts:121` |
+| AISLE-SR-001 | BQ-01 | runtime | `tests/pii/search-pii.spec.ts:24` |
+| AISLE-SR-002 | BQ-01 | runtime | `tests/pii/search-pii.spec.ts:53` |
+| AISLE-SR-003 | BQ-01 | runtime | `tests/pii/search-pii.spec.ts:79` |
+| AISLE-SR-004 | BQ-05 | runtime | `tests/pii/search-pii.spec.ts:105` |
+| AISLE-SR-005 | BQ-01, BQ-13 | runtime | `tests/pii/search-pii.spec.ts:119` |
+| AISLE-TR-001 | BQ-02, BQ-03 | runtime | `tests/transient/transient-phone.spec.ts:35` |
+| AISLE-TR-002 | BQ-02, BQ-03 | runtime | `tests/transient/transient-phone.spec.ts:56` |
+| AISLE-TR-003 | BQ-02, BQ-03 | runtime | `tests/transient/transient-phone.spec.ts:76` |
+| AISLE-TR-004 | BQ-02, BQ-03 | runtime | `tests/transient/transient-phone.spec.ts:111` |
+| AISLE-WR-005 | BQ-05 | runtime | `tests/pii/write-pii.spec.ts:116` |
+| AISLE-WR-006 | BQ-05 | runtime | `tests/pii/write-pii.spec.ts:138` |
+| AISLE-WR-008 | BQ-12 | runtime | `tests/pii/write-pii.spec.ts:195` |
+| AISLE-WR-009 | BQ-01 | runtime | `tests/pii/write-pii.spec.ts:212` |
+| POC-001 | BQ-01 | runtime | `tests/poc/email-poc.spec.ts:35` |
+| POC-002 | BQ-01 | runtime | `tests/poc/email-poc.spec.ts:55` |
+| POC-003 | BQ-01, BQ-04 | runtime | `tests/poc/email-poc.spec.ts:82` |
+
+## 4. Open questions
+
+| ID | Status | Question |
+|---|---|---|
+| BQ-01 | Open | Please grant the Aisle facade's caller READ, WRITE, SEARCH and BULK_READ on EMAIL, and confirm EMAIL normalization (trim + lower-case?). |
+| BQ-02 | Open | Are temporary phones and free-text encryption keys meant to be used through the facade? If yes, please grant that access. What are the allowed life… |
+| BQ-03 | Open | Please provide approved test phone numbers (nobody's real number). Does the facade caller have PHONE access? The `+91 98765 43210` in the curl coll… |
+| BQ-04 | Open | Read-only DB access for QA: engine, host, port, database, a SELECT-only user. Which table and columns hold PII values? Is there a tenant column and… |
+| BQ-11 | Open | Can QA get an expired (or revoked) Aisle test token for the expired-token test? |
+| BQ-05 | Observed | Are the observed request limits the contract? `user_id` 1–128 chars, `value` 1–1,024 chars, `field_names` ≥ 1, bulk read `user_ids` 1–200 and `fiel… |
+| BQ-06 | Observed | A `tenant_id` sent by the client: should it be ignored (current behaviour) or rejected? |
+| BQ-07 | Open | Is the test token meant to read and write any user ID? Should one user's data be protected from another user through the facade? |
+| BQ-08 | Open | Security finding: 422 validation errors echo the request back in `detail[].input`: the submitted personal value and the internal `tenant_id` (and e… |
+| BQ-09 | Observed | Which error format is the contract? Today: 401 is an empty `text/html` body; 400 has `error` as a string; 403/404 have `error` as an object; 422 is… |
+| BQ-10 | Open | Is there an approved way to purge run-prefixed synthetic test data (`qa-auto-…`) on staging? There is no delete API. |
+| BQ-12 | Observed | What should an unsupported field name return? Is 403 intended, or should it be a validation error (400/422)? |
+| BQ-13 | Open | Search with no match: 200 with `count: 0`, or 404? |
+| BQ-14 | Observed | Permission is checked before validation (an invalid email returns 403, not a validation error). Is that intended? |
+| BQ-15 | Observed | The first health call took ~14 s (later calls 100–250 ms). Is that a cold start? Which timeout should QA use? |
+| BQ-16 | Observed | Is `testa2.aisle.co` the long-term QA target? (`testa3.aisle.co`, given in one document, does not resolve.) |
+| BQ-17 | Observed | The facade accepts the token without the word "Bearer" (and with lower-case "bearer"). Is that intended? Most APIs require `Authorization: Bearer <… |
+| BQ-18 | Observed | A bulk read of exactly 200 user IDs returned 403 `AUTHORIZATION_DENIED` (201 → 422 `too_long`). What is the real maximum, and why 403? |
+| BQ-19 | Observed | Duplicate entries are not de-duplicated: `field_names: ["NAME","NAME"]` returns two items and `user_ids: [u,u]` returns two items. Intended? |
+| BQ-20 | Observed | `POST /api/v1/pii-test/health/ready` (wrong method) returns a 502 HTML error page instead of 405. Intended? |
 
 ## 5. CI settings (GitHub environment)
 
-Set these in GitHub → Settings → Environments → `qa` before running the integration job.
-
-| Name | Type | Used at |
+| Name | Kind | Where |
 |---|---|---|
-| `PII_BASE_URL` | Variable | `.github/workflows/pii-api-tests.yml:82` |
-| `PII_TEST_TENANT_ID` | Variable | `.github/workflows/pii-api-tests.yml:83` |
-| `PII_TEST_TENANT_ID_SECONDARY` | Variable | `.github/workflows/pii-api-tests.yml:84` |
-| `PII_TEST_EMAIL_DOMAIN` | Variable | `.github/workflows/pii-api-tests.yml:85` |
-| `PII_TEST_PHONES` | Secret | `.github/workflows/pii-api-tests.yml:86` |
-| `PII_CALLER_PRIMARY_ID` | Variable | `.github/workflows/pii-api-tests.yml:88` |
-| `PII_CALLER_SECONDARY_ID` | Variable | `.github/workflows/pii-api-tests.yml:89` |
-| `PII_CALLER_LIMITED_ID` | Variable | `.github/workflows/pii-api-tests.yml:90` |
-| `PII_CALLER_PRIMARY_PRIVATE_KEY` | Secret | `.github/workflows/pii-api-tests.yml:93` |
-| `PII_CALLER_SECONDARY_PRIVATE_KEY` | Secret | `.github/workflows/pii-api-tests.yml:94` |
-| `PII_CALLER_LIMITED_PRIVATE_KEY` | Secret | `.github/workflows/pii-api-tests.yml:95` |
-| `DB_ENGINE` | Variable | `.github/workflows/pii-api-tests.yml:96` |
-| `DB_HOST` | Variable | `.github/workflows/pii-api-tests.yml:97` |
-| `DB_PORT` | Variable | `.github/workflows/pii-api-tests.yml:98` |
-| `DB_NAME` | Variable | `.github/workflows/pii-api-tests.yml:99` |
-| `DB_USER` | Variable | `.github/workflows/pii-api-tests.yml:100` |
-| `DB_READONLY_PASSWORD` | Secret | `.github/workflows/pii-api-tests.yml:101` |
-| `DB_QUERIES_JSON` | Secret | `.github/workflows/pii-api-tests.yml:113` |
-
-## 6. Code placeholders in tests
-
-These tests cannot be finished with a setting: the expected behaviour itself is unknown. Each has a
-`// PENDING_…` comment saying what to write once Dev answers.
-
-| Marker | Where | What to do |
-|---|---|---|
-| `PENDING_Q17_ANSWER` | `tests/health/health.spec.ts:22` | tech doc v3 §63.9 returns 503 when a readiness check fails (e.g. PostgreSQL down), with body {status, checks}. When Dev provides a safe way to make QA not ready, replace this blockedBy(…) with a call to /health/ready that expects 503 (and the agreed body shape — Q-34). |
-| `PENDING_Q14_ANSWER` | `tests/security/authentication.spec.ts:249` | tech doc v3 §11.1/§15 says request IDs are NOT checked for reuse in its Phase 1 (both requests succeed) and are rejected with 401 once Phase 2 replay protection is on. When Dev confirms which phase QA runs (Q-38), replace this blockedBy(…) with that check. |
-| `PENDING_Q21_ANSWER` | `tests/security/authentication.spec.ts:259` | tech doc v3 §15 accepts replay as a known Phase 1 risk (a captured request can be re-sent until the caller's key is rotated); Phase 2 (§21) rejects it with 401. When Dev confirms the phase (Q-38), replace this blockedBy(…) with a replay check (same signed request twice; expect the agreed status). |
+| `AISLE_BASE_URL` | Variable | `.github/workflows/pii-api-tests.yml:89` |
+| `AISLE_TEST_TOKEN` | Secret | `.github/workflows/pii-api-tests.yml:91` |
+| `AISLE_EXPIRED_TEST_TOKEN` | Secret | `.github/workflows/pii-api-tests.yml:92` |
+| `AISLE_TEST_EMAIL_DOMAIN` | Variable | `.github/workflows/pii-api-tests.yml:93` |
+| `AISLE_TEST_PHONES` | Secret | `.github/workflows/pii-api-tests.yml:94` |
+| `DB_ENGINE` | Variable | `.github/workflows/pii-api-tests.yml:95` |
+| `DB_HOST` | Variable | `.github/workflows/pii-api-tests.yml:96` |
+| `DB_PORT` | Variable | `.github/workflows/pii-api-tests.yml:97` |
+| `DB_NAME` | Variable | `.github/workflows/pii-api-tests.yml:98` |
+| `DB_USER` | Variable | `.github/workflows/pii-api-tests.yml:99` |
+| `DB_READONLY_PASSWORD` | Secret | `.github/workflows/pii-api-tests.yml:100` |
+| `DB_QUERIES_JSON` | Secret | `.github/workflows/pii-api-tests.yml:112` |
+| `SMTP_HOST` | Variable | `.github/workflows/pii-api-tests.yml:152` |
+| `SMTP_PORT` | Variable | `.github/workflows/pii-api-tests.yml:153` |
+| `SMTP_USER` | Secret | `.github/workflows/pii-api-tests.yml:154` |
+| `SMTP_PASSWORD` | Secret | `.github/workflows/pii-api-tests.yml:155` |
+| `REPORT_MAIL_FROM` | Variable | `.github/workflows/pii-api-tests.yml:156` |
+| `REPORT_MAIL_TO` | Variable | `.github/workflows/pii-api-tests.yml:157` |

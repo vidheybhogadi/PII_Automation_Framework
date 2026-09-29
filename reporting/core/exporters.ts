@@ -7,6 +7,7 @@ import {
   formatDuration,
   formatPct,
   healthScore,
+  outcomeCounts,
   overallVerdict,
   passRate,
   scopeTests,
@@ -76,7 +77,8 @@ export function resultsJson(report: ReportData, tests: readonly ReportTest[] = r
       generatedAt: report.meta.generatedAt,
       run: report.run,
       environment: report.environment,
-      summary: { ...counts, passRate: passRate(counts) },
+      subtitle: report.meta.subtitle,
+      summary: { ...counts, passRate: passRate(counts), outcomes: outcomeCounts(tests) },
       tests: tests.map((t) => ({
         key: t.key,
         id: t.id,
@@ -107,14 +109,17 @@ export function chatSummary(
   tests: readonly ReportTest[] = scopeTests(report.tests),
 ): string {
   const c = countStatuses(tests);
+  const o = outcomeCounts(tests);
   const health = healthScore(tests, report.endpoints, report.config.health);
   const verdict = overallVerdict(evaluateGates(tests, report.config.gates));
   const critical = tests
     .filter((t) => t.status === 'FAIL')
     .sort((a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity])
     .slice(0, 8);
+  const label = (t: ReportTest) =>
+    testOutcome(t).outcome === 'Security finding' ? ' [security finding]' : '';
   const lines = [
-    `${report.meta.product} — PII API Automation QA Summary${report.meta.dataSource === 'DEMO' ? ' [DEMO DATA — NOT REAL]' : ''}`,
+    `${report.meta.product} — QA Summary${report.meta.dataSource === 'DEMO' ? ' [DEMO DATA — NOT REAL]' : ''}`,
     `Run: ${report.run.label} · Env: ${report.run.environment.toUpperCase()} · ${new Date(report.run.startedAt).toUTCString()}`,
     '',
     `Tests: ${c.total} (executed ${executedCount(c)})${
@@ -122,8 +127,8 @@ export function chatSummary(
         ? ` — service tests only; ${report.tests.length - tests.length} framework self-tests reported separately`
         : ''
     }`,
-    `Passed: ${c.PASS}  Failed: ${c.FAIL}  Blocked: ${c.BLOCKED + c.FIXME}  Skipped: ${c.SKIPPED}`,
-    `Pass rate: ${formatPct(passRate(c))}  ·  Health score: ${health.score === null ? 'N/A' : `${Math.round(health.score)}% (${health.band})`}`,
+    `Pass: ${o.Pass}  Fail: ${o.Fail}  Security finding: ${o['Security finding']}  Blocked: ${o.Blocked}  Skipped: ${o.Skipped}  Not Tested: ${o['Not Tested']}`,
+    `API Pass Rate: ${formatPct(passRate(c))}  ·  Test Health: ${health.score === null ? 'N/A' : `${Math.round(health.score)}% (${health.band})`}`,
     `Duration: ${formatDuration(report.run.durationMs)}`,
     `Verdict: ${verdict.verdict}`,
   ];
@@ -131,7 +136,7 @@ export function chatSummary(
     lines.push(
       '',
       'Failures (by severity):',
-      ...critical.map((t) => `- ${t.id} [${t.severity}] ${t.title.replace(/^\S+\s/, '')}`),
+      ...critical.map((t) => `- ${t.id} [${t.severity}]${label(t)} ${t.title.replace(/^\S+\s/, '')}`),
     );
   }
   return lines.join('\n');

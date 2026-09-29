@@ -15,10 +15,8 @@ import { generateRunId } from '../../src/data/test-identifiers';
 import { LIMITS } from '../../src/models/pii.models';
 
 const config = loadConfig({
-  PII_TEST_EMAIL_DOMAIN: 'qa.example',
-  PII_TEST_TENANT_ID: 'tenant-a',
-  PII_TEST_TENANT_ID_SECONDARY: 'tenant-b',
-  PII_TEST_PHONES: '+10 (000) 000-000, 12345',
+  AISLE_TEST_EMAIL_DOMAIN: 'qa.example',
+  AISLE_TEST_PHONES: '+10 (000) 000-000, 12345',
 });
 
 test.describe('UNIT test data factory', () => {
@@ -53,8 +51,12 @@ test.describe('UNIT test data factory', () => {
     const f = new TestDataFactory(config, generateRunId('qa-auto'), 0);
     expect(f.phone(0)).toEqual({ input: '+10 (000) 000-000', normalized: '10000000000' });
     expect(() => f.phone(1)).toThrow(ConfigError); // "12345" is too short -> config error, not a silent pass
-    const noPhones = new TestDataFactory(loadConfig({ PII_TEST_EMAIL_DOMAIN: 'qa.example' }), 'qa-auto-x', 0);
-    expect(() => noPhones.phone()).toThrow(/PII_TEST_PHONES/);
+    const noPhones = new TestDataFactory(
+      loadConfig({ AISLE_TEST_EMAIL_DOMAIN: 'qa.example' }),
+      'qa-auto-x',
+      0,
+    );
+    expect(() => noPhones.phone()).toThrow(/AISLE_TEST_PHONES/);
   });
 
   test('UT-DAT-005 Expected clean-up results match the guide’s rules', () => {
@@ -81,23 +83,10 @@ test.describe('UNIT test data factory', () => {
     expect(f.textOfLength(1025)).toHaveLength(1025);
   });
 
-  test('UT-DAT-008 Test tenants come from .env when set, otherwise are generated per run, and always differ', () => {
-    const f = new TestDataFactory(config, 'qa-auto-x', 0);
-    expect(f.tenant()).toBe('tenant-a');
-    expect(f.secondaryTenant()).toBe('tenant-b');
-    // Not set (or still PENDING_): one made-up tenant pair per run, the same for every worker of that run.
-    const unset = loadConfig({ PII_TEST_TENANT_ID: 'PENDING_TEST_TENANT_ID' });
-    const w0 = new TestDataFactory(unset, 'qa-auto-20260928t101500-ab12', 0);
-    const w3 = new TestDataFactory(unset, 'qa-auto-20260928t101500-ab12', 3);
-    expect(w0.tenant()).toBe('qa-auto-20260928t101500-ab12-app-a');
-    expect(w0.secondaryTenant()).toBe('qa-auto-20260928t101500-ab12-app-b');
-    expect(w3.tenant()).toBe(w0.tenant());
-    expect(new TestDataFactory(unset, 'qa-auto-20260928t111500-cd34', 0).tenant()).not.toBe(w0.tenant());
-    const same = new TestDataFactory(
-      loadConfig({ PII_TEST_TENANT_ID: 't', PII_TEST_TENANT_ID_SECONDARY: 't' }),
-      'qa-auto-x',
-      0,
-    );
-    expect(() => same.secondaryTenant()).toThrow(/must differ/);
+  test('UT-DAT-008 User IDs of an exact length can be made for the 1–128 character boundary tests', () => {
+    const f = new TestDataFactory(config, 'qa-auto-20260929t101500-ab12', 0);
+    for (const n of [1, 40, 128, 129]) expect(f.userIdOfLength(n)).toHaveLength(n);
+    expect(f.userIdOfLength(128)).not.toBe(f.userIdOfLength(128)); // still unique
+    expect(f.userIdOfLength(128)).toMatch(/^qa-auto-/); // clearly synthetic
   });
 });

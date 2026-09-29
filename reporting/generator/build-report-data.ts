@@ -14,8 +14,9 @@ import type {
 import { testCaseInfo } from '../../tests/catalog';
 import type { InventoryTest } from './inventory';
 
-export const PRODUCT = 'PII Sentinel';
-export const SUBTITLE = 'Aisle PII API Quality & Security Intelligence';
+export const PRODUCT = 'Aisle PII API Automation';
+/** The architecture under test (QA automation calls only the Aisle facade). */
+export const SUBTITLE = 'Aisle API → PII service → DB validation';
 export const REPORT_VERSION = '1.0.0';
 
 export function endpointInventory(): EndpointInfo[] {
@@ -25,8 +26,6 @@ export function endpointInventory(): EndpointInfo[] {
     path: e.path,
     description: ENDPOINT_DESCRIPTIONS[e.key] ?? '',
     authenticated: e.authenticated,
-    permission: e.permission,
-    noStore: e.noStore,
   }));
 }
 
@@ -56,6 +55,7 @@ export function enrichTests(run: CollectedRun): ReportTest[] {
         ...(c.errorCode ? { errorCode: sanitizeText(c.errorCode, 60) } : {}),
         ...(c.requestId ? { requestId: sanitizeText(c.requestId, 80) } : {}),
         ...(c.caller ? { caller: sanitizeText(c.caller, 80) } : {}),
+        ...(c.auth ? { auth: c.auth } : {}),
         ...(c.transportError ? { transportError: sanitizeText(c.transportError, 60) } : {}),
         ...(c.phase ? { phase: c.phase } : {}),
       })),
@@ -157,7 +157,7 @@ export function diagnose(run: CollectedRun, tests: readonly ReportTest[]): strin
   if (preflight.length > 0) {
     const why = preflight[0]?.annotations.find((a) => a.type === 'preflight')?.description ?? 'not ready';
     out.push(
-      `Service readiness check failed at startup (${why}) — ${preflight.length} service test(s) could not reach the PII service. Endpoint, security, DB and performance views reflect the environment, not the service.`,
+      `Service readiness check failed at startup (${why}) — ${preflight.length} service test(s) could not reach the Aisle PII facade. Endpoint, security, DB and performance views reflect the environment, not the service.`,
     );
   } else if (executedIntegration.length > 0 && calls.every((c) => c.phase === 'preflight'))
     out.push(

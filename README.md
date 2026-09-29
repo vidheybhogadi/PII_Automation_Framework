@@ -1,43 +1,55 @@
-# PII Service — API Test Automation
+# Aisle PII API — Test Automation
 
 ## The idea
 
-Aisle has a **PII service**: a backend that stores people's personal data (email, phone, name) **encrypted**,
-and hands it back only to apps that are allowed to see it.
+Aisle stores people's personal data (email, phone, name) through a **PII service** that keeps it **encrypted**.
+QA does not call that service directly. QA tests the **Aisle PII facade**: Aisle's front door to the PII service.
 
-This project is an **automated test suite** for that service. With one command it checks that the service:
+```
+QA automation ──Bearer token──▶ Aisle PII facade ──(tenant + signature added by Aisle)──▶ PII service ──▶ PII DB
+      ▲                                                                                                   │
+      └──────────────────────────── read-only DB validation (optional) ◀──────────────────────────────────┘
+```
 
-| Checks that it…              | Example                                                                 |
-| ---------------------------- | ----------------------------------------------------------------------- |
-| **works**                    | save an email, read it back, search by phone, read many users at once   |
-| **only trusts signed calls** | a request with a missing, wrong or tampered signature is rejected (401) |
-| **respects permissions**     | an app allowed to _search_ emails cannot _read_ phones (403)            |
-| **keeps customers apart**    | tenant A can never see tenant B's data                                  |
-| **stores data encrypted**    | the database holds ciphertext, not the plain email                      |
-| **never leaks**              | error messages never echo personal data                                 |
+This project is an **automated test suite** for that facade. With one command it checks that:
 
-Every run ends with a **one-page report** that anyone can read in seconds.
+| Checks that…                     | Example                                                                    |
+| -------------------------------- | -------------------------------------------------------------------------- |
+| **it works**                     | save a name, replace it, read it back, bulk-read several users             |
+| **only the token gets in**       | no token, a wrong token or a malformed header is refused (401)             |
+| **bad input is refused cleanly** | missing fields, wrong types, over-long values → 422; broken JSON → 400     |
+| **the tenant can't be spoofed**  | a `tenant_id` sent by the caller never moves data out of tenant `aisle`    |
+| **nothing leaks**                | error replies don't echo personal data; logs/reports never hold the token  |
+| **the DB stores it protected**   | (once DB access is given) the stored value is not the readable plain value |
 
-![Report](docs/screenshots/01-report-light.png)
+Every run ends with a **report** anyone can read in seconds, and an **Excel sheet** of all test cases.
 
 ### How one test run flows
 
 ```
 npm run test:all
    │
-   ├─▶ tests/…            a test creates fake, unique data and calls the API
-   │     └─▶ src/clients      builds the request and SIGNS its exact bytes (src/auth)
-   │           └─▶ PII service   verifies the signature and permissions, then answers
-   │     ◀── src/assertions   checks status, response shape and values (never prints PII)
-   │     ◀── src/db           optionally confirms in the DB that the value is encrypted
+   ├─▶ tests/…              a test makes fake, unique data (qa-auto-<run>-…) and calls the facade
+   │     └─▶ src/clients        adds "Authorization: Bearer <token>" + JSON header centrally, sends, logs (redacted)
+   │           └─▶ Aisle facade    authenticates QA, sets tenant "aisle", signs, forwards to the PII service
+   │     ◀── src/assertions     checks status, response shape and values (never prints personal data)
+   │     ◀── src/db             optionally confirms in the DB that the value is stored protected (read-only)
    │
-   ├─▶ reporting/collector    saves each result WITHOUT any personal data
-   └─▶ reporting/generator    builds the report + PDF  →  reports/qa-report/index.html
+   ├─▶ reporting/collector    saves each result WITHOUT any personal data or token
+   └─▶ reporting/generator    builds the report + PDF + Excel  →  reports/qa-report/index.html
 ```
 
-**Signing, in one sentence:** every request body is hashed (SHA-256) and signed with the calling app's private
-key (Ed25519). The service rejects anything that doesn't match. The framework does this automatically, so tests
-never touch keys.
+### How the automation works (step by step)
+
+1. The test generates (or loads) controlled test data — always fake, unique per run.
+2. The test calls the Aisle PII facade.
+3. Aisle authenticates the QA request (the Bearer token).
+4. Aisle internally adds the PII-service authentication (tenant + signature) — QA never does this.
+5. The PII service processes the request.
+6. The value is stored / retrieved.
+7. The automation validates Aisle's response.
+8. Where applicable, read-only DB validation checks the value is stored protected.
+9. A sanitized result (no personal data, no token) goes to the report.
 
 ---
 
@@ -46,77 +58,44 @@ never touch keys.
 ```
 PII_Automation_Framework/
 │
-├── tests/                          THE TESTS: one folder per area of the service
-│   ├── poc/                          1  end-to-end: save → check database → read back
-│   ├── health/                       2  service health endpoint
-│   ├── pii/                          52 save · read · search · bulk read · data clean-up
-│   ├── transient/                    12 temporary phone numbers (create, resolve, promote, expire)
-│   ├── free-text/                    10 encryption keys (create, read, revoke)
-│   ├── security/                     44 signing · permissions · tenant isolation · leak protection
-│   ├── contract/                     5  responses match the documented format
-│   ├── db/                           7  data is encrypted in the database
-│   └── unit/                         83 self-tests of the framework itself (no service needed)
+├── tests/                          THE TESTS (49 planned) — one folder per area
+│   ├── poc/                          POC-001…003: save email → read email → check DB (the first proof)
+│   ├── health/                       facade readiness
+│   ├── pii/                          save · read · search · bulk read · clean-up rules
+│   ├── transient/                    temporary phones (create, resolve, promote)
+│   ├── free-text/                    free-text encryption keys (create, read, revoke)
+│   ├── security/                     token checks · tenant spoofing · leak checks
+│   ├── contract/                     response formats
+│   ├── db/                           read-only DB validation
+│   ├── catalog/                      plain-English description of every test (Excel + report read this)
+│   └── unit/                         self-tests of the framework itself (no network needed)
 │
-├── src/                            THE FRAMEWORK: reusable code the tests are built on
-│   ├── clients/                      talks to the service
-│   │   ├── pii-client.ts               one method per endpoint: readPii(), writePii(), searchPii() …
-│   │   ├── base-api-client.ts          serialise body once → sign → send the same bytes → log (redacted)
-│   │   └── endpoints.ts                the list of all 11 endpoints
-│   ├── auth/
-│   │   └── ed25519-signer.ts           the request signature (matches the guide byte-for-byte)
-│   ├── fixtures/
-│   │   ├── test-fixtures.ts            what every test receives: pii, piiAs(), data, tenant, db, log…
-│   │   └── steps.ts                    common setup steps: seedUser(), createTransient() …
-│   ├── assertions/                   reusable checks: expectSuccess(), expectError(), expectSecretEquals()
-│   ├── models/                       the expected shape of every request and response (Zod schemas)
-│   ├── data/                         generates fake, unique test data (user IDs, emails, names)
-│   ├── db/                           read-only database access (Postgres or MySQL) + query catalog
-│   ├── config/                       reads and validates .env; clear messages when something is missing
-│   └── utils/                        logger that hides secrets, retry, request IDs, cleanup list
+├── src/                            THE FRAMEWORK
+│   ├── clients/
+│   │   ├── aisle-pii-client.ts         one method per facade endpoint: writePii(), readPii(), batchRead() …
+│   │   ├── base-api-client.ts          adds the Bearer token centrally, sends, logs safely
+│   │   └── endpoints.ts                the 11 facade endpoints (/api/v1/pii-test…)
+│   ├── fixtures/                     what every test receives (aisle, data, cleanup, db, log) + Blocked helpers
+│   ├── assertions/                   expectSuccess(), expectUnauthorized(), expectValidationError() …
+│   ├── models/                       expected request/response shapes (Zod) — observed on staging
+│   ├── data/                         fake, unique test data (user IDs, emails, names, approved phones)
+│   ├── db/                           read-only DB access + configurable query catalog
+│   ├── config/                       reads and validates .env; the token is kept secret
+│   └── utils/                        logger that hides secrets, retry, request IDs, clean-up list
 │
-├── reporting/                      THE REPORT
-│   ├── collector/                    plugs into Playwright; records results with no personal data
-│   ├── generator/                    turns results into the report page, history and PDF
-│   ├── dashboard/src/                the report page itself (Preact + CSS)
-│   │   ├── sections/                   Summary · What needs attention · Endpoints · All tests · About
-│   │   ├── components/                 speedometer, rings, top bar, test details panel, dialogs
-│   │   └── styles/                     colours, light/dark themes, print/PDF layout
-│   ├── core/                         shared logic: health score, statuses, data scrubbing, exports
-│   ├── config/report-config.json     health-score weights and quality gates (editable)
-│   ├── fixtures/                     made-up DEMO data for previewing the report
-│   └── tests/                        45 tests for the report (layout, privacy, accessibility, keys)
-│
-├── scripts/                        HELPERS (run via npm)
-│   ├── test-all.ts                   tests → report → PDF, in one command
-│   ├── check-env.ts                  checks your .env and connection; never prints secrets
-│   └── generate-caller-keypair.ts    creates a key pair for a calling app
-│
-├── docs/                           DETAILED GUIDES (setup, scenarios, open questions…)
-│   └── test-cases.xlsx               ALL TEST CASES in Excel, grouped by endpoint (npm run docs:testcases)
-├── config/db-queries.example.json  template for database queries (copy to db-queries.json)
-├── test-data/                      intentionally empty: all data is generated at runtime
-├── .github/workflows/              CI: checks every pull request; service tests on demand
-│
-├── .env.example                    settings template: PENDING_… dummies for everything still owed by Dev
-├── PENDING-PLACEHOLDERS.md         EVERY PENDING PLACEHOLDER, where it is, who provides it (npm run docs:pending)
-├── playwright.config.ts            test runner: projects (unit / api), timeouts, reporters
-└── package.json                    libraries and every npm command
+├── reporting/                      THE REPORT (dashboard, PDF, Excel/CSV/JSON export, history)
+├── scripts/                        helpers: test-all (tests → report → PDF → Excel), check-env, doc generators
+├── docs/                           guides — start with backend-open-questions.md and coverage-matrix.md
+│   └── test-cases.xlsx               ALL TEST CASES in Excel, grouped by endpoint
+├── config/db-queries.example.json  template for the read-only DB queries (all names PENDING until Dev confirms)
+├── .github/workflows/              CI: checks every pull request; facade tests daily 08:00 IST + report email, or on demand
+├── .env.example                    settings template (no real values)
+├── PENDING-PLACEHOLDERS.md         everything still owed by Dev, and which tests it blocks (generated)
+└── playwright.config.ts            test runner: projects (unit / api), reporters
 ```
 
-**Created locally, never committed:** `.env` (your settings) · `secrets/` (private keys) · `reports/` (reports,
-PDFs, history) · `test-results/` (per-test logs) · `node_modules/`.
-
-### Where to go when you want to…
-
-| …                            | go to                                                    |
-| ---------------------------- | -------------------------------------------------------- |
-| add or change a test         | `tests/<area>/…spec.ts`                                  |
-| see every test case in Excel | `docs/test-cases.xlsx` (refreshed by `npm run test:all`) |
-| call an endpoint differently | `src/clients/pii-client.ts`                              |
-| change an expected response  | `src/models/`                                            |
-| add a setting                | `src/config/env-schema.ts` + `.env.example`              |
-| change the report's look     | `reporting/dashboard/src/` (`npm run report:dev`)        |
-| change health-score weights  | `reporting/config/report-config.json`                    |
+**Created locally, never committed:** `.env` (your settings + the token) · `reports/` · `test-results/` ·
+`node_modules/`.
 
 ---
 
@@ -124,149 +103,98 @@ PDFs, history) · `test-results/` (per-test logs) · `node_modules/`.
 
 ```ts
 test(
-  'PII-RD-001 Reading one field of a user returns its value',
-  { tag: '@smoke' },
-  async ({ pii, data, tenant, cleanup }) => {
-    const userId = data.userId('rd1'); // 1. fake, unique data
-    const email = data.email();
-    await seedUser(pii, cleanup, tenant, userId, { EMAIL: email }); // 2. setup: save it
+  'AISLE-RD-001 Reading a saved name returns exactly that name',
+  { tag: ['@smoke', '@phase1'] },
+  async ({ aisle, data, cleanup }) => {
+    const userId = data.userId('rd1'); // 1. fake, unique user
+    const name = data.name();
+    await seedField(aisle, cleanup, { userId, field: 'NAME', value: name }); // 2. setup: save it
 
     const read = expectSuccess(
-      await pii.readPii({ tenant_id: tenant, user_id: userId, field_names: ['EMAIL'] }), // 3. signed call
+      await aisle.readPii({ user_id: userId, field_names: ['NAME'] }), // 3. Bearer-authenticated call, no tenant_id
       200,
-      readPiiDataSchema, // 4. expected status + shape
+      readPiiDataSchema,
+      'PII read successful', // 4. expected status + shape + message (observed)
     );
-    expectSecretEquals(read.items[0]?.value, email, 'EMAIL'); // 5. compare without printing the value
+    expectSecretEquals(read.items[0]?.value, name, 'NAME'); // 5. compare without printing the value
   },
 );
 ```
 
-- **Title = ID + what happens + expected result**, e.g. _"PII-AUTH-002 Request with no signature is rejected (401)
-  and nothing is saved"_. Anyone should understand a test from its title alone.
-- **IDs** never change: `WR` write · `RD` read · `SR` search · `BR` bulk read · `AUTH` signing · `AZ` permissions ·
-  `TI` tenant isolation · `DB` database · `UT` self-test.
-- **Tags** pick subsets: `@smoke` (15) · `@security` (45) · `@db` (8) · `@poc` (1) · `@regression` (132).
-- **Every test has a plain-English description** in `tests/catalog/<area>.ts`: what it does, why it matters, steps,
-  expected result, type, priority and preconditions. The report and the Excel sheet show it. **When you add a test,
-  add its entry there**; self-test UT-DOC-002 fails until you do.
-- **Waiting on the backend team?** Call `blockedBy('Q-14', 'reason')` in the test. It shows as **Not Tested** with
-  the reason, never as passed. Open questions: [docs/known-gaps-and-questions.md](docs/known-gaps-and-questions.md).
+- **IDs** never change: `POC-001…003` (the email proof of concept) and `AISLE-<AREA>-NNN` —
+  `HLT` health · `WR` save · `RD` read · `SR` search · `BR` bulk read · `NRM` clean-up rules · `TR` temporary
+  phones · `FT` free-text keys · `AUTH` token · `SEC` security · `CON` response format · `DB` database.
+- **Tags**: `@smoke` · `@phase1` · `@security` · `@db` · `@poc` (everything else is Regression).
+- **Every test has a plain-English description** in `tests/catalog/<area>.ts` (what, why, steps, expected, type,
+  priority). Self-test UT-DOC-002 fails until it exists. Test cases are added/changed/removed through the
+  **testcase-manager** agent (see [CLAUDE.md](CLAUDE.md)): it proposes first, and changes nothing until approved.
+- **Nothing is guessed.** Expected results come from behaviour observed on staging or from Dev's answers. Anything
+  unconfirmed is marked **Blocked** with a question in [docs/backend-open-questions.md](docs/backend-open-questions.md).
 
-### Adding a new test: where each column comes from
+---
 
-Nothing is hard-coded: the Excel sheet and the report pick a new test up automatically from these three places.
+## Statuses
 
-| Column                                                          | Comes from                                                                                                                                                                                                                                                                | Example                                      |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| **Endpoint** (its heading)                                      | The **ID prefix** (`PII-WR` → Save PII, `PII-RD` → Read PII, `PII-SR` → Search PII, `PII-BR` → Bulk read, `PII-TR` → Create temporary phone, `PII-FT` → Create encryption key, `PII-HLT` → Health check). To choose a different one, set `endpoint` in its catalog entry. | `endpoint: 'resolveTransientPhone'`          |
-| **Suite**                                                       | The test's **tag**: `@smoke` → Smoke, otherwise Regression                                                                                                                                                                                                                | `test('PII-RD-010 …', { tag: '@smoke' }, …)` |
-| **Type, priority, description, steps, expected, preconditions** | Its entry in **`tests/catalog/<area>.ts`**                                                                                                                                                                                                                                | see below                                    |
+| Status                 | Meaning                                                                                                      |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------ |
+| ✔ **Pass**             | Ran and passed                                                                                               |
+| ✘ **Fail**             | Ran and failed — an automation or product problem to investigate ("Expected …, got …")                       |
+| ⚠ **Security finding** | Ran and failed on a **known security defect** reported to Dev (e.g. BQ-08). Not an automation problem.       |
+| ⏸ **Blocked**          | Could not be tested: access, data or an answer from Dev is missing. The reason (BQ-xx) is shown. Not a pass. |
+| ↷ **Skipped**          | Deliberately not run (e.g. out of scope via settings)                                                        |
+| — **Not Tested**       | Not part of this run (or the facade was unreachable)                                                         |
 
-```ts
-// tests/pii/read-pii.spec.ts
-test('PII-RD-010 Reading a phone returns the digits-only number', { tag: '@smoke' }, async ({ pii, data, tenant }) => {
-  // …
-});
-
-// tests/catalog/read.ts
-'PII-RD-010': {
-  what: 'Saves a formatted test phone for a fake user, then reads it back.',
-  why: 'Apps rely on getting the cleaned-up number back, not what the user typed.',
-  steps: ['Save a formatted test phone', 'Read the PHONE field', 'Compare the value'],
-  expected: '200 OK; the value is the digits-only phone number.',
-  type: 'Positive',
-  priority: 'High',
-  preconditions: 'Needs approved test phone numbers',
-  // endpoint: not needed — PII-RD already means "Read PII"
-},
-```
-
-Self-test **UT-DOC-002** fails, telling you exactly what's missing, if a test has no catalog entry, or if its endpoint
-can't be worked out from the ID (e.g. a new `PII-AZ` permission test must say `endpoint: 'readPii'` or similar).
+Blocked tests unblock themselves: e.g. the EMAIL tests run for real as soon as Dev grants EMAIL access — today
+they record the real `403 AUTHORIZATION_DENIED` as the reason.
 
 ---
 
 ## Running it
 
-**Without the service** (checks your setup, about 5 minutes; needs Node.js 20.19+):
+**Setup** (Node.js 20.19+):
 
 ```bash
 npm ci && npx playwright install chromium
-npm run verify                     # 83 self-tests → "83 passed"
-npm run report:demo && npm run report:open -- --demo    # sample report (made-up data)
+npm run verify                     # typecheck, lint, format, framework self-tests (no network)
+cp .env.example .env               # then put the Aisle test token in AISLE_TEST_TOKEN (never commit it)
+npm run check-env                  # checks settings, the token and which fields the Aisle caller can use
 ```
 
-**Against the service:**
+**Run against the Aisle staging facade** (`https://testa2.aisle.co/V1`):
 
 ```bash
-cp .env.example .env               # fill it in: every line is explained
-npm run keys:generate -- secrets/primary-caller          # send the .pub.pem to the backend team
-npm run check-env                  # confirms settings + connection
-npm run test:all                   # all 133 tests → report → PDF
+npm run test:poc                   # POC-001…003 (email) — Blocked until Dev grants EMAIL access / DB access
+npm run test:phase1                # the 10 Phase-1 tests that prove the migration
+npm run test:all                   # all tests → report → PDF → Excel
+npm run report                     # rebuild the report from the last run
 npm run report:open
 ```
 
-Subsets: `npm run test:all -- --grep @smoke` · one test: `npx playwright test --grep PII-RD-001` · one folder:
-`npx playwright test tests/security`. All commands: [docs/execution-guide.md](docs/execution-guide.md).
-
----
-
-## Status: Pass / Fail / Not Tested
-
-The report and the Excel sheet use only three statuses, always for **every** test case:
-
-| Status           | Meaning                                                                                                                                                      |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| ✔ **Pass**       | The test ran in the last run and passed                                                                                                                      |
-| ✘ **Fail**       | The test ran in the last run and failed (the reason shows as "Expected …, got …")                                                                            |
-| — **Not Tested** | Anything else: not part of the last run, waiting on a Dev answer, skipped for missing setup, or the service was unreachable. The reason is shown next to it. |
-
-So if you run one test, that test shows Pass or Fail and all the others show Not Tested.
-
-## The report
-
-`reports/qa-report/index.html` (plus `report.pdf`, `test-cases.xlsx`, `results.csv`, `summary.txt`). Export → **Excel (.xlsx)** downloads the same styled workbook as `docs/test-cases.xlsx`, with this run’s results:
-
-- **Banner**: the answer in one sentence, four numbers, and a **health score** speedometer (0–100%)
-- **01 What needs attention**: each failure as **Expected → Got**, plus how many tests were not tested and why
-- **02 How each endpoint did**: one tile per endpoint (method + path); click one to see its test cases
-- **03 All tests**: every test case under a heading per endpoint, with a one-line description; click a row to see
-  what it does, why it matters, the steps and the expected result
-- **04 About this run**: environment, time, duration
-
-**Keyboard shortcuts** (press `?` in the report):
-
-| Key          | Action                | Key         | Action                         |
-| ------------ | --------------------- | ----------- | ------------------------------ |
-| `⌘/Ctrl K`   | search everything     | `F` `W` `A` | show Fail / Not Tested / All   |
-| `/`          | search the test list  | `← →`       | previous / next page           |
-| `1`–`4`      | jump to section 01–04 | `J` `K`     | next / previous test (details) |
-| `0` / `Home` | back to top           | `E`         | export menu                    |
-| `D`          | dark / light mode     | `Q`         | fold the quick-action bar      |
-| `Esc`        | close                 | `?`         | show all shortcuts             |
-
-More: [docs/reporting.md](docs/reporting.md).
+Subsets: `npm run test:smoke` · `npm run test:security` · `npm run test:db` · one test:
+`npx playwright test --grep AISLE-RD-001`. All commands: [docs/execution-guide.md](docs/execution-guide.md).
 
 ---
 
 ## Rules (enforced in code)
 
-- Never print or log personal data, keys, signatures or passwords. The logger and assertions hide them.
-- Never commit `.env`, `secrets/`, `*.pem` or `config/db-queries.json` (they are git-ignored).
-- Fake data only: non-production tenants and team-approved phone numbers.
-- The database is read-only. Never change shared data without approval.
-- Never fake results: a test that can't run shows as Waiting or Skipped, with the reason.
+- The Aisle test token lives only in `.env` / CI secrets. It is never hard-coded, printed, logged, put in reports or
+  error messages; the logger scrubs it and any `Authorization` header.
+- Never print or log personal data, free-text keys or DB passwords. Assertions compare without printing values.
+- Fake data only (`qa-auto-…` users, `example.test` emails, team-approved phone numbers). Never production data.
+- The database is read-only (SELECT only — writes are rejected by the framework).
+- Never fake results: a test that can't run shows as **Blocked** or **Skipped**, with the reason.
 
 ---
 
 ## Status and docs
 
-| Part                 | Tests | Status                                                                                                                      |
-| -------------------- | :---: | --------------------------------------------------------------------------------------------------------------------------- |
-| Framework self-tests |  83   | all passing                                                                                                                 |
-| Report tests         |  48   | all passing                                                                                                                 |
-| PII service tests    |  133  | written; **not yet run against a real service**: waiting on the items in [PENDING-PLACEHOLDERS.md](PENDING-PLACEHOLDERS.md) |
+| Part                 | Tests | Status                                                                                   |
+| -------------------- | :---: | ---------------------------------------------------------------------------------------- |
+| Framework self-tests |  60   | passing (`npm run verify`)                                                               |
+| Aisle facade tests   |  49   | written; see the migration report for the latest staging run and what is Blocked and why |
 
-[Pending placeholders](PENDING-PLACEHOLDERS.md) · [Test cases (Excel)](docs/test-cases.xlsx) · [Setup](docs/setup-guide.md) · [Commands](docs/execution-guide.md) · [Test scenarios](docs/test-scenarios.md) ·
-[Open questions](docs/known-gaps-and-questions.md) · [Tech doc v3 analysis](docs/tech-doc-v3-analysis.md) · [Architecture](docs/framework-architecture.md) ·
-[Database](docs/database-setup.md) · [Troubleshooting](docs/troubleshooting.md)
+[Backend open questions](docs/backend-open-questions.md) · [Coverage matrix](docs/coverage-matrix.md) ·
+[Pending placeholders](PENDING-PLACEHOLDERS.md) · [Test cases (Excel)](docs/test-cases.xlsx) ·
+[Setup](docs/setup-guide.md) · [Commands](docs/execution-guide.md) · [Endpoints](docs/endpoint-inventory.md) ·
+[Architecture](docs/framework-architecture.md) · [Database](docs/database-setup.md) · [Report](docs/reporting.md) ·
+[Troubleshooting](docs/troubleshooting.md) · [Archive (old direct-PII design)](docs/archive/)

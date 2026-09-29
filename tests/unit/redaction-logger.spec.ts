@@ -2,7 +2,6 @@
 import { expect, test } from '@playwright/test';
 import { Logger } from '../../src/utils/logger';
 import { REDACTED, maskIdentifier, redact, scrubText } from '../../src/utils/redaction';
-import { RFC8032_TEST1_PRIVATE_KEY_PEM } from './helpers/test-keys';
 
 const EMAIL = 'Jane.Sample@corp.example';
 const PHONE = '+91 98765 43210';
@@ -10,11 +9,13 @@ const KEY_B64 = 'odNqEN9fHP8rQw8UnpGgM9x74pVh5RCEb65o9UkwJxE=';
 const REQUEST_ID = '5e136a0b-2c1d-4f3e-9a8b-7c6d5e4f3a2b';
 const TRANSIENT_ID = 'bb1866c4-1cb2-4a80-9254-4d0684198554';
 
+/** A clearly fake PEM-shaped block (not a key) — checks that any PEM text is scrubbed. */
+const FAKE_PEM =
+  '-----BEGIN PRIVATE KEY-----\nTk9UX0FfUkVBTF9LRVlfVU5JVF9URVNUX09OTFk=\n-----END PRIVATE KEY-----';
+
 test.describe('UNIT redaction & logger', () => {
   test('UT-RED-001 The scrubber removes emails, phones, private keys and Base64 keys from text', () => {
-    const out = scrubText(
-      `user ${EMAIL} phone ${PHONE} digits 919876543210 key ${KEY_B64} ${RFC8032_TEST1_PRIVATE_KEY_PEM}`,
-    );
+    const out = scrubText(`user ${EMAIL} phone ${PHONE} digits 919876543210 key ${KEY_B64} ${FAKE_PEM}`);
     for (const secret of [EMAIL, PHONE, '919876543210', KEY_B64, 'MC4CAQAw'])
       expect(out).not.toContain(secret);
     expect(out).toContain('[REDACTED_EMAIL]');
@@ -39,7 +40,7 @@ test.describe('UNIT redaction & logger', () => {
     const out = redact({
       endpoint: 'writePii',
       status: 201,
-      headers: { 'X-PII-Signature': 'sig', 'X-Request-Id': REQUEST_ID },
+      headers: { Authorization: 'Bearer unit-fake-token', 'X-Request-Id': REQUEST_ID },
       body: { value: EMAIL },
       nested: [{ key: KEY_B64, key_id: TRANSIENT_ID, phone: PHONE }],
       buf: Buffer.from('secret'),
@@ -47,7 +48,7 @@ test.describe('UNIT redaction & logger', () => {
     expect(out).toEqual({
       endpoint: 'writePii',
       status: 201,
-      headers: { 'X-PII-Signature': REDACTED, 'X-Request-Id': REQUEST_ID },
+      headers: { Authorization: REDACTED, 'X-Request-Id': REQUEST_ID },
       body: REDACTED,
       nested: [{ key: REDACTED, key_id: TRANSIENT_ID, phone: REDACTED }],
       buf: '[Buffer 6 bytes]',
@@ -112,13 +113,14 @@ test.describe('UNIT redaction & logger', () => {
     expect(JSON.stringify(second)).not.toContain(EMAIL);
   });
 
-  test('UT-RED-008 The body-hash header (an unkeyed hash of PII) is never logged, by key or as free text', () => {
-    const digest = 'a'.repeat(32) + '0123456789abcdef'.repeat(2);
-    const out = redact({ headers: { 'X-PII-Body-Hash': digest }, bodyHash: digest }) as Record<
+  test('UT-RED-008 Bearer tokens and Authorization headers are never logged, by key or as free text', () => {
+    const token = 'deadbeef0123456789abcdef01234567'; // synthetic, 32 hex chars like the Aisle token
+    const out = redact({ headers: { Authorization: `Bearer ${token}` }, authorization: token }) as Record<
       string,
       unknown
     >;
-    expect(JSON.stringify(out)).not.toContain(digest);
-    expect(scrubText(`hash=${digest}`)).not.toContain(digest);
+    expect(JSON.stringify(out)).not.toContain(token);
+    expect(scrubText(`request failed: Authorization: Bearer ${token}`)).not.toContain(token);
+    expect(scrubText(`curl -H "Authorization: bearer ${token}"`)).not.toContain(token);
   });
 });

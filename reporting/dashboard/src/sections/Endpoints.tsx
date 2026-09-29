@@ -1,11 +1,13 @@
 /** "How each endpoint did" — one tile per endpoint (method + path) with a ring; click to see its tests. */
 import { useMemo } from 'preact/hooks';
 import { ENDPOINT_GROUP_ORDER } from '../../../core/catalog';
+import type { Outcome } from '../../../core/analytics';
 import type { ReportTest } from '../../../core/types';
 import { Ring, Section } from '../components/ui';
 import { Icon } from '../icons';
 import { endpointOf, plainEndpoint } from '../plain';
 import { outcomeOf, useApp } from '../store';
+import { plural } from '../utils';
 
 /** Columns that leave the fewest empty slots in the last row (12 → 4×3, 9 → 3×3, 8 → 4×2, 5 → 5). */
 export function balancedColumns(n: number, max = 5, min = 3): number {
@@ -25,9 +27,13 @@ export function balancedColumns(n: number, max = 5, min = 3): number {
 function EndpointCard({ endpoint, tests, index }: { endpoint: string; tests: ReportTest[]; index: number }) {
   const { report, showTests } = useApp();
   const p = plainEndpoint(endpoint, report.endpoints);
-  // Pass / Fail / Not Tested, the same rule as the test list and the Excel sheet.
-  const pass = tests.filter((t) => outcomeOf(t) === 'Pass').length;
-  const fail = tests.filter((t) => outcomeOf(t) === 'Fail').length;
+  // The same outcome rule as the test list and the Excel sheet. Security findings count as failures here.
+  const n = (o: Outcome) => tests.filter((t) => outcomeOf(t) === o).length;
+  const pass = n('Pass');
+  const failN = n('Fail');
+  const findings = n('Security finding');
+  const blocked = n('Blocked');
+  const fail = failN + findings;
   const c = { PASS: pass, FAIL: fail, total: tests.length };
   const executed = pass + fail;
   const waiting = c.total - executed;
@@ -35,11 +41,17 @@ function EndpointCard({ endpoint, tests, index }: { endpoint: string; tests: Rep
   const state = c.FAIL > 0 ? 'fail' : executed === 0 ? 'muted' : waiting > 0 ? 'warn' : 'pass';
   const label =
     c.FAIL > 0
-      ? `${c.FAIL} failed`
+      ? [failN && `${failN} failed`, findings && plural(findings, 'security finding')]
+          .filter(Boolean)
+          .join(' · ')
       : executed === 0
-        ? 'Not tested'
+        ? blocked
+          ? `${blocked} blocked`
+          : 'Not tested'
         : waiting > 0
-          ? 'Partly tested'
+          ? blocked
+            ? `Partly tested · ${blocked} blocked`
+            : 'Partly tested'
           : 'All passed';
   return (
     <button

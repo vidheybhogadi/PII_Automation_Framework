@@ -1,3 +1,7 @@
+> **ARCHIVED — out of scope.** This page describes the old design in which QA called the PII service
+> directly (Ed25519 signing, caller IDs, tenant_id in requests). QA now tests only the **Aisle PII facade**
+> (QA → Aisle → PII service → DB). Current open questions: [../backend-open-questions.md](../backend-open-questions.md).
+
 # Test Scenario Matrix
 
 **Execution status legend:** every integration test below is **implemented but NOT yet executed against a

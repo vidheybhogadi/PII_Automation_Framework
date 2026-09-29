@@ -22,7 +22,8 @@ export class ApiResponse<TData = unknown> {
     readonly headers: Readonly<Record<string, string>>,
     readonly requestId: string,
     readonly durationMs: number,
-    readonly callerId: string | undefined,
+    /** How the request was authenticated: 'token' | 'none' | 'custom'. Never the token itself. */
+    readonly auth: string | undefined,
     rawText: string,
   ) {
     this.#rawText = rawText;
@@ -62,6 +63,19 @@ export class ApiResponse<TData = unknown> {
     const body = this.#json as { error?: { code?: unknown } } | undefined;
     const code = body?.error?.code;
     return typeof code === 'string' ? code : undefined;
+  }
+
+  /**
+   * Field locations of a FastAPI 422 body (`{"detail":[{"loc":["body","value"],"type":...}]}`), e.g.
+   * ["body.value:string_too_short"]. Safe to log: locations and error types only, never the echoed input.
+   */
+  get validationIssues(): string[] {
+    const detail = (this.#json as { detail?: unknown } | undefined)?.detail;
+    if (!Array.isArray(detail)) return [];
+    return detail.map((d) => {
+      const item = d as { loc?: unknown[]; type?: unknown };
+      return `${(item.loc ?? []).join('.')}:${String(item.type ?? '?')}`;
+    });
   }
 
   header(name: string): string | undefined {

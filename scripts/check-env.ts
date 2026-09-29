@@ -1,19 +1,18 @@
 /**
- * Validates configuration WITHOUT printing any secret, then checks service readiness and sends ONE signed
- * probe per configured caller to prove signing, caller registration and permissions work end to end.
- *   npm run check-env              # config + readiness + signed probe
+ * Validates configuration WITHOUT printing any secret, then checks that the Aisle PII facade is reachable
+ * and accepts the test token.
+ *   npm run check-env              # config + readiness + token probe
  *   npm run check-env -- --offline # config only
  *
- * The probe is a read of a random, never-written user ID — it creates no data.
- * Exit code 0 = ready to run integration tests.
+ * The probe is a read of a random, never-written user ID — it creates no data. It also shows which fields
+ * the Aisle caller can use today (NAME vs EMAIL), so blocked access is visible before a run.
+ * Exit code 0 = ready to run the Aisle API tests.
  */
 import dotenv from 'dotenv';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
-import { Ed25519Signer } from '../src/auth/ed25519-signer';
-import { createPiiClient } from '../src/clients/client-factory';
-import { assertIntegrationConfig, loadConfig } from '../src/config/config';
-import { CALLER_ROLES } from '../src/config/env-schema';
+import { createAisleClient } from '../src/clients/client-factory';
+import { assertIntegrationConfig, isDbConfigured, loadConfig } from '../src/config/config';
 import { pendingSettings } from '../src/config/placeholders';
 import { Logger } from '../src/utils/logger';
 
@@ -29,66 +28,39 @@ async function main(): Promise<void> {
   const pending = pendingSettings(process.env);
   if (pending.length)
     warn(
-      `${pending.length} setting(s) still hold a PENDING_ placeholder (waiting on the backend team; see ` +
-        `PENDING-PLACEHOLDERS.md): ${pending.join(', ')}`,
+      `${pending.length} setting(s) still hold a PENDING_ placeholder (see PENDING-PLACEHOLDERS.md): ` +
+        pending.join(', '),
     );
   assertIntegrationConfig(config);
-  ok(`PII_BASE_URL set (${config.baseUrl})`);
-  ok(
-    `Tenants: primary set, secondary ${config.tenants.secondary ? 'set' : 'NOT set (tenant-isolation tests will fail)'}`,
-  );
-
-  for (const role of CALLER_ROLES) {
-    const creds = config.callers[role];
-    if (!creds) {
-      warn(`caller "${role}" not configured — tests needing it fail with an actionable message`);
-      continue;
-    }
-    Ed25519Signer.fromPem(creds.privateKeyPem, role); // throws a safe error if the key is invalid
-    ok(`caller "${role}" configured (id=${creds.callerId}); Ed25519 private key parses`);
-  }
-  if (config.testData.phones.length === 0) warn('PII_TEST_PHONES empty — phone/transient tests will fail');
+  ok(`AISLE_BASE_URL ${config.baseUrl}`);
+  ok('AISLE_TEST_TOKEN set (value never printed)');
+  ok(`Test email domain: ${config.testData.emailDomain}`);
+  if (config.testData.phones.length === 0)
+    warn('AISLE_TEST_PHONES empty — phone / temporary-phone tests will be BLOCKED (BQ-03)');
   else ok(`${config.testData.phones.length} approved test phone(s) configured`);
-  if (config.db.engine === 'none')
-    warn('DB_ENGINE=none — @db tests will fail until DB validation is configured');
-  else ok(`DB_ENGINE=${config.db.engine}, queries file ${config.db.queriesFile ?? '(not set)'}`);
+  if (isDbConfigured(config)) ok(`DB validation configured (${config.db.engine}, read-only)`);
+  else warn('DB validation not configured — @db tests will be BLOCKED (BQ-04)');
 
   if (offline) return;
-  const res = await createPiiClient(config, new Logger(), null).healthReady();
-  if (res.status !== 200) throw new Error(`Service not ready: ${res.summary()}`);
-  ok(`Service ready: ${res.summary()}`);
+  const client = createAisleClient(config, new Logger());
+  const health = await client.healthReady();
+  if (health.status === 401) throw new Error(`Aisle rejected the test token: ${health.summary()}`);
+  if (health.status !== 200) throw new Error(`Aisle PII facade not ready: ${health.summary()}`);
+  ok(`Facade ready and token accepted: ${health.summary()}`);
 
-  // Signed probe: POST /api/v1/pii/read for a user that cannot exist. Expected per role:
-  //   primary/secondary → 404 PII_NOT_FOUND (auth OK + READ on EMAIL)   limited → 403 (auth OK, no READ on EMAIL)
-  const tenant = config.tenants.primary as string;
+  // Token + field-access probe: read a user that cannot exist. 404 = access OK; 403 = field not granted.
   const userId = `${config.testData.runPrefix}-probe-${randomUUID().slice(0, 8)}`;
-  let failures = 0;
-  for (const role of CALLER_ROLES) {
-    if (!config.callers[role]) continue;
-    const probe = await createPiiClient(config, new Logger(), role).readPii(
-      { tenant_id: tenant, user_id: userId, field_names: ['EMAIL'] },
-      { retry: false },
-    );
-    const expected = role === 'limited' ? 403 : 404;
+  for (const field of ['NAME', 'EMAIL', 'PHONE']) {
+    const probe = await client.readPii({ user_id: userId, field_names: [field] }, { retry: false });
     const meaning: Record<number, string> = {
-      401: 'AUTHENTICATION FAILED — caller ID not registered, wrong private key for this caller ID, or signature mismatch',
-      403:
-        role === 'limited'
-          ? 'authenticated; READ on EMAIL correctly denied'
-          : 'authenticated, but READ on EMAIL is NOT granted — check caller permissions',
-      404: 'authenticated and authorized (PII_NOT_FOUND for the random probe user, as expected)',
+      404: 'access OK (PII_NOT_FOUND for the random probe user, as expected)',
+      403: 'NOT granted to the Aisle caller — tests needing it will be BLOCKED',
+      401: 'token rejected',
     };
-    const text = `signed probe as "${role}": ${probe.summary()} — ${meaning[probe.status] ?? 'unexpected response'}`;
-    if (probe.status === expected) ok(text);
-    else {
-      failures += 1;
-      console.log(`  ✘ ${text}`);
-    }
+    const text = `${field}: ${probe.summary()} — ${meaning[probe.status] ?? 'unexpected response'}`;
+    if (probe.status === 404) ok(text);
+    else warn(text);
   }
-  if (failures)
-    throw new Error(
-      `${failures} caller probe(s) failed — fix caller registration/permissions before running tests (docs/setup-guide.md §4-5).`,
-    );
 }
 
 main().catch((error: Error) => {

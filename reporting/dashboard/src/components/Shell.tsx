@@ -262,7 +262,7 @@ export function Topbar() {
           <Logo size={32} />
           <div class="brand__text">
             <div class="brand__name">{report.meta.product}</div>
-            <div class="brand__sub">PII API test report</div>
+            <div class="brand__sub">Aisle PII API test report</div>
           </div>
         </div>
         <span class={`tag ${isDemo ? 'status--BLOCKED' : 'tag--accent'}`}>

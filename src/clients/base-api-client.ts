@@ -1,79 +1,58 @@
 /**
- * BaseApiClient — the ONLY place where requests are serialized, signed and sent.
+ * BaseApiClient — the ONLY place where requests to the Aisle PII facade are built and sent.
+ *
+ * Authentication: every facade endpoint needs the Aisle test token. It is added HERE, once, as
+ * `Authorization: Bearer <token>`; tests never build auth headers themselves. The token is held in a
+ * `Secret` and is never logged, never put in error messages and never attached to reports.
+ *
+ * Aisle sets the tenant and signs the request to the PII service internally, so this client sends no
+ * tenant_id, no caller ID and no signature.
  *
  * Why Axios and not Playwright's APIRequestContext?
- *   Playwright traces record full request/response bodies and headers. For a PII service that would put
- *   plaintext PII, signatures and raw free-text keys into trace.zip files attached to reports. Axios traffic
- *   is invisible to Playwright tracing, and Axios lets us send a pre-built Buffer byte-for-byte (with
- *   request/response transforms disabled), which the signature scheme requires.
- *
- * Signing flow (guide "Authentication"; checklist item 5 "Serialize each request once, sign those exact
- * bytes, and transmit the same bytes"):
- *   1. payload  --JSON.stringify once-->  string  --UTF-8-->  bodyBytes (Buffer)
- *   2. X-PII-Signature = Base64(Ed25519.sign(privateKey, SHA256(bodyBytes)))
- *   3. The SAME bodyBytes Buffer is handed to Axios as the request body. Nothing re-serializes it.
+ *   Playwright traces record full request/response bodies and headers — here that would be the Bearer token
+ *   and decrypted personal data inside trace.zip files attached to reports. Axios traffic is invisible to
+ *   Playwright tracing, and Axios can send a pre-built Buffer byte-for-byte (needed for the broken-JSON test).
  */
 import axios, { type AxiosResponse } from 'axios';
-import { createHash } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
-import type { Ed25519Signer } from '../auth/ed25519-signer';
 import type { Logger } from '../utils/logger';
 import { currentPhase } from '../utils/phase';
 import { newRequestId } from '../utils/request-id';
 import { withRetry, type RetryPolicy } from '../utils/retry';
+import type { Secret } from '../utils/secret';
 import { ApiResponse } from './api-response';
 import { buildPath, type EndpointDefinition, type HttpMethod } from './endpoints';
 
-/**
- * Request headers. The Integration Guide documents Caller-Id, X-Request-Id and Signature. The tech doc v3
- * (§11.1) documents X-PII-Request-Id and a required X-PII-Body-Hash (hex SHA-256 of the body) instead.
- * Until Dev confirms which contract is deployed (Q-30), every request carries BOTH request-ID headers (same
- * UUIDv4) and the body hash. A service that does not expect a header ignores it.
- */
 export const HEADER = {
+  AUTHORIZATION: 'Authorization',
   CONTENT_TYPE: 'Content-Type',
-  CALLER_ID: 'X-PII-Caller-Id',
+  /** Correlation ID for our own logs; Aisle may ignore it. */
   REQUEST_ID: 'X-Request-Id',
-  PII_REQUEST_ID: 'X-PII-Request-Id',
-  BODY_HASH: 'X-PII-Body-Hash',
-  SIGNATURE: 'X-PII-Signature',
 } as const;
-export type AuthHeaderName = (typeof HEADER)[keyof typeof HEADER];
 
 export const JSON_CONTENT_TYPE = 'application/json';
 
-/** Serialize a payload ONCE into the exact bytes that will be signed and sent. Compact JSON, UTF-8. */
+/** Serialize a payload ONCE into the exact bytes that will be sent. Compact JSON, UTF-8. */
 export function serializeBody(payload: unknown): Buffer {
   const json = JSON.stringify(payload);
   if (json === undefined) throw new Error('Payload is not JSON-serializable');
   return Buffer.from(json, 'utf8');
 }
 
-/** An identity that can sign requests. */
-export interface SigningIdentity {
-  readonly callerId: string;
-  readonly signer: Ed25519Signer;
-}
-
 /**
- * Controlled request mutations for NEGATIVE security tests. Centralizing them here means tests never
- * re-implement signing; they only declare what should be wrong with the request.
+ * Controlled request changes for NEGATIVE tests. Tests only declare what should be wrong; the client
+ * still builds everything else centrally.
  */
 export interface TamperOptions {
-  /** Send no auth headers at all (Caller-Id, Request-Id, Signature). */
-  unauthenticated?: boolean;
-  /** Remove specific headers after they are built. */
-  omitHeaders?: readonly AuthHeaderName[];
-  /** Override header values after they are built (e.g. a malformed signature or unknown caller ID). */
-  headers?: Readonly<Record<string, string>>;
-  /** Transmit these bytes instead of the serialized payload (signature is computed over them unless `signOverBytes`). */
+  /**
+   * Replace the Authorization header: `null` sends none at all; a string is sent exactly as given
+   * (e.g. "Bearer not-a-real-token", "Token abc"). Never put the real token in here.
+   */
+  authorization?: string | null;
+  /** Send no Content-Type header. */
+  omitContentType?: boolean;
+  /** Transmit these exact bytes instead of the serialized payload (e.g. broken JSON). */
   bodyBytes?: Buffer;
-  /** Compute the signature over these bytes instead of the transmitted ones -> body/signature mismatch. */
-  signOverBytes?: Buffer;
-  /** Sign with a different key while keeping this client's caller ID. */
-  signWith?: Ed25519Signer;
-  /** 'raw-body' signs the body without SHA-256 first (wrong scheme). Default 'sha256-digest'. */
-  signatureScheme?: 'sha256-digest' | 'raw-body';
 }
 
 export interface CallOptions {
@@ -91,7 +70,8 @@ export interface PreparedRequest {
   headers: Record<string, string>;
   bodyBytes: Buffer | undefined;
   requestId: string;
-  callerId: string | undefined;
+  /** How the request was authenticated — safe to log: 'token' | 'none' | 'custom'. */
+  auth: 'token' | 'none' | 'custom';
 }
 
 export interface BaseClientOptions {
@@ -99,7 +79,8 @@ export interface BaseClientOptions {
   timeoutMs: number;
   retryPolicy: RetryPolicy;
   logger: Logger;
-  identity?: SigningIdentity;
+  /** The Aisle test token. Omit only for clients that must never authenticate. */
+  token?: Secret;
 }
 
 export class ApiTransportError extends Error {
@@ -116,59 +97,35 @@ export class BaseApiClient {
     this.options = { ...options, baseUrl: options.baseUrl.replace(/\/+$/, '') };
   }
 
-  get callerId(): string | undefined {
-    return this.options.identity?.callerId;
-  }
-
   /**
    * Build the exact request (URL, headers, body bytes) without sending it.
-   * Public so unit tests can inspect it and security tests can reason about it.
+   * Public so unit tests can inspect it.
    */
   prepare(endpoint: EndpointDefinition, payload: unknown, callOptions: CallOptions = {}): PreparedRequest {
     const tamper = callOptions.tamper ?? {};
     const path = buildPath(endpoint.path, callOptions.pathParams);
     const requestId = newRequestId();
-
-    // (1) Serialize exactly once.
     const bodyBytes = tamper.bodyBytes ?? (payload === undefined ? undefined : serializeBody(payload));
 
-    const headers: Record<string, string> = {};
-    if (bodyBytes !== undefined) headers[HEADER.CONTENT_TYPE] = JSON_CONTENT_TYPE;
-    headers[HEADER.REQUEST_ID] = requestId;
-    headers[HEADER.PII_REQUEST_ID] = requestId;
+    const headers: Record<string, string> = { [HEADER.REQUEST_ID]: requestId };
+    if (bodyBytes !== undefined && !tamper.omitContentType) headers[HEADER.CONTENT_TYPE] = JSON_CONTENT_TYPE;
 
-    const identity = this.options.identity;
-    if (endpoint.authenticated && !tamper.unauthenticated) {
-      if (!identity) {
+    let auth: PreparedRequest['auth'] = 'none';
+    if (tamper.authorization !== undefined) {
+      if (tamper.authorization !== null) {
+        headers[HEADER.AUTHORIZATION] = tamper.authorization;
+        auth = 'custom';
+      }
+    } else if (endpoint.authenticated) {
+      if (!this.options.token) {
         throw new Error(
-          `Endpoint ${endpoint.key} requires authentication but this client has no caller identity. ` +
-            'Create it with a configured caller (see requireCaller in src/config/config.ts).',
+          `Endpoint ${endpoint.key} needs the Aisle test token but this client has none. ` +
+            'Set AISLE_TEST_TOKEN (see docs/setup-guide.md).',
         );
       }
-      // (2) Sign the SHA-256 digest of the exact bytes (or deliberately different bytes for negative tests).
-      const signer = tamper.signWith ?? identity.signer;
-      const bytesToSign = tamper.signOverBytes ?? bodyBytes ?? Buffer.alloc(0);
-      const signature =
-        tamper.signatureScheme === 'raw-body'
-          ? signer.signRawBodyWithoutDigest(bytesToSign)
-          : signer.signBody(bytesToSign);
-      headers[HEADER.CALLER_ID] = identity.callerId;
-      // The digest the caller attests to (tech doc §12): of the SIGNED bytes, so a body changed after signing
-      // is caught as a hash mismatch.
-      headers[HEADER.BODY_HASH] = createHash('sha256').update(bytesToSign).digest('hex');
-      headers[HEADER.SIGNATURE] = signature;
+      headers[HEADER.AUTHORIZATION] = `Bearer ${this.options.token.reveal()}`;
+      auth = 'token';
     }
-    if (tamper.unauthenticated) {
-      delete headers[HEADER.REQUEST_ID];
-      delete headers[HEADER.PII_REQUEST_ID];
-    }
-
-    for (const name of tamper.omitHeaders ?? []) {
-      delete headers[name];
-      // "No request ID" means neither spelling of it.
-      if (name === HEADER.REQUEST_ID) delete headers[HEADER.PII_REQUEST_ID];
-    }
-    Object.assign(headers, tamper.headers ?? {});
 
     return {
       method: endpoint.method,
@@ -176,8 +133,8 @@ export class BaseApiClient {
       url: `${this.options.baseUrl}${path}`,
       headers,
       bodyBytes,
-      requestId: headers[HEADER.REQUEST_ID] ?? requestId,
-      callerId: headers[HEADER.CALLER_ID],
+      requestId,
+      auth,
     };
   }
 
@@ -193,7 +150,7 @@ export class BaseApiClient {
       : { ...this.options.retryPolicy, maxRetries: 0 };
 
     return withRetry(
-      // A fresh request (and fresh X-Request-Id) per attempt — checklist item 6.
+      // A fresh request (and fresh X-Request-Id) per attempt.
       () => this.send<TData>(endpoint.key, this.prepare(endpoint, payload, callOptions)),
       (response) => response.status === 503,
       policy,
@@ -208,7 +165,7 @@ export class BaseApiClient {
     );
   }
 
-  /** Send a prepared request exactly as built. (3) The same Buffer that was signed is transmitted. */
+  /** Send a prepared request exactly as built. Headers and bodies are never logged. */
   async send<TData = unknown>(
     endpointKey: ApiResponse['endpoint'],
     request: PreparedRequest,
@@ -219,8 +176,8 @@ export class BaseApiClient {
       response = await axios.request<string>({
         method: request.method,
         url: request.url,
-        // Axios would otherwise inject "Content-Type: application/x-www-form-urlencoded" when the header is
-        // absent, which would silently defeat the "missing Content-Type" negative test. `false` = do not send.
+        // Axios would otherwise add "Content-Type: application/x-www-form-urlencoded" when the header is
+        // absent, which would defeat the "no Content-Type" negative test. `false` = do not send.
         headers: { [HEADER.CONTENT_TYPE]: false, ...request.headers },
         data: request.bodyBytes,
         timeout: this.options.timeoutMs,
@@ -243,11 +200,11 @@ export class BaseApiClient {
         transportError: code,
         durationMs,
       });
-      // Message deliberately excludes body/headers.
+      // Message deliberately excludes body and headers (the Authorization header holds the token).
       throw new ApiTransportError(
         `${request.method} ${request.path} failed before an HTTP response was received (${code}, ` +
-          `requestId=${request.requestId}, ${durationMs}ms). Check PII_BASE_URL, VPN/network access and ` +
-          `that the service is running.`,
+          `requestId=${request.requestId}, ${durationMs}ms). Check AISLE_BASE_URL, network/VPN access and ` +
+          `that the Aisle staging service is up.`,
       );
     }
 
@@ -264,7 +221,7 @@ export class BaseApiClient {
       headers,
       request.requestId,
       durationMs,
-      request.callerId,
+      request.auth,
       typeof response.data === 'string' ? response.data : '',
     );
 
@@ -273,7 +230,7 @@ export class BaseApiClient {
       phase: currentPhase(),
       method: request.method,
       path: request.path,
-      caller: request.callerId,
+      auth: request.auth,
       requestId: request.requestId,
       status: result.status,
       errorCode: result.errorCode,

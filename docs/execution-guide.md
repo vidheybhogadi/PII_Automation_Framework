@@ -1,67 +1,74 @@
-# Execution Guide
+# Execution guide
 
-## Commands
+All commands run from the project root. The facade tests need `.env` with `AISLE_TEST_TOKEN`
+(see [setup-guide.md](setup-guide.md)).
 
-| Command                                 | Runs                                                                                      |
-| --------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `npm run verify`                        | typecheck + lint + format check + unit tests (no service)                                 |
-| `npm run test:unit`                     | framework self-tests only (no service, no .env)                                           |
-| `npm run test:api`                      | all integration tests against `PII_BASE_URL`                                              |
-| `npm run test:poc`                      | POC-001 (Write → DB → Read)                                                               |
-| `npm run test:smoke`                    | `@smoke` critical path (15 tests)                                                         |
-| `npm run test:regression`               | `@regression` (all functional)                                                            |
-| `npm run test:security`                 | `@security` (auth, authz, tenant isolation, response security)                            |
-| `npm run test:db`                       | `@db` (needs DB config)                                                                   |
-| `npm run test:debug`                    | integration tests, 1 worker, no retries, redacted logs to console                         |
-| `npm test`                              | unit + integration                                                                        |
-| `npm run test:list`                     | list all tests without running                                                            |
-| `npm run test:all`                      | tests → dashboard → history → PDF (see docs/reporting.md)                                 |
-| `npm run report`                        | PII Sentinel dashboard from the last run → `reports/qa-report`                            |
-| `npm run report:pdf`                    | programmatic PDF of the dashboard                                                         |
-| `npm run report:open`                   | open the latest report (`-- --demo` opens the demo report)                                |
-| `npm run report:demo`                   | sample report + PDF from made-up DEMO data → `reports/demo-report`                        |
-| `npm run report:dev`                    | live preview while editing the report's design                                            |
-| `npm run report:test`                   | tests for the report itself                                                               |
-| `npm run report:clean`                  | delete generated reports (`-- --all` also deletes run history)                            |
-| `npm run report:playwright`             | Playwright's raw HTML report (`reports/html`)                                             |
-| `npm run check-env`                     | validate `.env` and send one signed probe per caller                                      |
-| `npm run keys:generate -- <path>`       | create an Ed25519 caller key pair (`<path>.pem` + `.pub.pem`)                             |
-| `npm run typecheck` / `lint` / `format` | code checks and formatting                                                                |
-| `npm run docs:pending`                  | rebuild `PENDING-PLACEHOLDERS.md`: every placeholder still owed by Dev and where it is    |
-| `npm run docs:testcases`                | rebuild `docs/test-cases.xlsx`: every test case grouped by endpoint, with the last result |
-| `npm run docs:traceability`             | regenerate `docs/requirements-traceability.md`                                            |
+## Everyday commands
 
-Useful Playwright options (append after `--`):
+| Command                     | What it does                                                                                      |
+| --------------------------- | ------------------------------------------------------------------------------------------------- |
+| `npm run verify`            | typecheck + lint + format check + framework self-tests (no network)                               |
+| `npm run check-env`         | validates `.env`, checks the token against the facade, shows which fields are accessible          |
+| `npm run test:poc`          | POC-001…003 — the email proof of concept (save → read → DB)                                       |
+| `npm run test:phase1`       | the 10 Phase-1 tests that prove the migration to the Aisle facade                                 |
+| `npm run test:smoke`        | the Smoke suite                                                                                   |
+| `npm run test:regression`   | the Regression suite                                                                              |
+| `npm run test:security`     | token, tenant-spoofing and leak checks                                                            |
+| `npm run test:db`           | read-only DB validation (Blocked until DB access is given)                                        |
+| `npm run test:api`          | every facade test                                                                                 |
+| `npm run test:all`          | all facade tests → report → PDF → `docs/test-cases.xlsx` → open report (extra args are passed on) |
+| `npm run report`            | rebuild the report from the last run (`reports/latest/run-data.json`)                             |
+| `npm run report:open`       | open the report                                                                                   |
+| `npm run report:pdf`        | export the report to PDF                                                                          |
+| `npm run docs:testcases`    | rebuild `docs/test-cases.xlsx` (keeps Tester Notes)                                               |
+| `npm run docs:pending`      | rebuild `PENDING-PLACEHOLDERS.md`                                                                 |
+| `npm run docs:traceability` | rebuild `docs/requirements-traceability.md`                                                       |
+
+Every `test:*` command except `test:unit`, `test:debug` and `test:list` runs the full pipeline: tests → report
+(`reports/qa-report/`, archived copy in `reports/archive/<timestamp>__<run-id>/`) → PDF → `docs/test-cases.xlsx`,
+then opens the dashboard in your browser. Auto-open is skipped in CI; turn it off locally with `-- --no-open` or
+`REPORT_OPEN=false`.
+
+## Daily run and report email (GitHub Actions)
+
+[`.github/workflows/pii-api-tests.yml`](../.github/workflows/pii-api-tests.yml) runs the full `npm run test:all`
+on staging **every day at 08:00 IST** (cron `30 2 * * *`, UTC; GitHub may start it a few minutes late, and only
+from `main`). Pull requests run only the offline checks. After the report and PDF are built, `npm run report:mail`
+emails it: a short summary and the run link, then **every PDF page shown inline** in the body (no attachment). If
+no report was produced, a short "run failed" email is sent instead. A manual run (Actions → Run workflow) can
+switch the email off with `send_email`.
+
+Settings in GitHub (Settings → Environments → `staging`):
+
+| Name                         | Kind     | Value                                                                 |
+| ---------------------------- | -------- | --------------------------------------------------------------------- |
+| `SMTP_USER`, `SMTP_PASSWORD` | secret   | Microsoft 365 mailbox that sends the report (SMTP AUTH enabled by IT) |
+| `REPORT_MAIL_TO`             | variable | comma-separated recipients (default `vidhey.bhogadi@infoedge.com`)    |
+| `REPORT_MAIL_FROM`           | variable | optional sender address (defaults to `SMTP_USER`)                     |
+| `SMTP_HOST`, `SMTP_PORT`     | variable | optional (default `smtp.office365.com`, `587`)                        |
+
+Preview the email locally without sending: `npm run report:mail -- --dry-run` → `reports/email-preview/email.html`.
+
+## Single tests and debugging
 
 ```bash
-npm run test:api -- -g "PII-WR-00"                 # by ID prefix
-npm run test:api -- tests/transient                # by folder
-npm run test:api -- --grep-invert @db              # everything except DB
-npm run test:api -- --workers=2                    # parallelism
-ENV_FILE=.env.qa npm run test:smoke                # environment selection
-PII_TEST_RUN_ID=qa-auto-20260926t101500-ab12 npm run test:api -- -g PII-RD-001   # reproduce a run's IDs
+npx playwright test --grep AISLE-RD-001                 # one test
+npx playwright test tests/security                      # one folder
+npm run test:debug -- --grep AISLE-WR-002               # one worker, redacted log lines on the console
+PII_TEST_RUN_ID=qa-auto-20260929t101500-ab12 npm run test:api -- -g AISLE-RD-001   # reproduce a run's IDs
 ```
 
-`test:debug` sets env vars inline (macOS/Linux). On Windows PowerShell:
-`$env:PII_LOG_TO_CONSOLE='true'; npx playwright test --project=api --workers=1`.
+Every test attaches a redacted `api-calls.log` (method, path, status, request ID, error code — never the token,
+bodies or personal data) to the Playwright report (`npm run report:playwright`).
 
-## Reading results
+## Reading the results
 
-- **PII Sentinel dashboard**: `reports/qa-report/index.html` (+ `report.pdf`, `results.csv`, `results.json`, `summary.txt`) — see `docs/reporting.md`.
-- **Playwright HTML report**: `reports/html` — each test has `api-calls.log` (redacted: endpoint, method, request ID, caller role,
-  status, error code, duration) and, where relevant, `cleanup-summary.json`.
-- **Annotations**: `blocked` (question ID + reason) and `assumption` (tolerant expectation).
-- **JUnit**: `reports/junit/results.xml` for CI dashboards. **JSON**: `reports/json/results.json`.
-- Traces/screenshots/videos are deliberately off (see architecture §3).
+- **Pass / Fail** — ran; Fail means investigate.
+- **Security finding** — failed on a known, reported defect (e.g. AISLE-SEC-002 / BQ-08). Expected until Dev
+  fixes it; it still makes the run "not green".
+- **Blocked** — could not be tested; the reason names the BQ-xx question (e.g. EMAIL access denied with the real
+  403). These run for real automatically once the blocker is removed.
+- **Skipped / Not Tested** — deliberately not run / not part of this run.
 
-Statuses: _passed_; _failed_ (real defect **or** missing config — the message says which); _skipped_ (out of scope via
-`PII_ENDPOINTS_IN_SCOPE`, or a data prerequisite like PH2); _fixme_ (blocked by a backend question).
-
-## Parallelism and data
-
-Tests are independent: every test creates its own run-prefixed users, emails and keys. Batch seeding is chunked (10 at a time).
-The run ID is shared across workers. Use a dedicated QA tenant: data is never deleted (no delete API, Q-15).
-
-## Correlating with server logs
-
-Every call's `X-Request-Id` is in `api-calls.log`. Give it to the backend team to find the matching server-side log entry.
+Test data can't be deleted (no delete API): every writing test records what it left behind in
+`cleanup-summary.json`. Generated users all start with the run prefix (`qa-auto-…`).

@@ -1,102 +1,124 @@
-/** Response-level security controls and PII-hygiene checks. */
-import { expectError } from '../../src/assertions/response.assertions';
-import { expectNoSecretsIn, expectResponseDoesNotEcho } from '../../src/assertions/security.assertions';
-import { serializeBody } from '../../src/clients/base-api-client';
-import { formattedPhone } from '../../src/data/test-data-factory';
-import { createKey, createTransient, seedField } from '../../src/fixtures/steps';
-import { blockedBy, expect, noteAssumption, onlyIfInScope, test } from '../../src/fixtures/test-fixtures';
-import { ERROR_CODES } from '../../src/models/common.models';
+/**
+ * Security checks on what the Aisle facade exposes: tenant injection, echo of personal data in errors,
+ * leaks into our own logs/reports, and user isolation. Assertion messages never contain the values.
+ */
+import { expectStatus, expectSuccess, expectValidationError } from '../../src/assertions/response.assertions';
+import { expectNoSecretsIn, expectSecretEquals } from '../../src/assertions/security.assertions';
+import { requireToken } from '../../src/config/config';
+import { expectNotPersisted, seedField } from '../../src/fixtures/steps';
+import { blockedBy, expect, noteAssumption, securityFinding, test } from '../../src/fixtures/test-fixtures';
+import { PII_FIELDS, readPiiDataSchema, writePiiDataSchema } from '../../src/models/pii.models';
 
-test.describe('Response security', { tag: ['@security', '@regression'] }, () => {
-  onlyIfInScope('writePii', 'readPii');
+/** Tenant set by the facade itself (observed on staging). */
+const AISLE_TENANT = 'aisle';
+/** A clearly made-up tenant, used only to check that the caller cannot choose the tenant. */
+const FAKE_TENANT = 'qa-auto-fake-tenant';
 
-  test('PII-SEC-001 Error messages never repeat the personal value that was sent', async ({
-    pii,
+test.describe('Aisle facade — response and data security', { tag: ['@security'] }, () => {
+  test('AISLE-SEC-001 A tenant ID sent by the caller is ignored or refused: data can never land in another tenant', async ({
+    aisle,
     data,
-    tenant,
-  }) => {
-    noteAssumption(
-      'P-01',
-      'Security policy expectation (not stated in the guide): error bodies must not echo submitted PII.',
-    );
-    const badEmail = `qa-${data.runId}-invalid-email-value`;
-    const res = await pii.writePii({
-      tenant_id: tenant,
-      user_id: data.userId('sec1'),
-      field: 'EMAIL',
-      value: badEmail,
-    });
-    expectError(res, 400, ERROR_CODES.VALIDATION_ERROR);
-    expectResponseDoesNotEcho(res, badEmail);
-  });
-
-  test('PII-SEC-002 A request body over the size limit is rejected (413 BODY_TOO_LARGE)', async ({
-    pii,
-    data,
-    tenant,
-    config,
-  }) => {
-    const max = config.limits.maxBodyBytes;
-    if (!max) {
-      blockedBy(
-        'Q-22',
-        'Configured maximum body size is undocumented; set PII_MAX_BODY_BYTES for this environment.',
-      );
-      return;
-    }
-    const base = { tenant_id: tenant, user_id: data.userId('sec2'), field: 'NAME', value: '' };
-    const overhead = serializeBody(base).length;
-    const oversized = { ...base, value: 'x'.repeat(max - overhead + 1) };
-    expect(serializeBody(oversized).length).toBe(max + 1);
-    expectError(await pii.writePii(oversized, { retry: false }), 413, ERROR_CODES.BODY_TOO_LARGE);
-  });
-
-  test('PII-SEC-003 The development-only signing helper (/docs/signature) is switched off', async ({
-    pii,
-    config,
-  }) => {
-    if (!config.features.signatureHelperMustBeDisabled) {
-      blockedBy(
-        'Q-23',
-        'Only applicable to non-development environments: set PII_SIGNATURE_HELPER_MUST_BE_DISABLED=true there.',
-      );
-      return;
-    }
-    const res = await pii.probeSignatureHelper();
-    expect(
-      res.status >= 200 && res.status < 300,
-      `/docs/signature must not be usable here: ${res.summary()}`,
-    ).toBe(false);
-  });
-
-  test('PII-SEC-004 A full flow across many endpoints leaves no personal data, keys or signatures in the logs', async ({
-    pii,
-    data,
-    tenant,
     cleanup,
-    config,
-    log,
   }) => {
-    const email = data.email();
-    const phone = data.phone(0);
+    noteAssumption('BQ-06', 'observed: the made-up tenant is ignored; ignoring vs refusing is Dev’s call');
+    const userId = data.userId('sec1');
     const name = data.name();
-    const userId = data.userId('sec4');
-    await seedField(pii, cleanup, { tenant, userId, field: 'EMAIL', value: email });
-    await seedField(pii, cleanup, { tenant, userId, field: 'NAME', value: name });
-    await pii.readPii({ tenant_id: tenant, user_id: userId, field_names: ['EMAIL', 'NAME'] });
-    await pii.searchPii('EMAIL', { tenant_id: tenant, value: email, include_values: true });
-    const transient = await createTransient(pii, {
-      tenant,
-      phone: formattedPhone(phone.normalized),
-      ttlSeconds: config.limits.transientTtlMinSeconds,
-    });
-    await pii.resolveTransientPhone({ tenant_id: tenant, transient_id: transient.transient_id });
-    const key = await createKey(pii, cleanup, tenant);
 
-    const lines = log.lines();
-    expect(lines.length).toBeGreaterThanOrEqual(7);
-    expectNoSecretsIn(lines, [email, phone.normalized, name, key.key], 'api-calls.log');
-    // No line may contain an Ed25519 signature-shaped Base64 value (88 chars).
-    expect(lines.filter((l) => /[A-Za-z0-9+/]{86}==/.test(l))).toEqual([]);
+    const write = await aisle.call('writePii', {
+      user_id: userId,
+      field: PII_FIELDS.NAME,
+      value: name,
+      tenant_id: FAKE_TENANT,
+    });
+    if (write.status === 400 || write.status === 422) {
+      // Refused is also safe: nothing may have been saved.
+      await expectNotPersisted(aisle, { userId, field: PII_FIELDS.NAME });
+      return;
+    }
+    cleanup.leaveBehind('PII NAME', userId);
+    const saved = expectSuccess(write, [201, 200], writePiiDataSchema);
+    expect(saved.tenant_id, 'save reply tenant').toBe(AISLE_TENANT);
+
+    const injectedRead = await aisle.call('readPii', {
+      user_id: userId,
+      field_names: [PII_FIELDS.NAME],
+      tenant_id: FAKE_TENANT,
+    });
+    if (injectedRead.status !== 400 && injectedRead.status !== 422) {
+      const read = expectSuccess(injectedRead, 200, readPiiDataSchema);
+      expect(read.tenant_id, 'read reply tenant (tenant sent by caller)').toBe(AISLE_TENANT);
+      expect(read.items.every((i) => i.tenant_id === AISLE_TENANT)).toBe(true);
+    }
+
+    const normalRead = expectSuccess(
+      await aisle.readPii({ user_id: userId, field_names: [PII_FIELDS.NAME] }),
+      200,
+      readPiiDataSchema,
+    );
+    expect(normalRead.tenant_id, 'normal read tenant').toBe(AISLE_TENANT);
+    expect(normalRead.items[0]?.tenant_id).toBe(AISLE_TENANT);
+    expectSecretEquals(normalRead.items[0]?.value, name, 'NAME saved under the aisle tenant');
+  });
+
+  test('AISLE-SEC-002 Error replies do not repeat the personal value that was sent, or internal details', async ({
+    aisle,
+    data,
+  }) => {
+    securityFinding(
+      'BQ-08',
+      '422 replies echo the submitted value and the internal tenant_id in detail[].input',
+    );
+    const name = data.name();
+
+    // Leaving out user_id makes the save fail validation while the fake name is in the request. (For a MISSING
+    // field FastAPI echoes the whole body; a wrong-TYPE field only echoes that field — seen on staging.)
+    const res = await aisle.call('writePii', { field: PII_FIELDS.NAME, value: name });
+    expectValidationError(res, 'user_id');
+    const text = res.rawText();
+    expect(text.includes(name), '422 reply repeats the submitted fake name').toBe(false);
+    expect(text.includes('tenant_id'), '422 reply exposes the internal tenant_id field').toBe(false);
+  });
+
+  test(
+    'AISLE-SEC-003 Test logs and report files contain no token and no personal data',
+    { tag: ['@smoke', '@phase1'] },
+    async ({ aisle, data, cleanup, log, config }) => {
+      const token = requireToken(config).reveal();
+      const userId = data.userId('sec3');
+      const name = data.name();
+
+      await seedField(aisle, cleanup, { userId, field: PII_FIELDS.NAME, value: name });
+      expectStatus(await aisle.readPii({ user_id: userId, field_names: [PII_FIELDS.NAME] }), 200);
+      expectStatus(
+        await aisle.call(
+          'writePii',
+          { user_id: userId, field: PII_FIELDS.NAME, value: name },
+          { tamper: { authorization: null } },
+        ),
+        401,
+      );
+
+      const lines = log.lines();
+      expect(lines.length, 'the calls were logged').toBeGreaterThan(0);
+      expect(
+        lines.some((l) => l.includes('requestId')),
+        'request IDs are still visible',
+      ).toBe(true);
+      expectNoSecretsIn(lines, [token, name], 'api-calls.log');
+
+      const info = test.info();
+      const attachments = info.attachments
+        .filter((a) => a.body !== undefined)
+        .map((a) => a.body!.toString('utf8'));
+      expectNoSecretsIn(
+        [JSON.stringify(info.annotations), ...attachments],
+        [token, name],
+        'report annotations and attachments',
+      );
+    },
+  );
+
+  test('AISLE-SEC-004 The test token cannot read another user’s data', async () => {
+    blockedBy('BQ-07', 'Whether one token may read any user ID is Dev’s decision (today it can)');
   });
 });

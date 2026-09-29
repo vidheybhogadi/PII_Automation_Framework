@@ -1,11 +1,11 @@
 /** Dialogs: search palette, keyboard shortcuts, "how to read this report", score explanation. */
 import type { ComponentChildren } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { formatPct, healthScore } from '../../../core/analytics';
+import { formatPct, healthScore, OUTCOMES } from '../../../core/analytics';
 import { Icon } from '../icons';
 import { plainTitle } from '../plain';
-import { NOT_RUN, useApp } from '../store';
-import { STATUS_META } from './ui';
+import { NOT_RUN, outcomeOf, useApp } from '../store';
+import { OUTCOME_META, OutcomeBadge } from './ui';
 
 /** Accessible modal: focus trap, restores focus on close (Escape is handled globally). */
 export function Modal({
@@ -100,8 +100,20 @@ export function CommandPalette() {
       },
       {
         group: 'Quick actions',
-        label: 'Show tests that were not tested',
+        label: 'Show security findings',
+        icon: 'shield',
+        run: () => showTests({ statuses: ['FINDING'] }),
+      },
+      {
+        group: 'Quick actions',
+        label: 'Show blocked tests',
         icon: 'pause',
+        run: () => showTests({ statuses: ['BLOCKED'] }),
+      },
+      {
+        group: 'Quick actions',
+        label: 'Show tests that were not tested',
+        icon: 'minus',
         run: () => showTests({ statuses: NOT_RUN }),
       },
       { group: 'Quick actions', label: 'Show all tests', icon: 'tests', run: () => showTests({}) },
@@ -127,8 +139,8 @@ export function CommandPalette() {
     const tests: Item[] = service.map((t) => ({
       group: 'Tests',
       label: `${plainTitle(t.title)}`,
-      hint: `${t.id} · ${STATUS_META[t.status].label}`,
-      icon: STATUS_META[t.status].icon,
+      hint: `${t.id} · ${outcomeOf(t)}`,
+      icon: OUTCOME_META[outcomeOf(t)].icon,
       run: () => openTest(t.key),
     }));
     return [...actions, ...tests];
@@ -219,7 +231,7 @@ export const SHORTCUTS: [string, string][] = [
   ['/', 'Search the test list'],
   ['1 – 4', 'Jump to section 01–04'],
   ['0 or Home', 'Back to the top'],
-  ['F · W · A', 'Show Fail · Not Tested · All tests'],
+  ['F · B · W · A', 'Show Fail · Blocked · Not Tested · All tests'],
   ['← →', 'Previous / next page of tests'],
   ['J / K or ↓ ↑', 'Next / previous test (details open)'],
   ['E', 'Export menu'],
@@ -261,8 +273,8 @@ export function GuideModal() {
           </div>
         )}
         <p>
-          This report shows the automated checks of the <b>PII service</b> — the system that stores personal
-          data such as emails and phone numbers.
+          This report shows the automated checks of the <b>Aisle PII API</b> (Aisle API → PII service → DB
+          validation) — the system that stores personal data such as emails and phone numbers.
         </p>
         <ol class="guide">
           <li>
@@ -281,14 +293,14 @@ export function GuideModal() {
             <b>All tests</b> is the full list, grouped under each endpoint. Click any test for details.
           </li>
         </ol>
-        <div class="row row--wrap">
-          {(['PASS', 'FAIL', 'BLOCKED'] as const).map((s) => (
-            <span key={s} class={`status status--${s}`}>
-              <Icon name={STATUS_META[s].icon} size={12} stroke={2.6} /> {STATUS_META[s].label} —{' '}
-              {STATUS_META[s].help}
-            </span>
+        <ul class="outcome-legend">
+          {OUTCOMES.map((o) => (
+            <li key={o}>
+              <OutcomeBadge outcome={o} />
+              <span class="small">{OUTCOME_META[o].help}</span>
+            </li>
           ))}
-        </div>
+        </ul>
         <p class="small muted">
           The report never contains personal data, passwords, keys or signatures — only test names, results
           and timings.

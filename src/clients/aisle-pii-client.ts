@@ -1,8 +1,11 @@
 /**
- * PiiClient — one readable, typed method per documented endpoint.
+ * AislePiiClient — one readable, typed method per Aisle PII facade endpoint.
  *
- *   const res = await pii.writePii({ tenant_id, user_id, field: 'EMAIL', value });
- *   const data = expectSuccess(res, [201], writePiiDataSchema);
+ *   const res = await aisle.writePii({ user_id, field: 'NAME', value });
+ *   const data = expectSuccess(res, 201, writePiiDataSchema, 'PII write successful');
+ *
+ * Authentication (`Authorization: Bearer <AISLE_TEST_TOKEN>`) and `Content-Type: application/json` are added
+ * centrally by BaseApiClient. Requests never contain tenant_id: Aisle sets the tenant internally.
  *
  * Methods return the raw ApiResponse (they do NOT throw on 4xx/5xx) so tests can assert on any status.
  * For negative tests that need an off-contract payload (missing fields, wrong types), use `call()`.
@@ -33,25 +36,15 @@ import type {
   ResolveTransientPhoneRequest,
 } from '../models/transient.models';
 import type { ApiResponse } from './api-response';
-import {
-  BaseApiClient,
-  type BaseClientOptions,
-  type CallOptions,
-  type SigningIdentity,
-} from './base-api-client';
-import { DOC_ENDPOINTS, ENDPOINTS, type EndpointDefinition, type EndpointKey } from './endpoints';
+import { BaseApiClient, type BaseClientOptions, type CallOptions } from './base-api-client';
+import { ENDPOINTS, type EndpointKey } from './endpoints';
 
-export class PiiClient extends BaseApiClient {
+export class AislePiiClient extends BaseApiClient {
   constructor(options: BaseClientOptions) {
     super(options);
   }
 
-  /** Same base URL/logger/retry policy, different calling service. */
-  withIdentity(identity: SigningIdentity): PiiClient {
-    return new PiiClient({ ...this.options, identity });
-  }
-
-  /** Generic escape hatch for negative tests: any payload to any documented endpoint (still centrally signed). */
+  /** Generic escape hatch for negative tests: any payload to any facade endpoint (still centrally authenticated). */
   call<TData = unknown>(
     key: EndpointKey,
     payload: unknown,
@@ -60,12 +53,12 @@ export class PiiClient extends BaseApiClient {
     return this.execute<TData>(ENDPOINTS[key], payload, options);
   }
 
-  // ---- 1. Readiness (no authentication) ----------------------------------------------------------
+  // ---- Health --------------------------------------------------------------------------------------
   healthReady(options?: CallOptions): Promise<ApiResponse<{ status: string }>> {
     return this.execute(ENDPOINTS.healthReady, undefined, options);
   }
 
-  // ---- 2–5. PII ------------------------------------------------------------------------------------
+  // ---- PII -----------------------------------------------------------------------------------------
   writePii(request: WritePiiRequest, options?: CallOptions): Promise<ApiResponse<WritePiiData>> {
     return this.execute(ENDPOINTS.writePii, request, options);
   }
@@ -74,7 +67,7 @@ export class PiiClient extends BaseApiClient {
     return this.execute(ENDPOINTS.readPii, request, options);
   }
 
-  /** `field` is the path parameter, e.g. 'EMAIL' -> POST /api/v1/pii/EMAIL/search */
+  /** `field` is the path parameter, e.g. 'EMAIL' -> POST /api/v1/pii-test/EMAIL/search */
   searchPii(
     field: string,
     request: SearchPiiRequest,
@@ -83,11 +76,11 @@ export class PiiClient extends BaseApiClient {
     return this.execute(ENDPOINTS.searchPii, request, { ...options, pathParams: { field } });
   }
 
-  batchReadPii(request: BatchReadPiiRequest, options?: CallOptions): Promise<ApiResponse<BatchReadData>> {
+  batchRead(request: BatchReadPiiRequest, options?: CallOptions): Promise<ApiResponse<BatchReadData>> {
     return this.execute(ENDPOINTS.batchReadPii, request, options);
   }
 
-  // ---- 6–8. Transient phones -----------------------------------------------------------------------
+  // ---- Temporary (transient) phones ------------------------------------------------------------------
   createTransientPhone(
     request: CreateTransientPhoneRequest,
     options?: CallOptions,
@@ -109,9 +102,9 @@ export class PiiClient extends BaseApiClient {
     return this.execute(ENDPOINTS.promoteTransientPhone, request, options);
   }
 
-  // ---- 9–11. Free-text keys ------------------------------------------------------------------------
+  // ---- Free-text encryption keys -----------------------------------------------------------------------
   createFreeTextKey(
-    request: CreateFreeTextKeyRequest,
+    request: CreateFreeTextKeyRequest = {},
     options?: CallOptions,
   ): Promise<ApiResponse<FreeTextKeyData>> {
     return this.execute(ENDPOINTS.createFreeTextKey, request, options);
@@ -130,35 +123,4 @@ export class PiiClient extends BaseApiClient {
   ): Promise<ApiResponse<RevokeFreeTextKeyData>> {
     return this.execute(ENDPOINTS.revokeFreeTextKey, request, options);
   }
-
-  // ---- Public documentation endpoints (contract/security suites only) ------------------------------
-  getOpenApiSchema(): Promise<ApiResponse> {
-    return this.execute(rawEndpoint(DOC_ENDPOINTS.openApi.method, DOC_ENDPOINTS.openApi.path), undefined, {
-      retry: false,
-    });
-  }
-
-  /** Probe the development-only signing helper WITHOUT a meaningful body — used only to check exposure. */
-  probeSignatureHelper(): Promise<ApiResponse> {
-    return this.execute(
-      rawEndpoint(DOC_ENDPOINTS.signatureHelper.method, DOC_ENDPOINTS.signatureHelper.path),
-      {},
-      { retry: false },
-    );
-  }
-}
-
-/** Ad-hoc definition for unauthenticated documentation endpoints (not part of the functional inventory). */
-function rawEndpoint(method: 'GET' | 'POST', path: string): EndpointDefinition {
-  return {
-    // The path doubles as the log label; these are not EndpointKeys, hence the cast.
-    key: path as EndpointKey,
-    method,
-    path,
-    authenticated: false,
-    permission: 'none',
-    successStatus: [200],
-    retrySafe: false,
-    noStore: false,
-  };
 }

@@ -15,33 +15,46 @@ export const STATUS_META: Record<TestStatus, { label: string; icon: string; help
   PASS: { label: 'Pass', icon: 'check', help: 'The check ran and everything was as expected.' },
   FAIL: { label: 'Fail', icon: 'x', help: 'The check ran and something was not as expected.' },
   SKIPPED: { label: 'Skipped', icon: 'skip', help: GLOSSARY.Skipped as string },
-  BLOCKED: { label: 'Not Tested', icon: 'pause', help: GLOSSARY.Blocked as string },
-  FIXME: { label: 'Not Tested', icon: 'pause', help: GLOSSARY.Fixme as string },
+  BLOCKED: { label: 'Blocked', icon: 'pause', help: GLOSSARY.Blocked as string },
+  FIXME: { label: 'Blocked', icon: 'pause', help: GLOSSARY.Fixme as string },
   UNKNOWN: { label: 'Not run', icon: 'minus', help: 'No result was recorded (the run stopped early).' },
 };
 
-export function StatusBadge({ status, large }: { status: TestStatus; large?: boolean }) {
-  const m = STATUS_META[status];
-  return (
-    <span
-      class={`status status--${status}${large ? ' status--lg' : ''}`}
-      data-help={m.help}
-      data-help-title={m.label}
-    >
-      <Icon name={m.icon} size={large ? 15 : 12} stroke={2.6} />
-      {m.label}
-    </span>
-  );
-}
-
-/** The three statuses a reader sees: Pass, Fail, Not Tested. Icon + word, never colour alone. */
-export const OUTCOME_META: Record<Outcome, { cls: string; icon: string; help: string }> = {
-  Pass: { cls: 'PASS', icon: 'check', help: 'The test ran and everything was as expected.' },
-  Fail: { cls: 'FAIL', icon: 'x', help: 'The test ran and something was not as expected.' },
+/**
+ * The statuses a reader sees (see OUTCOMES in core/analytics for the order). Icon + word + help text, never
+ * colour alone. `cls` is the badge's CSS modifier (.outcome--…), `token` the row's data-status value.
+ */
+export const OUTCOME_META: Record<Outcome, { cls: string; token: string; icon: string; help: string }> = {
+  Pass: { cls: 'pass', token: 'PASS', icon: 'check', help: 'The test ran and everything was as expected.' },
+  Fail: {
+    cls: 'fail',
+    token: 'FAIL',
+    icon: 'x',
+    help: 'The test ran and something was not as expected (an automation failure to investigate).',
+  },
+  'Security finding': {
+    cls: 'finding',
+    token: 'FINDING',
+    icon: 'shield',
+    help: 'The test ran and failed on a known, reported security issue. Expected to fail until Dev fixes it — still counted as a failure.',
+  },
+  Blocked: {
+    cls: 'blocked',
+    token: 'BLOCKED',
+    icon: 'pause',
+    help: 'The test cannot run until Dev answers a question or grants access (see the BQ reference). Neither a pass nor a failure.',
+  },
+  Skipped: {
+    cls: 'skipped',
+    token: 'SKIPPED',
+    icon: 'skip',
+    help: 'The test was skipped in this run — see the reason (e.g. optional setup not configured).',
+  },
   'Not Tested': {
-    cls: 'SKIPPED',
+    cls: 'not-tested',
+    token: 'NOT_TESTED',
     icon: 'minus',
-    help: 'The test did not run in this run — see the reason (not part of this run, waiting on Dev, or skipped).',
+    help: 'The test did not run: not part of this run, the run stopped early, or the Aisle PII facade could not be reached.',
   },
 };
 
@@ -49,7 +62,7 @@ export function OutcomeBadge({ outcome, large }: { outcome: Outcome; large?: boo
   const m = OUTCOME_META[outcome];
   return (
     <span
-      class={`status status--${m.cls}${large ? ' status--lg' : ''}`}
+      class={`status outcome--${m.cls}${large ? ' status--lg' : ''}`}
       data-help={m.help}
       data-help-title={outcome}
     >

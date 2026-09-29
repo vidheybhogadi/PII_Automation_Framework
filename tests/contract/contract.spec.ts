@@ -1,187 +1,98 @@
 /**
- * Contract tests.
- *  - CON-001/002: the service's own OpenAPI schema vs. the guide's endpoint inventory (catches drift in
- *    either direction — a documented endpoint missing, or an undocumented /api/v1 endpoint present).
- *  - CON-003..005: success/error payloads contain EXACTLY the documented keys. An extra key in a PII
- *    response is treated as a contract (and potential data-exposure) failure.
+ * Response contract of the Aisle facade: the exact field names seen on staging (2026-09-29).
+ * Only key NAMES are compared and reported — never values.
  */
-import { expectExactKeys, expectSuccess } from '../../src/assertions/response.assertions';
-import { ENDPOINTS } from '../../src/clients/endpoints';
-import { createKey, createTransient } from '../../src/fixtures/steps';
-import { blockedBy, expect, test } from '../../src/fixtures/test-fixtures';
-import { ENVELOPE_KEYS } from '../../src/models/common.models';
 import {
-  FREE_TEXT_KEY_DATA_KEYS,
-  REVOKE_FREE_TEXT_KEY_DATA_KEYS,
-  freeTextKeyDataSchema,
-  revokeFreeTextKeyDataSchema,
-} from '../../src/models/free-text.models';
+  expectExactKeys,
+  expectStatus,
+  expectSuccess,
+  expectValidationError,
+} from '../../src/assertions/response.assertions';
+import { seedField } from '../../src/fixtures/steps';
+import { expect, noteAssumption, test } from '../../src/fixtures/test-fixtures';
+import { ENVELOPE_KEYS, healthReadyDataSchema } from '../../src/models/common.models';
 import {
   BATCH_READ_DATA_KEYS,
+  batchReadDataSchema,
+  PII_FIELDS,
   PII_ITEM_KEYS,
   READ_PII_DATA_KEYS,
-  SEARCH_DATA_KEYS,
-  WRITE_PII_DATA_KEYS,
-  batchReadDataSchema,
   readPiiDataSchema,
-  searchIdsOnlyDataSchema,
-  searchWithValuesDataSchema,
+  WRITE_PII_DATA_KEYS,
   writePiiDataSchema,
 } from '../../src/models/pii.models';
-import {
-  CREATE_TRANSIENT_DATA_KEYS,
-  PROMOTE_TRANSIENT_DATA_KEYS,
-  RESOLVE_TRANSIENT_DATA_KEYS,
-  promoteTransientPhoneDataSchema,
-  resolveTransientPhoneDataSchema,
-} from '../../src/models/transient.models';
 
-type OpenApiDoc = { paths?: Record<string, Record<string, unknown>> };
-const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete'];
+/** Tenant set by the facade itself (observed on staging). */
+const AISLE_TENANT = 'aisle';
 
-test.describe('Contract', { tag: ['@contract', '@regression'] }, () => {
-  test(
-    'PII-CON-001 The API description (OpenAPI) is available and lists every documented endpoint',
-    { tag: '@smoke' },
-    async ({ pii }) => {
-      const res = await pii.getOpenApiSchema();
-      if (res.status === 404) {
-        blockedBy(
-          'Q-24',
-          'OpenAPI is not exposed in this environment; endpoint drift cannot be checked here.',
-        );
-        return;
-      }
-      expect(res.status, res.summary()).toBe(200);
-      const doc = res.json() as OpenApiDoc;
-      const missing = Object.values(ENDPOINTS)
-        .filter((e) => !doc.paths?.[e.path]?.[e.method.toLowerCase()])
-        .map((e) => `${e.method} ${e.path}`);
-      expect(missing, 'documented endpoints missing from /openapi.json').toEqual([]);
-    },
-  );
-
-  test('PII-CON-002 The API description has no extra, undocumented endpoints', async ({ pii }) => {
-    const res = await pii.getOpenApiSchema();
-    if (res.status === 404) {
-      blockedBy('Q-24', 'OpenAPI is not exposed in this environment.');
-      return;
-    }
-    const doc = res.json() as OpenApiDoc;
-    const documented = new Set(Object.values(ENDPOINTS).map((e) => `${e.method} ${e.path}`));
-    const extra = Object.entries(doc.paths ?? {})
-      .filter(([path]) => path.startsWith('/api/v1'))
-      .flatMap(([path, ops]) =>
-        Object.keys(ops)
-          .filter((m) => HTTP_METHODS.includes(m))
-          .map((m) => `${m.toUpperCase()} ${path}`),
-      )
-      .filter((op) => !documented.has(op));
-    expect(extra, 'undocumented /api/v1 operations (update the guide or the inventory)').toEqual([]);
-  });
-
-  test('PII-CON-003 Save, read, search and bulk-read responses contain exactly the documented fields', async ({
-    pii,
+test.describe('Aisle facade — response contract', () => {
+  test('AISLE-CON-001 Success replies contain exactly the agreed fields', async ({
+    aisle,
     data,
-    tenant,
     cleanup,
   }) => {
-    const userId = data.userId('con3');
-    const email = data.email();
+    const health = await aisle.healthReady();
+    expectSuccess(health, 200, healthReadyDataSchema);
+    expectExactKeys(health.json(), ENVELOPE_KEYS, 'health envelope');
+    expectExactKeys(health.data(), ['status'], 'health data');
 
-    const write = await pii.writePii({ tenant_id: tenant, user_id: userId, field: 'EMAIL', value: email });
-    cleanup.leaveBehind('PII EMAIL', `${tenant}/${userId}`);
-    expectExactKeys(write.json(), ENVELOPE_KEYS, 'write envelope');
-    expectExactKeys(expectSuccess(write, 201, writePiiDataSchema), WRITE_PII_DATA_KEYS, 'write data');
+    const userId = data.userId('con1');
+    const write = await aisle.writePii({ user_id: userId, field: PII_FIELDS.NAME, value: data.name() });
+    cleanup.leaveBehind('PII NAME', userId);
+    const saved = expectSuccess(write, 201, writePiiDataSchema);
+    expectExactKeys(write.json(), ENVELOPE_KEYS, 'save envelope');
+    expectExactKeys(saved, WRITE_PII_DATA_KEYS, 'save data');
+    expect(saved.tenant_id).toBe(AISLE_TENANT);
 
-    const read = expectSuccess(
-      await pii.readPii({ tenant_id: tenant, user_id: userId, field_names: ['EMAIL'] }),
-      200,
-      readPiiDataSchema,
-    );
-    expectExactKeys(read, READ_PII_DATA_KEYS, 'read data');
-    expectExactKeys(read.items[0], PII_ITEM_KEYS, 'read item');
+    const read = await aisle.readPii({ user_id: userId, field_names: [PII_FIELDS.NAME] });
+    const readData = expectSuccess(read, 200, readPiiDataSchema);
+    expectExactKeys(read.json(), ENVELOPE_KEYS, 'read envelope');
+    expectExactKeys(readData, READ_PII_DATA_KEYS, 'read data');
+    readData.items.forEach((item, i) => expectExactKeys(item, PII_ITEM_KEYS, `read item #${i}`));
+    expect(readData.tenant_id).toBe(AISLE_TENANT);
 
-    const ids = expectSuccess(
-      await pii.searchPii('EMAIL', { tenant_id: tenant, value: email }),
-      200,
-      searchIdsOnlyDataSchema,
-    );
-    expectExactKeys(ids, SEARCH_DATA_KEYS, 'search data (ids only)');
-    expectExactKeys(ids.matches[0], ['user_id'], 'search match (ids only)');
-
-    const values = expectSuccess(
-      await pii.searchPii('EMAIL', { tenant_id: tenant, value: email, include_values: true }),
-      200,
-      searchWithValuesDataSchema,
-    );
-    expectExactKeys(values.matches[0], PII_ITEM_KEYS, 'search match (with values)');
-
-    const batch = expectSuccess(
-      await pii.batchReadPii({ tenant_id: tenant, user_ids: [userId], fields: ['EMAIL'] }),
-      200,
-      batchReadDataSchema,
-    );
-    expectExactKeys(batch, BATCH_READ_DATA_KEYS, 'batch data');
-    expectExactKeys(batch.items[0], PII_ITEM_KEYS, 'batch item');
+    const second = data.userId('con1b');
+    await seedField(aisle, cleanup, { userId: second, field: PII_FIELDS.NAME, value: data.name() });
+    const bulk = await aisle.batchRead({ user_ids: [userId, second], fields: [PII_FIELDS.NAME] });
+    const bulkData = expectSuccess(bulk, 200, batchReadDataSchema);
+    expectExactKeys(bulk.json(), ENVELOPE_KEYS, 'bulk-read envelope');
+    expectExactKeys(bulkData, BATCH_READ_DATA_KEYS, 'bulk-read data');
+    bulkData.items.forEach((item, i) => expectExactKeys(item, PII_ITEM_KEYS, `bulk-read item #${i}`));
+    expect(bulkData.tenant_id).toBe(AISLE_TENANT);
   });
 
-  test('PII-CON-004 Temporary-phone responses contain exactly the documented fields', async ({
-    pii,
+  test('AISLE-CON-002 Error replies keep their current format (401 empty, 400 “Invalid JSON”, 422 list of problems)', async ({
+    aisle,
     data,
-    tenant,
-    config,
-    cleanup,
   }) => {
-    const created = await createTransient(pii, {
-      tenant,
-      phone: data.phone(0).normalized,
-      ttlSeconds: config.limits.transientTtlMinSeconds,
+    noteAssumption(
+      'BQ-09',
+      'these are the formats observed today; the intended single error format is Dev’s call',
+    );
+    const userId = data.userId('con2');
+
+    const noToken = await aisle.call(
+      'readPii',
+      { user_id: userId, field_names: [PII_FIELDS.NAME] },
+      { tamper: { authorization: null } },
+    );
+    expectStatus(noToken, 401);
+    expect(noToken.rawText().length, '401 body is empty').toBe(0);
+    expect(noToken.header('content-type') ?? '', '401 content type').toContain('text/html');
+
+    const broken = await aisle.call('writePii', undefined, {
+      tamper: { bodyBytes: Buffer.from('{"user_id": ', 'utf8') },
     });
-    expectExactKeys(created, CREATE_TRANSIENT_DATA_KEYS, 'transient create data');
-    const resolved = expectSuccess(
-      await pii.resolveTransientPhone({ tenant_id: tenant, transient_id: created.transient_id }),
-      200,
-      resolveTransientPhoneDataSchema,
-    );
-    expectExactKeys(resolved, RESOLVE_TRANSIENT_DATA_KEYS, 'transient resolve data');
-    const userId = data.userId('con4');
-    const promoted = expectSuccess(
-      await pii.promoteTransientPhone({
-        tenant_id: tenant,
-        transient_id: created.transient_id,
-        user_id: userId,
-      }),
-      200,
-      promoteTransientPhoneDataSchema,
-    );
-    cleanup.leaveBehind('PII PHONE', `${tenant}/${userId}`);
-    expectExactKeys(promoted, PROMOTE_TRANSIENT_DATA_KEYS, 'transient promote data');
-  });
+    expectStatus(broken, 400);
+    expectExactKeys(broken.json(), ['error', 'message', 'status'], '400 body');
+    expect(broken.json()).toEqual({
+      status: false,
+      error: 'Invalid JSON',
+      message: 'Request body must be valid JSON',
+    });
 
-  test('PII-CON-005 Encryption-key responses and error responses contain exactly the documented fields', async ({
-    pii,
-    tenant,
-    cleanup,
-  }) => {
-    const created = await createKey(pii, cleanup, tenant);
-    expectExactKeys(created, FREE_TEXT_KEY_DATA_KEYS, 'key create data');
-    const read = expectSuccess(
-      await pii.readFreeTextKey({ tenant_id: tenant, key_id: created.key_id }),
-      200,
-      freeTextKeyDataSchema,
-    );
-    expectExactKeys(read, FREE_TEXT_KEY_DATA_KEYS, 'key read data');
-    const revoked = expectSuccess(
-      await pii.revokeFreeTextKey({ tenant_id: tenant, key_id: created.key_id }),
-      200,
-      revokeFreeTextKeyDataSchema,
-    );
-    expectExactKeys(revoked, REVOKE_FREE_TEXT_KEY_DATA_KEYS, 'key revoke data');
-
-    const notFound = await pii.readFreeTextKey({ tenant_id: tenant, key_id: created.key_id });
-    expect(notFound.status).toBe(404);
-    expectExactKeys(notFound.json(), ENVELOPE_KEYS, 'error envelope');
-    expectExactKeys((notFound.json() as { error: unknown }).error, ['code', 'message'], 'error object');
+    const empty = await aisle.call('writePii', { user_id: userId, field: PII_FIELDS.NAME, value: '' });
+    expectValidationError(empty, 'value');
+    expectExactKeys(empty.json(), ['detail'], '422 body');
   });
 });

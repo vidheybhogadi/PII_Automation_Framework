@@ -1,31 +1,13 @@
 import type { TestCaseCatalog } from './types';
 
 export const HEALTH_CASES: TestCaseCatalog = {
-  'PII-HLT-001': {
-    what: 'Calls the service’s health check (a simple “are you up and ready?” address) without any signature and checks it answers “ready”.',
-    why: 'Monitoring and deployments rely on this check to know the service can take traffic; if it failed or demanded a signature, a healthy service could be taken offline or a broken one kept live.',
-    steps: [
-      'Send an unsigned request to the readiness health check',
-      'Check the status code and the reply message',
-      'Check the reply contains only the documented fields',
-    ],
+  'AISLE-HLT-001': {
+    what: 'Calls the health endpoint of the Aisle facade (Aisle’s front door to the PII service) with the token (the secret pass proving the caller is Aisle’s test app).',
+    why: 'Every other test depends on the service being up. This is the first thing to check when a run fails.',
+    steps: ['Send the health request with the token', 'Check the status code and the reply'],
     expected:
-      '200 OK with the message "Service is ready"; the data says status "ready", and both the outer reply and the data contain exactly the documented fields (data has only "status").',
+      '200 OK. The reply says status true, message “Service is ready”, data status “ready” and no error. The first call after a quiet period can take about 15 seconds, so the test allows up to 30 seconds (question BQ-15).',
     type: 'Positive',
     priority: 'High',
-  },
-  'PII-HLT-002': {
-    what: 'Will check that the health check answers 503 SERVICE_NOT_READY when the service is not ready (for example, its database is down).',
-    why: 'If a broken service still reported “ready”, traffic would be sent to it and real requests would fail.',
-    steps: [
-      'Put a test instance of the service into a not-ready state (for example, database unavailable)',
-      'Call the readiness health check',
-      'Check the status code and reply body',
-    ],
-    expected: '503 Service Unavailable with SERVICE_NOT_READY and the agreed reply shape.',
-    type: 'Negative',
-    priority: 'Medium',
-    preconditions:
-      'Waiting on Dev question Q-17 — a safe way to make the service not ready (a test hook or a dedicated instance) is needed; shows as Not Tested until answered.',
   },
 };

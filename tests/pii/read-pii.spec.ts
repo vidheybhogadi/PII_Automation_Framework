@@ -1,148 +1,82 @@
-/** Guide §3 — POST /api/v1/pii/read. */
-import {
-  expectError,
-  expectRequestValidationError,
-  expectSuccess,
-} from '../../src/assertions/response.assertions';
+/** Read PII — POST /api/v1/pii-test/read through the Aisle facade (observed behaviour, BQ-01 gate for EMAIL). */
+import { expectError, expectSuccess, expectValidationError } from '../../src/assertions/response.assertions';
 import { expectSecretEquals } from '../../src/assertions/security.assertions';
-import { seedUser } from '../../src/fixtures/steps';
-import { expect, onlyIfInScope, test } from '../../src/fixtures/test-fixtures';
+import { BLOCKERS, seedField } from '../../src/fixtures/steps';
+import {
+  blockIfAccessDenied,
+  expect,
+  noteAssumption,
+  onlyIfInScope,
+  test,
+} from '../../src/fixtures/test-fixtures';
 import { ERROR_CODES } from '../../src/models/common.models';
-import { readPiiDataSchema } from '../../src/models/pii.models';
+import { PII_FIELDS, readPiiDataSchema } from '../../src/models/pii.models';
 
-test.describe('PII read', { tag: ['@regression'] }, () => {
-  onlyIfInScope('writePii', 'readPii');
+/** Tenant set by the facade itself (observed on staging). */
+const AISLE_TENANT = 'aisle';
+
+test.describe('Aisle facade — read PII', () => {
+  onlyIfInScope('readPii', 'writePii');
 
   test(
-    'PII-RD-001 Reading one field of a user returns its value',
-    { tag: '@smoke' },
-    async ({ pii, data, tenant, cleanup }) => {
+    'AISLE-RD-001 Reading a saved name returns exactly that name',
+    { tag: ['@smoke', '@phase1'] },
+    async ({ aisle, data, cleanup }) => {
       const userId = data.userId('rd1');
-      const email = data.email();
-      await seedUser(pii, cleanup, tenant, userId, { EMAIL: email });
-      const read = expectSuccess(
-        await pii.readPii({ tenant_id: tenant, user_id: userId, field_names: ['EMAIL'] }),
-        200,
-        readPiiDataSchema,
-        'PII read successful',
-      );
-      expect(read).toMatchObject({ tenant_id: tenant, user_id: userId, count: 1 });
-      expect(read.items[0]).toMatchObject({ tenant_id: tenant, user_id: userId, field: 'EMAIL' });
-      expectSecretEquals(read.items[0]?.value, email, 'EMAIL');
+      const name = data.name();
+      await seedField(aisle, cleanup, { userId, field: PII_FIELDS.NAME, value: name });
+
+      const res = await aisle.readPii({ user_id: userId, field_names: [PII_FIELDS.NAME] });
+      const read = expectSuccess(res, 200, readPiiDataSchema, 'PII read successful');
+      expect(read).toMatchObject({ tenant_id: AISLE_TENANT, user_id: userId, count: 1 });
+      expect(read.items).toHaveLength(1);
+      expect(read.items[0]).toMatchObject({
+        tenant_id: AISLE_TENANT,
+        user_id: userId,
+        field: PII_FIELDS.NAME,
+      });
+      expectSecretEquals(read.items[0]?.value, name, 'read NAME');
     },
   );
 
-  test('PII-RD-002 Reading several fields in one call returns all of them', async ({
-    pii,
+  test('AISLE-RD-002 Asking for a field the user has not saved leaves it out; the saved field is still returned', async ({
+    aisle,
     data,
-    tenant,
     cleanup,
   }) => {
     const userId = data.userId('rd2');
-    const values = { EMAIL: data.email(), PHONE: data.phone(0).normalized, NAME: data.name() };
-    await seedUser(pii, cleanup, tenant, userId, values);
-    const read = expectSuccess(
-      await pii.readPii({ tenant_id: tenant, user_id: userId, field_names: ['EMAIL', 'PHONE', 'NAME'] }),
-      200,
-      readPiiDataSchema,
-    );
-    expect(read.count).toBe(3);
-    expect(read.items.map((i) => i.field).sort()).toEqual(['EMAIL', 'NAME', 'PHONE']);
-    for (const item of read.items)
-      expectSecretEquals(item.value, values[item.field as keyof typeof values], item.field);
-  });
+    const name = data.name();
+    await seedField(aisle, cleanup, { userId, field: PII_FIELDS.NAME, value: name });
 
-  test('PII-RD-003 Only the fields asked for are returned', async ({ pii, data, tenant, cleanup }) => {
-    const userId = data.userId('rd3');
-    await seedUser(pii, cleanup, tenant, userId, { EMAIL: data.email(), NAME: data.name() });
-    const read = expectSuccess(
-      await pii.readPii({ tenant_id: tenant, user_id: userId, field_names: ['NAME'] }),
-      200,
-      readPiiDataSchema,
-    );
-    expect(read.items.map((i) => i.field)).toEqual(['NAME']);
+    const res = await aisle.readPii({ user_id: userId, field_names: [PII_FIELDS.NAME, PII_FIELDS.EMAIL] });
+    blockIfAccessDenied(res, BLOCKERS.email.id, BLOCKERS.email.reason);
+    noteAssumption('BQ-01', 'expected: fields the user has not saved are left out — to be confirmed by Dev');
+    const read = expectSuccess(res, 200, readPiiDataSchema, 'PII read successful');
     expect(read.count).toBe(1);
+    expect(read.items.map((i) => i.field)).toEqual([PII_FIELDS.NAME]);
+    expectSecretEquals(read.items[0]?.value, name, 'read NAME');
   });
 
-  test('PII-RD-004 Fields the user does not have are left out when at least one requested field exists', async ({
-    pii,
+  test('AISLE-RD-003 Reading a user who has nothing saved returns 404 PII_NOT_FOUND', async ({
+    aisle,
     data,
-    tenant,
-    cleanup,
   }) => {
-    const userId = data.userId('rd4');
-    await seedUser(pii, cleanup, tenant, userId, { EMAIL: data.email() });
-    const read = expectSuccess(
-      await pii.readPii({ tenant_id: tenant, user_id: userId, field_names: ['EMAIL', 'PHONE', 'NAME'] }),
-      200,
-      readPiiDataSchema,
-    );
-    expect(read.items.map((i) => i.field)).toEqual(['EMAIL']);
-    expect(read.count).toBe(1);
+    const res = await aisle.readPii({
+      user_id: data.userId('rd3-never-saved'),
+      field_names: [PII_FIELDS.NAME],
+    });
+    const error = expectError(res, 404, ERROR_CODES.PII_NOT_FOUND);
+    expect(error.message).toBe('PII value not found');
   });
 
-  test('PII-RD-005 Returns 404 PII_NOT_FOUND when the user has none of the requested fields', async ({
-    pii,
+  test('AISLE-RD-004 A read request with an empty field list or without a user ID is rejected (422)', async ({
+    aisle,
     data,
-    tenant,
-    cleanup,
   }) => {
-    const userId = data.userId('rd5');
-    await seedUser(pii, cleanup, tenant, userId, { EMAIL: data.email() });
-    expectError(
-      await pii.readPii({ tenant_id: tenant, user_id: userId, field_names: ['PHONE', 'NAME'] }),
-      404,
-      ERROR_CODES.PII_NOT_FOUND,
-    );
-  });
+    const emptyList = await aisle.call('readPii', { user_id: data.userId('rd4'), field_names: [] });
+    expectValidationError(emptyList, 'field_names');
 
-  test('PII-RD-006 Returns 404 PII_NOT_FOUND for a user that does not exist', async ({
-    pii,
-    data,
-    tenant,
-  }) => {
-    expectError(
-      await pii.readPii({ tenant_id: tenant, user_id: data.userId('never-written'), field_names: ['EMAIL'] }),
-      404,
-      ERROR_CODES.PII_NOT_FOUND,
-    );
-  });
-
-  test('PII-RD-007 An empty list of fields to read is rejected (422)', async ({ pii, data, tenant }) => {
-    expectRequestValidationError(
-      await pii.readPii({ tenant_id: tenant, user_id: data.userId('rd7'), field_names: [] }),
-    );
-  });
-
-  test('PII-RD-008 A read request missing required fields is rejected (422)', async ({
-    pii,
-    data,
-    tenant,
-  }) => {
-    const full = { tenant_id: tenant, user_id: data.userId('rd8'), field_names: ['EMAIL'] };
-    for (const key of Object.keys(full)) {
-      await test.step(`without ${key}`, async () => {
-        const payload: Record<string, unknown> = { ...full };
-        delete payload[key];
-        expectRequestValidationError(await pii.call('readPii', payload));
-      });
-    }
-  });
-
-  test('PII-RD-009 The returned count matches the items, and every item belongs to the requested tenant and user', async ({
-    pii,
-    data,
-    tenant,
-    cleanup,
-  }) => {
-    const userId = data.userId('rd9');
-    await seedUser(pii, cleanup, tenant, userId, { EMAIL: data.email(), NAME: data.name() });
-    const read = expectSuccess(
-      await pii.readPii({ tenant_id: tenant, user_id: userId, field_names: ['EMAIL', 'NAME'] }),
-      200,
-      readPiiDataSchema,
-    );
-    expect(read.count).toBe(read.items.length);
-    for (const item of read.items) expect(item).toMatchObject({ tenant_id: tenant, user_id: userId });
+    const noUser = await aisle.call('readPii', { field_names: [PII_FIELDS.NAME] });
+    expectValidationError(noUser, 'user_id');
   });
 });

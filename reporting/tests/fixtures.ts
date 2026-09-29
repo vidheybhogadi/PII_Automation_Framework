@@ -17,6 +17,21 @@ export const FIXTURES = {
   malformed: path.join(FIXTURE_ROOT, 'malformed'),
   preflight: path.join(FIXTURE_ROOT, 'preflight'),
   selfOnly: path.join(FIXTURE_ROOT, 'self-only'),
+  statuses: path.join(FIXTURE_ROOT, 'statuses'),
+};
+
+/** Synthetic annotations for the "statuses" fixture (a known security finding, a blocker, a plain skip). */
+export const STATUS_FIXTURE = {
+  finding: {
+    id: 'PII-SEC-001',
+    description: 'BQ-08: 422 errors echo the submitted value and internal tenant_id',
+  },
+  blocked: {
+    id: 'PII-RD-002',
+    description:
+      'BQ-01: EMAIL access not granted to the Aisle caller — observed POST /api/v1/pii-test/read -> HTTP 403 code=AUTHORIZATION_DENIED',
+  },
+  skipped: { id: 'PII-WR-002', description: 'AISLE_TEST_PHONES not configured' },
 };
 
 /** Secrets injected into the redaction fixture. None may appear in the rendered report. */
@@ -121,7 +136,7 @@ export async function buildFixtures(): Promise<void> {
             annotations: [{ type: 'preflight', description: why }],
             errors: [
               {
-                message: `Error: Preflight failed — ${why}. The PII service at PII_BASE_URL is not ready, so this test could not run.`,
+                message: `Error: Preflight failed — ${why}. The Aisle PII facade at AISLE_BASE_URL is not ready, so this test could not run.`,
               },
             ],
             apiCalls: [
@@ -154,6 +169,51 @@ export async function buildFixtures(): Promise<void> {
   await generate({
     input: writeRun('self-only', selfOnly),
     out: FIXTURES.selfOnly,
+    history: false,
+    quiet: true,
+  });
+
+  // Every reader-facing status at once: a security finding (FAIL + annotation), a blocked and a skipped test.
+  const sf = STATUS_FIXTURE;
+  const statuses: CollectedRun = {
+    ...base,
+    run: { ...base.run, runId: 'demo-statuses', label: 'DEMO All statuses' },
+    tests: base.tests.map((t): CollectedTest => {
+      if (t.id === sf.finding.id)
+        return {
+          ...t,
+          status: 'FAIL',
+          rawStatus: 'failed',
+          outcome: 'unexpected',
+          annotations: [{ type: 'security-finding', description: sf.finding.description }],
+          errors: [{ message: 'Error: expected the 422 error body not to echo the submitted value' }],
+        };
+      if (t.id === sf.blocked.id)
+        return {
+          ...t,
+          status: 'BLOCKED',
+          rawStatus: 'skipped',
+          outcome: 'skipped',
+          durationMs: 0,
+          annotations: [{ type: 'blocked', description: sf.blocked.description }],
+          errors: [],
+        };
+      if (t.id === sf.skipped.id)
+        return {
+          ...t,
+          status: 'SKIPPED',
+          rawStatus: 'skipped',
+          outcome: 'skipped',
+          durationMs: 0,
+          annotations: [{ type: 'skip', description: sf.skipped.description }],
+          errors: [],
+        };
+      return t;
+    }),
+  };
+  await generate({
+    input: writeRun('statuses', statuses),
+    out: FIXTURES.statuses,
     history: false,
     quiet: true,
   });

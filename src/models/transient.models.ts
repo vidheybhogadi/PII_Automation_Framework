@@ -1,10 +1,15 @@
-/** Transient phone contracts (guide sections 6–8). */
+/**
+ * Temporary ("transient") phone contracts on the Aisle facade.
+ *
+ * PROVISIONAL: requests match the Aisle curl collection. The RESPONSE shapes below come from the PII Service
+ * Integration Guide and are NOT yet confirmed through the facade — every call returns 403 today because the
+ * Aisle caller has no access (docs/backend-open-questions.md BQ-02). Confirm them before relying on them.
+ */
 import { z } from 'zod';
 import { isoDateTime } from './common.models';
 
 // ---- 6. Create ----------------------------------------------------------------------------------
 export interface CreateTransientPhoneRequest {
-  tenant_id: string;
   phone: string;
   ttl_seconds: number;
 }
@@ -19,7 +24,6 @@ export const CREATE_TRANSIENT_DATA_KEYS = ['expires_at', 'tenant_id', 'transient
 
 // ---- 7. Resolve ---------------------------------------------------------------------------------
 export interface ResolveTransientPhoneRequest {
-  tenant_id: string;
   transient_id: string;
 }
 
@@ -35,7 +39,6 @@ export const RESOLVE_TRANSIENT_DATA_KEYS = ['expires_at', 'phone', 'tenant_id', 
 
 // ---- 8. Promote ---------------------------------------------------------------------------------
 export interface PromoteTransientPhoneRequest {
-  tenant_id: string;
   transient_id: string;
   user_id: string;
 }

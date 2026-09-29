@@ -7,7 +7,10 @@ import {
   countStatuses,
   evaluateGates,
   healthScore,
+  isSecurityFinding,
   latencyStats,
+  OUTCOMES,
+  outcomeCounts,
   overallVerdict,
   passRate,
   percentile,
@@ -18,6 +21,7 @@ import {
   toHistoryEntry,
 } from '../../core/analytics';
 import type { HistoryEntry, ReportConfig, ReportData, ReportTest, TestStatus } from '../../core/types';
+import { areaForId } from '../../core/catalog';
 import { endpointInventory } from '../../generator/build-report-data';
 import config from '../../config/report-config.json';
 
@@ -302,7 +306,7 @@ test.describe('REPORT analytics', () => {
     expect(f).toMatchObject({ httpStatus: 403, errorCode: 'AUTHORIZATION_DENIED', requestId: 'test-id' });
   });
 
-  test('RPT-AN-016 Pass / Fail / Not Tested: one rule, with the reason; tests not in the run never affect health', () => {
+  test('RPT-AN-016 one outcome rule, with the reason; tests not in the run never affect health', () => {
     const pass = t('PII-WR-001', 'PASS');
     const fail = t('PII-WR-008', 'FAIL', {
       errors: [{ message: 'expected HTTP 400 but got POST /api/v1/pii -> HTTP 201' }],
@@ -321,11 +325,14 @@ test.describe('REPORT analytics', () => {
     expect(testOutcome(pass)).toEqual({ outcome: 'Pass', remark: '' });
     expect(testOutcome(fail)).toEqual({ outcome: 'Fail', remark: 'Expected 400, got HTTP 201' });
     expect(testOutcome(waiting)).toEqual({
-      outcome: 'Not Tested',
-      remark: 'Waiting on Dev — Q-14: reuse behaviour undocumented',
+      outcome: 'Blocked',
+      remark: 'BLOCKED — Q-14: reuse behaviour undocumented',
     });
-    expect(testOutcome(skipped)).toEqual({ outcome: 'Not Tested', remark: 'Needs the "limited" caller' });
-    expect(testOutcome(unreachable).outcome).toBe('Not Tested'); // never really tested
+    expect(testOutcome(skipped)).toEqual({ outcome: 'Skipped', remark: 'Needs the "limited" caller' });
+    expect(testOutcome(unreachable)).toEqual({
+      outcome: 'Not Tested', // never really tested
+      remark: 'The Aisle PII facade could not be reached, so this test could not run',
+    });
     expect(testOutcome(notRun)).toEqual({ outcome: 'Not Tested', remark: 'Not part of this run' });
 
     // A one-test run: the full list shows every test, but health and gates only see what ran.
@@ -335,5 +342,108 @@ test.describe('REPORT analytics', () => {
     expect(healthScore(scopeTests(all), endpointInventory(), cfg.health).score).toBe(
       healthScore([pass], endpointInventory(), cfg.health).score,
     );
+  });
+
+  test('RPT-AN-017 Blocked, Skipped, Security finding vs Fail, Not Tested (synthetic AISLE-* tests)', () => {
+    const blockedDesc =
+      'BQ-01: EMAIL access not granted to the Aisle caller — observed POST /api/v1/pii-test -> HTTP 403 code=AUTHORIZATION_DENIED';
+    // BLOCKED / FIXME status, or a skip that carries a `blocked` annotation → Blocked.
+    const blocked = t('AISLE-WR-004', 'BLOCKED', {
+      annotations: [{ type: 'blocked', description: blockedDesc }],
+    });
+    const fixme = t('AISLE-WR-005', 'FIXME', {
+      annotations: [{ type: 'fixme', description: 'BQ-02: pending' }],
+    });
+    const skippedBlocked = t('AISLE-RD-003', 'SKIPPED', {
+      annotations: [{ type: 'blocked', description: blockedDesc }],
+    });
+    expect(testOutcome(blocked)).toEqual({ outcome: 'Blocked', remark: `BLOCKED — ${blockedDesc}` });
+    expect(testOutcome(fixme)).toEqual({ outcome: 'Blocked', remark: 'BLOCKED — BQ-02: pending' });
+    expect(testOutcome(skippedBlocked).outcome).toBe('Blocked');
+    expect(testOutcome(t('AISLE-WR-006', 'BLOCKED')).remark).toBe('BLOCKED — waiting on an answer from Dev');
+
+    // A plain skip → Skipped with its reason.
+    const skipped = t('AISLE-TR-009', 'SKIPPED', {
+      annotations: [{ type: 'skip', description: 'AISLE_TEST_PHONES not configured' }],
+    });
+    expect(testOutcome(skipped)).toEqual({ outcome: 'Skipped', remark: 'AISLE_TEST_PHONES not configured' });
+    expect(testOutcome(t('AISLE-TR-010', 'SKIPPED')).remark).toBe('Skipped in this run');
+
+    // FAIL + `security-finding` annotation → Security finding; the remark uses the annotation text only.
+    const findingDesc = 'BQ-08: 422 errors echo the submitted value and internal tenant_id';
+    const finding = t('AISLE-SEC-001', 'FAIL', {
+      annotations: [{ type: 'security-finding', description: findingDesc }],
+      errors: [{ message: 'expected error body not to contain the submitted value [REDACTED]' }],
+    });
+    const f = testOutcome(finding);
+    expect(f.outcome).toBe('Security finding');
+    expect(f.remark).toBe(`SECURITY FINDING (expected until Dev fixes it) — ${findingDesc}`);
+    expect(f.remark.startsWith('SECURITY FINDING (expected until Dev fixes it) — ')).toBe(true);
+    expect(isSecurityFinding(finding)).toBe(true);
+    // A PASS with the annotation (Dev fixed it) is a Pass; a FAIL without it is an ordinary Fail.
+    expect(
+      testOutcome(
+        t('AISLE-SEC-002', 'PASS', { annotations: [{ type: 'security-finding', description: 'x' }] }),
+      ).outcome,
+    ).toBe('Pass');
+    const plainFail = t('AISLE-SEC-003', 'FAIL', {
+      errors: [{ message: 'expected HTTP 400 but got POST /api/v1/pii-test -> HTTP 201' }],
+    });
+    expect(testOutcome(plainFail)).toEqual({ outcome: 'Fail', remark: 'Expected 400, got HTTP 201' });
+
+    // Not Tested: not in this run, facade unreachable, or the run stopped first.
+    expect(testOutcome(t('AISLE-HLT-001', 'SKIPPED', { notRun: true })).outcome).toBe('Not Tested');
+    expect(testOutcome(t('AISLE-HLT-002', 'UNKNOWN'))).toEqual({
+      outcome: 'Not Tested',
+      remark: 'The run stopped before this test',
+    });
+
+    // Counted in one place, in the OUTCOMES order.
+    expect(OUTCOMES).toEqual(['Fail', 'Security finding', 'Blocked', 'Skipped', 'Not Tested', 'Pass']);
+    expect(outcomeCounts([blocked, fixme, skipped, finding, plainFail, t('AISLE-RD-001', 'PASS')])).toEqual({
+      Fail: 1,
+      'Security finding': 1,
+      Blocked: 2,
+      Skipped: 1,
+      'Not Tested': 0,
+      Pass: 1,
+    });
+  });
+
+  test('RPT-AN-018 a security finding still fails the gates and the verdict; blocked is not a failure', () => {
+    const finding = t('AISLE-SEC-001', 'FAIL', {
+      area: 'responseSecurity',
+      annotations: [{ type: 'security-finding', description: 'BQ-08: echo' }],
+    });
+    const passes = [t('AISLE-WR-001', 'PASS'), t('AISLE-RD-001', 'PASS', { area: 'read' })];
+    const withFinding = overallVerdict(evaluateGates([...passes, finding], cfg.gates)).verdict;
+    expect(['FAILED', 'ATTENTION REQUIRED']).toContain(withFinding);
+    const blocked = t('AISLE-WR-004', 'BLOCKED', {
+      annotations: [{ type: 'blocked', description: 'BQ-01' }],
+    });
+    expect(countStatuses([blocked]).FAIL).toBe(0);
+    expect(passRate(countStatuses([...passes, blocked]))).toBe(1);
+  });
+
+  test('RPT-AN-019 ID prefixes: AISLE-* (live) and PII-* (demo only) map to the same areas', () => {
+    for (const [a, b] of [
+      ['AISLE-HLT-001', 'PII-HLT-001'],
+      ['AISLE-WR-001', 'PII-WR-001'],
+      ['AISLE-RD-001', 'PII-RD-001'],
+      ['AISLE-SR-001', 'PII-SR-001'],
+      ['AISLE-BR-001', 'PII-BR-001'],
+      ['AISLE-NRM-001', 'PII-NRM-001'],
+      ['AISLE-TR-001', 'PII-TR-001'],
+      ['AISLE-FT-001', 'PII-FT-001'],
+      ['AISLE-AUTH-001', 'PII-AUTH-001'],
+      ['AISLE-SEC-001', 'PII-SEC-001'],
+      ['AISLE-CON-001', 'PII-CON-001'],
+      ['AISLE-DB-001', 'PII-DB-001'],
+    ])
+      expect(areaForId(a as string), a).toBe(areaForId(b as string));
+    expect(areaForId('AISLE-SEC-001')).toBe('responseSecurity');
+    expect(areaForId('POC-001')).toBe('poc');
+    expect(areaForId('PII-AZ-001')).toBe('authorization');
+    expect(areaForId('AISLE-XYZ-001')).toBe('other');
   });
 });

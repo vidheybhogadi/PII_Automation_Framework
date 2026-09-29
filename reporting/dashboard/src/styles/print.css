@@ -31,6 +31,12 @@
   letter-spacing: -0.035em;
   margin-top: 30mm;
 }
+.cover__arch {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-2, #475569);
+  margin-top: 3mm;
+}
 .cover__headline {
   font-size: 1.35rem;
   font-weight: 650;

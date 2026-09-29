@@ -22,23 +22,3 @@ export async function expectNoHorizontalOverflow(page: Page): Promise<void> {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow, 'page must not scroll horizontally').toBeLessThanOrEqual(0);
 }
-
-export async function scrollAll(page: Page): Promise<void> {
-  for (const id of [
-    'results',
-    'tests',
-    'failures',
-    'endpoints',
-    'performance',
-    'security',
-    'database',
-    'coverage',
-    'requirements',
-    'milestones',
-    'trends',
-    'environment',
-  ]) {
-    await page.locator(`#${id}`).scrollIntoViewIfNeeded();
-    await page.waitForTimeout(80);
-  }
-}

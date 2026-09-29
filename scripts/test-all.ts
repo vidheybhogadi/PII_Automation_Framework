@@ -5,18 +5,23 @@
  *   3. generate analytics + HTML dashboard + run history + archive
  *   4. generate the PDF
  *   5. refresh the test-case sheet (docs/test-cases.xlsx) with this run's results
- *   6. print artifact locations
+ *   6. print artifact locations and open the dashboard in the browser (skipped in CI, with --no-open or REPORT_OPEN=false)
  * Exits with the TEST exit code (report generation never masks test failures).
  */
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { exportPdf } from '../reporting/generator/export-pdf';
 import { generate, PATHS, ROOT } from '../reporting/generator/generate';
+import { openFile } from '../reporting/generator/open-file';
 
 async function main(): Promise<number> {
   // A CLI --reporter replaces the configured reporters, so always keep the PII Sentinel collector attached.
   const COLLECTOR = './reporting/collector/pii-results-reporter.ts';
-  const args = process.argv.slice(2).map((a) => (a.startsWith('--reporter=') ? `${a},${COLLECTOR}` : a));
+  const argv = process.argv.slice(2);
+  const autoOpen = !process.env.CI && process.env.REPORT_OPEN !== 'false' && !argv.includes('--no-open');
+  const args = argv
+    .filter((a) => a !== '--no-open')
+    .map((a) => (a.startsWith('--reporter=') ? `${a},${COLLECTOR}` : a));
   // Service tests only by default: framework self-tests belong to `npm run verify`, not to service reports.
   if (!args.some((a) => a === '--project' || a.startsWith('--project='))) args.unshift('--project=api');
   console.log(`\n▶ 1/5 Running tests: playwright test ${args.join(' ')}\n`);
@@ -48,6 +53,10 @@ async function main(): Promise<number> {
   console.log(
     `\n  Artifacts: ${path.relative(ROOT, PATHS.out)}/ (index.html, report.pdf, results.json, results.csv, summary.txt, data/)`,
   );
+  if (autoOpen) {
+    openFile(path.join(outDir, 'index.html'));
+    console.log(`  Opened ${path.relative(ROOT, path.join(outDir, 'index.html'))}`);
+  }
   console.log(`  Tests exited with code ${testExit}.\n`);
   return testExit;
 }

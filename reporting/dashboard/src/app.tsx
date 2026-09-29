@@ -5,6 +5,8 @@ import {
   formatDuration,
   formatPct,
   healthScore,
+  OUTCOMES,
+  outcomeCounts,
   overallVerdict,
   passRate,
   preflightFailures,
@@ -37,6 +39,12 @@ function Cover() {
   const selfOnly = service.every((t) => t.kind === 'unit');
   const h = healthScore(service, report.endpoints, report.config.health);
   const v = overallVerdict(evaluateGates(service, report.config.gates));
+  const o = outcomeCounts(service);
+  // Pass and Fail always; the other statuses only when present — keeps the cover line short.
+  const checks = OUTCOMES.filter((k) => k === 'Pass' || k === 'Fail' || o[k] > 0)
+    .sort((a, b) => (a === 'Pass' ? -1 : b === 'Pass' ? 1 : 0))
+    .map((k) => `${o[k]} ${k.toLowerCase()}`)
+    .join(' · ');
   return (
     <div class="cover print-only">
       <div>
@@ -44,9 +52,13 @@ function Cover() {
           <Logo size={44} /> {report.meta.product}
         </div>
         {isDemo && <div class="demo-ribbon">DEMO DATA — made-up results, not a real test run</div>}
-        <div class="cover__title">PII API test report</div>
+        <div class="cover__title">Aisle PII API test report</div>
+        <div class="cover__arch">{report.meta.subtitle}</div>
         <div class="cover__headline">
-          {headline(c, preflightFailures(service).length, selfOnly && c.total > 0).text}
+          {
+            headline(c, preflightFailures(service).length, selfOnly && c.total > 0, o['Security finding'])
+              .text
+          }
         </div>
         <dl class="cover__meta">
           <div>
@@ -54,17 +66,15 @@ function Cover() {
             <dd>{v.verdict}</dd>
           </div>
           <div>
-            <dt>Health score</dt>
+            <dt>Test Health</dt>
             <dd>{h.score === null ? 'N/A' : `${Math.round(h.score)}% — ${h.band}`}</dd>
           </div>
           <div>
-            <dt>Checks</dt>
-            <dd>
-              {c.PASS} pass · {c.FAIL} fail · {c.total - c.PASS - c.FAIL} not tested
-            </dd>
+            <dt>Test Execution Summary</dt>
+            <dd>{checks}</dd>
           </div>
           <div>
-            <dt>Pass rate</dt>
+            <dt>API Pass Rate</dt>
             <dd>{formatPct(passRate(c))}</dd>
           </div>
           <div>
@@ -108,6 +118,7 @@ export function App() {
         document.getElementById(section)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       } else if (k === 'f') showTests({ statuses: ['FAIL'] });
       else if (k === 'w') showTests({ statuses: NOT_RUN });
+      else if (k === 'b') showTests({ statuses: ['BLOCKED'] });
       else if (k === 'a') showTests({});
       else if (k === 'e') window.dispatchEvent(new Event('pii:open-export'));
       else if (k === 'q') window.dispatchEvent(new Event('pii:toggle-dock'));

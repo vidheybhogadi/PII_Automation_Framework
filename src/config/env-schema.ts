@@ -46,34 +46,31 @@ const csvList = z.preprocess(
     ),
 );
 
-export const CALLER_ROLES = ['primary', 'secondary', 'limited'] as const;
-export type CallerRole = (typeof CALLER_ROLES)[number];
+/** The verified Aisle staging facade (testa3 does not resolve). Overridable per environment. */
+export const DEFAULT_AISLE_BASE_URL = 'https://testa2.aisle.co/V1';
 
 export const envSchema = z.object({
-  // ---- Target service -------------------------------------------------------------------------
-  PII_ENVIRONMENT: z.preprocess(blankToUndefined, z.enum(['local', 'dev', 'qa', 'staging']).default('local')),
-  PII_BASE_URL: z.preprocess(blankToUndefined, z.url({ protocol: /^https?$/ }).optional()),
-  PII_HTTP_TIMEOUT_MS: intWithDefault(15_000, 100, 300_000),
+  // ---- Target: the Aisle PII facade ---------------------------------------------------------------
+  /** Label for reports: which Aisle environment was tested. */
+  PII_ENVIRONMENT: z.preprocess(
+    blankToUndefined,
+    z.enum(['local', 'dev', 'qa', 'staging']).default('staging'),
+  ),
+  AISLE_BASE_URL: z.preprocess(
+    blankToUndefined,
+    z.url({ protocol: /^https?$/ }).default(DEFAULT_AISLE_BASE_URL),
+  ),
+  /** The Aisle test token (sent as "Authorization: Bearer …"). SECRET — .env / CI secret only. */
+  AISLE_TEST_TOKEN: optionalString,
+  /** Generous by default: the first health call on staging took ~14 s (cold start). */
+  PII_HTTP_TIMEOUT_MS: intWithDefault(30_000, 100, 300_000),
   /** Extra attempts for retry-safe (read-only) endpoints on HTTP 503. 0 disables retries. */
   PII_RETRY_MAX_ATTEMPTS: intWithDefault(2, 0, 5),
   PII_RETRY_BASE_DELAY_MS: intWithDefault(250, 0, 10_000),
   /** Comma-separated endpoint keys (see src/clients/endpoints.ts) or "all". */
   PII_ENDPOINTS_IN_SCOPE: optionalString,
 
-  // ---- Calling-service identities (Ed25519) ---------------------------------------------------
-  PII_CALLER_PRIMARY_ID: optionalString,
-  PII_CALLER_PRIMARY_PRIVATE_KEY_FILE: optionalString,
-  PII_CALLER_PRIMARY_PRIVATE_KEY: optionalString,
-  PII_CALLER_SECONDARY_ID: optionalString,
-  PII_CALLER_SECONDARY_PRIVATE_KEY_FILE: optionalString,
-  PII_CALLER_SECONDARY_PRIVATE_KEY: optionalString,
-  PII_CALLER_LIMITED_ID: optionalString,
-  PII_CALLER_LIMITED_PRIVATE_KEY_FILE: optionalString,
-  PII_CALLER_LIMITED_PRIVATE_KEY: optionalString,
-
   // ---- Test data ------------------------------------------------------------------------------
-  PII_TEST_TENANT_ID: z.preprocess(blankToUndefined, z.string().trim().min(1).max(64).optional()),
-  PII_TEST_TENANT_ID_SECONDARY: z.preprocess(blankToUndefined, z.string().trim().min(1).max(64).optional()),
   PII_TEST_RUN_PREFIX: z.preprocess(
     blankToUndefined,
     z
@@ -83,48 +80,31 @@ export const envSchema = z.object({
   ),
   /** Set automatically by playwright.config.ts; override to reproduce a run. */
   PII_TEST_RUN_ID: optionalString,
-  PII_TEST_EMAIL_DOMAIN: z.preprocess(
+  /**
+   * Optional fixed test users. Staging accepts made-up user IDs, so tests normally generate their own;
+   * set these only if Dev asks QA to use specific approved (non-production) test users.
+   */
+  AISLE_TEST_USER_ID: z.preprocess(blankToUndefined, z.string().trim().min(1).max(128).optional()),
+  AISLE_TEST_OTHER_USER_ID: z.preprocess(blankToUndefined, z.string().trim().min(1).max(128).optional()),
+  /** Approved non-deliverable domain for synthetic emails (e.g. example.test). */
+  AISLE_TEST_EMAIL_DOMAIN: z.preprocess(
     blankToUndefined,
     z
       .string()
-      .regex(/^[a-z0-9.-]+\.[a-z0-9-]+$/i, 'must be a bare domain such as qa.example')
-      .optional(),
+      .regex(/^[a-z0-9.-]+\.[a-z0-9-]+$/i, 'must be a bare domain such as example.test')
+      .default('example.test'),
   ),
-  /** Team-approved test phone numbers (any formatting). Comma-separated. */
-  PII_TEST_PHONES: csvList,
-  PII_TEST_PHONE_8_DIGITS: z.preprocess(
-    blankToUndefined,
-    z
-      .string()
-      .regex(/^\d{8}$/)
-      .optional(),
-  ),
-  PII_TEST_PHONE_15_DIGITS: z.preprocess(
-    blankToUndefined,
-    z
-      .string()
-      .regex(/^\d{15}$/)
-      .optional(),
-  ),
+  /** Team-approved test phone numbers (any formatting). Comma-separated. Never invent real numbers. */
+  AISLE_TEST_PHONES: csvList,
+  /** A field name the facade does not support (unknown-field test). */
   PII_UNSUPPORTED_FIELD: z.preprocess(
     blankToUndefined,
     z.string().min(1).max(64).default('QA_AUTOMATION_UNKNOWN_FIELD'),
   ),
-  PII_NON_SEARCHABLE_FIELD: optionalString,
+  /** An expired Aisle test token, if Dev can provide one (AISLE-AUTH-005). SECRET. */
+  AISLE_EXPIRED_TEST_TOKEN: optionalString,
 
-  // ---- Server-side limits (documented development defaults) -----------------------------------
-  PII_BATCH_MAX_ITEMS: intWithDefault(50, 1, 10_000),
-  PII_SEARCH_DEFAULT_LIMIT: intWithDefault(10, 1, 100),
-  PII_TRANSIENT_TTL_MIN_SECONDS: intWithDefault(300, 1),
-  PII_TRANSIENT_TTL_MAX_SECONDS: intWithDefault(604_800, 1),
-  PII_MAX_BODY_BYTES: optionalInt(1),
-  PII_CLOCK_SKEW_TOLERANCE_SECONDS: intWithDefault(120, 0, 3_600),
-
-  // ---- Feature switches -----------------------------------------------------------------------
-  PII_ENABLE_TTL_EXPIRY_TEST: boolWithDefault(false),
-  PII_SIGNATURE_HELPER_MUST_BE_DISABLED: boolWithDefault(false),
-
-  // ---- Database (technology NOT documented — see docs/database-setup.md) ----------------------
+  // ---- Database (read-only validation; schema supplied by Dev — see docs/database-setup.md) --------
   DB_ENGINE: z.preprocess(blankToUndefined, z.enum(['none', 'postgres', 'mysql']).default('none')),
   DB_HOST: optionalString,
   DB_PORT: optionalInt(1, 65_535),

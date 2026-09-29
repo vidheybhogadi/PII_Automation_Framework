@@ -322,6 +322,33 @@
   color: var(--skipped-ink);
 }
 
+/* Outcome badges (what a reader sees) — icon + word, colour only reinforces. */
+.outcome--pass {
+  background: var(--pass-soft);
+  color: var(--pass-ink);
+}
+.outcome--fail {
+  background: var(--fail-soft);
+  color: var(--fail-ink);
+}
+.outcome--finding {
+  background: var(--finding-soft);
+  color: var(--finding-ink);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--finding) 45%, transparent);
+}
+.outcome--blocked {
+  background: var(--blocked-soft);
+  color: var(--blocked-ink);
+}
+.outcome--skipped {
+  background: var(--skip-soft);
+  color: var(--skip-ink);
+}
+.outcome--not-tested {
+  background: var(--unknown-soft);
+  color: var(--unknown-ink);
+}
+
 /* ---- Banners / demo -------------------------------------------------------------------------------- */
 .demo-ribbon {
   position: relative;
@@ -353,6 +380,13 @@
 }
 .banner--warn {
   background: var(--blocked-soft);
+}
+.banner--finding {
+  background: var(--finding-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--finding) 35%, transparent);
+}
+.banner--finding > svg {
+  color: var(--finding-ink);
 }
 .banner--fail {
   background: var(--fail-soft);
@@ -425,6 +459,14 @@
 .count-pill__item--warn {
   background: var(--blocked-soft);
   color: var(--blocked-ink);
+}
+.count-pill__item--muted {
+  background: var(--unknown-soft);
+  color: var(--unknown-ink);
+}
+.count-pill__item--finding {
+  background: var(--finding-soft);
+  color: var(--finding-ink);
 }
 
 /* ---- Section nav (top bar) ----------------------------------------------------------------------- */
@@ -588,7 +630,7 @@
 }
 .stats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--stat-cols, 4), minmax(0, 1fr));
   gap: 12px;
 }
 .stat {
@@ -643,6 +685,19 @@
   --c: var(--skipped);
   --c-soft: var(--skipped-soft);
   --c-ink: var(--skipped-ink);
+}
+.stat--finding {
+  --c: var(--finding);
+  --c-soft: var(--finding-soft);
+  --c-ink: var(--finding-ink);
+}
+.stat--skip {
+  --c: var(--skip);
+  --c-soft: var(--skip-soft);
+  --c-ink: var(--skip-ink);
+}
+.stat--finding .stat__value {
+  color: var(--finding-ink);
 }
 .stat__top {
   position: relative;
@@ -725,6 +780,13 @@
 }
 .stackbar__seg--muted {
   background: var(--skipped);
+}
+.stackbar__seg--finding {
+  background: var(--finding);
+  background-image: repeating-linear-gradient(45deg, transparent 0 4px, oklch(100% 0 0 / 0.3) 4px 6px);
+}
+.stackbar__seg--skip {
+  background: var(--skip);
 }
 .hero__foot {
   display: flex;
@@ -961,6 +1023,12 @@
 .alert-card--warn::after {
   background: linear-gradient(180deg, var(--blocked), color-mix(in oklch, var(--blocked) 40%, transparent));
 }
+.alert-card--muted::after {
+  background: linear-gradient(180deg, var(--unknown), color-mix(in oklch, var(--unknown) 40%, transparent));
+}
+.alert-card--finding::after {
+  background: linear-gradient(180deg, var(--finding), color-mix(in oklch, var(--finding) 40%, transparent));
+}
 .alert-card--wide,
 .attention__more {
   grid-column: 1 / -1;
@@ -983,6 +1051,44 @@
 .alert-card--warn .alert-card__icon {
   background: var(--blocked-soft);
   color: var(--blocked-ink);
+}
+.alert-card--finding .alert-card__icon {
+  background: var(--finding-soft);
+  color: var(--finding-ink);
+}
+.alert-card--muted .alert-card__icon {
+  background: var(--unknown-soft);
+  color: var(--unknown-ink);
+}
+.alert-card--finding {
+  align-items: flex-start;
+}
+.finding-list {
+  list-style: none;
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding: 0;
+}
+.finding-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: var(--r-md);
+  background: var(--finding-soft);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  text-align: left;
+}
+.finding-item:hover {
+  background: color-mix(in oklch, var(--finding) 20%, transparent);
+}
+.finding-item .mono {
+  color: var(--finding-ink);
+  font-weight: 700;
+  white-space: nowrap;
 }
 .alert-card__title {
   display: block;
@@ -1413,6 +1519,18 @@
 }
 .table tbody tr[data-status='NOT_TESTED'] td:first-child {
   box-shadow: inset 3px 0 0 var(--line-strong);
+}
+.table tbody tr[data-status='FINDING'] td:first-child {
+  box-shadow: inset 3px 0 0 var(--finding);
+}
+.table tbody tr[data-status='FINDING'] {
+  background: color-mix(in oklch, var(--finding) 5%, transparent);
+}
+.table tbody tr[data-status='BLOCKED'] td:first-child {
+  box-shadow: inset 3px 0 0 var(--blocked);
+}
+.table tbody tr[data-status='SKIPPED'] td:first-child {
+  box-shadow: inset 3px 0 0 var(--skip);
 }
 .table tbody tr[data-status='FAIL'] {
   background: color-mix(in oklch, var(--fail) 5%, transparent);
@@ -2098,6 +2216,14 @@
   color: var(--muted);
   font-style: italic;
 }
+.test-remark--finding {
+  color: var(--finding-ink);
+  font-style: normal;
+  font-weight: 600;
+}
+.test-remark--blocked {
+  color: var(--blocked-ink);
+}
 .prio {
   display: inline-flex;
   align-items: center;
@@ -2254,4 +2380,19 @@
   justify-content: center;
   padding: 0 8px;
   white-space: nowrap;
+}
+
+/* ---- Status legend (How to read this report) ---------------------------------------------------- */
+.outcome-legend {
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+}
+.outcome-legend li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
 }

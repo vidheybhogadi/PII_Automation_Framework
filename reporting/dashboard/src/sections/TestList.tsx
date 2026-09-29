@@ -1,26 +1,39 @@
-/** "All tests" — every test in the suite, grouped by endpoint: Pass / Fail / Not Tested, a one-line description, search. */
+/**
+ * "All tests" — every test in the suite, grouped by endpoint: Pass / Fail / Security finding / Blocked / Skipped /
+ * Not Tested, a one-line description, search.
+ */
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { formatDuration, testOutcome } from '../../../core/analytics';
+import { formatDuration, OUTCOMES, testOutcome, type Outcome } from '../../../core/analytics';
 import { suiteOf } from '../../../core/catalog';
-import type { TestStatus } from '../../../core/types';
-import { EmptyState, OutcomeBadge, Section } from '../components/ui';
+import { EmptyState, OUTCOME_META, OutcomeBadge, Section } from '../components/ui';
 import { Icon } from '../icons';
 import { plainEndpoint, plainTitle } from '../plain';
-import { GROUP_BY_OPTIONS, groupKeyOf, NOT_RUN, outcomeOf, useApp, type GroupBy } from '../store';
-import { isTypingTarget } from '../utils';
+import {
+  GROUP_BY_OPTIONS,
+  groupKeyOf,
+  OUTCOME_FILTER,
+  outcomeMatches,
+  outcomeOf,
+  useApp,
+  type GroupBy,
+} from '../store';
+import { isTypingTarget, type StatusFilter } from '../utils';
 
 const PAGE = 20;
-const TABS: { label: string; statuses: TestStatus[] }[] = [
-  { label: 'All', statuses: [] },
-  { label: 'Fail', statuses: ['FAIL'] },
-  { label: 'Not Tested', statuses: NOT_RUN },
-  { label: 'Pass', statuses: ['PASS'] },
+/** All · Fail · Security finding · Blocked · Skipped · Not Tested · Pass (the OUTCOMES order). */
+const TABS: { label: string; outcome: Outcome | null; statuses: StatusFilter[] }[] = [
+  { label: 'All', outcome: null, statuses: [] },
+  ...OUTCOMES.map((o) => ({ label: o, outcome: o, statuses: [OUTCOME_FILTER[o]] })),
 ];
+/** Outcomes of tests that really ran (they have a meaningful duration). */
+const RAN: readonly Outcome[] = ['Pass', 'Fail', 'Security finding'];
+/** Tabs always shown; the others appear only when some test has that status. */
+const ALWAYS: readonly (Outcome | null)[] = [null, 'Fail', 'Pass'];
 
 const TYPE_HEAD: Record<string, { icon: string; note: string }> = {
   Positive: { icon: 'check', note: 'Normal use works as expected' },
   Negative: { icon: 'x', note: 'Wrong or incomplete input is refused' },
-  Security: { icon: 'shield', note: 'Signing, permissions, customer separation and leaks' },
+  Security: { icon: 'shield', note: 'Token checks, access, customer separation and leaks' },
   Database: { icon: 'database', note: 'Checks the stored data directly' },
   Contract: { icon: 'requirement', note: 'Replies match the documented format' },
 };
@@ -113,18 +126,11 @@ export function TestList() {
     for (const t of sorted) m.set(groupKeyOf(t, groupBy), (m.get(groupKeyOf(t, groupBy)) ?? 0) + 1);
     return m;
   }, [sorted, groupBy]);
-  const count = (st: TestStatus[]) =>
-    !st.length
-      ? all.length
-      : all.filter((t) => {
-          const o = outcomeOf(t);
-          return o === 'Pass'
-            ? st.includes('PASS')
-            : o === 'Fail'
-              ? st.includes('FAIL')
-              : st.some((x) => NOT_RUN.includes(x));
-        }).length;
+  const count = (st: StatusFilter[]) => all.filter((t) => outcomeMatches(outcomeOf(t), st)).length;
   const activeTab = TABS.findIndex((t) => t.statuses.join() === filters.statuses.join());
+  const tabs = TABS.map((t, i) => ({ ...t, i, n: count(t.statuses) })).filter(
+    (t) => ALWAYS.includes(t.outcome) || t.n > 0 || t.i === activeTab,
+  );
   const endpointName = filters.endpoint ? plainEndpoint(filters.endpoint).name : '';
   // Longest executed test — scales the small time bars.
   const slowest = useMemo(
@@ -157,13 +163,13 @@ export function TestList() {
             </div>
           </div>
           <div class="seg" role="group" aria-label="Show">
-            {TABS.map((t, i) => (
+            {tabs.map((t) => (
               <button
                 key={t.label}
-                aria-pressed={activeTab === i}
+                aria-pressed={activeTab === t.i}
                 onClick={() => setFilters((f) => ({ ...f, statuses: t.statuses }))}
               >
-                {t.label} <span class="seg__count">{count(t.statuses)}</span>
+                {t.label} <span class="seg__count">{t.n}</span>
               </button>
             ))}
           </div>
@@ -235,7 +241,7 @@ export function TestList() {
                     {g.tests.map((t) => (
                       <tr
                         key={t.key}
-                        data-status={outcomeOf(t) === 'Not Tested' ? 'NOT_TESTED' : t.status}
+                        data-status={OUTCOME_META[outcomeOf(t)].token}
                         tabIndex={0}
                         onClick={() => openTest(t.key)}
                         onKeyDown={(e) => e.key === 'Enter' && openTest(t.key)}
@@ -252,12 +258,14 @@ export function TestList() {
                             {t.info && <span class={`prio prio--${t.info.priority}`}>{t.info.priority}</span>}
                             {suiteOf(t.tags) === 'Smoke' && <span class="suite suite--Smoke">Smoke</span>}
                             {outcomeOf(t) !== 'Pass' && testOutcome(t).remark !== 'Not part of this run' && (
-                              <span class="test-remark">{testOutcome(t).remark}</span>
+                              <span class={`test-remark test-remark--${OUTCOME_META[outcomeOf(t)].cls}`}>
+                                {testOutcome(t).remark}
+                              </span>
                             )}
                           </div>
                         </td>
                         <td class="num nowrap tabular">
-                          {outcomeOf(t) !== 'Not Tested' ? (
+                          {RAN.includes(outcomeOf(t)) ? (
                             <span class="timecell">
                               <span class="timebar" aria-hidden="true">
                                 <span style={{ width: `${Math.max(4, (t.durationMs / slowest) * 100)}%` }} />

@@ -154,6 +154,14 @@
   --unknown: oklch(70% 0.01 262);
   --unknown-ink: oklch(45% 0.01 262);
   --unknown-soft: oklch(70% 0.01 262 / 0.14);
+  /* Security finding: a known security issue (red-magenta, distinct from an automation failure). */
+  --finding: oklch(52% 0.21 345);
+  --finding-ink: oklch(43% 0.19 345);
+  --finding-soft: oklch(52% 0.21 345 / 0.13);
+  /* Skipped (grey-blue) — Not Tested uses the neutral --unknown tokens. */
+  --skip: oklch(62% 0.07 240);
+  --skip-ink: oklch(43% 0.07 240);
+  --skip-soft: oklch(62% 0.07 240 / 0.14);
   --info: oklch(60% 0.14 235);
   --info-soft: oklch(60% 0.14 235 / 0.12);
 
@@ -218,6 +226,12 @@
   --unknown: oklch(60% 0.01 262);
   --unknown-ink: oklch(76% 0.01 262);
   --unknown-soft: oklch(60% 0.01 262 / 0.18);
+  --finding: oklch(70% 0.19 345);
+  --finding-ink: oklch(82% 0.12 345);
+  --finding-soft: oklch(70% 0.19 345 / 0.18);
+  --skip: oklch(70% 0.07 240);
+  --skip-ink: oklch(83% 0.06 240);
+  --skip-soft: oklch(70% 0.07 240 / 0.17);
   --info: oklch(72% 0.13 235);
   --info-soft: oklch(72% 0.13 235 / 0.16);
 

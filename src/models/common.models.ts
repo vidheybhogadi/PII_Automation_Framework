@@ -1,6 +1,6 @@
 /**
- * Shared contract models — taken verbatim from the guide's "Success envelope", "Error envelope" and
- * "Common statuses" sections.
+ * Shared response models of the Aisle PII facade. The envelope `{status, message, data, error}`, the
+ * FastAPI 422 `detail` list and the error codes marked OBSERVED were seen on staging (2026-09-29).
  *
  * TypeScript + Zod pattern used throughout /models:
  *   const fooSchema = z.object({...});      // runtime validator
@@ -37,8 +37,8 @@ export const errorEnvelopeSchema = z.object({
 export type ErrorEnvelope = z.infer<typeof errorEnvelopeSchema>;
 
 /**
- * FastAPI's default 422 body. The guide lists 422 as "FastAPI validation response" without saying whether
- * it is wrapped in the error envelope — see docs/known-gaps-and-questions.md Q-05. Both shapes are accepted.
+ * FastAPI's default 422 body (OBSERVED). Note: each `detail` entry also carries an `input` echo of what was
+ * sent — including the value and the internal tenant_id — which is security finding BQ-08 (AISLE-SEC-002).
  */
 export const fastApiValidationSchema = z.object({
   detail: z.array(
@@ -50,34 +50,21 @@ export const fastApiValidationSchema = z.object({
   ),
 });
 
-/** Error codes documented in "Common statuses". */
+/**
+ * Error codes. OBSERVED on staging: AUTHORIZATION_DENIED (403), PII_NOT_FOUND (404). The others are
+ * PROVISIONAL (from the PII Service guide) and must be confirmed through the facade before being asserted.
+ */
 export const ERROR_CODES = {
-  VALIDATION_ERROR: 'VALIDATION_ERROR',
-  AUTHENTICATION_FAILED: 'AUTHENTICATION_FAILED',
-  INVALID_SIGNATURE: 'INVALID_SIGNATURE',
   AUTHORIZATION_DENIED: 'AUTHORIZATION_DENIED',
   PII_NOT_FOUND: 'PII_NOT_FOUND',
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
   TRANSIENT_PHONE_NOT_FOUND: 'TRANSIENT_PHONE_NOT_FOUND',
   FREE_TEXT_KEY_NOT_FOUND: 'FREE_TEXT_KEY_NOT_FOUND',
-  BODY_TOO_LARGE: 'BODY_TOO_LARGE',
-  INTERNAL_ERROR: 'INTERNAL_ERROR',
-  DECRYPTION_FAILED: 'DECRYPTION_FAILED',
-  KEY_UNAVAILABLE: 'KEY_UNAVAILABLE',
-  KEY_VERSION_NOT_FOUND: 'KEY_VERSION_NOT_FOUND',
-  DATABASE_ERROR: 'DATABASE_ERROR',
-  SERVICE_NOT_READY: 'SERVICE_NOT_READY',
 } as const;
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
 
-/** 401 may carry either code (guide: "AUTHENTICATION_FAILED / INVALID_SIGNATURE"). See Q-06. */
-export const AUTH_ERROR_CODES: readonly ErrorCode[] = [
-  ERROR_CODES.AUTHENTICATION_FAILED,
-  ERROR_CODES.INVALID_SIGNATURE,
-];
-
-/** Readiness payloads (section 1). */
+/** Readiness payload (OBSERVED): `{"status":true,"message":"Service is ready","data":{"status":"ready"}}`. */
 export const healthReadyDataSchema = z.object({ status: z.literal('ready') });
-export const healthNotReadyDataSchema = z.object({ status: z.literal('not_ready') });
 
 /** Documented top-level keys of every envelope — used by the strict contract tests. */
 export const ENVELOPE_KEYS = ['data', 'error', 'message', 'status'] as const;

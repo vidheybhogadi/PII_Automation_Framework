@@ -1,34 +1,28 @@
-/** UNIT — configuration parsing and actionable errors. */
+/** UNIT — configuration parsing, secret handling and actionable errors. */
 import { expect, test } from '@playwright/test';
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
+import { readFileSync } from 'node:fs';
 import { inspect } from 'node:util';
 import {
   ConfigError,
   assertIntegrationConfig,
+  isDbConfigured,
   loadConfig,
-  normalizePrivateKeyText,
-  requireCaller,
-  requireTenant,
+  requireToken,
 } from '../../src/config/config';
+import { DEFAULT_AISLE_BASE_URL } from '../../src/config/env-schema';
 import { ENDPOINT_KEYS } from '../../src/clients/endpoints';
 import { buildPendingDoc, PENDING_DOC } from '../../scripts/generate-pending-doc';
 import { pendingSettings } from '../../src/config/placeholders';
-import { RFC8032_TEST1_PRIVATE_KEY_PEM } from './helpers/test-keys';
+import { scrubText } from '../../src/utils/redaction';
 
-const keyDir = mkdtempSync(path.join(tmpdir(), 'pii-cfg-'));
-const keyFile = path.join(keyDir, 'unit.pem');
-writeFileSync(keyFile, RFC8032_TEST1_PRIVATE_KEY_PEM, { mode: 0o600 });
+/** Synthetic test token — NOT a real credential. */
+const FAKE_TOKEN = 'unitTestToken0123456789abcdef0000';
 
 const validEnv = {
-  PII_BASE_URL: 'http://127.0.0.1:8001/',
-  PII_CALLER_PRIMARY_ID: 'unit-caller',
-  PII_CALLER_PRIMARY_PRIVATE_KEY_FILE: keyFile,
-  PII_TEST_TENANT_ID: 'tenant-unit',
-  PII_TEST_TENANT_ID_SECONDARY: 'tenant-unit-2',
-  PII_TEST_EMAIL_DOMAIN: 'qa.example',
-  PII_TEST_PHONES: '+10 000 000 00, 1234567890',
+  AISLE_BASE_URL: 'https://staging.aisle.example/V1/',
+  AISLE_TEST_TOKEN: FAKE_TOKEN,
+  AISLE_TEST_EMAIL_DOMAIN: 'qa.example',
+  AISLE_TEST_PHONES: '+10 000 000 00, 1234567890',
 };
 
 function errorOf(fn: () => unknown): Error {
@@ -41,82 +35,69 @@ function errorOf(fn: () => unknown): Error {
 }
 
 test.describe('UNIT configuration', () => {
-  test('UT-CFG-001 With no .env, settings load with their documented defaults', () => {
+  test('UT-CFG-001 With no .env, settings load with safe defaults (verified staging URL, no token)', () => {
     const cfg = loadConfig({});
-    expect(cfg.baseUrl).toBeUndefined();
-    expect(cfg.limits).toMatchObject({
-      batchMaxItems: 50,
-      searchDefaultLimit: 10,
-      transientTtlMinSeconds: 300,
-      transientTtlMaxSeconds: 604_800,
-    });
+    expect(cfg.baseUrl).toBe(DEFAULT_AISLE_BASE_URL);
+    expect(DEFAULT_AISLE_BASE_URL).toBe('https://testa2.aisle.co/V1');
+    expect(cfg.token).toBeUndefined();
+    expect(cfg.testData.emailDomain).toBe('example.test');
+    expect(cfg.http.timeoutMs).toBe(30_000);
     expect(cfg.db.engine).toBe('none');
     expect(cfg.endpointsInScope).toEqual(ENDPOINT_KEYS);
   });
 
-  test('UT-CFG-002 A valid .env loads correctly (URL tidied, phone list parsed)', () => {
+  test('UT-CFG-002 A valid .env loads correctly (URL tidied, phone list parsed, token wrapped)', () => {
     const cfg = loadConfig(validEnv);
-    expect(cfg.baseUrl).toBe('http://127.0.0.1:8001');
-    expect(cfg.callers.primary?.callerId).toBe('unit-caller');
+    expect(cfg.baseUrl).toBe('https://staging.aisle.example/V1');
+    expect(cfg.token?.reveal()).toBe(FAKE_TOKEN);
     expect(cfg.testData.phones).toEqual(['+10 000 000 00', '1234567890']);
     expect(() => assertIntegrationConfig(cfg)).not.toThrow();
   });
 
-  test('UT-CFG-003 All missing settings are reported at once, each with a hint', () => {
+  test('UT-CFG-003 A missing Aisle token is reported with a hint on where to get it', () => {
     const err = errorOf(() => assertIntegrationConfig(loadConfig({})));
     expect(err).toBeInstanceOf(ConfigError);
-    for (const name of ['PII_BASE_URL', 'PII_CALLER_PRIMARY_ID', 'PII_TEST_EMAIL_DOMAIN']) {
-      expect(err.message).toContain(name);
-    }
-    // Tenants are optional: each run generates its own when they are not set.
-    expect(err.message).not.toContain('PII_TEST_TENANT_ID');
+    expect(err.message).toContain('AISLE_TEST_TOKEN');
     expect(err.message).toContain('docs/setup-guide.md');
+    expect(errorOf(() => requireToken(loadConfig({}))).message).toContain('AISLE_TEST_TOKEN');
   });
 
   test('UT-CFG-004 Invalid settings are rejected without printing the value', () => {
     const err = errorOf(() =>
-      loadConfig({ PII_BASE_URL: 'ftp://secret-host-value', PII_BATCH_MAX_ITEMS: 'abc' }),
+      loadConfig({ AISLE_BASE_URL: 'ftp://secret-host-value', PII_HTTP_TIMEOUT_MS: 'abc' }),
     );
-    expect(err.message).toContain('PII_BASE_URL');
-    expect(err.message).toContain('PII_BATCH_MAX_ITEMS');
+    expect(err.message).toContain('AISLE_BASE_URL');
+    expect(err.message).toContain('PII_HTTP_TIMEOUT_MS');
     expect(err.message).not.toContain('secret-host-value');
   });
 
-  test('UT-CFG-005 A private key can be given inline (with \\n line breaks) or Base64-encoded', () => {
-    const escaped = RFC8032_TEST1_PRIVATE_KEY_PEM.replace(/\n/g, '\\n');
-    expect(normalizePrivateKeyText(escaped)).toBe(RFC8032_TEST1_PRIVATE_KEY_PEM.trim());
-    const b64 = Buffer.from(RFC8032_TEST1_PRIVATE_KEY_PEM).toString('base64');
-    expect(normalizePrivateKeyText(b64)).toBe(RFC8032_TEST1_PRIVATE_KEY_PEM.trim());
-  });
-
-  test('UT-CFG-006 Caller setup errors say what to fix and never contain key text', () => {
-    const noKey = errorOf(() => loadConfig({ PII_CALLER_LIMITED_ID: 'x' }));
-    expect(noKey.message).toContain('PII_CALLER_LIMITED_PRIVATE_KEY_FILE');
-    const both = errorOf(() =>
-      loadConfig({ ...validEnv, PII_CALLER_PRIMARY_PRIVATE_KEY: RFC8032_TEST1_PRIVATE_KEY_PEM }),
-    );
-    expect(both.message).toContain('not both');
-    expect(both.message).not.toContain('MC4CAQAw');
-    const badPath = errorOf(() =>
-      loadConfig({ ...validEnv, PII_CALLER_PRIMARY_PRIVATE_KEY_FILE: '/nope/missing.pem' }),
-    );
-    expect(badPath.message).toContain('could not be read');
-  });
-
-  test('UT-CFG-007 Printing the settings never shows keys or the database password', () => {
+  test('UT-CFG-005 Printing the settings never shows the token or the database password', () => {
     const cfg = loadConfig({ ...validEnv, DB_PASSWORD: 'SuperSecretDbPass' });
-    const rendered = `${inspect(cfg, { depth: 10 })} ${JSON.stringify(cfg)}`;
-    expect(rendered).not.toContain('MC4CAQAw');
+    const rendered = `${inspect(cfg, { depth: 10 })} ${JSON.stringify(cfg)} ${String(cfg.token)}`;
+    expect(rendered).not.toContain(FAKE_TOKEN);
     expect(rendered).not.toContain('SuperSecretDbPass');
     expect(cfg.db.password?.reveal()).toBe('SuperSecretDbPass');
   });
 
-  test('UT-CFG-008 Required-setting checks explain exactly what is missing', () => {
-    const cfg = loadConfig({ ...validEnv, PII_TEST_TENANT_ID_SECONDARY: '' });
-    expect(errorOf(() => requireCaller(cfg, 'limited')).message).toContain('PII_CALLER_LIMITED_ID');
-    expect(errorOf(() => requireTenant(cfg, 'secondary')).message).toContain('PII_TEST_TENANT_ID_SECONDARY');
-    const same = loadConfig({ ...validEnv, PII_TEST_TENANT_ID_SECONDARY: 'tenant-unit' });
-    expect(errorOf(() => requireTenant(same, 'secondary')).message).toContain('must differ');
+  test('UT-CFG-006 Once loaded, the token is scrubbed from any text, even without "Bearer"', () => {
+    loadConfig(validEnv);
+    expect(scrubText(`failed with token ${FAKE_TOKEN} in url`)).not.toContain(FAKE_TOKEN);
+    expect(scrubText(`Authorization: Bearer ${FAKE_TOKEN}`)).not.toContain(FAKE_TOKEN);
+  });
+
+  test('UT-CFG-007 DB validation counts as configured only when engine, connection and queries are all set', () => {
+    expect(isDbConfigured(loadConfig({}))).toBe(false);
+    const partial = loadConfig({ DB_ENGINE: 'postgres', DB_HOST: 'db.example' });
+    expect(isDbConfigured(partial)).toBe(false);
+    const full = loadConfig({
+      DB_ENGINE: 'postgres',
+      DB_HOST: 'db.example',
+      DB_NAME: 'pii',
+      DB_USER: 'qa_readonly',
+      DB_PASSWORD: 'x-unit-password',
+      DB_QUERIES_FILE: 'config/db-queries.json',
+    });
+    expect(isDbConfigured(full)).toBe(true);
   });
 
   test('UT-CFG-009 Endpoint scope accepts a subset and rejects unknown endpoint names', () => {
@@ -129,43 +110,25 @@ test.describe('UNIT configuration', () => {
     );
   });
 
-  test('UT-CFG-010 On/off switches, lifetime limits and 8/15-digit test phones are validated', () => {
-    expect(loadConfig({ PII_ENABLE_TTL_EXPIRY_TEST: 'true' }).features.ttlExpiryTest).toBe(true);
-    expect(errorOf(() => loadConfig({ PII_ENABLE_TTL_EXPIRY_TEST: 'maybe' })).message).toContain(
-      'PII_ENABLE_TTL_EXPIRY_TEST',
-    );
-    expect(
-      errorOf(() =>
-        loadConfig({ PII_TRANSIENT_TTL_MIN_SECONDS: '900', PII_TRANSIENT_TTL_MAX_SECONDS: '300' }),
-      ).message,
-    ).toContain('must not be greater');
-    expect(errorOf(() => loadConfig({ PII_TEST_PHONE_8_DIGITS: '1234567' })).message).toContain(
-      'PII_TEST_PHONE_8_DIGITS',
+  test('UT-CFG-010 Optional fixed test users are validated against the observed 128-character limit', () => {
+    expect(loadConfig({ AISLE_TEST_USER_ID: 'qa-fixed-user' }).testData.userId).toBe('qa-fixed-user');
+    expect(errorOf(() => loadConfig({ AISLE_TEST_USER_ID: 'x'.repeat(129) })).message).toContain(
+      'AISLE_TEST_USER_ID',
     );
   });
 
   test('UT-CFG-011 Settings still set to a PENDING_ placeholder count as not set and are never used', () => {
     const env = {
-      PII_BASE_URL: 'PENDING_PII_BASE_URL',
-      PII_TEST_TENANT_ID: 'PENDING_TEST_TENANT_ID',
-      PII_BATCH_MAX_ITEMS: 'PENDING_BATCH_MAX_ITEMS',
-      PII_CALLER_PRIMARY_ID: 'PENDING_PRIMARY_CALLER_ID',
-      PII_CALLER_PRIMARY_PRIVATE_KEY_FILE: './secrets/does-not-exist.pem',
+      AISLE_TEST_TOKEN: 'PENDING_AISLE_TEST_TOKEN',
+      AISLE_TEST_PHONES: 'PENDING_APPROVED_TEST_PHONES',
       DB_ENGINE: 'PENDING_DB_ENGINE',
+      DB_HOST: 'PENDING_DB_HOST',
     };
     const config = loadConfig(env);
-    expect(config.baseUrl).toBeUndefined();
-    expect(config.tenants.primary).toBeUndefined();
-    expect(config.limits.batchMaxItems).toBe(50); // the guide's development value while pending
-    expect(config.callers.primary).toBeUndefined(); // a pending caller is "not configured", not broken
+    expect(config.token).toBeUndefined();
+    expect(config.testData.phones).toEqual([]);
     expect(config.db.engine).toBe('none');
-    expect(pendingSettings(env)).toEqual([
-      'DB_ENGINE',
-      'PII_BASE_URL',
-      'PII_BATCH_MAX_ITEMS',
-      'PII_CALLER_PRIMARY_ID',
-      'PII_TEST_TENANT_ID',
-    ]);
+    expect(pendingSettings(env)).toEqual(['AISLE_TEST_PHONES', 'AISLE_TEST_TOKEN', 'DB_ENGINE', 'DB_HOST']);
   });
 });
 

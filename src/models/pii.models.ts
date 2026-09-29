@@ -1,29 +1,27 @@
 /**
- * PII write / read / search / batch-read contracts (guide sections 2–5).
- * Field names and types are copied from the guide's request/response tables — nothing is invented.
+ * PII write / read / search / batch-read contracts on the Aisle facade.
+ *
+ * Requests carry NO tenant_id: Aisle sets the tenant itself (observed: every response says "aisle").
+ * Write / read / batch-read response shapes and the limits below were OBSERVED on staging (2026-09-29).
+ * Search response shapes are PROVISIONAL (from the PII Service guide): search returns 403 today (BQ-01).
  */
 import { z } from 'zod';
 
-/** "Typical field names are EMAIL, PHONE, and NAME." The field catalog itself is server-side. */
+/** Fields used through the facade. Only NAME is accessible today; EMAIL/PHONE return 403 (BQ-01, BQ-03). */
 export const PII_FIELDS = { EMAIL: 'EMAIL', PHONE: 'PHONE', NAME: 'NAME' } as const;
 export type PiiFieldName = (typeof PII_FIELDS)[keyof typeof PII_FIELDS];
 
-// ---- Documented request constraints -----------------------------------------------------------
+// ---- Request limits OBSERVED on staging (FastAPI 422 "min_length"/"max_length") -----------------------
 export const LIMITS = {
-  tenantId: { min: 1, max: 64 },
   userId: { min: 1, max: 128 },
-  field: { min: 1, max: 64 },
   value: { min: 1, max: 1024 },
-  searchLimit: { min: 1, max: 100 },
+  fieldNames: { min: 1 },
   batchUserIds: { min: 1, max: 200 },
-  batchFields: { min: 1, max: 64 },
-  transientPhone: { min: 1, max: 64 },
-  phoneDigits: { min: 8, max: 15 },
+  batchFields: { min: 1 },
 } as const;
 
 // ---- 2. Write PII -------------------------------------------------------------------------------
 export interface WritePiiRequest {
-  tenant_id: string;
   user_id: string;
   field: string;
   value: string;
@@ -40,7 +38,6 @@ export const WRITE_PII_DATA_KEYS = ['field', 'key_version', 'tenant_id', 'user_i
 
 // ---- 3. Read PII --------------------------------------------------------------------------------
 export interface ReadPiiRequest {
-  tenant_id: string;
   user_id: string;
   field_names: string[];
 }
@@ -65,7 +62,6 @@ export const READ_PII_DATA_KEYS = ['count', 'items', 'tenant_id', 'user_id'] as 
 
 // ---- 4. Search PII ------------------------------------------------------------------------------
 export interface SearchPiiRequest {
-  tenant_id: string;
   value: string;
   limit?: number;
   include_values?: boolean;
@@ -101,7 +97,6 @@ export const SEARCH_DATA_KEYS = ['count', 'field', 'matches', 'tenant_id', 'trun
 
 // ---- 5. Batch read ------------------------------------------------------------------------------
 export interface BatchReadPiiRequest {
-  tenant_id: string;
   user_ids: string[];
   fields: string[];
 }

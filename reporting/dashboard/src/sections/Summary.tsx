@@ -1,4 +1,7 @@
-/** The answer, in one glance: a status pill, a plain sentence, four big numbers, one bar and the health score. */
+/**
+ * The answer, in one glance: a status pill, a plain sentence, big numbers per status (Pass, Fail, Security finding,
+ * Blocked, Skipped, Not Tested, Total), one bar and the health score.
+ */
 import { useMemo } from 'preact/hooks';
 import {
   compareRuns,
@@ -7,7 +10,10 @@ import {
   executedCount,
   formatDuration,
   healthScore,
+  OUTCOMES,
+  outcomeCounts,
   overallVerdict,
+  type Outcome,
   passRate,
   preflightFailures,
   sameProfile,
@@ -17,7 +23,7 @@ import type { Counts } from '../../../core/types';
 import { Gauge, type Tone } from '../components/ui';
 import { useCountUp, useInView } from '../hooks';
 import { Icon } from '../icons';
-import { NOT_RUN, outcomeOf, useApp } from '../store';
+import { OUTCOME_FILTER, useApp } from '../store';
 import { fmtDateTime, plural } from '../utils';
 
 /** The one sentence a reader needs. Built only from recorded results. */
@@ -25,6 +31,8 @@ export function headline(
   c: Counts,
   preflight: number,
   selfTestsOnly = false,
+  /** How many of c.FAIL are known security findings (they still count as failures). */
+  findings = 0,
 ): { text: string; tone: Tone; icon: string; status: string } {
   const executed = executedCount(c);
   const notRun = c.total - executed;
@@ -33,14 +41,14 @@ export function headline(
   // Only the framework's own unit tests ran: never present that as a verdict on the PII service.
   if (selfTestsOnly)
     return {
-      text: 'The PII service was not tested — only self-tests ran.',
+      text: 'The Aisle PII API was not tested — only self-tests ran.',
       tone: 'muted',
       icon: 'minus',
       status: 'Service not tested',
     };
   if (preflight > 0 && preflight >= c.FAIL)
     return {
-      text: `The PII service could not be reached — ${plural(preflight, 'check')} could not run.`,
+      text: `The Aisle PII facade could not be reached — ${plural(preflight, 'check')} could not run.`,
       tone: 'fail',
       icon: 'server',
       status: 'Service unreachable',
@@ -54,20 +62,53 @@ export function headline(
     };
   if (c.FAIL > 0)
     return {
-      text: `${c.FAIL} of ${executed} checks failed — needs attention.`,
+      text: `${c.FAIL} of ${executed} checks failed${findings > 0 ? ` (${plural(findings, 'security finding')})` : ''} — needs attention.`,
       tone: 'fail',
       icon: 'x',
       status: 'Needs attention',
     };
   if (notRun > 0)
     return {
-      text: `All ${executed} checks passed · ${plural(notRun, 'test', 'tests')} not tested.`,
+      text: `All ${executed} checks passed · ${plural(notRun, 'test')} did not run (blocked, skipped or not tested).`,
       tone: 'pass',
       icon: 'check',
       status: 'All clear',
     };
   return { text: `All ${executed} checks passed.`, tone: 'pass', icon: 'check', status: 'All clear' };
 }
+
+/** Tile look + help per status (icon + word, never colour alone). */
+const TILE: Record<Outcome, { tone: Tone | 'finding' | 'skip'; icon: string; help: string }> = {
+  Pass: { tone: 'pass', icon: 'check', help: 'Tests that ran and passed.' },
+  Fail: {
+    tone: 'fail',
+    icon: 'x',
+    help: 'Tests that ran and found a problem (automation failures to investigate).',
+  },
+  'Security finding': {
+    tone: 'finding',
+    icon: 'shield',
+    help: 'Tests that fail on a known, reported security issue — expected until Dev fixes it. Still counted as failures.',
+  },
+  Blocked: {
+    tone: 'warn',
+    icon: 'pause',
+    help: 'Tests that cannot run until Dev answers a question or grants access. Not a pass and not a failure.',
+  },
+  Skipped: {
+    tone: 'skip',
+    icon: 'skip',
+    help: 'Tests skipped in this run (e.g. optional setup not configured).',
+  },
+  'Not Tested': {
+    tone: 'muted',
+    icon: 'minus',
+    help: 'Tests that did not run: not part of this run, the run stopped early, or the Aisle PII facade was unreachable.',
+  },
+};
+
+/** Tile columns: one row up to 4 tiles, otherwise two balanced rows. */
+const statCols = (n: number): number => (n <= 4 ? n : Math.ceil(n / 2));
 
 function BigNumber({
   label,
@@ -81,7 +122,7 @@ function BigNumber({
   label: string;
   value: number;
   total: number;
-  tone: Tone | 'accent';
+  tone: Tone | 'accent' | 'finding' | 'skip';
   icon: string;
   onClick?: () => void;
   help: string;
@@ -114,27 +155,25 @@ function BigNumber({
 
 export function Summary() {
   const { report, service, all, showTests, setUi } = useApp();
-  // Pass / Fail / Not Tested across EVERY test in the suite (tests not in this run count as Not Tested).
+  // Every status across EVERY test in the suite (tests not in this run count as Not Tested).
+  const o = useMemo(() => outcomeCounts(all), [all]);
+  // Pass/fail view for the headline and pass rate: a security finding is a failure (never "all clear").
   const c = useMemo(() => {
     const counts = emptyCounts();
-    for (const t of all) {
-      const o = outcomeOf(t);
-      counts.total += 1;
-      if (o === 'Pass') counts.PASS += 1;
-      else if (o === 'Fail') counts.FAIL += 1;
-      else counts.SKIPPED += 1;
-    }
+    counts.total = all.length;
+    counts.PASS = o.Pass;
+    counts.FAIL = o.Fail + o['Security finding'];
+    counts.SKIPPED = counts.total - counts.PASS - counts.FAIL;
     return counts;
-  }, [all]);
+  }, [all, o]);
   const preflight = preflightFailures(service).length;
   const selfOnly = service.every((t) => t.kind === 'unit');
-  const h = headline(c, preflight, selfOnly && c.total > 0);
+  const h = headline(c, preflight, selfOnly && c.total > 0, o['Security finding']);
   const health = useMemo(
     () => healthScore(service, report.endpoints, report.config.health),
     [service, report],
   );
   const verdict = overallVerdict(evaluateGates(service, report.config.gates));
-  const notRun = c.total - executedCount(c);
   const rate = passRate(c);
 
   // "vs last run" — only against a run of the same kind (same projects/filters).
@@ -143,11 +182,11 @@ export function Summary() {
     return compareRuns(toHistoryEntry(report, report.tests), prev);
   }, [report]);
 
-  const segs: [string, number, string][] = [
-    ['Pass', c.PASS, 'pass'],
-    ['Fail', c.FAIL, 'fail'],
-    ['Not Tested', notRun, 'muted'],
-  ];
+  const segs: [Outcome, number, string][] = OUTCOMES.map((k) => [k, o[k], TILE[k].tone]);
+  // Pass, Fail, Not Tested and Total always; Security finding / Blocked / Skipped only when present.
+  const tiles = (['Pass', 'Fail', 'Security finding', 'Blocked', 'Skipped', 'Not Tested'] as const).filter(
+    (k) => k === 'Pass' || k === 'Fail' || k === 'Not Tested' || o[k] > 0,
+  );
 
   return (
     <section id="summary" class={`hero glass glass--strong hero--${h.tone}`} aria-labelledby="summary-title">
@@ -176,34 +215,19 @@ export function Summary() {
           {h.text}
         </h1>
 
-        <div class="stats">
-          <BigNumber
-            label="Pass"
-            value={c.PASS}
-            total={c.total}
-            tone="pass"
-            icon="check"
-            help="Tests that ran and passed."
-            onClick={() => showTests({ statuses: ['PASS'] })}
-          />
-          <BigNumber
-            label="Fail"
-            value={c.FAIL}
-            total={c.total}
-            tone={c.FAIL ? 'fail' : 'muted'}
-            icon="x"
-            help="Tests that ran and found a problem."
-            onClick={() => showTests({ statuses: ['FAIL'] })}
-          />
-          <BigNumber
-            label="Not Tested"
-            value={notRun}
-            total={c.total}
-            tone="muted"
-            icon="minus"
-            help="Tests that did not run in this run: not selected, skipped, or waiting on an answer from Dev."
-            onClick={() => showTests({ statuses: NOT_RUN })}
-          />
+        <div class="stats" style={{ '--stat-cols': statCols(tiles.length + 1) }}>
+          {tiles.map((k) => (
+            <BigNumber
+              key={k}
+              label={k}
+              value={o[k]}
+              total={c.total}
+              tone={k === 'Fail' && !o.Fail ? 'muted' : TILE[k].tone}
+              icon={TILE[k].icon}
+              help={TILE[k].help}
+              onClick={() => showTests({ statuses: [OUTCOME_FILTER[k]] })}
+            />
+          ))}
           <BigNumber
             label="Total"
             value={c.total}
@@ -215,7 +239,14 @@ export function Summary() {
           />
         </div>
 
-        <div class="stackbar" role="img" aria-label={`${c.PASS} pass, ${c.FAIL} fail, ${notRun} not tested`}>
+        <div
+          class="stackbar"
+          role="img"
+          aria-label={segs
+            .filter(([, n]) => n > 0)
+            .map(([name, n]) => `${n} ${name.toLowerCase()}`)
+            .join(', ')}
+        >
           {segs
             .filter(([, n]) => n > 0)
             .map(([name, n, tone]) => (
@@ -246,10 +277,10 @@ export function Summary() {
       </div>
 
       <aside class="hero__score">
-        <div class="hero__score-title">Health score</div>
+        <div class="hero__score-title">Test health</div>
         <Gauge
           value={health.score}
-          label="Health score"
+          label="Test health"
           sub={
             health.score !== null
               ? health.band

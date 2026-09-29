@@ -1,210 +1,73 @@
-/** Guide §5 — POST /api/v1/pii/batch/read (Cartesian product of user_ids × fields). */
-import {
-  expectError,
-  expectRejected,
-  expectRequestValidationError,
-  expectSuccess,
-} from '../../src/assertions/response.assertions';
+/** Bulk read — POST /api/v1/pii-test/batch/read through the Aisle facade (observed behaviour). */
+import { expectError, expectSuccess, expectValidationError } from '../../src/assertions/response.assertions';
 import { expectSecretEquals } from '../../src/assertions/security.assertions';
-import type { PiiClient } from '../../src/clients/pii-client';
-import type { CleanupRegistry } from '../../src/utils/cleanup';
-import type { TestDataFactory } from '../../src/data/test-data-factory';
-import { seedField, seedUser } from '../../src/fixtures/steps';
+import { seedField } from '../../src/fixtures/steps';
 import { expect, noteAssumption, onlyIfInScope, test } from '../../src/fixtures/test-fixtures';
 import { ERROR_CODES } from '../../src/models/common.models';
-import { LIMITS, batchReadDataSchema } from '../../src/models/pii.models';
+import { batchReadDataSchema, LIMITS, PII_FIELDS } from '../../src/models/pii.models';
 
-/** Seed `count` users with an EMAIL each, in small parallel chunks to avoid hammering the service. */
-async function seedEmailUsers(
-  pii: PiiClient,
-  cleanup: CleanupRegistry,
-  data: TestDataFactory,
-  tenant: string,
-  count: number,
-): Promise<string[]> {
-  const users = data.userIds(count, 'br');
-  for (let i = 0; i < users.length; i += 10) {
-    await Promise.all(
-      users
-        .slice(i, i + 10)
-        .map((userId) =>
-          seedField(pii, cleanup, { tenant, userId, field: 'EMAIL', value: data.email('br') }),
-        ),
-    );
-  }
-  return users;
-}
+/** Tenant set by the facade itself (observed on staging). */
+const AISLE_TENANT = 'aisle';
 
-const pairKey = (i: { user_id: string; field: string }) => `${i.user_id}|${i.field}`;
-
-test.describe('PII batch read', { tag: ['@regression'] }, () => {
-  onlyIfInScope('writePii', 'batchReadPii');
+test.describe('Aisle facade — bulk read', () => {
+  onlyIfInScope('batchReadPii', 'writePii');
 
   test(
-    'PII-BR-001 Bulk read of 2 users × 2 fields returns all 4 values',
-    { tag: '@smoke' },
-    async ({ pii, data, tenant, cleanup }) => {
-      const [u1, u2] = data.userIds(2, 'br1') as [string, string];
-      const values: Record<string, string> = {
-        [`${u1}|EMAIL`]: data.email(),
-        [`${u1}|NAME`]: data.name(),
-        [`${u2}|EMAIL`]: data.email(),
-        [`${u2}|NAME`]: data.name(),
-      };
-      await seedUser(pii, cleanup, tenant, u1, {
-        EMAIL: values[`${u1}|EMAIL`]!,
-        NAME: values[`${u1}|NAME`]!,
-      });
-      await seedUser(pii, cleanup, tenant, u2, {
-        EMAIL: values[`${u2}|EMAIL`]!,
-        NAME: values[`${u2}|NAME`]!,
-      });
+    'AISLE-BR-001 Bulk read of names for two fake users returns both names',
+    { tag: ['@smoke'] },
+    async ({ aisle, data, cleanup }) => {
+      const users = [
+        { userId: data.userId('br1a'), name: data.name() },
+        { userId: data.userId('br1b'), name: data.name() },
+      ];
+      for (const u of users)
+        await seedField(aisle, cleanup, { userId: u.userId, field: PII_FIELDS.NAME, value: u.name });
 
-      const result = expectSuccess(
-        await pii.batchReadPii({ tenant_id: tenant, user_ids: [u1, u2], fields: ['EMAIL', 'NAME'] }),
-        200,
-        batchReadDataSchema,
-        'PII batch read successful',
-      );
-      expect(result.tenant_id).toBe(tenant);
-      expect(result.count).toBe(4);
-      expect(result.items.map(pairKey).sort()).toEqual(Object.keys(values).sort());
-      for (const item of result.items) {
-        expect(item.tenant_id).toBe(tenant);
-        expectSecretEquals(item.value, values[pairKey(item)]!, pairKey(item).split('|')[1]!);
+      const res = await aisle.batchRead({ user_ids: users.map((u) => u.userId), fields: [PII_FIELDS.NAME] });
+      const bulk = expectSuccess(res, 200, batchReadDataSchema, 'PII batch read successful');
+      expect(bulk.tenant_id).toBe(AISLE_TENANT);
+      expect(bulk.count).toBe(2);
+      expect(bulk.items).toHaveLength(2);
+      for (const u of users) {
+        const item = bulk.items.find((i) => i.user_id === u.userId);
+        expect(item, 'each fake user has an item').toBeDefined();
+        expect(item).toMatchObject({ tenant_id: AISLE_TENANT, field: PII_FIELDS.NAME });
+        expectSecretEquals(item?.value, u.name, 'bulk-read NAME');
       }
     },
   );
 
-  test('PII-BR-002 Bulk read leaves out fields a user does not have', async ({
-    pii,
+  test('AISLE-BR-002 A bulk read fails as a whole (404) if one user has none of the requested fields', async ({
+    aisle,
     data,
-    tenant,
     cleanup,
   }) => {
-    const [u1, u2] = data.userIds(2, 'br2') as [string, string];
-    await seedUser(pii, cleanup, tenant, u1, { EMAIL: data.email(), NAME: data.name() });
-    await seedUser(pii, cleanup, tenant, u2, { EMAIL: data.email() });
-    const result = expectSuccess(
-      await pii.batchReadPii({ tenant_id: tenant, user_ids: [u1, u2], fields: ['EMAIL', 'NAME'] }),
-      200,
-      batchReadDataSchema,
-    );
-    expect(result.count).toBe(3);
-    expect(result.items.map(pairKey).sort()).toEqual([`${u1}|EMAIL`, `${u1}|NAME`, `${u2}|EMAIL`].sort());
+    const saved = data.userId('br2-saved');
+    await seedField(aisle, cleanup, { userId: saved, field: PII_FIELDS.NAME, value: data.name() });
+
+    const res = await aisle.batchRead({
+      user_ids: [saved, data.userId('br2-never-saved')],
+      fields: [PII_FIELDS.NAME],
+    });
+    const error = expectError(res, 404, ERROR_CODES.PII_NOT_FOUND);
+    expect(error.data).toBeNull();
   });
 
-  test('PII-BR-003 The whole bulk read fails (404) if one user has none of the requested fields', async ({
-    pii,
+  test('AISLE-BR-003 Bulk reads with an empty user list or more than 200 users are rejected (422)', async ({
+    aisle,
     data,
-    tenant,
-    cleanup,
-  }) => {
-    const [withData, withoutData] = data.userIds(2, 'br3') as [string, string];
-    await seedUser(pii, cleanup, tenant, withData, { EMAIL: data.email() });
-    expectError(
-      await pii.batchReadPii({ tenant_id: tenant, user_ids: [withData, withoutData], fields: ['EMAIL'] }),
-      404,
-      ERROR_CODES.PII_NOT_FOUND,
-    );
-  });
-
-  test('PII-BR-004 A bulk read of exactly the maximum size (users × fields) is accepted', async ({
-    pii,
-    data,
-    tenant,
-    cleanup,
-    config,
-  }) => {
-    const max = config.limits.batchMaxItems;
-    test.skip(
-      max > LIMITS.batchUserIds.max,
-      `batchMaxItems ${max} exceeds user_ids max ${LIMITS.batchUserIds.max}; adjust test`,
-    );
-    test.setTimeout(120_000);
-    const users = await seedEmailUsers(pii, cleanup, data, tenant, max);
-    const result = expectSuccess(
-      await pii.batchReadPii({ tenant_id: tenant, user_ids: users, fields: ['EMAIL'] }),
-      200,
-      batchReadDataSchema,
-    );
-    expect(result.count).toBe(max);
-  });
-
-  test('PII-BR-005 A bulk read one item over the maximum size is rejected', async ({
-    pii,
-    data,
-    tenant,
-    cleanup,
-    config,
-  }) => {
-    const max = config.limits.batchMaxItems;
-    test.skip(
-      max + 1 > LIMITS.batchUserIds.max,
-      `batchMaxItems+1 exceeds user_ids max ${LIMITS.batchUserIds.max}`,
-    );
-    test.setTimeout(120_000);
-    noteAssumption('Q-19', 'Status for exceeding batch_max_items is undocumented; 400/413/422 accepted.');
-    // All users exist, so a rejection can only be due to the item limit (not to 404 for missing users).
-    const users = await seedEmailUsers(pii, cleanup, data, tenant, max + 1);
-    expectRejected(
-      await pii.batchReadPii({ tenant_id: tenant, user_ids: users, fields: ['EMAIL'] }),
-      [400, 413, 422],
-      'Q-19',
-    );
-  });
-
-  test('PII-BR-006 Repeated user IDs or fields in a bulk read are returned only once', async ({
-    pii,
-    data,
-    tenant,
-    cleanup,
   }) => {
     noteAssumption(
-      'Q-20',
-      'Whether duplicates count toward batch_max_items is undocumented; only de-dup of results is asserted.',
+      'BQ-18',
+      'the exact maximum is pending: 200 users returned 403 on staging, so it is not asserted',
     );
-    const userId = data.userId('br6');
-    await seedUser(pii, cleanup, tenant, userId, { EMAIL: data.email() });
-    const result = expectSuccess(
-      await pii.batchReadPii({ tenant_id: tenant, user_ids: [userId, userId], fields: ['EMAIL', 'EMAIL'] }),
-      200,
-      batchReadDataSchema,
-    );
-    expect(result.count).toBe(1);
-    expect(result.items.map(pairKey)).toEqual([`${userId}|EMAIL`]);
-  });
+    const empty = await aisle.call('batchReadPii', { user_ids: [], fields: [PII_FIELDS.NAME] });
+    expectValidationError(empty, 'user_ids');
 
-  test('PII-BR-007 Bulk reads over the request limits (too many users or fields) are rejected', async ({
-    pii,
-    tenant,
-    data,
-  }) => {
-    await test.step('empty user_ids -> 422', async () => {
-      expectRequestValidationError(
-        await pii.batchReadPii({ tenant_id: tenant, user_ids: [], fields: ['EMAIL'] }),
-      );
+    const tooMany = await aisle.call('batchReadPii', {
+      user_ids: data.userIds(LIMITS.batchUserIds.max + 1, 'br3'),
+      fields: [PII_FIELDS.NAME],
     });
-    await test.step('empty fields -> 422', async () => {
-      expectRequestValidationError(
-        await pii.batchReadPii({ tenant_id: tenant, user_ids: [data.userId('br7')], fields: [] }),
-      );
-    });
-    await test.step('201 user_ids (above 200) -> rejected', async () => {
-      const users = Array.from({ length: LIMITS.batchUserIds.max + 1 }, (_, i) => `${data.runId}-br7-${i}`);
-      expectRejected(
-        await pii.batchReadPii({ tenant_id: tenant, user_ids: users, fields: ['EMAIL'] }),
-        [400, 413, 422],
-        'Q-19',
-      );
-    });
-    await test.step('65 fields (above 64) -> rejected', async () => {
-      const fields = Array.from({ length: LIMITS.batchFields.max + 1 }, (_, i) => `F${i}`);
-      expectRejected(
-        await pii.batchReadPii({ tenant_id: tenant, user_ids: [data.userId('br7')], fields }),
-        [400, 413, 422],
-        'Q-19',
-      );
-    });
+    expectValidationError(tooMany, 'user_ids');
   });
 });

@@ -13,6 +13,7 @@ const apiCall = z.object({
   durationMs: z.number().nonnegative(),
   requestId: z.string().optional(),
   caller: z.string().optional(),
+  auth: z.enum(['token', 'none', 'custom']).optional(),
   transportError: z.string().optional(),
   phase: z.enum(['test', 'setup', 'verify', 'preflight']).optional(),
 });

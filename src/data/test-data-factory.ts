@@ -2,36 +2,44 @@
  * Test-data factory: unique, synthetic, traceable identities and values.
  *
  * - User IDs and emails are generated from the run ID + worker index + a counter -> unique in parallel.
- * - Emails use the team-approved domain (PII_TEST_EMAIL_DOMAIN); never a real mailbox.
- * - Phone numbers come ONLY from the team-approved list (PII_TEST_PHONES). The framework never invents a
+ * - Made-up user IDs are accepted by the Aisle staging facade (observed 2026-09-29), so every test creates
+ *   its own users: "<run id>-w<worker>-<n>-<label>" — clearly synthetic, never production-looking.
+ * - Emails use the approved test domain (AISLE_TEST_EMAIL_DOMAIN, e.g. example.test); never a real mailbox.
+ * - Phone numbers come ONLY from the team-approved list (AISLE_TEST_PHONES). The framework never invents a
  *   phone number that could belong to a real person.
- * - The `normalize*` functions are the documented normalization rules, used as the test oracle.
+ * - The `normalize*` functions are the expected clean-up rules, used as the test oracle. NAME rules were
+ *   observed on staging; EMAIL/PHONE rules are still to be confirmed (EMAIL/PHONE return 403 today).
  */
 import { ConfigError, requireValue, type FrameworkConfig } from '../config/config';
 import { LIMITS } from '../models/pii.models';
 import { SAFE_ID_PATTERN } from './test-identifiers';
 
-// ---- Documented normalization rules (guide "Value normalization") ------------------------------
+/**
+ * Sanity range for configured approved phones: E.164 numbers have at most 15 digits; shorter than 8 cannot
+ * be a real subscriber number. This checks OUR configuration only — the service's own phone rules are
+ * unconfirmed (docs/backend-open-questions.md BQ-03).
+ */
+const PHONE_DIGITS = { min: 8, max: 15 } as const;
 
-/** Email: trimmed and converted to lowercase; must contain "@". */
+// ---- Expected normalization rules ---------------------------------------------------------------
+
+/** Email: trimmed and converted to lowercase (expected; unconfirmed through the facade — BQ-01). */
 export function normalizeEmail(input: string): string {
   return input.trim().toLowerCase();
 }
 
-/** Phone: all non-digits removed; result must contain 8 to 15 digits. */
+/** Phone: all non-digits removed (expected; unconfirmed through the facade — BQ-03). */
 export function normalizePhone(input: string): string {
   return input.replace(/\D/g, '');
 }
 
 export function isValidNormalizedPhone(digits: string): boolean {
-  return (
-    /^\d+$/.test(digits) && digits.length >= LIMITS.phoneDigits.min && digits.length <= LIMITS.phoneDigits.max
-  );
+  return /^\d+$/.test(digits) && digits.length >= PHONE_DIGITS.min && digits.length <= PHONE_DIGITS.max;
 }
 
 /**
- * Name/default text: leading/trailing whitespace removed and internal whitespace collapsed.
- * NOTE: tests only use runs of plain spaces; whether tabs/newlines are collapsed is not documented (Q-10).
+ * Name: leading/trailing spaces removed and runs of inner spaces collapsed to one; capitals kept.
+ * OBSERVED on staging ("  QA   Auto Probe " -> "QA Auto Probe"). Tabs/newlines are not covered.
  */
 export function normalizeText(input: string): string {
   return input.trim().replace(/ {2,}/g, ' ');
@@ -100,7 +108,7 @@ export class TestDataFactory {
   email(label = 'e'): string {
     const domain = requireValue(
       this.config.testData.emailDomain,
-      'PII_TEST_EMAIL_DOMAIN',
+      'AISLE_TEST_EMAIL_DOMAIN',
       'Generating test emails',
     );
     return `${this.compactRunId}.w${this.workerIndex}.${this.next()}.${label}@${domain}`.toLowerCase();
@@ -115,7 +123,16 @@ export class TestDataFactory {
     return `Qa Auto ${suffix.charAt(0).toUpperCase()}${suffix.slice(1)}`;
   }
 
-  /** A value of exactly `length` chars, used for the documented 1024-char upper bound (NAME field). */
+  /**
+   * A unique, clearly synthetic user ID of exactly `length` characters (for the observed 1–128 limit).
+   * Lengths above the limit are allowed on purpose: boundary tests send them and expect a 422.
+   */
+  userIdOfLength(length: number, label = 'len'): string {
+    const base = this.userId(label);
+    return length <= base.length ? base.slice(0, length) : base + '-'.padEnd(length - base.length, 'x');
+  }
+
+  /** A value of exactly `length` chars, used for the observed 1024-char upper bound (NAME field). */
   textOfLength(length: number): string {
     const base = `Qa ${this.compactRunId} `;
     return (base + 'x'.repeat(Math.max(0, length))).slice(0, length);
@@ -125,14 +142,14 @@ export class TestDataFactory {
   phone(index = 0): ApprovedPhone {
     const phones = requireValue(
       this.config.testData.phones.length ? this.config.testData.phones : undefined,
-      'PII_TEST_PHONES',
+      'AISLE_TEST_PHONES',
       'Phone scenarios',
     );
     const input = phones[index % phones.length] as string;
     const normalized = normalizePhone(input);
     if (!isValidNormalizedPhone(normalized)) {
       throw new ConfigError(
-        `PII_TEST_PHONES entry #${index % phones.length} does not normalize to 8-15 digits; fix the configuration.`,
+        `AISLE_TEST_PHONES entry #${index % phones.length} does not normalize to 8-15 digits; fix the configuration.`,
       );
     }
     return { input, normalized };
@@ -141,23 +158,5 @@ export class TestDataFactory {
   /** Number of approved phones available. */
   get phoneCount(): number {
     return this.config.testData.phones.length;
-  }
-
-  /**
-   * The tenant (the app a user's data belongs to, e.g. Aisle or Arike) used by the tests.
-   * PII_TEST_TENANT_ID when set; otherwise a made-up tenant for this run ("<run id>-app-a"). The run ID is shared
-   * by all workers, so every test in one run uses the same tenant, and no run reuses another run's tenant.
-   */
-  tenant(): string {
-    return this.config.tenants.primary ?? `${this.runId}-app-a`;
-  }
-
-  /** A second, different tenant for the "one app cannot see another app's data" tests ("<run id>-app-b" if not set). */
-  secondaryTenant(): string {
-    const tenant = this.config.tenants.secondary ?? `${this.runId}-app-b`;
-    if (tenant === this.tenant()) {
-      throw new ConfigError('PII_TEST_TENANT_ID_SECONDARY must differ from PII_TEST_TENANT_ID.');
-    }
-    return tenant;
   }
 }

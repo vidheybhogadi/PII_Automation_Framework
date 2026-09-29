@@ -13,14 +13,6 @@ export const SCHEMA_VERSION = 1 as const;
 
 /** Unified status model. Colour is never the only signal: every status also has an icon + label. */
 export type TestStatus = 'PASS' | 'FAIL' | 'SKIPPED' | 'BLOCKED' | 'FIXME' | 'UNKNOWN';
-export const TEST_STATUSES: readonly TestStatus[] = [
-  'PASS',
-  'FAIL',
-  'SKIPPED',
-  'BLOCKED',
-  'FIXME',
-  'UNKNOWN',
-];
 
 /** REAL = produced by an actual test execution. DEMO = synthetic fixture for UI development only. */
 export type DataSource = 'REAL' | 'DEMO';
@@ -36,8 +28,10 @@ export interface ApiCallRecord {
   durationMs: number;
   /** Correlation ID (random UUID, not sensitive) — lets backend find the server-side log line. */
   requestId?: string;
-  /** Caller role label (primary/secondary/limited) or caller ID — never key material. */
+  /** Legacy (direct PII-service era): caller role label or caller ID — never key material. */
   caller?: string;
+  /** How the call authenticated to the Aisle facade: the test token, no token, or a custom header — never the token. */
+  auth?: CallAuth;
   transportError?: string;
   /**
    * Why the call was made: `test` = the behaviour under test; `setup` = seeding data; `verify` = a follow-up
@@ -47,6 +41,8 @@ export interface ApiCallRecord {
 }
 
 export type CallPhase = 'test' | 'setup' | 'verify' | 'preflight';
+export type CallAuth = 'token' | 'none' | 'custom';
+export const CALL_AUTH: readonly CallAuth[] = ['token', 'none', 'custom'];
 
 export interface TestStep {
   title: string;
@@ -173,8 +169,9 @@ export interface EndpointInfo {
   path: string;
   description: string;
   authenticated: boolean;
-  permission: string;
-  noStore: boolean;
+  /** Legacy (direct PII-service era): kept optional so older report data still loads. */
+  permission?: string;
+  noStore?: boolean;
 }
 
 /** A reference to tests: exact IDs ("PII-WR-001") or prefix patterns ending in "*" ("PII-NRM-*"). */

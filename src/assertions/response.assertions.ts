@@ -85,11 +85,7 @@ export function expectError(
   return parsed.data;
 }
 
-/**
- * HTTP 422 "FastAPI validation response". The guide does not say whether 422 bodies use the service error
- * envelope or FastAPI's default `{ "detail": [...] }` (Q-05), so both documented shapes are accepted — but
- * the body MUST be one of them.
- */
+/** HTTP 422 in either known shape (FastAPI `detail` list — observed — or the error envelope). */
 export function expectRequestValidationError(res: ApiResponse): 'fastapi-detail' | 'error-envelope' {
   expectStatus(res, 422);
   const body = res.json();
@@ -99,9 +95,40 @@ export function expectRequestValidationError(res: ApiResponse): 'fastapi-detail'
 }
 
 /**
- * For cases where the guide defines THAT a request must be rejected but not WHICH status (see
- * docs/known-gaps-and-questions.md). Accepts a closed set of statuses and asserts the body is a
- * documented error shape. Tighten to a single status once the backend confirms.
+ * Aisle token rejected: HTTP 401 with NO data. Observed on staging for a missing, wrong or malformed token:
+ * 401, Content-Type text/html, empty body. The body must never contain JSON data (and so no personal data).
+ */
+export function expectUnauthorized(res: ApiResponse, context = ''): void {
+  expectStatus(res, 401, context);
+  const body = res.json() as { data?: unknown } | undefined;
+  expect(
+    body === undefined || body.data === undefined || body.data === null,
+    `${context ? `${context}: ` : ''}401 response must not contain data (${res.summary()})`,
+  ).toBe(true);
+}
+
+/**
+ * HTTP 422 request-validation error in FastAPI format, optionally naming the offending body field.
+ * Observed on staging: `{"detail":[{"type","loc":["body","<field>"],"msg","input",…}]}`.
+ */
+export function expectValidationError(res: ApiResponse, field?: string): void {
+  expectStatus(res, 422);
+  expect(
+    fastApiValidationSchema.safeParse(res.json()).success,
+    `422 body should be a FastAPI "detail" list (${res.summary()})`,
+  ).toBe(true);
+  if (field !== undefined) {
+    expect(
+      res.validationIssues.some((i) => i.startsWith(`body.${field}:`)),
+      `422 should name body.${field}; got [${res.validationIssues.join(', ')}] (${res.summary()})`,
+    ).toBe(true);
+  }
+}
+
+/**
+ * For cases where it is known THAT a request must be rejected but not WHICH status (see
+ * docs/backend-open-questions.md). Accepts a closed set of statuses and asserts the body is a
+ * known error shape. Tighten to a single status once the backend confirms.
  */
 export function expectRejected(
   res: ApiResponse,

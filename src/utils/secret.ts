@@ -1,7 +1,7 @@
 import { inspect } from 'node:util';
 
 /**
- * Wraps a sensitive string (private key PEM, DB password, raw free-text key...).
+ * Wraps a sensitive string (bearer token, DB password, raw free-text key...).
  *
  * The value is kept in a JavaScript private field (`#value`), so it is NOT an enumerable property.
  * As a result it does not appear in console.log output, JSON.stringify output, Playwright assertion

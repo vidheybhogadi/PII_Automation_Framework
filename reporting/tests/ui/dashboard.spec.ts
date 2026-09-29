@@ -1,9 +1,9 @@
-/** PII Sentinel report — the simple single-page report, tested in Chromium against SYNTHETIC fixtures only. */
+/** Aisle PII API Automation report — the single-page report, tested in Chromium against SYNTHETIC fixtures only. */
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { FIXTURES, INJECTED_SECRETS } from '../fixtures';
+import { FIXTURES, INJECTED_SECRETS, STATUS_FIXTURE } from '../fixtures';
 import { expectNoHorizontalOverflow, openReport } from './helpers';
 
 type FixtureTest = { status: string; kind: string; title: string };
@@ -16,7 +16,9 @@ const counts = (dir?: string) => {
   const s = serviceTests(dir);
   const pass = s.filter((t) => t.status === 'PASS').length;
   const fail = s.filter((t) => t.status === 'FAIL').length;
-  return { total: s.length, pass, fail, waiting: s.length - pass - fail };
+  const blocked = s.filter((t) => t.status === 'BLOCKED' || t.status === 'FIXME').length;
+  // Demo data has no skipped / not-run tests: everything that did not pass or fail is Blocked.
+  return { total: s.length, pass, fail, blocked, notTested: s.length - pass - fail - blocked };
 };
 
 test.describe('REPORT UI — at a glance', () => {
@@ -31,9 +33,12 @@ test.describe('REPORT UI — at a glance', () => {
     );
     await expect(page.getByRole('button', { name: `Pass: ${c.pass}` })).toBeVisible();
     await expect(page.getByRole('button', { name: `Fail: ${c.fail}` })).toBeVisible();
-    await expect(page.getByRole('button', { name: `Not Tested: ${c.waiting}` })).toBeVisible();
+    await expect(page.getByRole('button', { name: `Blocked: ${c.blocked}` })).toBeVisible();
+    await expect(page.getByRole('button', { name: `Not Tested: ${c.notTested}` })).toBeVisible();
+    // Security finding / Skipped tiles appear only when some test has that status.
+    await expect(page.getByRole('button', { name: /^Security finding: / })).toHaveCount(0);
     await expect(page.getByRole('button', { name: `Total: ${c.total}` })).toBeVisible();
-    await expect(page.getByRole('img', { name: /Health score \d+% out of 100%/ })).toBeVisible();
+    await expect(page.getByRole('img', { name: /Test health \d+% out of 100%/ })).toBeVisible();
     for (const title of ['What needs attention', 'How each endpoint did', 'All tests', 'About this run']) {
       await expect(page.getByRole('heading', { name: title, level: 2 })).toBeVisible();
     }
@@ -46,13 +51,24 @@ test.describe('REPORT UI — at a glance', () => {
     await openReport(page, FIXTURES.demo);
     const attention = page.locator('#attention');
     await expect(attention.locator('.alert-card--fail')).toHaveCount(counts().fail);
-    await expect(attention).toContainText('tests were not tested');
+    await expect(attention).toContainText(`${counts().blocked} tests are blocked`);
+    await expect(attention.locator('.alert-card--warn')).toContainText('Q-26');
     await attention.getByRole('button', { name: /Request without a Content-Type header/ }).click();
     const drawer = page.getByRole('dialog', { name: /Request without a Content-Type header/ });
-    // Every test explains itself in plain language, for someone new to the project.
-    await expect(drawer).toContainText('What this test does');
-    await expect(drawer).toContainText('Why it matters');
-    await expect(drawer).toContainText('Expected result');
+    // Every test explains itself in plain language, for someone new to the project. The demo data keeps the old
+    // PII-* IDs; once tests/catalog only describes the live AISLE-* tests, the panel says so instead.
+    const described = (
+      JSON.parse(readFileSync(path.join(FIXTURES.demo, 'data/report.json'), 'utf8')) as {
+        tests: { id: string; info?: unknown }[];
+      }
+    ).tests.some((t) => t.id === 'PII-AUTH-018' && t.info);
+    if (described) {
+      await expect(drawer).toContainText('What this test does');
+      await expect(drawer).toContainText('Why it matters');
+      await expect(drawer).toContainText('Expected result');
+    } else {
+      await expect(drawer).toContainText('No description has been written for this test yet');
+    }
     await expect(drawer).toContainText('Result of this run');
     await expect(drawer).toContainText('What went wrong');
     await expect(drawer).toContainText('Expected');
@@ -67,7 +83,7 @@ test.describe('REPORT UI — at a glance', () => {
     await openReport(page, FIXTURES.demo);
     const tiles = page.locator('#endpoints .area');
     await expect(tiles).toHaveCount(12); // 11 endpoints + "Across endpoints"
-    await expect(page.locator('#endpoints')).toContainText('/api/v1/pii/read');
+    await expect(page.locator('#endpoints')).toContainText('/api/v1/pii-test/read');
     await expect(page.locator('#endpoints')).not.toContainText('Security checks');
     await page.getByRole('button', { name: /^Read PII:/ }).click();
     await expect(page.getByRole('button', { name: 'Remove endpoint filter Read PII' })).toBeVisible();
@@ -196,7 +212,7 @@ test.describe('REPORT UI — look & feel', () => {
     await expect(page.getByRole('dialog', { name: 'How to read this report' })).toBeVisible();
   });
 
-  test('RPT-UI-014 keyboard: sections (1–4), filters (F/W/A), paging (← →), next test (J/K), export (E), dock (Q)', async ({
+  test('RPT-UI-014 keyboard: sections (1–4), filters (F/B/W/A), paging (← →), next test (J/K), export (E), dock (Q)', async ({
     page,
   }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -219,8 +235,10 @@ test.describe('REPORT UI — look & feel', () => {
     const rows = page.locator('#tests tbody tr[data-status]');
     await page.keyboard.press('f');
     await expect(rows).toHaveCount(c.fail);
+    await page.keyboard.press('b');
+    await expect(rows).toHaveCount(c.blocked);
     await page.keyboard.press('w');
-    await expect(rows).toHaveCount(c.waiting);
+    await expect(rows).toHaveCount(c.notTested);
     await page.keyboard.press('a');
     await expect(page.locator('#tests .pagination')).toContainText(`1–20 of ${c.total}`);
     await page.keyboard.press('ArrowRight');
@@ -265,11 +283,73 @@ test.describe('REPORT UI — look & feel', () => {
   });
 });
 
+test.describe('REPORT UI — statuses', () => {
+  test('RPT-UI-040 Pass, Fail, Security finding, Blocked, Skipped are shown apart; a finding is never "all clear"', async ({
+    page,
+  }) => {
+    const errors = await openReport(page, FIXTURES.statuses);
+    const sf = STATUS_FIXTURE;
+    // Tiles: one per status present.
+    await expect(page.getByRole('button', { name: 'Security finding: 1' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Blocked: \d+$/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Skipped: 1' })).toBeVisible();
+    // A security finding still counts as a failure in the headline.
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('1 security finding');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('needs attention');
+
+    // What needs attention: a Security findings card distinct from Failures, and blockers grouped by BQ-id.
+    const attention = page.locator('#attention');
+    await expect(attention.locator('.alert-card--finding')).toContainText(sf.finding.id);
+    await expect(attention.locator('.alert-card--finding')).toContainText('BQ-08');
+    // The finding is not one of the automation-failure cards (those are exactly the demo's ordinary failures).
+    await expect(attention.locator('.alert-card--fail')).toHaveCount(counts().fail);
+    await expect(attention.locator('.alert-card--warn')).toContainText('BQ-01');
+
+    // Test list: tabs in order, each row labelled with its status.
+    const tests = page.locator('#tests');
+    const tabs = tests.getByRole('group', { name: 'Show' }).getByRole('button');
+    await expect(tabs).toHaveText([/^All/, /^Fail/, /^Security finding/, /^Blocked/, /^Skipped/, /^Pass/]);
+    await tabs.filter({ hasText: /^Security finding/ }).click();
+    const rows = tests.locator('tbody tr[data-status]');
+    await expect(rows).toHaveCount(1);
+    await expect(rows.first()).toHaveAttribute('data-status', 'FINDING');
+    await expect(rows.first().locator('.outcome--finding')).toHaveText('Security finding');
+    await expect(rows.first()).toContainText('SECURITY FINDING (expected until Dev fixes it) — BQ-08');
+    await tabs.filter({ hasText: /^Skipped/ }).click();
+    await expect(rows).toHaveCount(1);
+    await expect(rows.first()).toContainText(sf.skipped.description);
+    await tabs.filter({ hasText: /^Blocked/ }).click();
+    await expect(
+      tests.locator('tbody tr[data-status="BLOCKED"]').filter({ hasText: sf.blocked.id }),
+    ).toHaveCount(1);
+    await expect(rows.filter({ hasText: sf.blocked.id })).toContainText('BLOCKED — BQ-01');
+
+    // Details panel: the finding is explained, not presented as an automation failure.
+    await tabs.filter({ hasText: /^Security finding/ }).click();
+    await rows.first().click();
+    const drawer = page.locator('.drawer');
+    await expect(drawer).toContainText('Known security finding — expected to fail until Dev fixes it.');
+    await expect(drawer.locator('.outcome--finding').first()).toBeVisible();
+    await page.keyboard.press('Escape');
+
+    // CSV export labels the row "Security finding".
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
+    const [dl] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('menuitem', { name: /Raw data \(CSV\)/ }).click(),
+    ]);
+    const csv = readFileSync((await dl.path()) as string, 'utf8');
+    const line = csv.split('\n').find((l) => l.startsWith(`${sf.finding.id},`));
+    expect(line).toContain(',Security finding,SECURITY FINDING (expected until Dev fixes it) — BQ-08');
+    expect(errors).toEqual([]);
+  });
+});
+
 test.describe('REPORT UI — honest states', () => {
   test('RPT-UI-020 empty run: "no tests" instead of fake zeros', async ({ page }) => {
     await openReport(page, FIXTURES.empty);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('No tests were run.');
-    await expect(page.getByRole('img', { name: /Health score not available/ })).toBeVisible();
+    await expect(page.getByRole('img', { name: /Test health not available/ })).toBeVisible();
     await expect(page.getByText('Nothing needs attention')).toBeVisible();
   });
 
@@ -278,7 +358,7 @@ test.describe('REPORT UI — honest states', () => {
   }) => {
     await openReport(page, FIXTURES.preflight);
     await expect(page.getByRole('heading', { level: 1 })).toContainText(
-      'The PII service could not be reached',
+      'The Aisle PII facade could not be reached',
     );
     await expect(page.locator('#attention .alert-card--fail')).toHaveCount(1);
     await expect(page.locator('#about')).toContainText('Service readiness check failed at startup');
@@ -294,8 +374,8 @@ test.describe('REPORT UI — honest states', () => {
     page,
   }) => {
     await openReport(page, FIXTURES.selfOnly);
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('The PII service was not tested');
-    await expect(page.getByRole('img', { name: /Health score not available/ })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('The Aisle PII API was not tested');
+    await expect(page.getByRole('img', { name: /Test health not available/ })).toBeVisible();
     await expect(page.getByText('Service not tested')).toBeVisible();
   });
 

@@ -1,7 +1,7 @@
 /**
- * Dummy placeholders for values the PII backend team has not provided yet.
+ * Dummy placeholders for values the backend team has not provided yet.
  *
- * Any setting whose value starts with `PENDING_` (e.g. `PII_BASE_URL=PENDING_PII_BASE_URL`) is treated exactly
+ * Any setting whose value starts with `PENDING_` (e.g. `DB_HOST=PENDING_DB_HOST`) is treated exactly
  * like an unset variable: it is never sent to the service or the database, and tests that need it fail with
  * the usual "missing setting" message. The full list lives in PENDING-PLACEHOLDERS.md (npm run docs:pending).
  */
@@ -17,18 +17,9 @@ export function pendingSettings(env: NodeJS.ProcessEnv): string[] {
     .sort();
 }
 
-/**
- * A copy of `env` without placeholder values. When a caller's ID is still a placeholder, that caller's key
- * settings are dropped too, so a pending caller counts as "not configured" rather than as a broken one.
- */
+/** A copy of `env` without placeholder values. */
 export function withoutPlaceholders(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const out: NodeJS.ProcessEnv = {};
   for (const [k, v] of Object.entries(env)) if (!isPending(v)) out[k] = v;
-  for (const role of ['PRIMARY', 'SECONDARY', 'LIMITED']) {
-    if (isPending(env[`PII_CALLER_${role}_ID`])) {
-      delete out[`PII_CALLER_${role}_PRIVATE_KEY_FILE`];
-      delete out[`PII_CALLER_${role}_PRIVATE_KEY`];
-    }
-  }
   return out;
 }

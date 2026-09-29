@@ -15,7 +15,12 @@ import { assertNoSensitiveData } from '../../generator/write-report';
 import { renderTraceabilityDoc, TRACEABILITY_DOC } from '../../generator/traceability-doc';
 import { format } from 'prettier';
 import { generate, PATHS } from '../../generator/generate';
-import { INJECTED_SECRETS } from '../fixtures';
+import { listInventory } from '../../generator/inventory';
+import { demoRun, INJECTED_SECRETS } from '../fixtures';
+import ExcelJS from 'exceljs';
+import { writeFileSync } from 'node:fs';
+import { buildTestCasesWorkbook } from '../../../scripts/generate-test-cases-xlsx';
+import { enrichTests } from '../../generator/build-report-data';
 
 test.describe('REPORT safety', () => {
   test('RPT-SF-001 sanitizer removes emails, phones, PEM, tokens, JWTs, credentials and signatures', () => {
@@ -131,8 +136,9 @@ test.describe('REPORT safety', () => {
   });
 
   test('RPT-SF-009 catalog matches the real suite (no drift)', () => {
-    const run = JSON.parse(readFileSync(PATHS.demoRun, 'utf8')) as CollectedRun; // inventory = real `playwright test --list`
-    const ids = new Set(run.tests.map((t) => t.id));
+    // Valid IDs = the demo dataset (legacy PII-* IDs) + the real suite (`playwright test --list`: AISLE-*, POC-*, UT-*).
+    const run = JSON.parse(readFileSync(PATHS.demoRun, 'utf8')) as CollectedRun;
+    const ids = new Set([...run.tests.map((t) => t.id), ...listInventory(['api', 'unit']).map((t) => t.id)]);
     const unknownArea = [...ids].filter((id) => areaForId(id) === 'other');
     expect(unknownArea, 'tests without a recognised ID prefix').toEqual([]);
     const dangling = [...new Set(REQUIREMENTS.flatMap((r) => r.tests))].filter(
@@ -192,5 +198,102 @@ test.describe('REPORT safety', () => {
       'projects=api · files=tests/pii',
     );
     expect(runProfile(['playwright', 'test'], ['unit', 'api'])).toBe('projects=api+unit');
+  });
+
+  test('RPT-SF-012 collector keeps the Aisle auth mode (token/none/custom) and never anything else', () => {
+    const call = (auth: unknown) =>
+      JSON.stringify({
+        msg: 'HTTP call',
+        endpoint: 'readPii',
+        method: 'POST',
+        path: '/api/v1/pii-test/read',
+        status: 200,
+        durationMs: 2,
+        auth,
+        authorization: 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.c2lnbmF0dXJlLXZhbHVl',
+      });
+    const calls = parseApiCalls([call('token'), call('none'), call('custom'), call('Bearer abc')].join('\n'));
+    expect(calls.map((c) => c.auth)).toEqual(['token', 'none', 'custom', undefined]);
+    expect(JSON.stringify(calls)).not.toMatch(/Bearer|eyJ|authorization/);
+  });
+
+  test('RPT-SF-013 CSV and Excel label a security finding "Security finding" (distinct from Fail)', async () => {
+    const base = demoRun();
+    const findingId = 'PII-SEC-001';
+    const blockedId = 'PII-RD-002';
+    const run: CollectedRun = {
+      ...base,
+      tests: base.tests.map((t) =>
+        t.id === findingId
+          ? {
+              ...t,
+              status: 'FAIL',
+              rawStatus: 'failed',
+              annotations: [
+                { type: 'security-finding', description: 'BQ-08: 422 errors echo the submitted value' },
+              ],
+              errors: [{ message: 'Error: expected the error body not to echo the value' }],
+            }
+          : t.id === blockedId
+            ? {
+                ...t,
+                status: 'SKIPPED',
+                rawStatus: 'skipped',
+                annotations: [{ type: 'blocked', description: 'BQ-01: EMAIL access not granted' }],
+              }
+            : t,
+      ),
+    };
+    const tests = enrichTests(run);
+
+    // CSV: the status column is the reader-facing outcome.
+    const csv = testsToCsv(tests.filter((t) => t.id === findingId || t.id === blockedId));
+    const [header, ...rows] = csv.trim().split('\n');
+    expect(header!.split(',').slice(0, 5)).toEqual(['test_id', 'endpoint', 'title', 'status', 'remarks']);
+    const finding = rows.find((r) => r.startsWith(`${findingId},`))!;
+    expect(finding).toContain(',Security finding,SECURITY FINDING (expected until Dev fixes it) — BQ-08');
+    expect(rows.find((r) => r.startsWith(`${blockedId},`))).toContain(',Blocked,BLOCKED — BQ-01');
+
+    // Excel: same labels, coloured differently from an automation failure.
+    const dir = mkdtempSync(path.join(tmpdir(), 'xlsx-'));
+    const runFile = path.join(dir, 'run-data.json');
+    writeFileSync(runFile, JSON.stringify(run));
+    const inventory = run.tests
+      .filter((t) => t.project !== 'unit')
+      .map(({ key, id, title, suite, file, line, project, tags }) => ({
+        key,
+        id,
+        title,
+        suite,
+        file,
+        line,
+        project,
+        tags,
+      }));
+    const { buffer, summary } = await buildTestCasesWorkbook({ runData: runFile, inventory });
+    expect(summary).toMatch(/Security finding 1 · Blocked \d+/);
+    const xlsx = path.join(dir, 'test-cases.xlsx');
+    writeFileSync(xlsx, buffer);
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.readFile(xlsx);
+    const ws = wb.getWorksheet('Test Cases')!;
+    const cellsOf = (id: string) => {
+      let found: ExcelJS.Row | undefined;
+      ws.eachRow((r) => {
+        if (r.getCell(2).text === id) found = r;
+      });
+      return found!;
+    };
+    const fRow = cellsOf(findingId);
+    expect(fRow.getCell(11).text).toContain('Security finding');
+    expect(fRow.getCell(12).text).toMatch(/^SECURITY FINDING \(expected until Dev fixes it\) — BQ-08/);
+    expect(cellsOf(blockedId).getCell(11).text).toContain('Blocked');
+    const argb = (c: ExcelJS.Cell) => (c.fill as ExcelJS.FillPattern | undefined)?.fgColor?.argb;
+    const failRow = tests.find((t) => t.status === 'FAIL' && t.id !== findingId && t.kind === 'integration');
+    if (failRow) expect(argb(fRow.getCell(11))).not.toBe(argb(cellsOf(failRow.id).getCell(11)));
+    let totals = '';
+    ws.getRow(3).eachCell((c) => (totals += `${c.text} | `));
+    expect(totals).toContain('Security finding: 1');
+    expect(totals).toMatch(/Blocked: \d+/);
   });
 });

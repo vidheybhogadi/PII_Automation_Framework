@@ -1,10 +1,11 @@
 /**
- * PII Sentinel collector — a Playwright reporter that writes normalized, sanitized run data after every run.
+ * Aisle PII API Automation collector — a Playwright reporter that writes normalized, sanitized run data after every run.
  *
  *   reporter: [['./reporting/collector/pii-results-reporter.ts', { outputFile: 'reports/latest/run-data.json' }]]
  *
  * PII safety: only ALLOW-LISTED fields are copied. From the redacted `api-calls.log` attachment we keep
- * endpoint/method/path/status/errorCode/duration/requestId/caller only. Request/response bodies, headers,
+ * endpoint/method/path/status/errorCode/duration/requestId/auth mode (token | none | custom — never the token)
+ * and the legacy caller label only. Request/response bodies, headers,
  * signatures and keys are never read. All free text passes through sanitizeText().
  */
 import type {
@@ -22,9 +23,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { maskUrl, sanitizeText } from '../core/sanitize';
 import {
+  CALL_AUTH,
   SCHEMA_VERSION,
   type ApiCallRecord,
   type Annotation,
+  type CallAuth,
   type CallPhase,
   type CollectedRun,
   type CollectedTest,
@@ -107,6 +110,12 @@ export function runProfile(argv: readonly string[], projects: readonly string[])
   return sanitizeText(parts.join(' · '), 200);
 }
 
+/** The auth mode of a logged call — only the allow-listed values ('token' | 'none' | 'custom') are kept. */
+function authOf(entry: Record<string, unknown>): Pick<ApiCallRecord, 'auth'> {
+  const a = entry.auth;
+  return typeof a === 'string' && (CALL_AUTH as readonly string[]).includes(a) ? { auth: a as CallAuth } : {};
+}
+
 /** Parse the framework's redacted per-test log: keep only allow-listed fields of "HTTP call" entries. */
 export function parseApiCalls(logText: string): ApiCallRecord[] {
   const calls: ApiCallRecord[] = [];
@@ -131,6 +140,7 @@ export function parseApiCalls(logText: string): ApiCallRecord[] {
         durationMs: num('durationMs') ?? 0,
         ...(str('requestId') ? { requestId: str('requestId') } : {}),
         ...(str('caller') ? { caller: str('caller') } : {}),
+        ...authOf(entry),
         ...phaseOf(entry),
       });
     } else if (entry.msg === 'HTTP transport failure') {
@@ -142,6 +152,7 @@ export function parseApiCalls(logText: string): ApiCallRecord[] {
         durationMs: num('durationMs') ?? 0,
         ...(str('requestId') ? { requestId: str('requestId') } : {}),
         transportError: str('transportError') ?? 'UNKNOWN',
+        ...authOf(entry),
         ...phaseOf(entry),
       });
     }
@@ -275,10 +286,11 @@ export default class PiiResultsReporter implements Reporter {
         playwright: this.config.version,
         framework: 'aisle-pii-api-automation',
         frameworkVersion: readVersion(path.join(pkgDir, 'package.json')),
+        // The Aisle facade base URL (AISLE_BASE_URL). Masked by default.
         serviceUrl:
           process.env.REPORT_SHOW_SERVICE_URL === 'true'
-            ? (process.env.PII_BASE_URL ?? null)
-            : maskUrl(process.env.PII_BASE_URL),
+            ? (process.env.AISLE_BASE_URL ?? null)
+            : maskUrl(process.env.AISLE_BASE_URL),
         runtime: 'Node.js — API tests via Axios (no browser)',
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       },

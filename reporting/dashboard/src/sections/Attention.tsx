@@ -1,50 +1,86 @@
-/** "What needs attention" — failures first, then what was not tested and why. Plain language, click for details. */
+/**
+ * "What needs attention" — automation failures first, then known security findings, then blocked tests (grouped by
+ * blocker, e.g. BQ-01), then what was skipped / not tested and why. Plain language, click for details.
+ */
 import { useMemo, useState } from 'preact/hooks';
 import {
   analyzeFailure,
   FAILURE_PATTERNS,
   preflightFailures,
   questionIdOf,
+  SECURITY_FINDING_ANNOTATION,
   SEVERITY_RANK,
+  testOutcome,
 } from '../../../core/analytics';
 import { EmptyState, Section } from '../components/ui';
 import { Icon } from '../icons';
 import { endpointOf, plainEndpoint, plainTitle } from '../plain';
-import { NOT_RUN, outcomeOf, useApp } from '../store';
+import { NOT_RUN, OUTCOME_FILTER, outcomeOf, useApp } from '../store';
 import { plural } from '../utils';
 
 export function Attention() {
   const { report, service, all, openTest, showTests } = useApp();
   const [showAll, setShowAll] = useState(false);
   const preflight = useMemo(() => preflightFailures(service), [service]);
+  // Automation failures only; known security findings get their own card.
   const failures = useMemo(
     () =>
       service
-        .filter((t) => t.status === 'FAIL' && !preflight.includes(t))
+        .filter((t) => outcomeOf(t) === 'Fail' && !preflight.includes(t))
         .sort((a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity])
         .map(analyzeFailure),
     [service, preflight],
   );
-  // Not Tested = everything that did not run to a pass or fail (the unreachable-service case has its own card).
+  const findings = useMemo(
+    () =>
+      service
+        .filter((t) => outcomeOf(t) === 'Security finding')
+        .sort((a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] || a.id.localeCompare(b.id)),
+    [service],
+  );
+  // Blocked tests grouped by their blocker (BQ-xx / Q-xx), with the blocker's description.
+  const blockers = useMemo(() => {
+    const groups = new Map<string, { why: string; tests: string[] }>();
+    for (const t of all) {
+      if (outcomeOf(t) !== 'Blocked') continue;
+      const id = questionIdOf(t) ?? 'Other';
+      const why =
+        t.annotations.find((a) => a.type === 'blocked')?.description ??
+        testOutcome(t).remark.replace(/^BLOCKED — /, '');
+      const g = groups.get(id) ?? { why: why.replace(/^B?Q-\d+:\s*/, ''), tests: [] };
+      g.tests.push(t.id);
+      groups.set(id, g);
+    }
+    return [...groups.entries()].sort(([a], [b]) =>
+      a === 'Other' ? 1 : b === 'Other' ? -1 : a.localeCompare(b, undefined, { numeric: true }),
+    );
+  }, [all]);
+  const blockedCount = blockers.reduce((n, [, g]) => n + g.tests.length, 0);
+  // Skipped / Not Tested = the rest that did not run (the unreachable-facade case has its own card).
   const waiting = useMemo(
-    () => all.filter((t) => outcomeOf(t) === 'Not Tested' && !preflight.includes(t)),
+    () =>
+      all.filter(
+        (t) => (outcomeOf(t) === 'Not Tested' || outcomeOf(t) === 'Skipped') && !preflight.includes(t),
+      ),
     [all, preflight],
   );
-  const questions = useMemo(() => [...new Set(waiting.map(questionIdOf).filter(Boolean))], [waiting]);
   const reasons = useMemo(() => {
     const notInRun = waiting.filter((t) => t.notRun).length;
-    const onDev = waiting.filter((t) => t.status === 'BLOCKED' || t.status === 'FIXME').length;
-    const skipped = waiting.filter((t) => !t.notRun && t.status === 'SKIPPED').length;
-    const other = waiting.length - notInRun - onDev - skipped;
+    const skipped = waiting.filter((t) => outcomeOf(t) === 'Skipped').length;
+    const other = waiting.length - notInRun - skipped;
     return [
       [notInRun, 'not part of this run'],
-      [onDev, `waiting on an answer from Dev${questions.length ? ` (${questions.join(', ')})` : ''}`],
-      [skipped, 'skipped — need extra setup (e.g. another caller)'],
+      [skipped, 'skipped — need extra setup or configuration'],
       [other, 'stopped before running'],
     ].filter(([n]) => (n as number) > 0) as [number, string][];
-  }, [waiting, questions]);
+  }, [waiting]);
   const shown = showAll ? failures : failures.slice(0, 6);
-  const nothing = failures.length === 0 && waiting.length === 0 && preflight.length === 0;
+  const nothing =
+    failures.length === 0 &&
+    findings.length === 0 &&
+    blockedCount === 0 &&
+    waiting.length === 0 &&
+    preflight.length === 0;
 
   return (
     <Section
@@ -61,8 +97,16 @@ export function Attention() {
                 {failures.length + (preflight.length ? 1 : 0)} to fix
               </span>
             )}
+            {findings.length > 0 && (
+              <span class="count-pill__item count-pill__item--finding">
+                {plural(findings.length, 'security finding')}
+              </span>
+            )}
+            {blockedCount > 0 && (
+              <span class="count-pill__item count-pill__item--warn">{blockedCount} blocked</span>
+            )}
             {waiting.length > 0 && (
-              <span class="count-pill__item count-pill__item--warn">{waiting.length} not tested</span>
+              <span class="count-pill__item count-pill__item--muted">{waiting.length} not tested</span>
             )}
           </span>
         )
@@ -82,10 +126,10 @@ export function Attention() {
                 <Icon name="server" size={22} />
               </span>
               <div class="grow">
-                <div class="alert-card__title">The PII service could not be reached</div>
+                <div class="alert-card__title">The Aisle PII facade could not be reached</div>
                 <div class="alert-card__text">
                   {plural(preflight.length, 'check')} could not run. This is an environment problem (address,
-                  network/VPN or the service being down) — not a problem with the individual checks.
+                  token, network/VPN or the service being down) — not a problem with the individual checks.
                 </div>
               </div>
             </div>
@@ -135,13 +179,76 @@ export function Attention() {
             </button>
           )}
 
-          {waiting.length > 0 && (
+          {findings.length > 0 && (
+            <div class="alert-card alert-card--finding alert-card--wide glass">
+              <span class="alert-card__icon">
+                <Icon name="shield" size={20} />
+              </span>
+              <div class="grow">
+                <div class="alert-card__title">
+                  {plural(findings.length, 'security finding')} — expected to fail until Dev fixes{' '}
+                  {findings.length === 1 ? 'it' : 'them'}
+                </div>
+                <div class="alert-card__text">
+                  Known, reported security issues. They still count as failures, but are not automation
+                  problems.
+                </div>
+                <ul class="finding-list">
+                  {findings.map((t) => (
+                    <li key={t.key}>
+                      <button class="finding-item" onClick={() => openTest(t.key)}>
+                        <span class="mono">{t.id}</span>
+                        <span class="grow">
+                          {t.annotations.find((a) => a.type === SECURITY_FINDING_ANNOTATION)?.description ??
+                            plainTitle(t.title)}
+                        </span>
+                        <Icon name="chevronRight" size={14} class="faint" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+
+          {blockedCount > 0 && (
             <button
               class="alert-card alert-card--warn alert-card--wide glass glass--interactive"
-              onClick={() => showTests({ statuses: NOT_RUN })}
+              onClick={() => showTests({ statuses: [OUTCOME_FILTER.Blocked] })}
             >
               <span class="alert-card__icon">
                 <Icon name="pause" size={20} />
+              </span>
+              <span class="grow">
+                <span class="alert-card__title">
+                  {plural(blockedCount, 'test is', 'tests are')} blocked — waiting on Dev
+                </span>
+                <span class="alert-card__text">Not a pass and not a failure. Blockers:</span>
+                <span class="reason-list">
+                  {blockers.map(([id, g]) => (
+                    <span key={id} class="reason" title={g.tests.join(', ')}>
+                      <b>{id}</b> {g.why} <span class="faint">({plural(g.tests.length, 'test')})</span>
+                    </span>
+                  ))}
+                </span>
+              </span>
+              <Icon name="chevronRight" size={18} class="faint" />
+            </button>
+          )}
+
+          {waiting.length > 0 && (
+            <button
+              class="alert-card alert-card--muted alert-card--wide glass glass--interactive"
+              onClick={() =>
+                showTests({
+                  statuses: waiting.some((t) => outcomeOf(t) === 'Not Tested')
+                    ? [...NOT_RUN, OUTCOME_FILTER.Skipped]
+                    : [OUTCOME_FILTER.Skipped],
+                })
+              }
+            >
+              <span class="alert-card__icon">
+                <Icon name="minus" size={20} />
               </span>
               <span class="grow">
                 <span class="alert-card__title">

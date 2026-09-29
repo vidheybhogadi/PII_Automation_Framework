@@ -54,9 +54,15 @@ export async function copyText(text: string): Promise<boolean> {
   }
 }
 
+/**
+ * A status filter token (URL: #status=…). One per reader-facing outcome: PASS, FAIL, FINDING (security finding),
+ * BLOCKED, SKIPPED, NOT_TESTED. FIXME / UNKNOWN are accepted from older links (→ Blocked / Not Tested).
+ */
+export type StatusFilter = TestStatus | 'FINDING' | 'NOT_TESTED';
+
 /** Test-list filters. */
 export interface Filters {
-  statuses: TestStatus[];
+  statuses: StatusFilter[];
   /** Endpoint key, e.g. "writePii" ('' = all endpoints). */
   endpoint: string;
   q: string;
@@ -70,7 +76,7 @@ export function parseHash(hash: string): { filters: Filters; test: string | null
   return {
     test: p.get('test'),
     filters: {
-      statuses: (p.get('status') ?? '').split(',').filter(Boolean) as TestStatus[],
+      statuses: (p.get('status') ?? '').split(',').filter(Boolean) as StatusFilter[],
       endpoint: p.get('endpoint') ?? '',
       q: p.get('q') ?? '',
     },

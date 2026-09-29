@@ -5,17 +5,11 @@
  *   tsx reporting/generator/tools.ts open [--demo]
  *   tsx reporting/generator/tools.ts clean [--all]    (--all also removes run history)
  */
-import { spawn } from 'node:child_process';
 import { existsSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { bundleDashboard, watchDashboard } from './bundle';
 import { generate, PATHS, ROOT } from './generate';
-
-function openFile(file: string): void {
-  const cmd = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'cmd' : 'xdg-open';
-  const args = process.platform === 'win32' ? ['/c', 'start', '', file] : [file];
-  spawn(cmd, args, { stdio: 'ignore', detached: true }).unref();
-}
+import { openFile } from './open-file';
 
 async function main(): Promise<void> {
   const [cmd, ...rest] = process.argv.slice(2);

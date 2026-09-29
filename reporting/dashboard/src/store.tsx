@@ -1,27 +1,53 @@
 /** App state for the single-page report: data, test-list filters, theme, overlays, toasts, URL state. */
 import { createContext, type ComponentChildren } from 'preact';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { catalogTests, scopeTests, testOutcome, type Outcome } from '../../core/analytics';
+import { catalogTests, OUTCOMES, scopeTests, testOutcome, type Outcome } from '../../core/analytics';
 import { ENDPOINT_GROUP_ORDER, suiteOf } from '../../core/catalog';
 import { endpointOf, plainEndpoint } from './plain';
-import type { ReportData, ReportTest, TestStatus } from '../../core/types';
-import { buildHash, EMPTY_FILTERS, parseHash, prefersReducedMotion, storage, type Filters } from './utils';
+import type { ReportData, ReportTest } from '../../core/types';
+import {
+  buildHash,
+  EMPTY_FILTERS,
+  parseHash,
+  prefersReducedMotion,
+  storage,
+  type Filters,
+  type StatusFilter,
+} from './utils';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 export const ACCENTS = ['azure', 'violet', 'emerald', 'rose', 'amber', 'cyan'] as const;
 export type Accent = (typeof ACCENTS)[number];
 
-/** Filter value meaning "Not Tested" (anything that did not run to a pass or a fail). */
-export const NOT_RUN: TestStatus[] = ['BLOCKED', 'FIXME', 'SKIPPED', 'UNKNOWN'];
+/** The status-filter token for each outcome (one filter per outcome; see OUTCOMES for the order). */
+export const OUTCOME_FILTER: Record<Outcome, StatusFilter> = {
+  Fail: 'FAIL',
+  'Security finding': 'FINDING',
+  Blocked: 'BLOCKED',
+  Skipped: 'SKIPPED',
+  'Not Tested': 'NOT_TESTED',
+  Pass: 'PASS',
+};
+/** Tokens from older links that still mean an outcome. */
+const LEGACY_FILTER: Partial<Record<StatusFilter, Outcome>> = { FIXME: 'Blocked', UNKNOWN: 'Not Tested' };
 
-/** Pass / Fail / Not Tested for a test — the only statuses a reader sees. */
+/** Filter value meaning "Not Tested" (not part of this run, run stopped, or the facade was unreachable). */
+export const NOT_RUN: StatusFilter[] = ['NOT_TESTED'];
+
+/** The reader-facing status of a test: Pass, Fail, Security finding, Blocked, Skipped or Not Tested. */
 export const outcomeOf = (t: ReportTest): Outcome => testOutcome(t).outcome;
+
+/** True when a test with outcome `o` is selected by the status filter tokens (empty = everything). */
+export function outcomeMatches(o: Outcome, statuses: readonly StatusFilter[]): boolean {
+  if (!statuses.length) return true;
+  return statuses.some((s) => s === OUTCOME_FILTER[o] || LEGACY_FILTER[s] === o);
+}
 
 const GROUP_RANK = (key: string): number => {
   const i = (ENDPOINT_GROUP_ORDER as readonly string[]).indexOf(key);
   return i < 0 ? ENDPOINT_GROUP_ORDER.length : i;
 };
-const RANK: Record<Outcome, number> = { Fail: 0, 'Not Tested': 1, Pass: 2 };
+const RANK = Object.fromEntries(OUTCOMES.map((o, i) => [o, i])) as Record<Outcome, number>;
 
 /** How the test list is grouped: by endpoint (default), test type, suite (Smoke/Regression), or not at all. */
 export type GroupBy = 'endpoint' | 'type' | 'suite' | 'none';
@@ -48,7 +74,7 @@ export function groupKeyOf(t: ReportTest, groupBy: GroupBy): string {
 const byId = (a: ReportTest, b: ReportTest) =>
   a.id.localeCompare(b.id, undefined, { numeric: true }) || a.title.localeCompare(b.title);
 
-/** One order for the table, the details panel and J/K: grouped headings first, then Fail → Not Tested → Pass, then ID. */
+/** One order for the table, the details panel and J/K: grouped headings first, then by outcome (OUTCOMES order: Fail first, Pass last), then ID. */
 function compareFor(groupBy: GroupBy) {
   return (a: ReportTest, b: ReportTest): number => {
     if (groupBy === 'none') return byId(a, b);
@@ -86,7 +112,7 @@ export interface AppState {
   all: ReportTest[];
   groupBy: GroupBy;
   setGroupBy: (g: GroupBy) => void;
-  /** All service tests after the test-list filters, grouped by endpoint (fail → not tested → pass inside each). */
+  /** All service tests after the test-list filters, grouped by endpoint (OUTCOMES order inside each). */
   list: ReportTest[];
   byKey: Map<string, ReportTest>;
   filters: Filters;
@@ -116,14 +142,7 @@ export function useApp(): AppState {
 }
 
 function matches(t: ReportTest, f: Filters): boolean {
-  if (f.statuses.length) {
-    const o = outcomeOf(t);
-    const wanted =
-      (o === 'Pass' && f.statuses.includes('PASS')) ||
-      (o === 'Fail' && f.statuses.includes('FAIL')) ||
-      (o === 'Not Tested' && f.statuses.some((s) => NOT_RUN.includes(s)));
-    if (!wanted) return false;
-  }
+  if (!outcomeMatches(outcomeOf(t), f.statuses)) return false;
   if (f.endpoint && endpointOf(t) !== f.endpoint) return false;
   if (f.q) {
     const hay =

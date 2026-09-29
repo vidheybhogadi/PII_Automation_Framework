@@ -44,7 +44,7 @@ export async function exportPdf(dir: string, opts: { timeoutMs?: number } = {}):
       preferCSSPageSize: true,
       displayHeaderFooter: true,
       margin: { top: '16mm', bottom: '16mm', left: '12mm', right: '12mm' },
-      headerTemplate: `<div style="width:100%;font-size:8px;color:#667;padding:0 12mm;display:flex;justify-content:space-between;font-family:sans-serif"><span>PII Sentinel · ${esc(label)}${demo ? ' · DEMO DATA — NOT REAL' : ''}</span><span>Internal — contains no personal data</span></div>`,
+      headerTemplate: `<div style="width:100%;font-size:8px;color:#667;padding:0 12mm;display:flex;justify-content:space-between;font-family:sans-serif"><span>Aisle PII API Automation · ${esc(label)}${demo ? ' · DEMO DATA — NOT REAL' : ''}</span><span>Internal — contains no personal data</span></div>`,
       footerTemplate: `<div style="width:100%;font-size:8px;color:#667;padding:0 12mm;display:flex;justify-content:space-between;font-family:sans-serif"><span class="date"></span><span>Page <span class="pageNumber"></span> / <span class="totalPages"></span></span></div>`,
     });
     // Point the dashboard's Export → PDF at the generated file.

@@ -186,11 +186,24 @@ export function TestDrawer() {
             </div>
           </section>
 
+          {outcome.outcome === 'Security finding' && (
+            <div class="banner banner--finding">
+              <Icon name="shield" />
+              <div>
+                <b>Known security finding — expected to fail until Dev fixes it.</b>
+                <div class="small">
+                  Reported to Dev; still counted as a failure. It is listed separately from automation
+                  failures.
+                </div>
+              </div>
+            </div>
+          )}
+
           {preflight && (
             <div class="banner banner--fail">
               <Icon name="server" />
               <div>
-                <b>This check could not run — the PII service was not reachable.</b>
+                <b>This check could not run — the Aisle PII facade was not reachable.</b>
                 <div class="small">{preflight.description}</div>
               </div>
             </div>
@@ -234,7 +247,13 @@ export function TestDrawer() {
             <div class="banner banner--warn">
               <Icon name="pause" />
               <div>
-                <b>Why this test was not tested</b>
+                <b>
+                  {outcome.outcome === 'Blocked'
+                    ? 'Why this test is blocked'
+                    : outcome.outcome === 'Skipped'
+                      ? 'Why this test was skipped'
+                      : 'Why this test was not tested'}
+                </b>
                 <ul>
                   {waiting
                     .filter((a) => a.description)

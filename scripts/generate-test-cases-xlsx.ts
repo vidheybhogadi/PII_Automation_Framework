@@ -1,5 +1,5 @@
 /**
- * Builds docs/test-cases.xlsx — every PII service test case, grouped by API endpoint, on one sheet.
+ * Builds docs/test-cases.xlsx — every Aisle PII API test case, grouped by API endpoint, on one sheet.
  *
  *   npm run docs:testcases          (also run automatically at the end of npm run test:all)
  *
@@ -8,8 +8,9 @@
  *     automatically, in the right endpoint section.
  *   - Descriptions (what / why / steps / expected / type / priority / preconditions) come from tests/catalog.
  *     A test without one is flagged in the sheet, and self-test UT-DOC-002 fails until it is written.
- *   - Status comes from the LAST run only: Pass, Fail, or Not Tested (with the reason). Tests that were not part of
- *     the last run are Not Tested. Nothing is guessed.
+ *   - Status comes from the LAST run only: Pass, Fail, Security finding, Blocked, Skipped or Not Tested (with the
+ *     reason) — the same rule as the HTML report (testOutcome). Tests that were not part of the last run are
+ *     Not Tested. Nothing is guessed.
  *   - The "Tester Notes" column is carried over from the previous file, so manual notes survive regeneration.
  *
  * The same builder (buildTestCasesWorkbook) produces the Excel file in the HTML report's Export menu, so both
@@ -18,7 +19,7 @@
 import ExcelJS from 'exceljs';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { testOutcome, type Outcome } from '../reporting/core/analytics';
+import { OUTCOMES, testOutcome, type Outcome } from '../reporting/core/analytics';
 import { ENDPOINT_GROUP_ORDER, primaryEndpoint, suiteOf } from '../reporting/core/catalog';
 import type { ReportTest } from '../reporting/core/types';
 import { plainEndpoint } from '../reporting/dashboard/src/plain';
@@ -77,6 +78,12 @@ const C = {
   failInk: 'FF9C0006',
   notBg: 'FFE5E7EB',
   notInk: 'FF4B5563',
+  blockedBg: 'FFFFEB9C',
+  blockedInk: 'FF9C5700',
+  skipBg: 'FFF1F5F9',
+  skipInk: 'FF475569',
+  findingBg: 'FFEBD5F5',
+  findingInk: 'FF6B1D5E',
   warnInk: 'FFB45309',
 };
 const PRIORITY_INK: Record<string, string> = {
@@ -85,16 +92,20 @@ const PRIORITY_INK: Record<string, string> = {
   Medium: 'FF1D4ED8',
   Low: 'FF6B7280',
 };
-const OUTCOME_STYLE: Record<Outcome, { label: string; bg: string; ink: string }> = {
+/** One style per outcome — symbol + word + colour, so the status never depends on colour alone. */
+export const OUTCOME_STYLE: Record<Outcome, { label: string; bg: string; ink: string }> = {
   Pass: { label: '✔ Pass', bg: C.passBg, ink: C.passInk },
   Fail: { label: '✘ Fail', bg: C.failBg, ink: C.failInk },
+  'Security finding': { label: '⚠ Security finding', bg: C.findingBg, ink: C.findingInk },
+  Blocked: { label: '⏸ Blocked', bg: C.blockedBg, ink: C.blockedInk },
+  Skipped: { label: '↷ Skipped', bg: C.skipBg, ink: C.skipInk },
   'Not Tested': { label: '— Not Tested', bg: C.notBg, ink: C.notInk },
 };
 const fill = (argb: string): ExcelJS.Fill => ({ type: 'pattern', pattern: 'solid', fgColor: { argb } });
 const thin = { style: 'thin' as const, color: { argb: C.border } };
 const box = { top: thin, left: thin, bottom: thin, right: thin };
 
-// ---- Last run: Pass / Fail / Not Tested per test -----------------------------------------------------------
+// ---- Last run: one outcome per test (see OUTCOMES) ----------------------------------------------------------
 interface LastRun {
   byKey: Map<string, ReportTest>;
   label: string | null;
@@ -152,7 +163,7 @@ async function previousNotes(file: string | undefined): Promise<Map<string, stri
       }
       if (!idCol) return;
       const id = String(row.getCell(idCol).value ?? '').trim();
-      if (!/^(PII-[A-Z]+|POC)-\d+[a-z]?$/.test(id)) return;
+      if (!/^(?:PII-[A-Z]+|AISLE-[A-Z]+|POC)-\d+[a-z]?$/.test(id)) return;
       const n = (seen.get(id) ?? 0) + 1;
       seen.set(id, n);
       const note = row.getCell(notesCol).text?.trim();
@@ -200,7 +211,7 @@ function band(ws: ExcelJS.Worksheet, rowNo: number, text: string, bg: string, in
 
 // ---- Build ---------------------------------------------------------------------------------------------------
 export interface TestCasesWorkbookOptions {
-  /** The run to take Pass / Fail / Not Tested from (a collector run-data.json). Missing → all Not Tested. */
+  /** The run to take each test's outcome from (a collector run-data.json). Missing → all Not Tested. */
   runData: string | null;
   /** An earlier sheet whose Tester Notes are carried over. */
   notesFrom?: string;
@@ -240,15 +251,24 @@ export async function buildTestCasesWorkbook(
       results: tests.map((t) => outcomeFor(t, last)),
     };
   });
+  const tally = (results: { outcome: Outcome }[]) => {
+    const t = Object.fromEntries(OUTCOMES.map((o) => [o, 0])) as Record<Outcome, number>;
+    for (const r of results) t[r.outcome] += 1;
+    return t;
+  };
   const everyResult = groups.flatMap((g) => g.results);
   const total = everyResult.length;
-  const pass = everyResult.filter((r) => r.outcome === 'Pass').length;
-  const failN = everyResult.filter((r) => r.outcome === 'Fail').length;
-  const notTested = total - pass - failN;
+  const all = tally(everyResult);
+  const pass = all.Pass;
+  const failN = all.Fail;
+  const findingN = all['Security finding'];
+  const blockedN = all.Blocked;
+  const notTested = all.Skipped + all['Not Tested'];
+  // Pass rate of tests that ran: a security finding is a failure (it never makes the run look all-green).
   const rate = (p: number, f: number) => (p + f ? `${Math.round((p / (p + f)) * 1000) / 10}%` : 'N/A');
 
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'PII API automation';
+  wb.creator = 'Aisle PII API Automation';
   wb.created = new Date();
   const ws = wb.addWorksheet(SHEET, {
     views: [{ state: 'frozen', ySplit: 3, showGridLines: false }],
@@ -261,12 +281,19 @@ export async function buildTestCasesWorkbook(
       margins: { left: 0.3, right: 0.3, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.2 },
       printTitlesRow: '1:3',
     },
-    headerFooter: { oddFooter: '&L&8PII Service — API Test Cases&R&8Page &P of &N' },
+    headerFooter: { oddFooter: '&L&8Aisle PII API Automation — API Test Cases&R&8Page &P of &N' },
   });
   ws.columns = COLUMNS.map((c) => ({ key: c.key, width: c.width }));
 
   // Rows 1–3: title, last run, totals (frozen at the top while scrolling).
-  band(ws, 1, 'PII Service — API Test Cases', C.navy, C.white, 18);
+  band(
+    ws,
+    1,
+    'Aisle PII API Automation — API Test Cases   (Aisle API → PII service → DB validation)',
+    C.navy,
+    C.white,
+    18,
+  );
   ws.getRow(1).height = 34;
   band(
     ws,
@@ -279,10 +306,12 @@ export async function buildTestCasesWorkbook(
   ws.getRow(2).height = 22;
   const totals: [number, number, string, string, string][] = [
     [1, 3, `Total test cases: ${total}`, C.bandSoft, C.bandInk],
-    [4, 5, `✔ Pass: ${pass}`, C.passBg, C.passInk],
-    [6, 7, `✘ Fail: ${failN}`, C.failBg, C.failInk],
-    [8, 10, `— Not Tested: ${notTested}`, C.notBg, C.notInk],
-    [11, 13, `Pass rate of tests run: ${rate(pass, failN)}`, C.bandSoft, C.bandInk],
+    [4, 4, `✔ Pass: ${pass}`, C.passBg, C.passInk],
+    [5, 5, `✘ Fail: ${failN}`, C.failBg, C.failInk],
+    [6, 6, `⚠ Security finding: ${findingN}`, C.findingBg, C.findingInk],
+    [7, 9, `⏸ Blocked: ${blockedN}`, C.blockedBg, C.blockedInk],
+    [10, 10, `— Not Tested / Skipped: ${notTested}`, C.notBg, C.notInk],
+    [11, 13, `Pass rate of tests run: ${rate(pass, failN + findingN)}`, C.bandSoft, C.bandInk],
   ];
   for (const [from, to, text, bg, ink] of totals) {
     ws.mergeCells(3, from, 3, to);
@@ -290,10 +319,10 @@ export async function buildTestCasesWorkbook(
     cell.value = text;
     cell.font = { bold: true, size: 12, color: { argb: ink } };
     cell.fill = fill(bg);
-    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
     cell.border = box;
   }
-  ws.getRow(3).height = 26;
+  ws.getRow(3).height = 32;
 
   // Summary by endpoint (links are filled in once every section's row is known).
   band(ws, 5, 'SUMMARY BY ENDPOINT', C.band, C.white, 12);
@@ -311,18 +340,20 @@ export async function buildTestCasesWorkbook(
     [6, 6, 'Test cases'],
     [7, 7, 'Pass'],
     [8, 8, 'Fail'],
-    [9, 9, 'Not Tested'],
-    [10, 10, 'Pass rate'],
-    [11, 13, 'Go to'],
+    [9, 9, 'Security finding'],
+    [10, 10, 'Blocked'],
+    [11, 11, 'Not Tested / Skipped'],
+    [12, 12, 'Pass rate'],
+    [13, 13, 'Go to'],
   ]);
   for (let n = 1; n <= COLS; n += 1) {
     const cell = ws.getCell(6, n);
     cell.font = { bold: true, color: { argb: C.white } };
     cell.fill = fill(C.headerBg);
-    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
     cell.border = box;
   }
-  ws.getRow(6).height = 22;
+  ws.getRow(6).height = 32;
 
   const summaryStart = 7;
   let rowNo = summaryStart + groups.length + 2;
@@ -330,16 +361,19 @@ export async function buildTestCasesWorkbook(
 
   // One section per endpoint.
   groups.forEach((g, gi) => {
-    const gPass = g.results.filter((r) => r.outcome === 'Pass').length;
-    const gFail = g.results.filter((r) => r.outcome === 'Fail').length;
-    const gNot = g.results.length - gPass - gFail;
+    const gt = tally(g.results);
+    const extra = [
+      gt['Security finding'] ? `  ·  ⚠ ${gt['Security finding']} security finding` : '',
+      gt.Blocked ? `  ·  ⏸ ${gt.Blocked} blocked` : '',
+    ].join('');
     sectionRows.push(rowNo);
 
     ws.mergeCells(rowNo, 1, rowNo, COLS - 1);
     const title = ws.getCell(rowNo, 1);
     title.value =
       `${gi + 1}.  ${g.name}     ${g.method ? `${g.method} ` : ''}${g.path}` +
-      `        ${g.tests.length} test cases  ·  ✔ ${gPass}  ·  ✘ ${gFail}  ·  — ${gNot}`;
+      `        ${g.tests.length} test cases  ·  ✔ ${gt.Pass}  ·  ✘ ${gt.Fail}${extra}` +
+      `  ·  — ${gt.Skipped + gt['Not Tested']}`;
     title.font = { bold: true, size: 13, color: { argb: C.white } };
     title.fill = fill(C.band);
     title.alignment = { vertical: 'middle', indent: 1 };
@@ -429,7 +463,11 @@ export async function buildTestCasesWorkbook(
       row.getCell(col('remarks')).font =
         result.outcome === 'Fail'
           ? { bold: true, color: { argb: C.failInk } }
-          : { italic: true, color: { argb: C.muted } };
+          : result.outcome === 'Security finding'
+            ? { bold: true, color: { argb: C.findingInk } }
+            : result.outcome === 'Blocked'
+              ? { color: { argb: C.blockedInk } }
+              : { italic: true, color: { argb: C.muted } };
       row.height = rowHeight([
         [`${shortTitle}\n${info?.what ?? ''}`, width('description')],
         [info?.why ?? '', width('why')],
@@ -446,20 +484,20 @@ export async function buildTestCasesWorkbook(
   // Summary rows, now that every section's first row is known.
   groups.forEach((g, gi) => {
     const r = summaryStart + gi;
-    const gPass = g.results.filter((x) => x.outcome === 'Pass').length;
-    const gFail = g.results.filter((x) => x.outcome === 'Fail').length;
-    const gNot = g.results.length - gPass - gFail;
+    const gt = tally(g.results);
     const target = sectionRows[gi] as number;
     writeCells(r, [
       [1, 1, gi + 1],
       [2, 3, sheetLink(g.name, target)],
       [4, 5, `${g.method ? `${g.method} ` : ''}${g.path}`],
       [6, 6, g.tests.length],
-      [7, 7, gPass],
-      [8, 8, gFail],
-      [9, 9, gNot],
-      [10, 10, rate(gPass, gFail)],
-      [11, 13, sheetLink(`Go to section ${gi + 1} →`, target)],
+      [7, 7, gt.Pass],
+      [8, 8, gt.Fail],
+      [9, 9, gt['Security finding']],
+      [10, 10, gt.Blocked],
+      [11, 11, gt.Skipped + gt['Not Tested']],
+      [12, 12, rate(gt.Pass, gt.Fail + gt['Security finding'])],
+      [13, 13, sheetLink(`Section ${gi + 1} →`, target)],
     ]);
     ws.getRow(r).height = 20;
     for (let n = 1; n <= COLS; n += 1) {
@@ -471,15 +509,21 @@ export async function buildTestCasesWorkbook(
     ws.getCell(r, 2).font = { bold: true, color: { argb: C.link }, underline: true };
     ws.getCell(r, 4).font = { name: 'Menlo', size: 9, color: { argb: C.muted } };
     ws.getCell(r, 7).font = { bold: true, color: { argb: C.passInk } };
-    ws.getCell(r, 8).font = { bold: true, color: { argb: gFail ? C.failInk : C.muted } };
-    ws.getCell(r, 9).font = { color: { argb: C.notInk } };
-    ws.getCell(r, 11).font = { color: { argb: C.link }, underline: true };
+    ws.getCell(r, 8).font = { bold: true, color: { argb: gt.Fail ? C.failInk : C.muted } };
+    ws.getCell(r, 9).font = { bold: true, color: { argb: gt['Security finding'] ? C.findingInk : C.muted } };
+    ws.getCell(r, 10).font = {
+      bold: Boolean(gt.Blocked),
+      color: { argb: gt.Blocked ? C.blockedInk : C.muted },
+    };
+    ws.getCell(r, 11).font = { color: { argb: C.notInk } };
+    ws.getCell(r, 13).font = { color: { argb: C.link }, underline: true };
   });
 
   const buffer = Buffer.from(await wb.xlsx.writeBuffer());
   const summary =
     `${total} test cases in ${groups.length} endpoint sections ` +
-    `(Pass ${pass} · Fail ${failN} · Not Tested ${notTested}). ${last.label ?? 'No run recorded yet.'}`;
+    `(Pass ${pass} · Fail ${failN} · Security finding ${findingN} · Blocked ${blockedN} · ` +
+    `Not Tested/Skipped ${notTested}). ${last.label ?? 'No run recorded yet.'}`;
   return { buffer, summary };
 }
 
