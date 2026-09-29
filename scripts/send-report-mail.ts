@@ -3,10 +3,11 @@
  *
  *   npm run report:mail               # send reports/qa-report/ to REPORT_MAIL_TO
  *   npm run report:mail -- --dry-run  # build the email only → reports/email-preview/ (.eml + .html), send nothing
+ *   npm run report:mail -- --dry-run --dir reports/archive/<run>   # preview the email for an archived run
  *
  * Email clients cannot display a PDF inline, so each PDF page is rasterised to a PNG (pdf.js in Playwright's
- * Chromium) and embedded as an inline image. A plain-text summary and the run link come first, so the result
- * is readable even when images are blocked. If no report was produced, a short "run failed" email is sent.
+ * Chromium) and embedded as an inline image, below a styled summary (report-mail-template.ts) that is readable
+ * even when images are blocked. If no report was produced, a short "run failed" email is sent.
  *
  * Env: SMTP_HOST, SMTP_PORT (587 = STARTTLS, 465 = TLS), SMTP_USER, SMTP_PASSWORD, REPORT_MAIL_FROM (defaults to
  * SMTP_USER), REPORT_MAIL_TO (comma/semicolon/newline-separated list). Never prints the password.
@@ -16,27 +17,21 @@ import dotenv from 'dotenv';
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import nodemailer from 'nodemailer';
-import type Mail from 'nodemailer/lib/mailer';
 import { PATHS, ROOT } from '../reporting/generator/generate';
+import {
+  buildNoReportEmail,
+  buildReportEmail,
+  EMAIL_WIDTH,
+  readFacts,
+  type ReportFacts,
+} from './report-mail-template';
 
 dotenv.config({ path: path.resolve(ROOT, process.env.ENV_FILE ?? '.env'), quiet: true });
 
 const PREVIEW_DIR = path.join(ROOT, 'reports/email-preview');
 const PDFJS_DIR = path.join(ROOT, 'node_modules/pdfjs-dist/build');
-/** 1.5 × A4 (595 pt) ≈ 890 px wide: sharp text, shown at 800 px in the email. */
+/** 1.5 × A4 (595 pt) ≈ 890 px wide: sharp text when shown at the email width. */
 const RENDER_SCALE = 1.5;
-const DISPLAY_WIDTH = 800;
-
-interface ReportFacts {
-  environment: string;
-  verdict: string;
-  pass: number;
-  executed: number;
-  summaryText: string;
-}
-
-const escapeHtml = (s: string) =>
-  s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
 function recipients(): string[] {
   const list = (process.env.REPORT_MAIL_TO ?? '')
@@ -56,25 +51,11 @@ function runUrl(): string | null {
     : null;
 }
 
-function readFacts(dir: string): ReportFacts | null {
+function loadFacts(dir: string): ReportFacts | null {
   const summaryFile = path.join(dir, 'summary.txt');
   const resultsFile = path.join(dir, 'results.json');
   if (!existsSync(summaryFile) || !existsSync(resultsFile)) return null;
-  const summaryText = readFileSync(summaryFile, 'utf8').trim();
-  const results = JSON.parse(readFileSync(resultsFile, 'utf8')) as {
-    run?: { environment?: string };
-    summary?: { outcomes?: Record<string, number> };
-  };
-  const o = results.summary?.outcomes ?? {};
-  const pass = o.Pass ?? 0;
-  const executed = pass + (o.Fail ?? 0) + (o['Security finding'] ?? 0);
-  return {
-    environment: (results.run?.environment ?? 'unknown').toUpperCase(),
-    verdict: /^Verdict:\s*(.+)$/m.exec(summaryText)?.[1]?.trim() ?? 'UNKNOWN',
-    pass,
-    executed,
-    summaryText,
-  };
+  return readFacts(JSON.parse(readFileSync(resultsFile, 'utf8')), readFileSync(summaryFile, 'utf8'));
 }
 
 /** Renders every page of the PDF to PNG with pdf.js inside Chromium (no system tools needed). */
@@ -123,11 +104,7 @@ async function pdfToPngs(pdfFile: string): Promise<Buffer[]> {
     await page.goto('http://report.local/');
     const state = () => {
       const w = globalThis as unknown as { __PAGES__?: string[]; __PAGES_ERROR__?: string };
-      return {
-        done: Boolean(w.__PAGES__ || w.__PAGES_ERROR__),
-        pages: w.__PAGES__ ?? [],
-        error: w.__PAGES_ERROR__,
-      };
+      return { pages: w.__PAGES__ ?? [], error: w.__PAGES_ERROR__ };
     };
     await page.waitForFunction(
       () => {
@@ -145,40 +122,24 @@ async function pdfToPngs(pdfFile: string): Promise<Buffer[]> {
   }
 }
 
-function buildMessage(facts: ReportFacts | null, pngs: Buffer[], renderNote: string | null): Mail.Options {
+function buildMessage(facts: ReportFacts | null, pngs: Buffer[], note: string | null) {
   const url = runUrl();
-  const date = new Date().toISOString().slice(0, 10);
-  const subject = facts
-    ? `[PII API] ${facts.environment} · ${facts.verdict} · ${facts.pass}/${facts.executed} passed · ${date}`
-    : `[PII API] Run failed — no report produced · ${date}`;
-  const intro = facts
-    ? facts.summaryText
-    : 'The scheduled run finished without producing a report (for example a configuration or setup failure). See the run log.';
-  const notes = [
-    renderNote,
-    url ? `Run on GitHub (interactive dashboard in the artifacts): ${url}` : null,
-  ].filter((n): n is string => Boolean(n));
-
-  const text = [intro, '', ...notes, '', 'Internal — contains no personal data.'].join('\n');
-  const pageImgs = pngs
-    .map(
-      (_, i) =>
-        `<img src="cid:page-${i + 1}@pii-report" width="${DISPLAY_WIDTH}" alt="Report page ${i + 1} of ${pngs.length}" ` +
-        `style="display:block;width:100%;max-width:${DISPLAY_WIDTH}px;height:auto;margin:0 auto 12px;border:1px solid #dde1e6">`,
-    )
-    .join('\n');
-  const html = `<!doctype html><html><body style="margin:0;padding:16px;background:#f4f5f7;font-family:Segoe UI,Arial,sans-serif;color:#1f2328">
-<div style="max-width:${DISPLAY_WIDTH}px;margin:0 auto">
-<pre style="white-space:pre-wrap;font:13px/1.5 Consolas,Menlo,monospace;background:#fff;border:1px solid #dde1e6;padding:12px;margin:0 0 12px">${escapeHtml(intro)}</pre>
-${notes.map((n) => `<p style="font-size:13px;margin:0 0 8px">${escapeHtml(n).replace(/(https:\/\/\S+)/, '<a href="$1">$1</a>')}</p>`).join('\n')}
-${pageImgs}
-<p style="font-size:11px;color:#667;margin:12px 0 0">Internal — contains no personal data. Sent automatically by the PII API tests workflow.</p>
-</div></body></html>`;
-
+  const parts = facts
+    ? buildReportEmail(facts, {
+        runUrl: url,
+        note,
+        pageCount: pngs.length,
+        pagesHtml: pngs
+          .map(
+            (_, i) =>
+              `<img src="cid:page-${i + 1}@pii-report" width="${EMAIL_WIDTH}" alt="Report page ${i + 1} of ${pngs.length}" ` +
+              `style="display:block;width:100%;max-width:${EMAIL_WIDTH}px;height:auto;margin:0 0 12px;border:1px solid #e5e7eb;border-radius:6px">`,
+          )
+          .join('\n'),
+      })
+    : buildNoReportEmail(url);
   return {
-    subject,
-    text,
-    html,
+    ...parts,
     attachments: pngs.map((content, i) => ({
       filename: `report-page-${i + 1}.png`,
       content,
@@ -192,8 +153,9 @@ ${pageImgs}
 async function main(): Promise<void> {
   const dryRun = process.argv.includes('--dry-run');
   const to = recipients();
-  const dir = PATHS.out;
-  const facts = readFacts(dir);
+  const dirArg = process.argv.indexOf('--dir');
+  const dir = dirArg >= 0 ? path.resolve(process.argv[dirArg + 1] ?? '') : PATHS.out;
+  const facts = loadFacts(dir);
   const pdf = path.join(dir, 'report.pdf');
 
   let pngs: Buffer[] = [];

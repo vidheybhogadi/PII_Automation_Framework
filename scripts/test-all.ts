@@ -9,6 +9,7 @@
  * Exits with the TEST exit code (report generation never masks test failures).
  */
 import { spawnSync } from 'node:child_process';
+import { cpSync, existsSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { exportPdf } from '../reporting/generator/export-pdf';
 import { generate, PATHS, ROOT } from '../reporting/generator/generate';
@@ -34,12 +35,19 @@ async function main(): Promise<number> {
 
   console.log('\n▶ 2/5 Collected results: reports/latest/run-data.json');
   console.log('▶ 3/5 Generating analytics + dashboard');
-  const { outDir } = await generate({ archive: true });
+  // A PDF left over from an earlier run must not be archived or emailed with this one.
+  rmSync(path.join(PATHS.out, 'report.pdf'), { force: true });
+  const { outDir, files } = await generate({ archive: true });
+  const archiveDir = files.find((f) => f.startsWith(PATHS.archive));
 
   console.log('▶ 4/5 Generating PDF');
   try {
     const pdf = await exportPdf(outDir);
     console.log(`  PDF: ${path.relative(ROOT, pdf)}`);
+    // The archive copy was taken before the PDF existed: add the PDF and the data files that now point at it.
+    if (archiveDir)
+      for (const f of ['report.pdf', 'data/report-data.js', 'data/report.json'])
+        if (existsSync(path.join(outDir, f))) cpSync(path.join(outDir, f), path.join(archiveDir, f));
   } catch (e) {
     console.error(`  PDF generation failed (dashboard is still available): ${(e as Error).message}`);
   }
