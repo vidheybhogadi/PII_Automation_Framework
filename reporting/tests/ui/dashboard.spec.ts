@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { FIXTURES, INJECTED_SECRETS, STATUS_FIXTURE } from '../fixtures';
 import { expectNoHorizontalOverflow, openReport } from './helpers';
+import { TEST_CASES } from '../../../tests/catalog';
 
 type FixtureTest = { status: string; kind: string; title: string };
 /** The report is about service (integration) tests; framework self-tests are summarised separately. */
@@ -35,8 +36,10 @@ test.describe('REPORT UI — at a glance', () => {
     await expect(page.getByRole('button', { name: `Fail: ${c.fail}` })).toBeVisible();
     await expect(page.getByRole('button', { name: `Blocked: ${c.blocked}` })).toBeVisible();
     await expect(page.getByRole('button', { name: `Not Tested: ${c.notTested}` })).toBeVisible();
-    // Security finding / Skipped tiles appear only when some test has that status.
+    // Security finding / Skipped / Not Applicable tiles appear only when some test has that status.
     await expect(page.getByRole('button', { name: /^Security finding: / })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /^Not Applicable: / })).toHaveCount(0);
+    await expect(page.locator('#attention .alert-card--na')).toHaveCount(0);
     await expect(page.getByRole('button', { name: `Total: ${c.total}` })).toBeVisible();
     await expect(page.getByRole('img', { name: /Test health \d+% out of 100%/ })).toBeVisible();
     for (const title of ['What needs attention', 'How each endpoint did', 'All tests', 'About this run']) {
@@ -293,6 +296,7 @@ test.describe('REPORT UI — statuses', () => {
     await expect(page.getByRole('button', { name: 'Security finding: 1' })).toBeVisible();
     await expect(page.getByRole('button', { name: /^Blocked: \d+$/ })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Skipped: 1' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Not Applicable: 1' })).toBeVisible();
     // A security finding still counts as a failure in the headline.
     await expect(page.getByRole('heading', { level: 1 })).toContainText('1 security finding');
     await expect(page.getByRole('heading', { level: 1 })).toContainText('needs attention');
@@ -304,11 +308,25 @@ test.describe('REPORT UI — statuses', () => {
     // The finding is not one of the automation-failure cards (those are exactly the demo's ordinary failures).
     await expect(attention.locator('.alert-card--fail')).toHaveCount(counts().fail);
     await expect(attention.locator('.alert-card--warn')).toContainText('BQ-01');
+    // Not applicable: a small card with the BQ answer — not among blocked / not tested.
+    const naCard = attention.locator('.alert-card--na');
+    await expect(naCard).toContainText('1 test is not applicable');
+    await expect(naCard).toContainText('BQ-05');
+    await expect(attention.locator('.alert-card--warn')).not.toContainText('BQ-05');
+    await expect(attention.locator('.count-pill')).toContainText('1 not applicable');
 
     // Test list: tabs in order, each row labelled with its status.
     const tests = page.locator('#tests');
     const tabs = tests.getByRole('group', { name: 'Show' }).getByRole('button');
-    await expect(tabs).toHaveText([/^All/, /^Fail/, /^Security finding/, /^Blocked/, /^Skipped/, /^Pass/]);
+    await expect(tabs).toHaveText([
+      /^All/,
+      /^Fail/,
+      /^Security finding/,
+      /^Blocked/,
+      /^Skipped/,
+      /^Not Applicable/,
+      /^Pass/,
+    ]);
     await tabs.filter({ hasText: /^Security finding/ }).click();
     const rows = tests.locator('tbody tr[data-status]');
     await expect(rows).toHaveCount(1);
@@ -323,6 +341,14 @@ test.describe('REPORT UI — statuses', () => {
       tests.locator('tbody tr[data-status="BLOCKED"]').filter({ hasText: sf.blocked.id }),
     ).toHaveCount(1);
     await expect(rows.filter({ hasText: sf.blocked.id })).toContainText('BLOCKED — BQ-01');
+    await tabs.filter({ hasText: /^Not Applicable/ }).click();
+    await expect(rows).toHaveCount(1);
+    await expect(rows.first()).toHaveAttribute('data-status', 'NOT_APPLICABLE');
+    await expect(rows.first().locator('.outcome--not-applicable')).toHaveText('Not Applicable');
+    await expect(rows.first()).toContainText(`NOT APPLICABLE — ${sf.notApplicable.description}`);
+    await rows.first().click();
+    await expect(page.locator('.drawer .banner--na')).toContainText(sf.notApplicable.description);
+    await page.keyboard.press('Escape');
 
     // Details panel: the finding is explained, not presented as an automation failure.
     await tabs.filter({ hasText: /^Security finding/ }).click();
@@ -341,6 +367,30 @@ test.describe('REPORT UI — statuses', () => {
     const csv = readFileSync((await dl.path()) as string, 'utf8');
     const line = csv.split('\n').find((l) => l.startsWith(`${sf.finding.id},`));
     expect(line).toContain(',Security finding,SECURITY FINDING (expected until Dev fixes it) — BQ-08');
+    expect(csv.split('\n')[0]).toContain(',module,method,request,validation,dependency,');
+    expect(errors).toEqual([]);
+  });
+
+  test('RPT-UI-041 the test drawer shows the Request (monospace) and the Validation checks', async ({
+    page,
+  }) => {
+    const errors = await openReport(page, FIXTURES.statuses);
+    const info = TEST_CASES[STATUS_FIXTURE.described.id];
+    expect(info, 'catalog entry for the described fixture test').toBeTruthy();
+    await page
+      .locator('#tests')
+      .getByRole('searchbox', { name: 'Search tests' })
+      .fill(STATUS_FIXTURE.described.id);
+    await page.locator('#tests tbody tr[data-status]').first().click();
+    const drawer = page.locator('.drawer');
+    const request = drawer.locator('.about-test__request');
+    if (info?.request) {
+      await expect(request).toContainText(info.request.slice(0, 30));
+      expect(await request.evaluate((el) => getComputedStyle(el).fontFamily)).toMatch(/mono/i);
+    } else await expect(request).toHaveCount(0);
+    const checks = drawer.locator('.about-test__checks li');
+    await expect(checks).toHaveCount(info?.validation?.length ?? 0);
+    if (info?.validation?.[0]) await expect(checks.first()).toContainText(info.validation[0].slice(0, 20));
     expect(errors).toEqual([]);
   });
 });

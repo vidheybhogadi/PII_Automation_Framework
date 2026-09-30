@@ -21,6 +21,14 @@ export interface TestCaseInfo {
   steps: string[];
   /** The concrete expected outcome: status code plus the key facts that are checked. */
   expected: string;
+  /**
+   * The request(s) sent, as a short example with placeholders instead of real values, e.g.
+   * `POST /api/v1/pii-test {"user_id":"<new fake user>","field":"NAME","value":"QA Automation User"}`.
+   * Never a real token, never real personal data.
+   */
+  request: string;
+  /** The individual checks the test makes (status, body fields, values, side effects), one per entry. */
+  validation: string[];
   type: TestType;
   priority: Priority;
   /** Anything needed beyond the basic setup, e.g. "Needs read-only database access". Omit when none. */

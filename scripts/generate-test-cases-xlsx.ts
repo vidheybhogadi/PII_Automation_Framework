@@ -6,11 +6,15 @@
  * Fully dynamic:
  *   - The test list comes from the code (`playwright test --list`), so new tests and new endpoints appear
  *     automatically, in the right endpoint section.
- *   - Descriptions (what / why / steps / expected / type / priority / preconditions) come from tests/catalog.
- *     A test without one is flagged in the sheet, and self-test UT-DOC-002 fails until it is written.
- *   - Status comes from the LAST run only: Pass, Fail, Security finding, Blocked, Skipped or Not Tested (with the
- *     reason) — the same rule as the HTML report (testOutcome). Tests that were not part of the last run are
- *     Not Tested. Nothing is guessed.
+ *   - Descriptions (what / why / steps / expected / request / validation / type / priority / preconditions) come
+ *     from tests/catalog. A test without one is flagged in the sheet, and self-test UT-DOC-002 fails until it is
+ *     written. Missing request / validation values show as "—".
+ *   - Module = the area label of the ID; Endpoint / Method = the test's primary endpoint (src/clients/endpoints.ts).
+ *   - Status comes from the LAST run only: Pass, Fail, Security finding, Blocked, Skipped, Not Tested or Not
+ *     Applicable (with the reason) — the same rule as the HTML report (testOutcome). Tests that were not part of
+ *     the last run are Not Tested. Nothing is guessed.
+ *   - Dependency / Blocker: the BQ id + reason from the run (Blocked, Not Applicable, Security finding); for tests
+ *     not in the last run, the questions the test source can block on (same detection as docs:pending).
  *   - The "Tester Notes" column is carried over from the previous file, so manual notes survive regeneration.
  *
  * The same builder (buildTestCasesWorkbook) produces the Excel file in the HTML report's Export menu, so both
@@ -19,8 +23,9 @@
 import ExcelJS from 'exceljs';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { OUTCOMES, testOutcome, type Outcome } from '../reporting/core/analytics';
+import { dependencyOf, OUTCOMES, testOutcome, type Outcome } from '../reporting/core/analytics';
 import { ENDPOINT_GROUP_ORDER, primaryEndpoint, suiteOf } from '../reporting/core/catalog';
+import { endpointOfTest, moduleOf, NONE, requestOf, validationOf } from '../reporting/core/test-case';
 import type { ReportTest } from '../reporting/core/types';
 import { plainEndpoint } from '../reporting/dashboard/src/plain';
 import { enrichTests, resolveEndpoints } from '../reporting/generator/build-report-data';
@@ -28,6 +33,7 @@ import { listInventory, type InventoryTest } from '../reporting/generator/invent
 import { parseCollectedRun } from '../reporting/generator/schema';
 import { ENDPOINTS } from '../src/clients/endpoints';
 import { TEST_CASES, type TestCaseInfo } from '../tests/catalog';
+import { blockedTests, questions } from './generate-pending-doc';
 
 const ROOT = path.resolve(__dirname, '..');
 // Preview options (e.g. from demo data into a scratch file): --run <run-data.json> --out <file.xlsx>
@@ -41,16 +47,22 @@ const SHEET = 'Test Cases';
 // ---- Columns -----------------------------------------------------------------------------------------------
 const COLUMNS = [
   { key: 'sno', header: 'S/No', width: 6 },
-  { key: 'id', header: 'TC ID', width: 14 },
-  { key: 'description', header: 'Test Case Description', width: 46 },
-  { key: 'why', header: 'Why It Matters', width: 38 },
-  { key: 'steps', header: 'Steps', width: 44 },
-  { key: 'expected', header: 'Expected Result', width: 40 },
+  { key: 'id', header: 'TC ID', width: 15 },
+  { key: 'title', header: 'Test Name', width: 38 },
+  { key: 'module', header: 'Module', width: 15 },
+  { key: 'endpoint', header: 'Endpoint', width: 24 },
+  { key: 'method', header: 'Method', width: 9 },
+  { key: 'pre', header: 'Preconditions', width: 24 },
+  { key: 'request', header: 'Request', width: 42 },
+  { key: 'steps', header: 'Steps', width: 40 },
+  { key: 'expected', header: 'Expected Result', width: 36 },
+  { key: 'validation', header: 'Validation', width: 38 },
+  { key: 'why', header: 'Why It Matters', width: 32 },
   { key: 'type', header: 'Type', width: 11 },
-  { key: 'suite', header: 'Suite', width: 12 },
+  { key: 'suite', header: 'Suite', width: 11 },
   { key: 'priority', header: 'Priority', width: 10 },
-  { key: 'pre', header: 'Preconditions', width: 28 },
-  { key: 'status', header: 'Status', width: 14 },
+  { key: 'status', header: 'Status', width: 17 },
+  { key: 'dependency', header: 'Dependency / Blocker', width: 30 },
   { key: 'remarks', header: 'Actual Result / Remarks', width: 32 },
   { key: 'notes', header: 'Tester Notes', width: 26 },
 ] as const;
@@ -58,6 +70,24 @@ type ColKey = (typeof COLUMNS)[number]['key'];
 const COLS = COLUMNS.length;
 const col = (key: ColKey) => COLUMNS.findIndex((c) => c.key === key) + 1;
 const width = (key: ColKey) => COLUMNS[col(key) - 1]!.width;
+
+/** "Summary by endpoint" table: the sheet columns each summary column spans (merged cells). */
+const SUMMARY = [
+  { key: 'n', header: '#', from: 1, to: 1 },
+  { key: 'name', header: 'Endpoint', from: 2, to: 3 },
+  { key: 'path', header: 'Method and path', from: 4, to: 6 },
+  { key: 'tests', header: 'Test cases', from: 7, to: 7 },
+  { key: 'pass', header: 'Pass', from: 8, to: 8 },
+  { key: 'fail', header: 'Fail', from: 9, to: 9 },
+  { key: 'finding', header: 'Security finding', from: 10, to: 10 },
+  { key: 'blocked', header: 'Blocked', from: 11, to: 11 },
+  { key: 'na', header: 'Not Applicable', from: 12, to: 12 },
+  { key: 'notTested', header: 'Not Tested / Skipped', from: 13, to: 14 },
+  { key: 'rate', header: 'Pass rate', from: 15, to: 16 },
+  { key: 'go', header: 'Go to', from: 17, to: 19 },
+] as const;
+type SummaryKey = (typeof SUMMARY)[number]['key'];
+const sc = (key: SummaryKey) => SUMMARY.find((c) => c.key === key)!.from;
 
 // ---- Palette ------------------------------------------------------------------------------------------------
 const C = {
@@ -84,6 +114,8 @@ const C = {
   skipInk: 'FF475569',
   findingBg: 'FFEBD5F5',
   findingInk: 'FF6B1D5E',
+  naBg: 'FFD5EEEC',
+  naInk: 'FF285E61',
   warnInk: 'FFB45309',
 };
 const PRIORITY_INK: Record<string, string> = {
@@ -100,18 +132,19 @@ export const OUTCOME_STYLE: Record<Outcome, { label: string; bg: string; ink: st
   Blocked: { label: '⏸ Blocked', bg: C.blockedBg, ink: C.blockedInk },
   Skipped: { label: '↷ Skipped', bg: C.skipBg, ink: C.skipInk },
   'Not Tested': { label: '— Not Tested', bg: C.notBg, ink: C.notInk },
+  'Not Applicable': { label: '⊘ Not Applicable', bg: C.naBg, ink: C.naInk },
 };
 const fill = (argb: string): ExcelJS.Fill => ({ type: 'pattern', pattern: 'solid', fgColor: { argb } });
 const thin = { style: 'thin' as const, color: { argb: C.border } };
 const box = { top: thin, left: thin, bottom: thin, right: thin };
 
 // ---- Last run: one outcome per test (see OUTCOMES) ----------------------------------------------------------
-interface LastRun {
+export interface LastRun {
   byKey: Map<string, ReportTest>;
   label: string | null;
 }
 
-function loadLastRun(runData: string | null): LastRun {
+export function loadLastRun(runData: string | null): LastRun {
   if (!runData || !existsSync(runData)) return { byKey: new Map(), label: null };
   try {
     const run = parseCollectedRun(JSON.parse(readFileSync(runData, 'utf8')), path.relative(ROOT, runData));
@@ -130,14 +163,87 @@ function loadLastRun(runData: string | null): LastRun {
   }
 }
 
-function outcomeFor(t: InventoryTest, last: LastRun): { outcome: Outcome; remark: string } {
+export interface TestResultRow {
+  outcome: Outcome;
+  remark: string;
+  /** "BQ-xx: reason" (run) or the questions the test can block on (static); '' when none. */
+  dependency: string;
+}
+
+/**
+ * Questions each test can block on, read from the test source (the same detection as docs:pending):
+ * 'BQ-xx' literals, BLOCKERS.*, requireApprovedPhones, the `db` fixture. Empty when the sources cannot be read.
+ */
+export function staticBlockers(): Map<string, string> {
+  const out = new Map<string, string>();
+  try {
+    const qs = questions();
+    for (const b of blockedTests()) {
+      const text = b.questions
+        .map((q) => {
+          const why = qs.get(q)?.text;
+          return why ? `${q}: ${why}` : q;
+        })
+        .join(' | ');
+      out.set(b.id, `${b.kind === 'static' ? 'Blocked until answered' : 'May be blocked by'} ${text}`);
+    }
+  } catch {
+    /* sources unreadable (e.g. packaged report): no static blockers */
+  }
+  return out;
+}
+
+export function outcomeFor(
+  t: InventoryTest,
+  last: LastRun,
+  blockers: ReadonlyMap<string, string> = new Map(),
+): TestResultRow {
   const ran = last.byKey.get(t.key);
   if (!ran)
     return {
       outcome: 'Not Tested',
       remark: last.label ? 'Not part of the last run' : 'No run recorded yet',
+      dependency: blockers.get(t.id) ?? '',
     };
-  return testOutcome(ran);
+  return { ...testOutcome(ran), dependency: dependencyOf(ran) };
+}
+
+/** Method + path of an inventory test's primary endpoint ("several endpoints" for cross-endpoint tests). */
+export function endpointOf(t: Pick<InventoryTest, 'id'>): { method: string; path: string } {
+  return endpointOfTest(resolveEndpoints(t.id));
+}
+
+/** Endpoint sections in the guide's order (then any new endpoint), each with its tests sorted by ID. */
+export function groupByEndpoint(inventory: readonly InventoryTest[]) {
+  const byEndpoint = new Map<string, InventoryTest[]>();
+  for (const t of inventory) {
+    const key = primaryEndpoint(resolveEndpoints(t.id));
+    byEndpoint.set(key, [...(byEndpoint.get(key) ?? []), t]);
+  }
+  const known = (ENDPOINT_GROUP_ORDER as readonly string[]).filter((k) => byEndpoint.has(k));
+  const extra = [...byEndpoint.keys()].filter((k) => !known.includes(k)).sort();
+  return [...known, ...extra].map((key) => {
+    const p = plainEndpoint(key);
+    const def = ENDPOINTS[key as keyof typeof ENDPOINTS];
+    const tests = [...(byEndpoint.get(key) ?? [])].sort(
+      (a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }) || a.title.localeCompare(b.title),
+    );
+    return {
+      key,
+      name: p.name,
+      method: def?.method ?? '',
+      path: def?.path ?? 'several endpoints',
+      means: p.means,
+      tests,
+    };
+  });
+}
+
+/** Tally of outcomes (every outcome present, zero when none). */
+export function tally(results: readonly { outcome: Outcome }[]): Record<Outcome, number> {
+  const t = Object.fromEntries(OUTCOMES.map((o) => [o, 0])) as Record<Outcome, number>;
+  for (const r of results) t[r.outcome] += 1;
+  return t;
 }
 
 // ---- Tester notes carried over from the previous file -------------------------------------------------------
@@ -176,11 +282,14 @@ async function previousNotes(file: string | undefined): Promise<Map<string, stri
 }
 
 // ---- Layout helpers -----------------------------------------------------------------------------------------
-/** Excel does not auto-size wrapped rows in a generated file, so estimate the height from the text. */
-function rowHeight(texts: [string, number][]): number {
+/**
+ * Excel does not auto-size wrapped rows in a generated file, so estimate the height from the text.
+ * `mono` cells (monospace, wider glyphs) fit fewer characters per line.
+ */
+function rowHeight(texts: [string, number, boolean?][]): number {
   let lines = 1;
-  for (const [text, w] of texts) {
-    const perLine = Math.max(8, Math.floor(w * 1.15));
+  for (const [text, w, mono] of texts) {
+    const perLine = Math.max(8, Math.floor(w * (mono ? 1.0 : 1.15)));
     const n = text.split('\n').reduce((sum, part) => sum + Math.max(1, Math.ceil(part.length / perLine)), 0);
     lines = Math.max(lines, n);
   }
@@ -227,35 +336,11 @@ export async function buildTestCasesWorkbook(
   const last = loadLastRun(opts.runData);
   const notes = await previousNotes(opts.notesFrom);
 
-  const endpointOfTest = (t: InventoryTest) => primaryEndpoint(resolveEndpoints(t.id));
-  const byEndpoint = new Map<string, InventoryTest[]>();
-  for (const t of inventory) {
-    const key = endpointOfTest(t);
-    byEndpoint.set(key, [...(byEndpoint.get(key) ?? []), t]);
-  }
-  // Known endpoints in the guide's order, then any new endpoint found in the tests.
-  const known = (ENDPOINT_GROUP_ORDER as readonly string[]).filter((k) => byEndpoint.has(k));
-  const extra = [...byEndpoint.keys()].filter((k) => !known.includes(k)).sort();
-  const groups = [...known, ...extra].map((key) => {
-    const p = plainEndpoint(key);
-    const def = ENDPOINTS[key as keyof typeof ENDPOINTS];
-    const tests = [...(byEndpoint.get(key) ?? [])].sort(
-      (a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }) || a.title.localeCompare(b.title),
-    );
-    return {
-      name: p.name,
-      method: def?.method ?? '',
-      path: def?.path ?? 'several endpoints',
-      means: p.means,
-      tests,
-      results: tests.map((t) => outcomeFor(t, last)),
-    };
-  });
-  const tally = (results: { outcome: Outcome }[]) => {
-    const t = Object.fromEntries(OUTCOMES.map((o) => [o, 0])) as Record<Outcome, number>;
-    for (const r of results) t[r.outcome] += 1;
-    return t;
-  };
+  const blockers = staticBlockers();
+  const groups = groupByEndpoint(inventory).map((g) => ({
+    ...g,
+    results: g.tests.map((t) => outcomeFor(t, last, blockers)),
+  }));
   const everyResult = groups.flatMap((g) => g.results);
   const total = everyResult.length;
   const all = tally(everyResult);
@@ -263,8 +348,10 @@ export async function buildTestCasesWorkbook(
   const failN = all.Fail;
   const findingN = all['Security finding'];
   const blockedN = all.Blocked;
+  const naN = all['Not Applicable'];
   const notTested = all.Skipped + all['Not Tested'];
-  // Pass rate of tests that ran: a security finding is a failure (it never makes the run look all-green).
+  // Pass rate of tests that ran: a security finding is a failure (it never makes the run look all-green);
+  // Not Applicable tests are neither.
   const rate = (p: number, f: number) => (p + f ? `${Math.round((p / (p + f)) * 1000) / 10}%` : 'N/A');
 
   const wb = new ExcelJS.Workbook();
@@ -306,12 +393,13 @@ export async function buildTestCasesWorkbook(
   ws.getRow(2).height = 22;
   const totals: [number, number, string, string, string][] = [
     [1, 3, `Total test cases: ${total}`, C.bandSoft, C.bandInk],
-    [4, 4, `✔ Pass: ${pass}`, C.passBg, C.passInk],
-    [5, 5, `✘ Fail: ${failN}`, C.failBg, C.failInk],
-    [6, 6, `⚠ Security finding: ${findingN}`, C.findingBg, C.findingInk],
-    [7, 9, `⏸ Blocked: ${blockedN}`, C.blockedBg, C.blockedInk],
-    [10, 10, `— Not Tested / Skipped: ${notTested}`, C.notBg, C.notInk],
-    [11, 13, `Pass rate of tests run: ${rate(pass, failN + findingN)}`, C.bandSoft, C.bandInk],
+    [4, 5, `✔ Pass: ${pass}`, C.passBg, C.passInk],
+    [6, 6, `✘ Fail: ${failN}`, C.failBg, C.failInk],
+    [7, 7, `⚠ Security finding: ${findingN}`, C.findingBg, C.findingInk],
+    [8, 8, `⏸ Blocked: ${blockedN}`, C.blockedBg, C.blockedInk],
+    [9, 9, `⊘ Not Applicable: ${naN}`, C.naBg, C.naInk],
+    [10, 11, `— Not Tested / Skipped: ${notTested}`, C.notBg, C.notInk],
+    [12, COLS, `Pass rate of tests run: ${rate(pass, failN + findingN)}`, C.bandSoft, C.bandInk],
   ];
   for (const [from, to, text, bg, ink] of totals) {
     ws.mergeCells(3, from, 3, to);
@@ -333,19 +421,10 @@ export async function buildTestCasesWorkbook(
       ws.getCell(rowNo, from).value = value;
     }
   };
-  writeCells(6, [
-    [1, 1, '#'],
-    [2, 3, 'Endpoint'],
-    [4, 5, 'Method and path'],
-    [6, 6, 'Test cases'],
-    [7, 7, 'Pass'],
-    [8, 8, 'Fail'],
-    [9, 9, 'Security finding'],
-    [10, 10, 'Blocked'],
-    [11, 11, 'Not Tested / Skipped'],
-    [12, 12, 'Pass rate'],
-    [13, 13, 'Go to'],
-  ]);
+  writeCells(
+    6,
+    SUMMARY.map((c) => [c.from, c.to, c.header]),
+  );
   for (let n = 1; n <= COLS; n += 1) {
     const cell = ws.getCell(6, n);
     cell.font = { bold: true, color: { argb: C.white } };
@@ -365,6 +444,7 @@ export async function buildTestCasesWorkbook(
     const extra = [
       gt['Security finding'] ? `  ·  ⚠ ${gt['Security finding']} security finding` : '',
       gt.Blocked ? `  ·  ⏸ ${gt.Blocked} blocked` : '',
+      gt['Not Applicable'] ? `  ·  ⊘ ${gt['Not Applicable']} not applicable` : '',
     ].join('');
     sectionRows.push(rowNo);
 
@@ -410,10 +490,16 @@ export async function buildTestCasesWorkbook(
       occurrences.set(t.id, n);
       const shortTitle = t.title.replace(/^\S+\s/, '');
       const steps = (info?.steps ?? []).map((s, k) => `${k + 1}. ${s}`).join('\n');
+      const request = requestOf(info) || NONE;
+      const validation = validationOf(info)
+        .map((v) => `• ${v}`)
+        .join('\n');
+      const endpoint = endpointOf(t);
+      const dependency = result.dependency || NONE;
       const values: Record<ColKey, ExcelJS.CellValue> = {
         sno: i + 1,
         id: t.id,
-        description: {
+        title: {
           richText: [
             { text: shortTitle, font: { bold: true, color: { argb: 'FF0F172A' } } },
             info
@@ -424,14 +510,20 @@ export async function buildTestCasesWorkbook(
                 },
           ],
         },
-        why: info?.why ?? '',
+        module: moduleOf(t.id),
+        endpoint: endpoint.path,
+        method: endpoint.method || NONE,
+        pre: info?.preconditions || NONE,
+        request,
         steps,
         expected: info?.expected ?? '',
+        validation: validation || NONE,
+        why: info?.why ?? '',
         type: info?.type ?? '',
         suite: suiteOf(t.tags),
         priority: info?.priority ?? '',
-        pre: info?.preconditions ?? '',
         status: OUTCOME_STYLE[result.outcome].label,
+        dependency,
         remarks: result.remark,
         notes: notes.get(`${t.id}#${n}`) ?? '',
       };
@@ -442,12 +534,31 @@ export async function buildTestCasesWorkbook(
         cell.alignment = {
           vertical: 'top',
           wrapText: true,
-          horizontal: ['sno', 'type', 'suite', 'priority', 'status'].includes(c.key) ? 'center' : 'left',
+          horizontal: ['sno', 'method', 'type', 'suite', 'priority', 'status'].includes(c.key)
+            ? 'center'
+            : 'left',
         };
         cell.border = box;
         if (i % 2 === 1) cell.fill = fill(C.zebra);
       });
       row.getCell(col('id')).font = { name: 'Menlo', size: 10, bold: true };
+      row.getCell(col('request')).font = { name: 'Menlo', size: 9, color: { argb: 'FF0F172A' } };
+      row.getCell(col('endpoint')).font = { name: 'Menlo', size: 9, color: { argb: C.slate } };
+      row.getCell(col('method')).font = { bold: true, color: { argb: C.slate } };
+      row.getCell(col('module')).font = { color: { argb: C.slate } };
+      row.getCell(col('dependency')).font =
+        dependency === NONE
+          ? { color: { argb: C.muted } }
+          : {
+              color: {
+                argb:
+                  result.outcome === 'Not Applicable'
+                    ? C.naInk
+                    : result.outcome === 'Security finding'
+                      ? C.findingInk
+                      : C.blockedInk,
+              },
+            };
       row.getCell(col('suite')).font =
         suiteOf(t.tags) === 'Smoke'
           ? { bold: true, color: { argb: 'FF6D28D9' } }
@@ -467,13 +578,18 @@ export async function buildTestCasesWorkbook(
             ? { bold: true, color: { argb: C.findingInk } }
             : result.outcome === 'Blocked'
               ? { color: { argb: C.blockedInk } }
-              : { italic: true, color: { argb: C.muted } };
+              : result.outcome === 'Not Applicable'
+                ? { color: { argb: C.naInk } }
+                : { italic: true, color: { argb: C.muted } };
       row.height = rowHeight([
-        [`${shortTitle}\n${info?.what ?? ''}`, width('description')],
+        [`${shortTitle}\n${info?.what ?? ''}`, width('title')],
         [info?.why ?? '', width('why')],
         [steps, width('steps')],
         [info?.expected ?? '', width('expected')],
         [info?.preconditions ?? '', width('pre')],
+        [request, width('request'), true],
+        [validation, width('validation')],
+        [dependency, width('dependency')],
         [result.remark, width('remarks')],
       ]);
       rowNo += 1;
@@ -486,44 +602,59 @@ export async function buildTestCasesWorkbook(
     const r = summaryStart + gi;
     const gt = tally(g.results);
     const target = sectionRows[gi] as number;
-    writeCells(r, [
-      [1, 1, gi + 1],
-      [2, 3, sheetLink(g.name, target)],
-      [4, 5, `${g.method ? `${g.method} ` : ''}${g.path}`],
-      [6, 6, g.tests.length],
-      [7, 7, gt.Pass],
-      [8, 8, gt.Fail],
-      [9, 9, gt['Security finding']],
-      [10, 10, gt.Blocked],
-      [11, 11, gt.Skipped + gt['Not Tested']],
-      [12, 12, rate(gt.Pass, gt.Fail + gt['Security finding'])],
-      [13, 13, sheetLink(`Section ${gi + 1} →`, target)],
-    ]);
+    const value: Record<SummaryKey, ExcelJS.CellValue> = {
+      n: gi + 1,
+      name: sheetLink(g.name, target),
+      path: `${g.method ? `${g.method} ` : ''}${g.path}`,
+      tests: g.tests.length,
+      pass: gt.Pass,
+      fail: gt.Fail,
+      finding: gt['Security finding'],
+      blocked: gt.Blocked,
+      na: gt['Not Applicable'],
+      notTested: gt.Skipped + gt['Not Tested'],
+      rate: rate(gt.Pass, gt.Fail + gt['Security finding']),
+      go: sheetLink(`Section ${gi + 1} →`, target),
+    };
+    writeCells(
+      r,
+      SUMMARY.map((c) => [c.from, c.to, value[c.key]]),
+    );
     ws.getRow(r).height = 20;
     for (let n = 1; n <= COLS; n += 1) {
       const cell = ws.getCell(r, n);
       cell.border = box;
-      cell.alignment = { vertical: 'middle', horizontal: n === 2 || n === 4 ? 'left' : 'center' };
+      cell.alignment = {
+        vertical: 'middle',
+        horizontal: n === sc('name') || n === sc('path') ? 'left' : 'center',
+      };
       if (gi % 2 === 1) cell.fill = fill(C.zebra);
     }
-    ws.getCell(r, 2).font = { bold: true, color: { argb: C.link }, underline: true };
-    ws.getCell(r, 4).font = { name: 'Menlo', size: 9, color: { argb: C.muted } };
-    ws.getCell(r, 7).font = { bold: true, color: { argb: C.passInk } };
-    ws.getCell(r, 8).font = { bold: true, color: { argb: gt.Fail ? C.failInk : C.muted } };
-    ws.getCell(r, 9).font = { bold: true, color: { argb: gt['Security finding'] ? C.findingInk : C.muted } };
-    ws.getCell(r, 10).font = {
+    ws.getCell(r, sc('name')).font = { bold: true, color: { argb: C.link }, underline: true };
+    ws.getCell(r, sc('path')).font = { name: 'Menlo', size: 9, color: { argb: C.muted } };
+    ws.getCell(r, sc('pass')).font = { bold: true, color: { argb: C.passInk } };
+    ws.getCell(r, sc('fail')).font = { bold: true, color: { argb: gt.Fail ? C.failInk : C.muted } };
+    ws.getCell(r, sc('finding')).font = {
+      bold: true,
+      color: { argb: gt['Security finding'] ? C.findingInk : C.muted },
+    };
+    ws.getCell(r, sc('blocked')).font = {
       bold: Boolean(gt.Blocked),
       color: { argb: gt.Blocked ? C.blockedInk : C.muted },
     };
-    ws.getCell(r, 11).font = { color: { argb: C.notInk } };
-    ws.getCell(r, 13).font = { color: { argb: C.link }, underline: true };
+    ws.getCell(r, sc('na')).font = {
+      bold: Boolean(gt['Not Applicable']),
+      color: { argb: gt['Not Applicable'] ? C.naInk : C.muted },
+    };
+    ws.getCell(r, sc('notTested')).font = { color: { argb: C.notInk } };
+    ws.getCell(r, sc('go')).font = { color: { argb: C.link }, underline: true };
   });
 
   const buffer = Buffer.from(await wb.xlsx.writeBuffer());
   const summary =
     `${total} test cases in ${groups.length} endpoint sections ` +
     `(Pass ${pass} · Fail ${failN} · Security finding ${findingN} · Blocked ${blockedN} · ` +
-    `Not Tested/Skipped ${notTested}). ${last.label ?? 'No run recorded yet.'}`;
+    `Not Applicable ${naN} · Not Tested/Skipped ${notTested}). ${last.label ?? 'No run recorded yet.'}`;
   return { buffer, summary };
 }
 

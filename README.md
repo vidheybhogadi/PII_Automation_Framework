@@ -58,8 +58,8 @@ npm run test:all
 ```
 PII_Automation_Framework/
 │
-├── tests/                          THE TESTS (49 planned) — one folder per area
-│   ├── poc/                          POC-001…003: save email → read email → check DB (the first proof)
+├── tests/                          THE TESTS (55 planned) — one folder per area
+│   ├── poc/                          POC-001…003: save name → read name → check DB (the first proof)
 │   ├── health/                       facade readiness
 │   ├── pii/                          save · read · search · bulk read · clean-up rules
 │   ├── transient/                    temporary phones (create, resolve, promote)
@@ -121,12 +121,12 @@ test(
 );
 ```
 
-- **IDs** never change: `POC-001…003` (the email proof of concept) and `AISLE-<AREA>-NNN` —
+- **IDs** never change: `POC-001…003` (the NAME proof of concept) and `AISLE-<AREA>-NNN` —
   `HLT` health · `WR` save · `RD` read · `SR` search · `BR` bulk read · `NRM` clean-up rules · `TR` temporary
   phones · `FT` free-text keys · `AUTH` token · `SEC` security · `CON` response format · `DB` database.
 - **Tags**: `@smoke` · `@phase1` · `@security` · `@db` · `@poc` (everything else is Regression).
-- **Every test has a plain-English description** in `tests/catalog/<area>.ts` (what, why, steps, expected, type,
-  priority). Self-test UT-DOC-002 fails until it exists. Test cases are added/changed/removed through the
+- **Every test has a plain-English description** in `tests/catalog/<area>.ts` (what, why, steps, expected, the
+  request sent, the checks made, type, priority). Self-test UT-DOC-002 fails until it exists. Test cases are added/changed/removed through the
   **testcase-manager** agent (see [CLAUDE.md](CLAUDE.md)): it proposes first, and changes nothing until approved.
 - **Nothing is guessed.** Expected results come from behaviour observed on staging or from Dev's answers. Anything
   unconfirmed is marked **Blocked** with a question in [docs/backend-open-questions.md](docs/backend-open-questions.md).
@@ -163,7 +163,7 @@ npm run check-env                  # checks settings, the token and which fields
 **Run against the Aisle staging facade** (`https://testa2.aisle.co/V1`):
 
 ```bash
-npm run test:poc                   # POC-001…003 (email) — Blocked until Dev grants EMAIL access / DB access
+npm run test:poc                   # POC-001…003 (NAME) — POC-003 is Blocked until read-only DB access (BQ-04)
 npm run test:phase1                # the 10 Phase-1 tests that prove the migration
 npm run test:all                   # all tests → report → PDF → Excel
 npm run report                     # rebuild the report from the last run
@@ -191,7 +191,7 @@ Subsets: `npm run test:smoke` · `npm run test:security` · `npm run test:db` ·
 | Part                 | Tests | Status                                                                                   |
 | -------------------- | :---: | ---------------------------------------------------------------------------------------- |
 | Framework self-tests |  60   | passing (`npm run verify`)                                                               |
-| Aisle facade tests   |  49   | written; see the migration report for the latest staging run and what is Blocked and why |
+| Aisle facade tests   |  55   | written; see the migration report for the latest staging run and what is Blocked and why |
 
 [Backend open questions](docs/backend-open-questions.md) · [Coverage matrix](docs/coverage-matrix.md) ·
 [Pending placeholders](PENDING-PLACEHOLDERS.md) · [Test cases (Excel)](docs/test-cases.xlsx) ·

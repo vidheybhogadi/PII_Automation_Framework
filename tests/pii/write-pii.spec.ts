@@ -10,6 +10,7 @@ import {
   expectValidationError,
 } from '../../src/assertions/response.assertions';
 import { expectResponseDoesNotEcho, expectSecretEquals } from '../../src/assertions/security.assertions';
+import { messyEmail } from '../../src/data/test-data-factory';
 import { BLOCKERS, expectNotPersisted, readValue, seedField } from '../../src/fixtures/steps';
 import {
   blockIfAccessDenied,
@@ -19,7 +20,13 @@ import {
   test,
 } from '../../src/fixtures/test-fixtures';
 import { ERROR_CODES } from '../../src/models/common.models';
-import { batchReadDataSchema, LIMITS, PII_FIELDS, writePiiDataSchema } from '../../src/models/pii.models';
+import {
+  batchReadDataSchema,
+  LIMITS,
+  PII_FIELDS,
+  readPiiDataSchema,
+  writePiiDataSchema,
+} from '../../src/models/pii.models';
 
 /** Tenant set by the facade itself (observed on staging). */
 const AISLE_TENANT = 'aisle';
@@ -45,18 +52,21 @@ test.describe('Aisle facade — save PII', () => {
   );
 
   test(
-    'AISLE-WR-002 Saving a name again replaces the old one (200), and read and bulk read both return the new name',
+    'AISLE-WR-002 Full name lifecycle: save, read, replace (200), read the new name, bulk read the new name',
     { tag: ['@smoke', '@phase1'] },
     async ({ aisle, data, cleanup }) => {
       const userId = data.userId('wr2');
-      await seedField(aisle, cleanup, { userId, field: PII_FIELDS.NAME, value: data.name() });
-      const newName = data.name();
+      const nameA = data.name();
+      const nameB = data.name();
 
-      const replace = await aisle.writePii({ user_id: userId, field: PII_FIELDS.NAME, value: newName });
+      await seedField(aisle, cleanup, { userId, field: PII_FIELDS.NAME, value: nameA });
+      expectSecretEquals(await readValue(aisle, { userId, field: PII_FIELDS.NAME }), nameA, 'read NAME A');
+
+      const replace = await aisle.writePii({ user_id: userId, field: PII_FIELDS.NAME, value: nameB });
       const saved = expectSuccess(replace, 200, writePiiDataSchema, 'PII write successful');
       expect(saved).toMatchObject({ tenant_id: AISLE_TENANT, user_id: userId, field: PII_FIELDS.NAME });
 
-      expectSecretEquals(await readValue(aisle, { userId, field: PII_FIELDS.NAME }), newName, 'read NAME');
+      expectSecretEquals(await readValue(aisle, { userId, field: PII_FIELDS.NAME }), nameB, 'read NAME B');
 
       const bulk = expectSuccess(
         await aisle.batchRead({ user_ids: [userId], fields: [PII_FIELDS.NAME] }),
@@ -65,7 +75,7 @@ test.describe('Aisle facade — save PII', () => {
       );
       expect(bulk.count).toBe(1);
       expect(bulk.items[0]?.user_id).toBe(userId);
-      expectSecretEquals(bulk.items[0]?.value, newName, 'bulk-read NAME');
+      expectSecretEquals(bulk.items[0]?.value, nameB, 'bulk-read NAME B');
     },
   );
 
@@ -90,6 +100,16 @@ test.describe('Aisle facade — save PII', () => {
       value: 12345,
     });
     expectValidationError(numberValue, 'value');
+
+    const noField = await aisle.call('writePii', { user_id: userId, value: data.name() });
+    expectValidationError(noField, 'field');
+
+    const numberUser = await aisle.call('writePii', {
+      user_id: 12345,
+      field: PII_FIELDS.NAME,
+      value: data.name(),
+    });
+    expectValidationError(numberUser, 'user_id');
 
     expectSecretEquals(
       await readValue(aisle, { userId, field: PII_FIELDS.NAME }),
@@ -225,5 +245,32 @@ test.describe('Aisle facade — save PII', () => {
     );
     expectStatus(res, [400, 422], 'invalid email rejected');
     await expectNotPersisted(aisle, { userId, field: PII_FIELDS.EMAIL });
+  });
+
+  test('AISLE-WR-010 Saving a fake email and reading it back returns it cleaned up', async ({
+    aisle,
+    data,
+    cleanup,
+  }) => {
+    const userId = data.userId('wr10');
+    const email = data.email('wr10');
+    await seedField(aisle, cleanup, {
+      userId,
+      field: PII_FIELDS.EMAIL,
+      value: messyEmail(email),
+      blocker: BLOCKERS.email,
+    });
+
+    const res = await aisle.readPii({ user_id: userId, field_names: [PII_FIELDS.EMAIL] });
+    blockIfAccessDenied(res, BLOCKERS.email.id, BLOCKERS.email.reason);
+    noteAssumption('BQ-01', 'expected EMAIL normalization trim + lower-case — to be confirmed by Dev');
+    const read = expectSuccess(res, 200, readPiiDataSchema, 'PII read successful');
+    expect(read.count).toBe(1);
+    expect(read.items[0]).toMatchObject({
+      tenant_id: AISLE_TENANT,
+      user_id: userId,
+      field: PII_FIELDS.EMAIL,
+    });
+    expectSecretEquals(read.items[0]?.value, email, 'cleaned-up EMAIL');
   });
 });

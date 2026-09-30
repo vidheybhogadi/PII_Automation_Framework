@@ -23,6 +23,8 @@ export const GLOSSARY: Record<string, string> = {
     'A test that cannot run until Dev answers an open question or grants access (BQ-xx / Q-xx). Never counted as passed, and not counted as a failure.',
   'Security finding':
     'A test that fails on a known, reported security issue (BQ-xx). Expected to fail until Dev fixes it; still counted as a failure for the verdict.',
+  'Not Applicable':
+    'A test for a feature Dev has confirmed is intentionally not supported (answer recorded against a BQ-xx question). Neither a pass nor a failure, and left out of the pass rate, quality gates and health score.',
   Skipped: 'A test deliberately not run in this execution (out of scope or a data prerequisite missing).',
   'Quality gate':
     'A pass/fail checkpoint for one area (e.g. Authentication). The run is only “PASSED” if every critical gate passes.',

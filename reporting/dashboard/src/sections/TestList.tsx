@@ -1,6 +1,6 @@
 /**
  * "All tests" — every test in the suite, grouped by endpoint: Pass / Fail / Security finding / Blocked / Skipped /
- * Not Tested, a one-line description, search.
+ * Not Tested / Not Applicable (tab shown only when present), a one-line description, search.
  */
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { formatDuration, OUTCOMES, testOutcome, type Outcome } from '../../../core/analytics';
@@ -20,7 +20,7 @@ import {
 import { isTypingTarget, type StatusFilter } from '../utils';
 
 const PAGE = 20;
-/** All · Fail · Security finding · Blocked · Skipped · Not Tested · Pass (the OUTCOMES order). */
+/** All · Fail · Security finding · Blocked · Skipped · Not Tested · Not Applicable · Pass (the OUTCOMES order). */
 const TABS: { label: string; outcome: Outcome | null; statuses: StatusFilter[] }[] = [
   { label: 'All', outcome: null, statuses: [] },
   ...OUTCOMES.map((o) => ({ label: o, outcome: o, statuses: [OUTCOME_FILTER[o]] })),

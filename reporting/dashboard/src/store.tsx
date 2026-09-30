@@ -26,6 +26,7 @@ export const OUTCOME_FILTER: Record<Outcome, StatusFilter> = {
   Blocked: 'BLOCKED',
   Skipped: 'SKIPPED',
   'Not Tested': 'NOT_TESTED',
+  'Not Applicable': 'NOT_APPLICABLE',
   Pass: 'PASS',
 };
 /** Tokens from older links that still mean an outcome. */
@@ -34,7 +35,7 @@ const LEGACY_FILTER: Partial<Record<StatusFilter, Outcome>> = { FIXME: 'Blocked'
 /** Filter value meaning "Not Tested" (not part of this run, run stopped, or the facade was unreachable). */
 export const NOT_RUN: StatusFilter[] = ['NOT_TESTED'];
 
-/** The reader-facing status of a test: Pass, Fail, Security finding, Blocked, Skipped or Not Tested. */
+/** The reader-facing status of a test: Pass, Fail, Security finding, Blocked, Skipped, Not Tested or Not Applicable. */
 export const outcomeOf = (t: ReportTest): Outcome => testOutcome(t).outcome;
 
 /** True when a test with outcome `o` is selected by the status filter tokens (empty = everything). */

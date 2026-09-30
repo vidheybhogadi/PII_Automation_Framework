@@ -256,6 +256,10 @@ export interface TestDescription {
   type: 'Positive' | 'Negative' | 'Security' | 'Database' | 'Contract';
   priority: 'Critical' | 'High' | 'Medium' | 'Low';
   preconditions?: string;
+  /** Example request with placeholders (never a real token or real personal data). Absent in older data. */
+  request?: string;
+  /** The individual checks the test makes, one per entry. Absent in older data. */
+  validation?: string[];
 }
 
 export interface ReportTest extends CollectedTest {

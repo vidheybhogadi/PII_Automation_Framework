@@ -114,13 +114,16 @@ export class TestDataFactory {
     return `${this.compactRunId}.w${this.workerIndex}.${this.next()}.${label}@${domain}`.toLowerCase();
   }
 
-  /** Unique synthetic name in normalized form (single spaces, trimmed). Letters only after the prefix. */
+  /**
+   * Unique synthetic name in normalized form (single spaces, trimmed), clearly QA-only:
+   * "QA Automation User Bcdab". Letters only after the prefix (digits are mapped to letters).
+   */
   name(): string {
     const seq = this.next();
     const suffix = [...`${this.workerIndex}${seq}${this.runId.slice(-4)}`]
       .map((ch) => (/\d/.test(ch) ? String.fromCharCode(97 + Number(ch)) : ch))
       .join('');
-    return `Qa Auto ${suffix.charAt(0).toUpperCase()}${suffix.slice(1)}`;
+    return `QA Automation User ${suffix.charAt(0).toUpperCase()}${suffix.slice(1)}`;
   }
 
   /**

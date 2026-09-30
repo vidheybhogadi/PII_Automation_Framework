@@ -1,6 +1,12 @@
 /** Test details — plain language first, technical detail below. Only sanitized metadata is ever shown. */
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'preact/hooks';
-import { analyzeFailure, FAILURE_PATTERNS, formatDuration, testOutcome } from '../../../core/analytics';
+import {
+  analyzeFailure,
+  FAILURE_PATTERNS,
+  formatDuration,
+  NOT_APPLICABLE_ANNOTATION,
+  testOutcome,
+} from '../../../core/analytics';
 import { suiteOf } from '../../../core/catalog';
 import { sanitizeText } from '../../../core/sanitize';
 import { Icon } from '../icons';
@@ -69,6 +75,10 @@ export function TestDrawer() {
   const calls = test.apiCalls.filter((c) => c.phase !== 'preflight');
   const outcome = testOutcome(test);
   const info = test.info;
+  const notApplicable =
+    outcome.outcome === 'Not Applicable'
+      ? test.annotations.filter((a) => a.type === NOT_APPLICABLE_ANNOTATION && a.description)
+      : [];
 
   return (
     <>
@@ -152,10 +162,28 @@ export function TestDrawer() {
                     ))}
                   </ol>
                 </div>
+                {info.request && (
+                  <div class="about-test__block">
+                    <div class="subhead">Request</div>
+                    <pre class="about-test__request">
+                      <code>{info.request}</code>
+                    </pre>
+                  </div>
+                )}
                 <div class="about-test__block about-test__block--expected">
                   <div class="subhead">Expected result</div>
                   <p>{info.expected}</p>
                 </div>
+                {info.validation && info.validation.length > 0 && (
+                  <div class="about-test__block">
+                    <div class="subhead">Validation (what is checked)</div>
+                    <ul class="about-test__checks">
+                      {info.validation.map((v, i) => (
+                        <li key={i}>{v}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 <div class="about-test__chips">
                   <span class="tag">{info.type}</span>
                   <span class={`suite suite--${suiteOf(test.tags)}`}>{suiteOf(test.tags)}</span>
@@ -195,6 +223,21 @@ export function TestDrawer() {
                   Reported to Dev; still counted as a failure. It is listed separately from automation
                   failures.
                 </div>
+              </div>
+            </div>
+          )}
+
+          {notApplicable.length > 0 && (
+            <div class="banner banner--na">
+              <Icon name="ban" />
+              <div>
+                <b>Not applicable — Dev confirmed this feature is intentionally not supported.</b>
+                <ul>
+                  {notApplicable.map((a, i) => (
+                    <li key={i}>{a.description}</li>
+                  ))}
+                </ul>
+                <div class="small">Neither a pass nor a failure; not counted in the pass rate or gates.</div>
               </div>
             </div>
           )}
@@ -243,7 +286,7 @@ export function TestDrawer() {
             </section>
           )}
 
-          {waiting.length > 0 && !test.notRun && (
+          {waiting.length > 0 && !test.notRun && outcome.outcome !== 'Not Applicable' && (
             <div class="banner banner--warn">
               <Icon name="pause" />
               <div>

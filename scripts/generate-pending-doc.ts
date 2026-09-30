@@ -50,7 +50,7 @@ function testFiles(dir = 'tests'): string[] {
   });
 }
 
-interface BlockedTest {
+export interface BlockedTest {
   id: string;
   file: string;
   line: number;
@@ -59,7 +59,7 @@ interface BlockedTest {
 }
 
 /** Every test that can be blocked, with the questions it waits on. */
-function blockedTests(): BlockedTest[] {
+export function blockedTests(): BlockedTest[] {
   const out: BlockedTest[] = [];
   for (const file of testFiles()) {
     const lines = read(file).split('\n');
@@ -94,7 +94,7 @@ function blockedTests(): BlockedTest[] {
 }
 
 /** BQ-xx → { question, status } from docs/backend-open-questions.md. */
-function questions(): Map<string, { text: string; status: string }> {
+export function questions(): Map<string, { text: string; status: string }> {
   const map = new Map<string, { text: string; status: string }>();
   for (const line of read('docs/backend-open-questions.md').split('\n')) {
     const cells = line.split('|').map((c) => c.trim());

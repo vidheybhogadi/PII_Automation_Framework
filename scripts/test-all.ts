@@ -4,7 +4,7 @@
  *   2. collect results        (reporting/collector → reports/latest/run-data.json, written by Playwright)
  *   3. generate analytics + HTML dashboard + run history + archive
  *   4. generate the PDF
- *   5. refresh the test-case sheet (docs/test-cases.xlsx) with this run's results
+ *   5. refresh the test-case sheet (docs/test-cases.xlsx) and inventory (docs/test-case-inventory.md) with this run's results
  *   6. print artifact locations and open the dashboard in the browser (skipped in CI, with --no-open or REPORT_OPEN=false)
  * Exits with the TEST exit code (report generation never masks test failures).
  */
@@ -51,13 +51,21 @@ async function main(): Promise<number> {
   } catch (e) {
     console.error(`  PDF generation failed (dashboard is still available): ${(e as Error).message}`);
   }
-  console.log('▶ 5/5 Updating the test-case sheet (docs/test-cases.xlsx)');
+  console.log('▶ 5/5 Updating the test-case sheet (docs/test-cases.xlsx) and inventory');
   const sheet = spawnSync('npx', ['tsx', 'scripts/generate-test-cases-xlsx.ts'], {
     cwd: ROOT,
     stdio: 'inherit',
     shell: process.platform === 'win32',
   });
   if (sheet.status !== 0) console.error('  Test-case sheet was not updated (the report is unaffected).');
+  console.log('  Updating the test-case inventory (docs/test-case-inventory.md)');
+  const inventoryDoc = spawnSync('npm', ['run', '-s', 'docs:inventory'], {
+    cwd: ROOT,
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+  });
+  if (inventoryDoc.status !== 0)
+    console.error('  Test-case inventory was not updated (the report is unaffected).');
   console.log(
     `\n  Artifacts: ${path.relative(ROOT, PATHS.out)}/ (index.html, report.pdf, results.json, results.csv, summary.txt, data/)`,
   );

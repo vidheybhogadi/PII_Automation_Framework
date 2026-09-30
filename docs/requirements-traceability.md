@@ -12,7 +12,7 @@ requirement — VERIFIED / FAILED / PARTIAL / BLOCKED / NOT EXECUTED — comes f
 report dashboard (Requirements section) and its PDF. Test references ending in `*` cover every test with
 that ID prefix.
 
-**27 requirements** in 13 groups · 21 depend on an open backend question.
+**29 requirements** in 13 groups · 23 depend on an open backend question.
 
 ## Authentication
 
@@ -30,12 +30,12 @@ that ID prefix.
 
 ## PII Save
 
-| Req      | Requirement                                                                                                          | Type    | Source                       | Endpoints               | Tests                                                           | Open question |
-| -------- | -------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------------- | ----------------------- | --------------------------------------------------------------- | ------------- |
-| FR-WR-01 | A new field is saved with 201, a repeat save replaces it with 200; the reply has tenant, user, field and key version | Derived | Staging, observed 2026-09-29 | `POST /api/v1/pii-test` | `AISLE-WR-001`, `AISLE-WR-002`, `AISLE-CON-001`                 | —             |
-| FR-WR-02 | Invalid requests are refused (422 list of problems; broken JSON 400) and change nothing                              | Derived | Staging, observed 2026-09-29 | `POST /api/v1/pii-test` | `AISLE-WR-003`, `AISLE-WR-004`, `AISLE-WR-007`, `AISLE-CON-002` | BQ-09         |
-| FR-WR-03 | Length limits: user ID 1–128 characters, value 1–1,024 characters                                                    | Derived | Staging, observed 2026-09-29 | `POST /api/v1/pii-test` | `AISLE-WR-004`, `AISLE-WR-005`, `AISLE-WR-006`                  | BQ-05         |
-| FR-WR-04 | An unknown field name is refused (403)                                                                               | Derived | Staging, observed 2026-09-29 | `POST /api/v1/pii-test` | `AISLE-WR-008`                                                  | BQ-12         |
+| Req      | Requirement                                                                                                          | Type    | Source                       | Endpoints                                                                                     | Tests                                                           | Open question |
+| -------- | -------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ------------- |
+| FR-WR-01 | A new field is saved with 201, a repeat save replaces it with 200; the reply has tenant, user, field and key version | Derived | Staging, observed 2026-09-29 | `POST /api/v1/pii-test`                                                                       | `AISLE-WR-001`, `AISLE-WR-002`, `AISLE-CON-001`, `POC-001`      | —             |
+| FR-WR-02 | Invalid requests are refused (422 list of problems; broken JSON 400) and change nothing                              | Derived | Staging, observed 2026-09-29 | `POST /api/v1/pii-test`                                                                       | `AISLE-WR-003`, `AISLE-WR-004`, `AISLE-WR-007`, `AISLE-CON-002` | BQ-09         |
+| FR-WR-03 | Length limits: user ID 1–128 characters, value 1–1,024 characters                                                    | Derived | Staging, observed 2026-09-29 | `POST /api/v1/pii-test`                                                                       | `AISLE-WR-004`, `AISLE-WR-005`, `AISLE-WR-006`                  | BQ-05         |
+| FR-WR-04 | An unknown field name is refused (403) on save, read and bulk read                                                   | Derived | Staging, observed 2026-09-29 | `POST /api/v1/pii-test`<br>`POST /api/v1/pii-test/read`<br>`POST /api/v1/pii-test/batch/read` | `AISLE-WR-008`, `AISLE-RD-005`, `AISLE-BR-006`                  | BQ-12         |
 
 ## PII Read
 
@@ -48,25 +48,26 @@ that ID prefix.
 
 ## Bulk read
 
-| Req      | Requirement                                                      | Type    | Source                       | Endpoints                          | Tests          | Open question |
-| -------- | ---------------------------------------------------------------- | ------- | ---------------------------- | ---------------------------------- | -------------- | ------------- |
-| FR-BR-01 | A bulk read returns every requested user × field                 | Derived | Staging, observed 2026-09-29 | `POST /api/v1/pii-test/batch/read` | `AISLE-BR-001` | BQ-19         |
-| FR-BR-02 | If any requested user has no value, the whole bulk read gets 404 | Derived | Staging, observed 2026-09-29 | `POST /api/v1/pii-test/batch/read` | `AISLE-BR-002` | —             |
-| FR-BR-03 | The user list must hold 1–200 IDs (422 outside)                  | Derived | Staging, observed 2026-09-29 | `POST /api/v1/pii-test/batch/read` | `AISLE-BR-003` | BQ-18         |
+| Req      | Requirement                                                                | Type    | Source                                                  | Endpoints                          | Tests                          | Open question |
+| -------- | -------------------------------------------------------------------------- | ------- | ------------------------------------------------------- | ---------------------------------- | ------------------------------ | ------------- |
+| FR-BR-01 | A bulk read returns every requested user × field                           | Derived | Staging, observed 2026-09-29                            | `POST /api/v1/pii-test/batch/read` | `AISLE-BR-001`, `AISLE-BR-004` | BQ-19         |
+| FR-BR-02 | If any requested user has no value, the whole bulk read gets 404           | Derived | Staging, observed 2026-09-29                            | `POST /api/v1/pii-test/batch/read` | `AISLE-BR-002`                 | —             |
+| FR-BR-03 | The user list must hold 1–200 IDs (422 outside)                            | Derived | Staging, observed 2026-09-29                            | `POST /api/v1/pii-test/batch/read` | `AISLE-BR-003`                 | BQ-18         |
+| FR-BR-04 | A bulk read needs both the user list and the field list (422 when missing) | Derived | Inferred from save/read behaviour; to verify on staging | `POST /api/v1/pii-test/batch/read` | `AISLE-BR-005`                 | BQ-09         |
 
 ## Normalization
 
 | Req       | Requirement                                                               | Type    | Source                       | Endpoints                                               | Tests                            | Open question |
 | --------- | ------------------------------------------------------------------------- | ------- | ---------------------------- | ------------------------------------------------------- | -------------------------------- | ------------- |
-| FR-NRM-01 | Names are trimmed and runs of spaces collapsed; capitals are kept         | Derived | Staging, observed 2026-09-29 | `POST /api/v1/pii-test`<br>`POST /api/v1/pii-test/read` | `AISLE-NRM-001`                  | —             |
-| FR-NRM-02 | Emails are trimmed and lower-cased (blocked)                              | Derived | BQ-01                        | `POST /api/v1/pii-test`<br>`POST /api/v1/pii-test/read` | `POC-002`                        | BQ-01         |
+| FR-NRM-01 | Names are trimmed and runs of spaces collapsed; capitals are kept         | Derived | Staging, observed 2026-09-29 | `POST /api/v1/pii-test`<br>`POST /api/v1/pii-test/read` | `AISLE-NRM-001`, `POC-002`       | —             |
+| FR-NRM-02 | Emails are trimmed and lower-cased (blocked)                              | Derived | BQ-01                        | `POST /api/v1/pii-test`<br>`POST /api/v1/pii-test/read` | `AISLE-WR-010`                   | BQ-01         |
 | FR-NRM-03 | Phones are stored as digits only and invalid phones are refused (blocked) | Derived | BQ-03                        | `POST /api/v1/pii-test`<br>`POST /api/v1/pii-test/read` | `AISLE-NRM-002`, `AISLE-NRM-003` | BQ-03         |
 
 ## Email flow
 
-| Req       | Requirement                                                                 | Type    | Source | Endpoints                                               | Tests                                           | Open question |
-| --------- | --------------------------------------------------------------------------- | ------- | ------ | ------------------------------------------------------- | ----------------------------------------------- | ------------- |
-| FR-EML-01 | An email can be saved, read back and is stored for the right user (blocked) | Derived | BQ-01  | `POST /api/v1/pii-test`<br>`POST /api/v1/pii-test/read` | `POC-001`, `POC-002`, `POC-003`, `AISLE-WR-009` | BQ-01         |
+| Req       | Requirement                                                                               | Type    | Source | Endpoints                                               | Tests                          | Open question |
+| --------- | ----------------------------------------------------------------------------------------- | ------- | ------ | ------------------------------------------------------- | ------------------------------ | ------------- |
+| FR-EML-01 | An email can be saved and read back cleaned up, and an invalid email is refused (blocked) | Derived | BQ-01  | `POST /api/v1/pii-test`<br>`POST /api/v1/pii-test/read` | `AISLE-WR-009`, `AISLE-WR-010` | BQ-01         |
 
 ## Search
 
@@ -89,10 +90,11 @@ that ID prefix.
 
 ## Security
 
-| Req       | Requirement                                                                                  | Type   | Source            | Endpoints                                               | Tests                       | Open question |
-| --------- | -------------------------------------------------------------------------------------------- | ------ | ----------------- | ------------------------------------------------------- | --------------------------- | ------------- |
-| FR-SEC-01 | Error replies do not repeat the submitted personal value or internal details (known finding) | Policy | BQ-08             | `POST /api/v1/pii-test`                                 | `AISLE-SEC-002`             | BQ-08         |
-| FR-SEC-02 | Test logs and reports never contain the token or personal data                               | Policy | QA security rules | `POST /api/v1/pii-test`<br>`POST /api/v1/pii-test/read` | `AISLE-SEC-003`, `UT-RED-*` | —             |
+| Req       | Requirement                                                                                               | Type   | Source            | Endpoints                                               | Tests                       | Open question |
+| --------- | --------------------------------------------------------------------------------------------------------- | ------ | ----------------- | ------------------------------------------------------- | --------------------------- | ------------- |
+| FR-SEC-01 | Error replies do not repeat the submitted personal value or internal details (known finding)              | Policy | BQ-08             | `POST /api/v1/pii-test`                                 | `AISLE-SEC-002`             | BQ-08         |
+| FR-SEC-02 | Test logs and reports never contain the token or personal data                                            | Policy | QA security rules | `POST /api/v1/pii-test`<br>`POST /api/v1/pii-test/read` | `AISLE-SEC-003`, `UT-RED-*` | —             |
+| FR-SEC-03 | Error replies reveal no internal service details (stack traces, internal hosts, server or database names) | Policy | BQ-29             | `POST /api/v1/pii-test`<br>`POST /api/v1/pii-test/read` | `AISLE-SEC-005`             | BQ-29         |
 
 ## Storage
 

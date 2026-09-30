@@ -1,11 +1,13 @@
 /**
  * "What needs attention" — automation failures first, then known security findings, then blocked tests (grouped by
- * blocker, e.g. BQ-01), then what was skipped / not tested and why. Plain language, click for details.
+ * blocker, e.g. BQ-01), then what was skipped / not tested and why, then a small "Not applicable" card (features
+ * Dev confirmed are unsupported, grouped by BQ answer). Plain language, click for details.
  */
 import { useMemo, useState } from 'preact/hooks';
 import {
   analyzeFailure,
   FAILURE_PATTERNS,
+  NOT_APPLICABLE_ANNOTATION,
   preflightFailures,
   questionIdOf,
   SECURITY_FINDING_ANNOTATION,
@@ -56,6 +58,50 @@ export function Attention() {
     );
   }, [all]);
   const blockedCount = blockers.reduce((n, [, g]) => n + g.tests.length, 0);
+  // Not Applicable: Dev confirmed the feature is intentionally unsupported — grouped by the BQ answer.
+  const notApplicable = useMemo(() => {
+    const groups = new Map<string, { why: string; tests: string[] }>();
+    for (const t of all) {
+      if (outcomeOf(t) !== 'Not Applicable') continue;
+      const id = questionIdOf(t, NOT_APPLICABLE_ANNOTATION) ?? 'Other';
+      const why =
+        t.annotations.find((a) => a.type === NOT_APPLICABLE_ANNOTATION)?.description ??
+        testOutcome(t).remark.replace(/^NOT APPLICABLE — /, '');
+      const g = groups.get(id) ?? { why: why.replace(/^B?Q-\d+:\s*/, ''), tests: [] };
+      g.tests.push(t.id);
+      groups.set(id, g);
+    }
+    return [...groups.entries()].sort(([a], [b]) =>
+      a === 'Other' ? 1 : b === 'Other' ? -1 : a.localeCompare(b, undefined, { numeric: true }),
+    );
+  }, [all]);
+  const naCount = notApplicable.reduce((n, [, g]) => n + g.tests.length, 0);
+  const naCard = naCount > 0 && (
+    <button
+      class="alert-card alert-card--na alert-card--wide glass glass--interactive"
+      onClick={() => showTests({ statuses: [OUTCOME_FILTER['Not Applicable']] })}
+    >
+      <span class="alert-card__icon">
+        <Icon name="ban" size={20} />
+      </span>
+      <span class="grow">
+        <span class="alert-card__title">
+          {plural(naCount, 'test is', 'tests are')} not applicable — feature confirmed unsupported by Dev
+        </span>
+        <span class="alert-card__text">
+          Nothing to fix: not a pass or a failure, and not counted in the pass rate or quality gates.
+        </span>
+        <span class="reason-list">
+          {notApplicable.map(([id, g]) => (
+            <span key={id} class="reason" title={g.tests.join(', ')}>
+              <b>{id}</b> {g.why} <span class="faint">({plural(g.tests.length, 'test')})</span>
+            </span>
+          ))}
+        </span>
+      </span>
+      <Icon name="chevronRight" size={18} class="faint" />
+    </button>
+  );
   // Skipped / Not Tested = the rest that did not run (the unreachable-facade case has its own card).
   const waiting = useMemo(
     () =>
@@ -108,16 +154,22 @@ export function Attention() {
             {waiting.length > 0 && (
               <span class="count-pill__item count-pill__item--muted">{waiting.length} not tested</span>
             )}
+            {naCount > 0 && (
+              <span class="count-pill__item count-pill__item--na">{naCount} not applicable</span>
+            )}
           </span>
         )
       }
     >
       {nothing ? (
-        <EmptyState icon="check" title="Nothing needs attention">
-          {service.some((t) => t.status === 'PASS')
-            ? 'Every check that ran passed.'
-            : 'No checks ran in this report.'}
-        </EmptyState>
+        <>
+          <EmptyState icon="check" title="Nothing needs attention">
+            {service.some((t) => t.status === 'PASS')
+              ? 'Every check that ran passed.'
+              : 'No checks ran in this report.'}
+          </EmptyState>
+          {naCard && <div class="attention">{naCard}</div>}
+        </>
       ) : (
         <div class="attention">
           {preflight.length > 0 && (
@@ -266,6 +318,8 @@ export function Attention() {
               <Icon name="chevronRight" size={18} class="faint" />
             </button>
           )}
+
+          {naCard}
         </div>
       )}
     </Section>

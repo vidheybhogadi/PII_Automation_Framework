@@ -216,6 +216,15 @@ export function requireApprovedPhones(config: FrameworkConfig): void {
 }
 
 /**
+ * Mark the current test NOT APPLICABLE: Dev has CONFIRMED the feature is intentionally unsupported. Use only with
+ * a recorded answer in docs/backend-open-questions.md — an unconfirmed feature is Blocked, never Not Applicable.
+ */
+export function notApplicable(questionId: string, confirmedAnswer: string): void {
+  test.info().annotations.push({ type: 'not-applicable', description: `${questionId}: ${confirmedAnswer}` });
+  test.skip(true, `NOT APPLICABLE (${questionId}): ${confirmedAnswer}`);
+}
+
+/**
  * Tag a test as checking a KNOWN security finding. If the test fails, reports show it as
  * "Security finding" — a real defect for Dev — not as an automation failure. The assertion itself must never
  * be weakened to make it pass.

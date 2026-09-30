@@ -2396,3 +2396,66 @@
   gap: 10px;
   flex-wrap: wrap;
 }
+
+/* ---- Not Applicable (feature confirmed unsupported by Dev) — neutral slate-teal, dashed to differ from Skipped */
+.outcome--not-applicable {
+  background: var(--na-soft);
+  color: var(--na-ink);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--na) 40%, transparent);
+}
+.stat--na {
+  --c: var(--na);
+  --c-soft: var(--na-soft);
+  --c-ink: var(--na-ink);
+}
+.stackbar__seg--na {
+  background: var(--na);
+  background-image: repeating-linear-gradient(90deg, transparent 0 5px, oklch(100% 0 0 / 0.3) 5px 7px);
+}
+.table tbody tr[data-status='NOT_APPLICABLE'] td:first-child {
+  box-shadow: inset 3px 0 0 var(--na);
+}
+.test-remark--not-applicable {
+  color: var(--na-ink);
+}
+.count-pill__item--na {
+  background: var(--na-soft);
+  color: var(--na-ink);
+}
+.alert-card--na::after {
+  background: linear-gradient(180deg, var(--na), color-mix(in oklch, var(--na) 40%, transparent));
+}
+.alert-card--na .alert-card__icon {
+  background: var(--na-soft);
+  color: var(--na-ink);
+}
+.result-box--Not-Applicable {
+  border-left-color: var(--na);
+}
+.banner--na {
+  background: var(--na-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--na) 35%, transparent);
+}
+.banner--na > svg {
+  color: var(--na-ink);
+}
+
+/* ---- Drawer: request example + validation checks ------------------------------------------------------ */
+.about-test__request {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: color-mix(in oklch, var(--text) 5%, transparent);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.about-test__checks {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 3px;
+  line-height: 1.5;
+}

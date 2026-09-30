@@ -56,9 +56,9 @@ export async function copyText(text: string): Promise<boolean> {
 
 /**
  * A status filter token (URL: #status=…). One per reader-facing outcome: PASS, FAIL, FINDING (security finding),
- * BLOCKED, SKIPPED, NOT_TESTED. FIXME / UNKNOWN are accepted from older links (→ Blocked / Not Tested).
+ * BLOCKED, SKIPPED, NOT_TESTED, NOT_APPLICABLE. FIXME / UNKNOWN are accepted from older links (→ Blocked / Not Tested).
  */
-export type StatusFilter = TestStatus | 'FINDING' | 'NOT_TESTED';
+export type StatusFilter = TestStatus | 'FINDING' | 'NOT_TESTED' | 'NOT_APPLICABLE';
 
 /** Test-list filters. */
 export interface Filters {

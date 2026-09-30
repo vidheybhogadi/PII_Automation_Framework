@@ -217,3 +217,14 @@ html[data-print='true'] .test-what {
 html[data-print='true'] .group-row td {
   background: oklch(96% 0.02 255) !important;
 }
+
+/* ---- Not Applicable on paper: shadows are dropped, so a dashed outline keeps it distinct from Skipped -- */
+html[data-print='true'] .outcome--not-applicable {
+  border: 1px dashed var(--na);
+}
+html[data-print='true'] .alert-card--na {
+  break-inside: avoid;
+}
+html[data-print='true'] .about-test__request {
+  border: 1px solid var(--line);
+}

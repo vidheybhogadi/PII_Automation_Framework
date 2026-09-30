@@ -162,6 +162,10 @@
   --skip: oklch(62% 0.07 240);
   --skip-ink: oklch(43% 0.07 240);
   --skip-soft: oklch(62% 0.07 240 / 0.14);
+  /* Not Applicable (slate-teal) — feature confirmed unsupported by Dev; neutral, distinct from Skipped. */
+  --na: oklch(58% 0.06 195);
+  --na-ink: oklch(40% 0.06 195);
+  --na-soft: oklch(58% 0.06 195 / 0.14);
   --info: oklch(60% 0.14 235);
   --info-soft: oklch(60% 0.14 235 / 0.12);
 
@@ -232,6 +236,9 @@
   --skip: oklch(70% 0.07 240);
   --skip-ink: oklch(83% 0.06 240);
   --skip-soft: oklch(70% 0.07 240 / 0.17);
+  --na: oklch(72% 0.06 195);
+  --na-ink: oklch(84% 0.05 195);
+  --na-soft: oklch(72% 0.06 195 / 0.17);
   --info: oklch(72% 0.13 235);
   --info-soft: oklch(72% 0.13 235 / 0.16);
 

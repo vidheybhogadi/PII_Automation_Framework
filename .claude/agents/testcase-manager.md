@@ -92,7 +92,7 @@ Area map (ID prefix → spec file → catalog file → default endpoint):
 
 | Prefix     | Spec                                     | Catalog              | Default endpoint                           |
 | ---------- | ---------------------------------------- | -------------------- | ------------------------------------------ |
-| POC        | tests/poc/email-poc.spec.ts              | poc.ts               | writePii + readPii                         |
+| POC        | tests/poc/name-poc.spec.ts               | poc.ts               | writePii + readPii                         |
 | AISLE-HLT  | tests/health/health.spec.ts              | health.ts            | healthReady                                |
 | AISLE-WR   | tests/pii/write-pii.spec.ts              | write.ts             | writePii                                   |
 | AISLE-RD   | tests/pii/read-pii.spec.ts               | read.ts              | readPii                                    |
@@ -146,7 +146,7 @@ Bad → good:
 - Use typographic apostrophes (’) in titles and strings.
 - **Type**: Positive | Negative | Security | Database | Contract. **Priority**: Critical | High | Medium | Low.
 - **Tags**: `@smoke` (quick, most important checks only) — otherwise Regression. Also `@security`, `@db`, `@poc`
-  where they apply, and `@phase1` for the Phase-1 set (POC-001…003, AISLE-HLT-001, AISLE-WR-001, AISLE-WR-002,
+  where they apply, and `@phase1` for the Phase-1 set (POC-001…003 (NAME), AISLE-HLT-001, AISLE-WR-001, AISLE-WR-002,
   AISLE-RD-001, AISLE-AUTH-001, AISLE-AUTH-002, AISLE-SEC-003).
 - **Fixtures** (`src/fixtures/test-fixtures.ts`): `aisle` (the Bearer-authenticated `AislePiiClient`), `data`
   (`TestDataFactory`: `userId()`, `userIdOfLength(n)`, `email()`, `name()`, `textOfLength(n)`, `phone(i)`),

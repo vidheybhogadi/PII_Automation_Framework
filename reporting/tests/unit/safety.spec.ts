@@ -221,6 +221,8 @@ test.describe('REPORT safety', () => {
     const base = demoRun();
     const findingId = 'PII-SEC-001';
     const blockedId = 'PII-RD-002';
+    const naId = 'PII-RD-003';
+    const naAnswer = 'BQ-05: Dev confirmed this read variant is intentionally not supported';
     const run: CollectedRun = {
       ...base,
       tests: base.tests.map((t) =>
@@ -241,7 +243,15 @@ test.describe('REPORT safety', () => {
                 rawStatus: 'skipped',
                 annotations: [{ type: 'blocked', description: 'BQ-01: EMAIL access not granted' }],
               }
-            : t,
+            : t.id === naId
+              ? {
+                  ...t,
+                  status: 'SKIPPED',
+                  rawStatus: 'skipped',
+                  errors: [],
+                  annotations: [{ type: 'not-applicable', description: naAnswer }],
+                }
+              : t,
       ),
     };
     const tests = enrichTests(run);
@@ -271,29 +281,94 @@ test.describe('REPORT safety', () => {
         tags,
       }));
     const { buffer, summary } = await buildTestCasesWorkbook({ runData: runFile, inventory });
-    expect(summary).toMatch(/Security finding 1 · Blocked \d+/);
+    expect(summary).toMatch(/Security finding 1 · Blocked \d+ · Not Applicable 1/);
     const xlsx = path.join(dir, 'test-cases.xlsx');
     writeFileSync(xlsx, buffer);
-    const wb = new ExcelJS.Workbook();
-    await wb.xlsx.readFile(xlsx);
+    const read = async (file: string) => {
+      const wb = new ExcelJS.Workbook();
+      await wb.xlsx.readFile(file);
+      return wb;
+    };
+    const wb = await read(xlsx);
     const ws = wb.getWorksheet('Test Cases')!;
-    const cellsOf = (id: string) => {
+    // Columns are found by header text (the same way the Tester Notes reader does).
+    let headerRow: ExcelJS.Row | undefined;
+    ws.eachRow((r) => {
+      if (!headerRow && r.getCell(2).text === 'TC ID') headerRow = r;
+    });
+    const headers: string[] = [];
+    headerRow!.eachCell((c, n) => (headers[n] = c.text));
+    expect(headers.filter(Boolean)).toEqual([
+      'S/No',
+      'TC ID',
+      'Test Name',
+      'Module',
+      'Endpoint',
+      'Method',
+      'Preconditions',
+      'Request',
+      'Steps',
+      'Expected Result',
+      'Validation',
+      'Why It Matters',
+      'Type',
+      'Suite',
+      'Priority',
+      'Status',
+      'Dependency / Blocker',
+      'Actual Result / Remarks',
+      'Tester Notes',
+    ]);
+    const colOf = (h: string) => headers.indexOf(h);
+    const [STATUS, REMARKS, DEP, NOTES] = [
+      'Status',
+      'Actual Result / Remarks',
+      'Dependency / Blocker',
+      'Tester Notes',
+    ].map(colOf) as [number, number, number, number];
+    const cellsOf = (sheet: ExcelJS.Worksheet, id: string) => {
       let found: ExcelJS.Row | undefined;
-      ws.eachRow((r) => {
+      sheet.eachRow((r) => {
         if (r.getCell(2).text === id) found = r;
       });
       return found!;
     };
-    const fRow = cellsOf(findingId);
-    expect(fRow.getCell(11).text).toContain('Security finding');
-    expect(fRow.getCell(12).text).toMatch(/^SECURITY FINDING \(expected until Dev fixes it\) — BQ-08/);
-    expect(cellsOf(blockedId).getCell(11).text).toContain('Blocked');
+    const fRow = cellsOf(ws, findingId);
+    expect(fRow.getCell(STATUS).text).toContain('Security finding');
+    expect(fRow.getCell(REMARKS).text).toMatch(/^SECURITY FINDING \(expected until Dev fixes it\) — BQ-08/);
+    expect(fRow.getCell(DEP).text).toContain('BQ-08: 422 errors echo the submitted value');
+    expect(cellsOf(ws, blockedId).getCell(STATUS).text).toContain('Blocked');
+    expect(cellsOf(ws, blockedId).getCell(DEP).text).toBe('BQ-01: EMAIL access not granted');
+    // Not Applicable: its own label, colour and BQ answer.
+    const naRow = cellsOf(ws, naId);
+    expect(naRow.getCell(STATUS).text).toContain('Not Applicable');
+    expect(naRow.getCell(REMARKS).text).toBe(`NOT APPLICABLE — ${naAnswer}`);
+    expect(naRow.getCell(DEP).text).toBe(naAnswer);
     const argb = (c: ExcelJS.Cell) => (c.fill as ExcelJS.FillPattern | undefined)?.fgColor?.argb;
+    const skipRow = tests.find(
+      (t) => t.status === 'SKIPPED' && !t.annotations.length && t.kind === 'integration',
+    );
+    if (skipRow) expect(argb(naRow.getCell(STATUS))).not.toBe(argb(cellsOf(ws, skipRow.id).getCell(STATUS)));
+    expect(argb(naRow.getCell(STATUS))).not.toBe(argb(cellsOf(ws, blockedId).getCell(STATUS)));
+    // Request is monospace; Module / Method are filled in.
+    expect(fRow.getCell(colOf('Request')).font?.name).toBe('Menlo');
+    expect(fRow.getCell(colOf('Module')).text).toBe('Response Security');
+    expect(fRow.getCell(colOf('Method')).text).not.toBe('');
     const failRow = tests.find((t) => t.status === 'FAIL' && t.id !== findingId && t.kind === 'integration');
-    if (failRow) expect(argb(fRow.getCell(11))).not.toBe(argb(cellsOf(failRow.id).getCell(11)));
+    if (failRow) expect(argb(fRow.getCell(STATUS))).not.toBe(argb(cellsOf(ws, failRow.id).getCell(STATUS)));
     let totals = '';
     ws.getRow(3).eachCell((c) => (totals += `${c.text} | `));
     expect(totals).toContain('Security finding: 1');
+    expect(totals).toContain('Not Applicable: 1');
     expect(totals).toMatch(/Blocked: \d+/);
+
+    // Tester Notes survive regeneration with the new column positions.
+    naRow.getCell(NOTES).value = 'Confirmed with Dev on the call';
+    await wb.xlsx.writeFile(xlsx);
+    const again = await buildTestCasesWorkbook({ runData: runFile, inventory, notesFrom: xlsx });
+    const xlsx2 = path.join(dir, 'test-cases-2.xlsx');
+    writeFileSync(xlsx2, again.buffer);
+    const ws2 = (await read(xlsx2)).getWorksheet('Test Cases')!;
+    expect(cellsOf(ws2, naId).getCell(NOTES).text).toBe('Confirmed with Dev on the call');
   });
 });

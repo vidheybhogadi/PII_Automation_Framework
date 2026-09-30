@@ -14,6 +14,13 @@ export const FREE_TEXT_CASES: TestCaseCatalog = {
     ],
     expected:
       '201 Created with a key ID and a 256-bit key (32 bytes, written in Base64 characters). The header “Cache-Control: no-store” (tells browsers and proxies not to keep a copy) is present. The key does not appear in our logs. To be confirmed by Dev (question BQ-02).',
+    request: 'POST /api/v1/pii-test/free-text/keys {}',
+    validation: [
+      'Status is 201',
+      'Reply has a key ID and a 256-bit key in Base64',
+      'Header “Cache-Control: no-store” is present',
+      'The key does not appear in the test log',
+    ],
     type: 'Positive',
     priority: 'High',
     preconditions: FREE_TEXT_BLOCKED,
@@ -24,6 +31,13 @@ export const FREE_TEXT_CASES: TestCaseCatalog = {
     steps: ['Create a key', 'Send the read-key request with its key ID', 'Compare the two keys'],
     expected:
       '200 OK with the same key, and the header “Cache-Control: no-store” (tells browsers and proxies not to keep a copy). To be confirmed by Dev (question BQ-02).',
+    request:
+      'POST /api/v1/pii-test/free-text/keys {} · POST /api/v1/pii-test/free-text/keys/read {"key_id":"<key ID>"}',
+    validation: [
+      'Read status is 200',
+      'The key equals the one created',
+      'Header “Cache-Control: no-store” is present',
+    ],
     type: 'Positive',
     priority: 'High',
     preconditions: FREE_TEXT_BLOCKED,
@@ -34,6 +48,14 @@ export const FREE_TEXT_CASES: TestCaseCatalog = {
     steps: ['Create a key', 'Revoke it', 'Read it and revoke it again', 'Read a made-up key ID'],
     expected:
       'Revoke returns 200 OK with status REVOKED. The later read, the second revoke and the made-up key ID all return 404 (not found). To be confirmed by Dev (question BQ-02).',
+    request:
+      'POST /api/v1/pii-test/free-text/keys {} · POST /api/v1/pii-test/free-text/keys/revoke {"key_id":"<key ID>"} · POST /api/v1/pii-test/free-text/keys/read and /revoke again · POST /api/v1/pii-test/free-text/keys/read {"key_id":"<made-up ID>"}',
+    validation: [
+      'Revoke status is 200 with status REVOKED',
+      'Read after revoke → 404',
+      'Second revoke → 404',
+      'Made-up key ID → 404',
+    ],
     type: 'Positive',
     priority: 'High',
     preconditions: FREE_TEXT_BLOCKED,

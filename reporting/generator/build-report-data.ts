@@ -3,6 +3,7 @@ import { ENDPOINTS } from '../../src/clients/endpoints';
 import { flattenCalls } from '../core/analytics';
 import { areaForId, ENDPOINT_DESCRIPTIONS, endpointsForId, severityFor } from '../core/catalog';
 import { sanitizeText } from '../core/sanitize';
+import { requestOf, validationOf } from '../core/test-case';
 import type {
   CollectedRun,
   EndpointInfo,
@@ -87,6 +88,9 @@ export function resolveEndpoints(id: string): string[] {
 function describe(id: string): Pick<ReportTest, 'info'> {
   const info = testCaseInfo(id);
   if (!info) return {};
+  // request / validation may still be missing while the catalog is being filled in — omit them then.
+  const request = requestOf(info);
+  const validation = validationOf(info).map((v) => sanitizeText(v, 300));
   return {
     info: {
       what: sanitizeText(info.what, 600),
@@ -96,6 +100,8 @@ function describe(id: string): Pick<ReportTest, 'info'> {
       type: info.type,
       priority: info.priority,
       ...(info.preconditions ? { preconditions: sanitizeText(info.preconditions, 400) } : {}),
+      ...(request ? { request: sanitizeText(request, 800) } : {}),
+      ...(validation.length ? { validation } : {}),
     },
   };
 }

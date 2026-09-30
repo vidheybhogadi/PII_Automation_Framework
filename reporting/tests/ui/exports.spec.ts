@@ -46,7 +46,10 @@ test.describe('REPORT UI — exports', () => {
     );
     const all = texts.join('\n');
     // Same header row, endpoint sections and statuses as the docs sheet.
-    expect(all).toContain('S/No | TC ID | Test Case Description');
+    expect(all).toContain(
+      'S/No | TC ID | Test Name | Module | Endpoint | Method | Preconditions | Request | Steps | Expected Result | Validation',
+    );
+    expect(all).toContain('Status | Dependency / Blocker | Actual Result / Remarks | Tester Notes');
     expect(all).toContain('Tester Notes');
     expect(all).toMatch(/Save PII/);
     expect(all).toMatch(/\bFail\b/);

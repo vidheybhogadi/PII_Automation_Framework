@@ -414,7 +414,7 @@ export const REQUIREMENTS: Requirement[] = [
     'Derived',
     OBS,
     ['writePii'],
-    ['AISLE-WR-001', 'AISLE-WR-002', 'AISLE-CON-001'],
+    ['AISLE-WR-001', 'AISLE-WR-002', 'AISLE-CON-001', 'POC-001'],
   ),
   req(
     'FR-WR-02',
@@ -439,11 +439,11 @@ export const REQUIREMENTS: Requirement[] = [
   req(
     'FR-WR-04',
     'PII Save',
-    'An unknown field name is refused (403)',
+    'An unknown field name is refused (403) on save, read and bulk read',
     'Derived',
     OBS,
-    ['writePii'],
-    ['AISLE-WR-008'],
+    ['writePii', 'readPii', 'batchReadPii'],
+    ['AISLE-WR-008', 'AISLE-RD-005', 'AISLE-BR-006'],
     'BQ-12',
   ),
   req(
@@ -491,7 +491,7 @@ export const REQUIREMENTS: Requirement[] = [
     'Derived',
     OBS,
     ['batchReadPii'],
-    ['AISLE-BR-001'],
+    ['AISLE-BR-001', 'AISLE-BR-004'],
     'BQ-19',
   ),
   req(
@@ -514,13 +514,23 @@ export const REQUIREMENTS: Requirement[] = [
     'BQ-18',
   ),
   req(
+    'FR-BR-04',
+    'Bulk read',
+    'A bulk read needs both the user list and the field list (422 when missing)',
+    'Derived',
+    'Inferred from save/read behaviour; to verify on staging',
+    ['batchReadPii'],
+    ['AISLE-BR-005'],
+    'BQ-09',
+  ),
+  req(
     'FR-NRM-01',
     'Normalization',
     'Names are trimmed and runs of spaces collapsed; capitals are kept',
     'Derived',
     OBS,
     ['writePii', 'readPii'],
-    ['AISLE-NRM-001'],
+    ['AISLE-NRM-001', 'POC-002'],
   ),
   req(
     'FR-NRM-02',
@@ -529,7 +539,7 @@ export const REQUIREMENTS: Requirement[] = [
     'Derived',
     'BQ-01',
     ['writePii', 'readPii'],
-    ['POC-002'],
+    ['AISLE-WR-010'],
     'BQ-01',
   ),
   req(
@@ -545,11 +555,11 @@ export const REQUIREMENTS: Requirement[] = [
   req(
     'FR-EML-01',
     'Email flow',
-    'An email can be saved, read back and is stored for the right user (blocked)',
+    'An email can be saved and read back cleaned up, and an invalid email is refused (blocked)',
     'Derived',
     'BQ-01',
     ['writePii', 'readPii'],
-    ['POC-001', 'POC-002', 'POC-003', 'AISLE-WR-009'],
+    ['AISLE-WR-009', 'AISLE-WR-010'],
     'BQ-01',
   ),
   req(
@@ -610,6 +620,16 @@ export const REQUIREMENTS: Requirement[] = [
     'QA security rules',
     ['writePii', 'readPii'],
     ['AISLE-SEC-003', 'UT-RED-*'],
+  ),
+  req(
+    'FR-SEC-03',
+    'Security',
+    'Error replies reveal no internal service details (stack traces, internal hosts, server or database names)',
+    'Policy',
+    'BQ-29',
+    ['writePii', 'readPii'],
+    ['AISLE-SEC-005'],
+    'BQ-29',
   ),
   req(
     'FR-DB-01',

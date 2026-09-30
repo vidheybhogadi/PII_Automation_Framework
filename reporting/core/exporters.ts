@@ -2,6 +2,7 @@
 import { areaInfo, primaryEndpoint, suiteOf } from './catalog';
 import {
   countStatuses,
+  dependencyOf,
   evaluateGates,
   executedCount,
   formatDuration,
@@ -14,6 +15,7 @@ import {
   SEVERITY_RANK,
   testOutcome,
 } from './analytics';
+import { endpointOfTest, moduleOf } from './test-case';
 import type { ReportData, ReportTest } from './types';
 
 const CSV_COLUMNS: [string, (t: ReportTest) => string | number][] = [
@@ -30,6 +32,12 @@ const CSV_COLUMNS: [string, (t: ReportTest) => string | number][] = [
   ['suite', (t) => suiteOf(t.tags)],
   ['priority', (t) => t.info?.priority ?? ''],
   ['preconditions', (t) => t.info?.preconditions ?? ''],
+  ['module', (t) => moduleOf(t.id)],
+  ['method', (t) => endpointOfTest(t.endpoints).method],
+  ['request', (t) => t.info?.request ?? ''],
+  // One line per row (like `steps`): the checks are numbered and separated by "; ".
+  ['validation', (t) => (t.info?.validation ?? []).map((v, i) => `${i + 1}) ${v}`).join('; ')],
+  ['dependency', (t) => dependencyOf(t)],
   ['raw_status', (t) => (t.notRun ? 'NOT_RUN' : t.status)],
   ['category', (t) => areaInfo(t.area).label],
   ['severity', (t) => t.severity],
@@ -127,7 +135,7 @@ export function chatSummary(
         ? ` — service tests only; ${report.tests.length - tests.length} framework self-tests reported separately`
         : ''
     }`,
-    `Pass: ${o.Pass}  Fail: ${o.Fail}  Security finding: ${o['Security finding']}  Blocked: ${o.Blocked}  Skipped: ${o.Skipped}  Not Tested: ${o['Not Tested']}`,
+    `Pass: ${o.Pass}  Fail: ${o.Fail}  Security finding: ${o['Security finding']}  Blocked: ${o.Blocked}  Skipped: ${o.Skipped}  Not Tested: ${o['Not Tested']}  Not Applicable: ${o['Not Applicable']}`,
     `API Pass Rate: ${formatPct(passRate(c))}  ·  Test Health: ${health.score === null ? 'N/A' : `${Math.round(health.score)}% (${health.band})`}`,
     `Duration: ${formatDuration(report.run.durationMs)}`,
     `Verdict: ${verdict.verdict}`,
@@ -137,6 +145,15 @@ export function chatSummary(
       '',
       'Failures (by severity):',
       ...critical.map((t) => `- ${t.id} [${t.severity}]${label(t)} ${t.title.replace(/^\S+\s/, '')}`),
+    );
+  }
+  const na = tests.filter((t) => testOutcome(t).outcome === 'Not Applicable');
+  if (na.length) {
+    lines.push(
+      '',
+      'Not applicable (feature confirmed unsupported by Dev — not counted in pass rate or gates):',
+      ...na.slice(0, 8).map((t) => `- ${t.id} ${dependencyOf(t)}`),
+      ...(na.length > 8 ? [`- … and ${na.length - 8} more`] : []),
     );
   }
   return lines.join('\n');

@@ -32,6 +32,13 @@ export const STATUS_FIXTURE = {
       'BQ-01: EMAIL access not granted to the Aisle caller — observed POST /api/v1/pii-test/read -> HTTP 403 code=AUTHORIZATION_DENIED',
   },
   skipped: { id: 'PII-WR-002', description: 'AISLE_TEST_PHONES not configured' },
+  /** Skipped with a `not-applicable` annotation (helper notApplicable()): feature confirmed unsupported by Dev. */
+  notApplicable: {
+    id: 'PII-BR-006',
+    description: 'BQ-05: Dev confirmed repeated user IDs in a bulk read are intentionally not supported',
+  },
+  /** A demo test re-labelled with a live catalog ID, so the drawer shows its Request + Validation. */
+  described: { from: 'PII-WR-001', id: 'AISLE-WR-001' },
 };
 
 /** Secrets injected into the redaction fixture. None may appear in the rendered report. */
@@ -173,7 +180,8 @@ export async function buildFixtures(): Promise<void> {
     quiet: true,
   });
 
-  // Every reader-facing status at once: a security finding (FAIL + annotation), a blocked and a skipped test.
+  // Every reader-facing status at once: a security finding (FAIL + annotation), a blocked, a skipped and a
+  // not-applicable test, plus one test with a live catalog description (request + validation).
   const sf = STATUS_FIXTURE;
   const statuses: CollectedRun = {
     ...base,
@@ -198,6 +206,22 @@ export async function buildFixtures(): Promise<void> {
           annotations: [{ type: 'blocked', description: sf.blocked.description }],
           errors: [],
         };
+      if (t.id === sf.notApplicable.id)
+        return {
+          ...t,
+          status: 'SKIPPED',
+          rawStatus: 'skipped',
+          outcome: 'skipped',
+          durationMs: 0,
+          annotations: [
+            { type: 'not-applicable', description: sf.notApplicable.description },
+            { type: 'skip', description: `NOT APPLICABLE (BQ-05): ${sf.notApplicable.description.slice(7)}` },
+          ],
+          apiCalls: [],
+          errors: [],
+        };
+      if (t.id === sf.described.from)
+        return { ...t, id: sf.described.id, title: t.title.replace(sf.described.from, sf.described.id) };
       if (t.id === sf.skipped.id)
         return {
           ...t,

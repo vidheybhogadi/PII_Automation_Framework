@@ -41,6 +41,7 @@
     "report:playwright": "playwright show-report reports/html",
     "docs:traceability": "tsx reporting/generator/traceability-doc.ts && prettier --write docs/requirements-traceability.md",
     "docs:testcases": "tsx scripts/generate-test-cases-xlsx.ts",
+    "docs:inventory": "tsx scripts/generate-test-inventory.ts && prettier --write --log-level warn docs/test-case-inventory.md",
     "docs:pending": "tsx scripts/generate-pending-doc.ts"
   },
   "dependencies": {

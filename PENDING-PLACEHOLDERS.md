@@ -18,7 +18,7 @@ environment), then run `npm run check-env`.
 2. [ ] Approved test phone numbers (BQ-03) — section 1
 3. [ ] Read-only DB access and the PII table/column layout (BQ-04) — sections 1–2 (6 DB placeholders)
 4. [ ] An expired Aisle test token, if possible (BQ-11) — `AISLE_EXPIRED_TEST_TOKEN`
-5. [ ] Answers to the open questions behind 34 blockable tests — sections 3–4
+5. [ ] Answers to the open questions behind 38 blockable tests — sections 3–4
 
 ## 1. Settings (`.env.example`)
 
@@ -55,7 +55,10 @@ Blocked only if staging still denies access (403) or the setting is missing — 
 | AISLE-AUTH-003 | BQ-17 | runtime | `tests/security/authentication.spec.ts:58` |
 | AISLE-AUTH-004 | BQ-09 | runtime | `tests/security/authentication.spec.ts:71` |
 | AISLE-AUTH-005 | BQ-11 | runtime | `tests/security/authentication.spec.ts:106` |
-| AISLE-BR-003 | BQ-18 | runtime | `tests/pii/batch-read.spec.ts:56` |
+| AISLE-BR-003 | BQ-18 | runtime | `tests/pii/batch-read.spec.ts:71` |
+| AISLE-BR-004 | BQ-19 | runtime | `tests/pii/batch-read.spec.ts:89` |
+| AISLE-BR-005 | BQ-09 | runtime | `tests/pii/batch-read.spec.ts:109` |
+| AISLE-BR-006 | BQ-12 | runtime | `tests/pii/batch-read.spec.ts:124` |
 | AISLE-CON-002 | BQ-09 | runtime | `tests/contract/contract.spec.ts:64` |
 | AISLE-DB-001 | BQ-04 | runtime | `tests/db/db-persistence.spec.ts:19` |
 | AISLE-DB-002 | BQ-04 | runtime | `tests/db/db-persistence.spec.ts:44` |
@@ -67,9 +70,11 @@ Blocked only if staging still denies access (403) or the setting is missing — 
 | AISLE-NRM-002 | BQ-03 | static | `tests/pii/normalization.spec.ts:23` |
 | AISLE-NRM-003 | BQ-03 | static | `tests/pii/normalization.spec.ts:27` |
 | AISLE-RD-002 | BQ-01 | runtime | `tests/pii/read-pii.spec.ts:42` |
-| AISLE-SEC-001 | BQ-06 | runtime | `tests/security/response-security.spec.ts:18` |
-| AISLE-SEC-002 | BQ-08 | runtime | `tests/security/response-security.spec.ts:63` |
-| AISLE-SEC-004 | BQ-07 | static | `tests/security/response-security.spec.ts:121` |
+| AISLE-RD-005 | BQ-12 | runtime | `tests/pii/read-pii.spec.ts:89` |
+| AISLE-SEC-001 | BQ-06 | runtime | `tests/security/response-security.spec.ts:19` |
+| AISLE-SEC-002 | BQ-08 | runtime | `tests/security/response-security.spec.ts:64` |
+| AISLE-SEC-004 | BQ-07 | static | `tests/security/response-security.spec.ts:122` |
+| AISLE-SEC-005 | BQ-29 | runtime | `tests/security/response-security.spec.ts:126` |
 | AISLE-SR-001 | BQ-01 | runtime | `tests/pii/search-pii.spec.ts:24` |
 | AISLE-SR-002 | BQ-01 | runtime | `tests/pii/search-pii.spec.ts:53` |
 | AISLE-SR-003 | BQ-01 | runtime | `tests/pii/search-pii.spec.ts:79` |
@@ -79,38 +84,50 @@ Blocked only if staging still denies access (403) or the setting is missing — 
 | AISLE-TR-002 | BQ-02, BQ-03 | runtime | `tests/transient/transient-phone.spec.ts:56` |
 | AISLE-TR-003 | BQ-02, BQ-03 | runtime | `tests/transient/transient-phone.spec.ts:76` |
 | AISLE-TR-004 | BQ-02, BQ-03 | runtime | `tests/transient/transient-phone.spec.ts:111` |
-| AISLE-WR-005 | BQ-05 | runtime | `tests/pii/write-pii.spec.ts:116` |
-| AISLE-WR-006 | BQ-05 | runtime | `tests/pii/write-pii.spec.ts:138` |
-| AISLE-WR-008 | BQ-12 | runtime | `tests/pii/write-pii.spec.ts:195` |
-| AISLE-WR-009 | BQ-01 | runtime | `tests/pii/write-pii.spec.ts:212` |
-| POC-001 | BQ-01 | runtime | `tests/poc/email-poc.spec.ts:35` |
-| POC-002 | BQ-01 | runtime | `tests/poc/email-poc.spec.ts:55` |
-| POC-003 | BQ-01, BQ-04 | runtime | `tests/poc/email-poc.spec.ts:82` |
+| AISLE-WR-005 | BQ-05 | runtime | `tests/pii/write-pii.spec.ts:136` |
+| AISLE-WR-006 | BQ-05 | runtime | `tests/pii/write-pii.spec.ts:158` |
+| AISLE-WR-008 | BQ-12 | runtime | `tests/pii/write-pii.spec.ts:215` |
+| AISLE-WR-009 | BQ-01 | runtime | `tests/pii/write-pii.spec.ts:232` |
+| AISLE-WR-010 | BQ-01 | runtime | `tests/pii/write-pii.spec.ts:250` |
+| POC-003 | BQ-04 | runtime | `tests/poc/name-poc.spec.ts:65` |
 
 ## 4. Open questions
 
 | ID | Status | Question |
 |---|---|---|
-| BQ-01 | Open | Please grant the Aisle facade's caller READ, WRITE, SEARCH and BULK_READ on EMAIL, and confirm EMAIL normalization (trim + lower-case?). |
-| BQ-02 | Open | Are temporary phones and free-text encryption keys meant to be used through the facade? If yes, please grant that access. What are the allowed life… |
-| BQ-03 | Open | Please provide approved test phone numbers (nobody's real number). Does the facade caller have PHONE access? The `+91 98765 43210` in the curl coll… |
-| BQ-04 | Open | Read-only DB access for QA: engine, host, port, database, a SELECT-only user. Which table and columns hold PII values? Is there a tenant column and… |
-| BQ-11 | Open | Can QA get an expired (or revoked) Aisle test token for the expired-token test? |
-| BQ-05 | Observed | Are the observed request limits the contract? `user_id` 1–128 chars, `value` 1–1,024 chars, `field_names` ≥ 1, bulk read `user_ids` 1–200 and `fiel… |
-| BQ-06 | Observed | A `tenant_id` sent by the client: should it be ignored (current behaviour) or rejected? |
-| BQ-07 | Open | Is the test token meant to read and write any user ID? Should one user's data be protected from another user through the facade? |
-| BQ-08 | Open | Security finding: 422 validation errors echo the request back in `detail[].input`: the submitted personal value and the internal `tenant_id` (and e… |
-| BQ-09 | Observed | Which error format is the contract? Today: 401 is an empty `text/html` body; 400 has `error` as a string; 403/404 have `error` as an object; 422 is… |
-| BQ-10 | Open | Is there an approved way to purge run-prefixed synthetic test data (`qa-auto-…`) on staging? There is no delete API. |
+| BQ-21 | Observed | (Q1) Does the Aisle caller have READ permission for NAME? |
+| BQ-22 | Observed | (Q2) Does the Aisle caller have WRITE permission for NAME? |
+| BQ-01 | Open | (Q3) Please grant the Aisle caller READ, WRITE, SEARCH and BULK_READ on EMAIL, and confirm EMAIL normalization (trim + lower-case?). |
+| BQ-03 | Open | (Q4) Does the Aisle caller have READ/WRITE on PHONE? Please provide approved test phone numbers (nobody's real number); `+91 98765 43210` from the … |
+| BQ-23 | Open | (Q5) Which SEARCH permissions are enabled for the Aisle caller (which fields)? |
+| BQ-24 | Observed | (Q6) Which BULK_READ permissions are enabled (which fields)? |
+| BQ-02 | Open | Are temporary phones and free-text encryption keys meant to be used through the facade? If yes, please grant that access. |
+| BQ-25 | Observed | (Q7) What are the expected HTTP status codes for success? |
+| BQ-09 | Observed | (Q8) Which status codes and error format are the contract for validation errors? Today: 401 empty `text/html`; 400 `error` as a string; 403/404 `er… |
+| BQ-26 | Observed | (Q9) What is the expected response for a user / field that does not exist? |
+| BQ-27 | Observed | (Q10) What are the supported field names? |
 | BQ-12 | Observed | What should an unsupported field name return? Is 403 intended, or should it be a validation error (400/422)? |
+| BQ-05 | Observed | (Q11, Q13) Are the observed limits the contract? `user_id` 1–128, `value` 1–1,024, `field_names` ≥ 1, bulk `fields` ≥ 1, search `limit` 1–100. Is t… |
+| BQ-18 | Observed | (Q12) What is the bulk-read size limit? 201 IDs → 422 `too_long` (max 200), but exactly 200 IDs returned 403 `AUTHORIZATION_DENIED`. Why 403? |
+| BQ-28 | Open | (Q14) What are the temporary-phone TTL (`ttl_seconds`) limits? |
 | BQ-13 | Open | Search with no match: 200 with `count: 0`, or 404? |
-| BQ-14 | Observed | Permission is checked before validation (an invalid email returns 403, not a validation error). Is that intended? |
-| BQ-15 | Observed | The first health call took ~14 s (later calls 100–250 ms). Is that a cold start? Which timeout should QA use? |
-| BQ-16 | Observed | Is `testa2.aisle.co` the long-term QA target? (`testa3.aisle.co`, given in one document, does not resolve.) |
-| BQ-17 | Observed | The facade accepts the token without the word "Bearer" (and with lower-case "bearer"). Is that intended? Most APIs require `Authorization: Bearer <… |
-| BQ-18 | Observed | A bulk read of exactly 200 user IDs returned 403 `AUTHORIZATION_DENIED` (201 → 422 `too_long`). What is the real maximum, and why 403? |
-| BQ-19 | Observed | Duplicate entries are not de-duplicated: `field_names: ["NAME","NAME"]` returns two items and `user_ids: [u,u]` returns two items. Intended? |
-| BQ-20 | Observed | `POST /api/v1/pii-test/health/ready` (wrong method) returns a 502 HTML error page instead of 405. Intended? |
+| BQ-14 | Observed | Permission is checked before value validation (an invalid email returns 403, not a validation error). Is that intended? |
+| BQ-19 | Observed | Duplicate entries are not de-duplicated: `field_names: ["NAME","NAME"]` and `user_ids: [u,u]` each return two items. Intended? |
+| BQ-06 | Observed | (Q15) What should happen if the client sends `tenant_id`: ignored (current behaviour) or rejected? |
+| BQ-07 | Open | (Q16, Q17) What is the expected cross-user authorization behaviour? Is the Aisle test token allowed to read and write arbitrary user IDs? |
+| BQ-08 | Open | (Q18) Security finding: should error responses ever contain submitted PII? Today 422 errors echo the request in `detail[].input` — the submitted va… |
+| BQ-29 | Open | (Q19) Which internal PII-service details must never reach the QA-facing response? Are `tenant_id` and `key_version` in success responses intended? |
+| BQ-17 | Observed | The facade accepts the token without "Bearer" (and with lower-case "bearer"). Intended? |
+| BQ-04 | Open | (Q20–Q23) Which DB/table stores the PII? Which columns hold tenant, user, field and stored value (and key version)? What is the encryption / storag… |
+| BQ-30 | Open | (Q24) What DB validation is officially expected from QA (existence, association, protected storage, replacement, audit)? |
+| BQ-11 | Open | (Q25) How can QA obtain an expired (or revoked) Aisle test token for negative testing? |
+| BQ-31 | Open | (Q26) Are there separate QA tokens for different authorization scenarios (e.g. read-only)? |
+| BQ-32 | Open | (Q27, Q28) Is NAME search supported? The only documented search endpoint is `/api/v1/pii-test/EMAIL/search`; QA keeps the EMAIL search tests separa… |
+| BQ-10 | Open | Is there an approved way to purge run-prefixed synthetic test data (`qa-auto-…`) on staging? There is no delete API. |
+| BQ-15 | Observed | The first health call took ~14 s (later 100–250 ms). Cold start? Which timeout should QA use? |
+| BQ-16 | Observed | Is `testa2.aisle.co` the long-term QA target? (`testa3.aisle.co` does not resolve.) |
+| BQ-20 | Observed | `POST /api/v1/pii-test/health/ready` (wrong method) and unknown paths return a 502 HTML page instead of 405 / 404. Intended? |
+| BQ-33 | Observed | Staging availability: on 2026-09-30 every facade call (even without a token) returned the gateway page "502: Bad gateway". Planned downtime? |
 
 ## 5. CI settings (GitHub environment)
 

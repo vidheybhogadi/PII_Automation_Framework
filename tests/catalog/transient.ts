@@ -14,6 +14,12 @@ export const TRANSIENT_CASES: TestCaseCatalog = {
     ],
     expected:
       '201 Created with a temporary ID and an expiry time in the future. The phone is not repeated in the reply. Reply format and allowed lifetimes to be confirmed by Dev (question BQ-02).',
+    request: 'POST /api/v1/pii-test/transient/phones {"phone":"<approved test phone>","ttl_seconds":900}',
+    validation: [
+      'Status is 201',
+      'Reply has a temporary ID and an expiry time in the future',
+      'The phone is not repeated in the reply',
+    ],
     type: 'Positive',
     priority: 'High',
     preconditions: TRANSIENT_BLOCKED,
@@ -28,6 +34,13 @@ export const TRANSIENT_CASES: TestCaseCatalog = {
     ],
     expected:
       '200 OK. The phone is returned as digits only, with the same temporary ID. The header “Cache-Control: no-store” (tells browsers and proxies not to keep a copy) is present. To be confirmed by Dev (question BQ-02).',
+    request:
+      'POST /api/v1/pii-test/transient/phones (approved test phone) · POST /api/v1/pii-test/transient/phones/resolve {"transient_id":"<temporary ID>"}',
+    validation: [
+      'Resolve status is 200 with the same temporary ID',
+      'The phone is returned as digits only',
+      'Header “Cache-Control: no-store” is present',
+    ],
     type: 'Positive',
     priority: 'High',
     preconditions: TRANSIENT_BLOCKED,
@@ -43,6 +56,14 @@ export const TRANSIENT_CASES: TestCaseCatalog = {
     ],
     expected:
       'Promote returns 200 OK for that user and field PHONE. Reading PHONE returns the digits. The second look-up and second promote both return 404 (not found). To be confirmed by Dev (question BQ-02).',
+    request:
+      'POST /api/v1/pii-test/transient/phones (approved test phone) · POST /api/v1/pii-test/transient/phones/promote {"transient_id":"<temporary ID>","user_id":"<new fake user>"} · POST /api/v1/pii-test/read {"user_id":"<same user>","field_names":["PHONE"]} · POST /api/v1/pii-test/transient/phones/resolve and /promote again',
+    validation: [
+      'Promote status is 200 for that user and field PHONE',
+      'Reading PHONE returns the digits',
+      'Second resolve returns 404',
+      'Second promote returns 404',
+    ],
     type: 'Positive',
     priority: 'High',
     preconditions: TRANSIENT_BLOCKED,
@@ -53,6 +74,9 @@ export const TRANSIENT_CASES: TestCaseCatalog = {
     steps: ['Send a look-up with an unknown temporary ID', 'Send a look-up with a badly formed ID'],
     expected:
       'The unknown ID gets 404 (not found). The badly formed ID gets 422 (refused: the request format is invalid). No phone is returned. To be confirmed by Dev (question BQ-02).',
+    request:
+      'POST /api/v1/pii-test/transient/phones/resolve {"transient_id":"<made-up ID>"} · POST /api/v1/pii-test/transient/phones/resolve {"transient_id":"not-a-valid-id"}',
+    validation: ['Unknown ID → 404', 'Badly formed ID → 422 naming transient_id', 'No phone is returned'],
     type: 'Negative',
     priority: 'Medium',
     preconditions: TRANSIENT_BLOCKED,

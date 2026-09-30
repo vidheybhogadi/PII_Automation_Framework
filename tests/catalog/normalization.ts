@@ -7,6 +7,13 @@ export const NORMALIZATION_CASES: TestCaseCatalog = {
     steps: ['Save the messy fake name for a new fake user', 'Read the NAME field back'],
     expected:
       '200 OK. The value has the outer spaces removed and each run of inner spaces turned into one space. Capital letters are kept exactly as typed.',
+    request:
+      'POST /api/v1/pii-test {"user_id":"<new fake user>","field":"NAME","value":"   QA   Automation   User <letters>  "} · POST /api/v1/pii-test/read {"user_id":"<same user>","field_names":["NAME"]}',
+    validation: [
+      'Save succeeds',
+      'Read status is 200',
+      'The value equals “QA Automation User <letters>”: trimmed, single spaces, capitals kept',
+    ],
     type: 'Positive',
     priority: 'High',
   },
@@ -19,6 +26,9 @@ export const NORMALIZATION_CASES: TestCaseCatalog = {
       'Read the PHONE field back',
     ],
     expected: '200 OK. The value is digits only.',
+    request:
+      'POST /api/v1/pii-test {"user_id":"<new fake user>","field":"PHONE","value":"<approved test phone with spaces, dashes, brackets>"} · POST /api/v1/pii-test/read {"user_id":"<same user>","field_names":["PHONE"]}',
+    validation: ['Save succeeds', 'Read status is 200', 'The value contains digits only'],
     type: 'Positive',
     priority: 'High',
     preconditions:
@@ -29,6 +39,9 @@ export const NORMALIZATION_CASES: TestCaseCatalog = {
     why: 'Invalid phones would make texts and calls fail.',
     steps: ['Save a 5-digit phone for a new fake user', 'Save a 16-digit phone', 'Check both replies'],
     expected: 'Both are refused and nothing is saved. The exact status is waiting on Dev (question BQ-03).',
+    request:
+      'POST /api/v1/pii-test {"user_id":"<new fake user>","field":"PHONE","value":"12345"} · {… "value":"<16 digits>"}',
+    validation: ['Both saves are refused', 'Nothing is saved for the user'],
     type: 'Negative',
     priority: 'Medium',
     preconditions:

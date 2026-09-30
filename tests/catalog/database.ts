@@ -15,6 +15,14 @@ export const DATABASE_CASES: TestCaseCatalog = {
     ],
     expected:
       'Exactly one record for that user and NAME, under the same tenant as the save reply. The key version matches the save reply (if the database stores one). The name is not readable in the stored value. This alone does not prove encryption; the encryption format is waiting on Dev (question BQ-04).',
+    request:
+      'POST /api/v1/pii-test {"user_id":"<new fake user>","field":"NAME","value":"QA Automation User"} · read-only database query “findPiiRecords” (tenant, user, NAME)',
+    validation: [
+      'Exactly one stored record',
+      'Stored user, field and tenant match the save reply',
+      'Stored key version matches the save reply (when present)',
+      'The name is not readable in the stored value',
+    ],
     type: 'Database',
     priority: 'Critical',
     preconditions: DB_BLOCKED,
@@ -29,6 +37,13 @@ export const DATABASE_CASES: TestCaseCatalog = {
     ],
     expected:
       'There is still exactly one record, and its stored bytes changed. Name B is not readable in it. Encryption format waiting on Dev (question BQ-04).',
+    request:
+      'POST /api/v1/pii-test (name A) · database query · POST /api/v1/pii-test (name B) · database query',
+    validation: [
+      'One record after each save',
+      'The stored bytes changed after the replace',
+      'Name B is not readable in the stored value',
+    ],
     type: 'Database',
     priority: 'High',
     preconditions: DB_BLOCKED,
@@ -38,6 +53,9 @@ export const DATABASE_CASES: TestCaseCatalog = {
     why: 'A refused request must leave nothing behind.',
     steps: ['Send a save with no token', 'Check it is refused with 401', 'Look up that user in the database'],
     expected: '401 Unauthorized (refused: not signed in), and no record exists for that user.',
+    request:
+      'POST /api/v1/pii-test {"user_id":"<new fake user>","field":"NAME","value":"QA Automation User"} without Authorization header · database query for that user',
+    validation: ['The save gets 401 with no data', 'No stored record exists for that user'],
     type: 'Database',
     priority: 'High',
     preconditions: DB_BLOCKED,

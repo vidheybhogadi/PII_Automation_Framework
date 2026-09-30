@@ -50,6 +50,12 @@ export const OUTCOME_META: Record<Outcome, { cls: string; token: string; icon: s
     icon: 'skip',
     help: 'The test was skipped in this run — see the reason (e.g. optional setup not configured).',
   },
+  'Not Applicable': {
+    cls: 'not-applicable',
+    token: 'NOT_APPLICABLE',
+    icon: 'ban',
+    help: 'Dev confirmed this feature is intentionally not supported (see the BQ answer). Neither a pass nor a failure, and not counted in the pass rate or quality gates.',
+  },
   'Not Tested': {
     cls: 'not-tested',
     token: 'NOT_TESTED',

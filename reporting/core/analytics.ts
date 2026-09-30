@@ -122,14 +122,46 @@ export function catalogTests<T extends { kind: 'integration' | 'unit'; notRun?: 
  *                      `blocked` annotation). Neither a pass nor a failure.
  *   Skipped          — skipped in this run for another reason (e.g. optional setup missing).
  *   Not Tested       — not part of this run, the run stopped first, or the Aisle PII facade was unreachable.
+ *   Not Applicable   — Dev CONFIRMED the feature is intentionally unsupported (skipped with a `not-applicable`
+ *                      annotation, "BQ-xx: <answer>"). Neither a pass nor a failure, and left out of pass rate,
+ *                      quality gates, health and "checks that ran" — there is nothing to test.
  *   Pass             — the test ran and everything was as expected.
  */
-export const OUTCOMES = ['Fail', 'Security finding', 'Blocked', 'Skipped', 'Not Tested', 'Pass'] as const;
+export const OUTCOMES = [
+  'Fail',
+  'Security finding',
+  'Blocked',
+  'Skipped',
+  'Not Tested',
+  'Not Applicable',
+  'Pass',
+] as const;
 export type Outcome = (typeof OUTCOMES)[number];
 
 /** Annotation marking a test that fails on a known, reported security issue (e.g. "BQ-08: …"). */
 export const SECURITY_FINDING_ANNOTATION = 'security-finding';
 export const SECURITY_FINDING_PREFIX = 'SECURITY FINDING (expected until Dev fixes it) — ';
+
+/** Annotation marking a feature Dev confirmed is intentionally unsupported (helper `notApplicable()`). */
+export const NOT_APPLICABLE_ANNOTATION = 'not-applicable';
+export const NOT_APPLICABLE_PREFIX = 'NOT APPLICABLE — ';
+
+/** A test that did not run because Dev confirmed the feature is intentionally unsupported. */
+export function isNotApplicable(t: Pick<ReportTest, 'status' | 'annotations' | 'notRun'>): boolean {
+  return (
+    !t.notRun &&
+    t.status !== 'PASS' &&
+    t.status !== 'FAIL' &&
+    t.annotations.some((a) => a.type === NOT_APPLICABLE_ANNOTATION)
+  );
+}
+
+/** Tests that count towards gates, health and "checks that ran": everything except Not Applicable. */
+export function applicableTests<T extends Pick<ReportTest, 'status' | 'annotations' | 'notRun'>>(
+  tests: readonly T[],
+): T[] {
+  return tests.filter((t) => !isNotApplicable(t));
+}
 
 /** A failed test that carries a `security-finding` annotation. */
 export function isSecurityFinding(t: Pick<ReportTest, 'status' | 'annotations'>): boolean {
@@ -162,6 +194,15 @@ export function testOutcome(t: ReportTest): { outcome: Outcome; remark: string }
     }
     return { outcome: 'Fail', remark: remark.slice(0, 300) };
   }
+  if (isNotApplicable(t))
+    return {
+      outcome: 'Not Applicable',
+      remark:
+        `${NOT_APPLICABLE_PREFIX}${note(NOT_APPLICABLE_ANNOTATION) || 'confirmed by Dev as not supported'}`.slice(
+          0,
+          400,
+        ),
+    };
   const blockedWhy = note('blocked') || note('fixme');
   if (
     t.status === 'BLOCKED' ||
@@ -174,6 +215,27 @@ export function testOutcome(t: ReportTest): { outcome: Outcome; remark: string }
     };
   if (t.status === 'SKIPPED') return { outcome: 'Skipped', remark: note('skip') || 'Skipped in this run' };
   return { outcome: 'Not Tested', remark: 'The run stopped before this test' };
+}
+
+/**
+ * The dependency / blocker behind a test's outcome — "BQ-xx: reason" for Blocked, Not Applicable and Security
+ * finding (from the annotation text, already sanitized), '' for everything else.
+ */
+export function dependencyOf(t: ReportTest): string {
+  const outcome = testOutcome(t).outcome;
+  const types: Partial<Record<Outcome, string[]>> = {
+    Blocked: ['blocked', 'fixme'],
+    'Not Applicable': [NOT_APPLICABLE_ANNOTATION],
+    'Security finding': [SECURITY_FINDING_ANNOTATION],
+  };
+  const wanted = types[outcome];
+  if (!wanted) return '';
+  const notes = [
+    ...new Set(
+      t.annotations.filter((a) => wanted.includes(a.type) && a.description).map((a) => a.description),
+    ),
+  ];
+  return notes.join(' | ') || testOutcome(t).remark;
 }
 
 /** How many tests have each outcome (every outcome present, zero when none). */
@@ -458,10 +520,10 @@ export function analyzeFailure(test: ReportTest): FailureInsight {
   return { test, pattern, expected, received, httpStatus, errorCode, assertion, message, requestId };
 }
 
-export function questionIdOf(test: ReportTest): string | null {
+export function questionIdOf(test: ReportTest, type = 'blocked'): string | null {
   for (const a of test.annotations) {
     const m = /\b(B?Q-\d+)\b/.exec(`${a.description ?? ''}`);
-    if (a.type === 'blocked' && m) return m[1] as string;
+    if (a.type === type && m) return m[1] as string;
   }
   return null;
 }
@@ -479,8 +541,10 @@ export interface GateResult {
 }
 
 export function evaluateGates(tests: readonly ReportTest[], gates: readonly GateRule[]): GateResult[] {
+  // Not Applicable tests are neither run nor missing: a gate never waits on them.
+  const applicable = applicableTests(tests);
   return gates.map((gate) => {
-    const inGate = tests.filter((t) => gate.areas.includes(t.area));
+    const inGate = applicable.filter((t) => gate.areas.includes(t.area));
     const counts = countStatuses(inGate);
     const failedIds = inGate.filter((t) => t.status === 'FAIL').map((t) => t.id);
     let status: GateStatus;
@@ -556,8 +620,9 @@ export function healthScore(
 ): HealthScore {
   // Checks that never reached the service (readiness check failed at startup) say nothing about the
   // service's health — they are left out, so an unreachable service gives "N/A", not a low score.
+  // Not Applicable tests (feature confirmed unsupported) are left out too — there is nothing to execute.
   const unreachable = new Set(preflightFailures(allTests));
-  const tests = allTests.filter((t) => !unreachable.has(t));
+  const tests = applicableTests(allTests).filter((t) => !unreachable.has(t));
   const counts = countStatuses(tests);
   const critical = tests.filter((t) => t.severity === 'critical');
   const criticalCounts = countStatuses(critical);
@@ -570,7 +635,8 @@ export function healthScore(
       label: 'API Pass Rate',
       value: passRate(counts),
       weight: cfg.weights.passRate,
-      explain: 'Passed ÷ executed (passed + failed). Skipped/blocked tests are excluded here.',
+      explain:
+        'Passed ÷ executed (passed + failed). Skipped, blocked and Not Applicable tests are excluded here.',
     },
     {
       key: 'criticalPassRate',
@@ -584,7 +650,8 @@ export function healthScore(
       label: 'Execution completeness',
       value: ratio(executedCount(counts), counts.total),
       weight: cfg.weights.completion,
-      explain: 'Executed ÷ total. Blocked, skipped and fixme tests lower this component.',
+      explain:
+        'Executed ÷ total. Blocked, skipped and fixme tests lower this component; Not Applicable tests are left out.',
     },
     {
       key: 'endpointCoverage',

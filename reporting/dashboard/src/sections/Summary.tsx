@@ -1,6 +1,6 @@
 /**
  * The answer, in one glance: a status pill, a plain sentence, big numbers per status (Pass, Fail, Security finding,
- * Blocked, Skipped, Not Tested, Total), one bar and the health score.
+ * Blocked, Skipped, Not Tested, Not Applicable, Total), one bar and the health score.
  */
 import { useMemo } from 'preact/hooks';
 import {
@@ -78,7 +78,7 @@ export function headline(
 }
 
 /** Tile look + help per status (icon + word, never colour alone). */
-const TILE: Record<Outcome, { tone: Tone | 'finding' | 'skip'; icon: string; help: string }> = {
+const TILE: Record<Outcome, { tone: Tone | 'finding' | 'skip' | 'na'; icon: string; help: string }> = {
   Pass: { tone: 'pass', icon: 'check', help: 'Tests that ran and passed.' },
   Fail: {
     tone: 'fail',
@@ -99,6 +99,11 @@ const TILE: Record<Outcome, { tone: Tone | 'finding' | 'skip'; icon: string; hel
     tone: 'skip',
     icon: 'skip',
     help: 'Tests skipped in this run (e.g. optional setup not configured).',
+  },
+  'Not Applicable': {
+    tone: 'na',
+    icon: 'ban',
+    help: 'Tests for a feature Dev confirmed is intentionally not supported. Neither a pass nor a failure — left out of the pass rate, quality gates and health score.',
   },
   'Not Tested': {
     tone: 'muted',
@@ -122,7 +127,7 @@ function BigNumber({
   label: string;
   value: number;
   total: number;
-  tone: Tone | 'accent' | 'finding' | 'skip';
+  tone: Tone | 'accent' | 'finding' | 'skip' | 'na';
   icon: string;
   onClick?: () => void;
   help: string;
@@ -158,9 +163,10 @@ export function Summary() {
   // Every status across EVERY test in the suite (tests not in this run count as Not Tested).
   const o = useMemo(() => outcomeCounts(all), [all]);
   // Pass/fail view for the headline and pass rate: a security finding is a failure (never "all clear").
+  // Not Applicable tests (feature confirmed unsupported) are left out: nothing to run, nothing missing.
   const c = useMemo(() => {
     const counts = emptyCounts();
-    counts.total = all.length;
+    counts.total = all.length - o['Not Applicable'];
     counts.PASS = o.Pass;
     counts.FAIL = o.Fail + o['Security finding'];
     counts.SKIPPED = counts.total - counts.PASS - counts.FAIL;
@@ -183,10 +189,10 @@ export function Summary() {
   }, [report]);
 
   const segs: [Outcome, number, string][] = OUTCOMES.map((k) => [k, o[k], TILE[k].tone]);
-  // Pass, Fail, Not Tested and Total always; Security finding / Blocked / Skipped only when present.
-  const tiles = (['Pass', 'Fail', 'Security finding', 'Blocked', 'Skipped', 'Not Tested'] as const).filter(
-    (k) => k === 'Pass' || k === 'Fail' || k === 'Not Tested' || o[k] > 0,
-  );
+  // Pass, Fail, Not Tested and Total always; Security finding / Blocked / Skipped / Not Applicable only when present.
+  const tiles = (
+    ['Pass', 'Fail', 'Security finding', 'Blocked', 'Skipped', 'Not Tested', 'Not Applicable'] as const
+  ).filter((k) => k === 'Pass' || k === 'Fail' || k === 'Not Tested' || o[k] > 0);
 
   return (
     <section id="summary" class={`hero glass glass--strong hero--${h.tone}`} aria-labelledby="summary-title">
@@ -221,7 +227,7 @@ export function Summary() {
               key={k}
               label={k}
               value={o[k]}
-              total={c.total}
+              total={all.length}
               tone={k === 'Fail' && !o.Fail ? 'muted' : TILE[k].tone}
               icon={TILE[k].icon}
               help={TILE[k].help}
@@ -230,8 +236,8 @@ export function Summary() {
           ))}
           <BigNumber
             label="Total"
-            value={c.total}
-            total={c.total}
+            value={all.length}
+            total={all.length}
             tone="accent"
             icon="tests"
             help="Every test case in the suite."

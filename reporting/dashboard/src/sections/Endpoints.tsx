@@ -33,10 +33,12 @@ function EndpointCard({ endpoint, tests, index }: { endpoint: string; tests: Rep
   const failN = n('Fail');
   const findings = n('Security finding');
   const blocked = n('Blocked');
+  const na = n('Not Applicable');
   const fail = failN + findings;
   const c = { PASS: pass, FAIL: fail, total: tests.length };
   const executed = pass + fail;
-  const waiting = c.total - executed;
+  // Not Applicable tests (feature confirmed unsupported) never make an endpoint "partly tested".
+  const waiting = c.total - executed - na;
   const rate = executed ? pass / executed : null;
   const state = c.FAIL > 0 ? 'fail' : executed === 0 ? 'muted' : waiting > 0 ? 'warn' : 'pass';
   const label =
@@ -47,7 +49,9 @@ function EndpointCard({ endpoint, tests, index }: { endpoint: string; tests: Rep
       : executed === 0
         ? blocked
           ? `${blocked} blocked`
-          : 'Not tested'
+          : na === c.total
+            ? 'Not applicable'
+            : 'Not tested'
         : waiting > 0
           ? blocked
             ? `Partly tested · ${blocked} blocked`

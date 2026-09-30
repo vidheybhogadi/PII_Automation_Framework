@@ -9,7 +9,7 @@ import { AREAS } from '../reporting/core/catalog';
 
 export const EMAIL_WIDTH = 720;
 
-type Outcome = 'Pass' | 'Fail' | 'Security finding' | 'Blocked' | 'Skipped' | 'Not Tested';
+type Outcome = 'Pass' | 'Fail' | 'Security finding' | 'Blocked' | 'Skipped' | 'Not Tested' | 'Not Applicable';
 
 interface ResultTest {
   id: string;
@@ -87,7 +87,7 @@ export function readFacts(results: Results, summaryText: string): ReportFacts {
       pass: n('Pass'),
       problems: n('Fail', 'Security finding'),
       blocked: n('Blocked'),
-      notRun: n('Skipped', 'Not Tested'),
+      notRun: n('Skipped', 'Not Tested', 'Not Applicable'),
       total: inArea.length,
     };
   }).filter((a) => a.total > 0);
@@ -232,7 +232,7 @@ export function buildReportEmail(
   const fail = f.count('Fail');
   const sec = f.count('Security finding');
   const blocked = f.count('Blocked');
-  const notRun = f.count('Skipped') + f.count('Not Tested');
+  const notRun = f.count('Skipped') + f.count('Not Tested') + f.count('Not Applicable');
   const pass = f.count('Pass');
   const vs = verdictStyle(f.verdict);
   const when = f.startedAt ? istDate(f.startedAt) : '';

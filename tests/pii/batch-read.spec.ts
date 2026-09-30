@@ -13,7 +13,7 @@ test.describe('Aisle facade — bulk read', () => {
   onlyIfInScope('batchReadPii', 'writePii');
 
   test(
-    'AISLE-BR-001 Bulk read of names for two fake users returns both names',
+    'AISLE-BR-001 Bulk read lifecycle: save names for two fake users, bulk read one, then both',
     { tag: ['@smoke'] },
     async ({ aisle, data, cleanup }) => {
       const users = [
@@ -22,6 +22,21 @@ test.describe('Aisle facade — bulk read', () => {
       ];
       for (const u of users)
         await seedField(aisle, cleanup, { userId: u.userId, field: PII_FIELDS.NAME, value: u.name });
+      const [userA] = users as [{ userId: string; name: string }];
+
+      const one = expectSuccess(
+        await aisle.batchRead({ user_ids: [userA.userId], fields: [PII_FIELDS.NAME] }),
+        200,
+        batchReadDataSchema,
+        'PII batch read successful',
+      );
+      expect(one.count).toBe(1);
+      expect(one.items[0]).toMatchObject({
+        tenant_id: AISLE_TENANT,
+        user_id: userA.userId,
+        field: PII_FIELDS.NAME,
+      });
+      expectSecretEquals(one.items[0]?.value, userA.name, 'bulk-read NAME (user A only)');
 
       const res = await aisle.batchRead({ user_ids: users.map((u) => u.userId), fields: [PII_FIELDS.NAME] });
       const bulk = expectSuccess(res, 200, batchReadDataSchema, 'PII batch read successful');
@@ -69,5 +84,56 @@ test.describe('Aisle facade — bulk read', () => {
       fields: [PII_FIELDS.NAME],
     });
     expectValidationError(tooMany, 'user_ids');
+  });
+
+  test('AISLE-BR-004 Bulk read with the same user ID twice returns only that user’s saved name', async ({
+    aisle,
+    data,
+    cleanup,
+  }) => {
+    const userId = data.userId('br4');
+    const name = data.name();
+    await seedField(aisle, cleanup, { userId, field: PII_FIELDS.NAME, value: name });
+
+    const res = await aisle.batchRead({ user_ids: [userId, userId], fields: [PII_FIELDS.NAME] });
+    const bulk = expectSuccess(res, 200, batchReadDataSchema, 'PII batch read successful');
+    expect(bulk.items.length).toBeGreaterThanOrEqual(1);
+    for (const item of bulk.items) {
+      expect(item).toMatchObject({ tenant_id: AISLE_TENANT, user_id: userId, field: PII_FIELDS.NAME });
+      expectSecretEquals(item.value, name, 'bulk-read NAME');
+    }
+    // De-duplication is deliberately NOT asserted either way (BQ-19); the observed count is recorded.
+    noteAssumption('BQ-19', `duplicate user ID returned count=${bulk.count} (observed 2 on 2026-09-29)`);
+  });
+
+  test('AISLE-BR-005 Bulk reads missing the user list or the field list are rejected (422)', async ({
+    aisle,
+    data,
+  }) => {
+    noteAssumption(
+      'BQ-09',
+      'missing user_ids/fields → 422 inferred from read/write behaviour; verify on staging',
+    );
+    const noUsers = await aisle.call('batchReadPii', { fields: [PII_FIELDS.NAME] });
+    expectValidationError(noUsers, 'user_ids');
+
+    const noFields = await aisle.call('batchReadPii', { user_ids: [data.userId('br5')] });
+    expectValidationError(noFields, 'fields');
+  });
+
+  test('AISLE-BR-006 Bulk read of an unknown field name is refused (403 AUTHORIZATION_DENIED)', async ({
+    aisle,
+    data,
+    config,
+  }) => {
+    noteAssumption(
+      'BQ-12',
+      'expected 403 like read/write of an unknown field (BQ-27); not yet observed for bulk read — verify on staging',
+    );
+    const res = await aisle.batchRead({
+      user_ids: [data.userId('br6')],
+      fields: [config.testData.unsupportedField],
+    });
+    expectError(res, 403, ERROR_CODES.AUTHORIZATION_DENIED);
   });
 });

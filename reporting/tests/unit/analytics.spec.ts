@@ -5,8 +5,10 @@ import {
   catalogTests,
   compareRuns,
   countStatuses,
+  dependencyOf,
   evaluateGates,
   healthScore,
+  isNotApplicable,
   isSecurityFinding,
   latencyStats,
   OUTCOMES,
@@ -22,6 +24,7 @@ import {
 } from '../../core/analytics';
 import type { HistoryEntry, ReportConfig, ReportData, ReportTest, TestStatus } from '../../core/types';
 import { areaForId } from '../../core/catalog';
+import { chatSummary, testsToCsv } from '../../core/exporters';
 import { endpointInventory } from '../../generator/build-report-data';
 import config from '../../config/report-config.json';
 
@@ -399,13 +402,22 @@ test.describe('REPORT analytics', () => {
     });
 
     // Counted in one place, in the OUTCOMES order.
-    expect(OUTCOMES).toEqual(['Fail', 'Security finding', 'Blocked', 'Skipped', 'Not Tested', 'Pass']);
+    expect(OUTCOMES).toEqual([
+      'Fail',
+      'Security finding',
+      'Blocked',
+      'Skipped',
+      'Not Tested',
+      'Not Applicable',
+      'Pass',
+    ]);
     expect(outcomeCounts([blocked, fixme, skipped, finding, plainFail, t('AISLE-RD-001', 'PASS')])).toEqual({
       Fail: 1,
       'Security finding': 1,
       Blocked: 2,
       Skipped: 1,
       'Not Tested': 0,
+      'Not Applicable': 0,
       Pass: 1,
     });
   });
@@ -445,5 +457,74 @@ test.describe('REPORT analytics', () => {
     expect(areaForId('POC-001')).toBe('poc');
     expect(areaForId('PII-AZ-001')).toBe('authorization');
     expect(areaForId('AISLE-XYZ-001')).toBe('other');
+  });
+  test('RPT-AN-020 Not Applicable: confirmed-unsupported skips are neither pass nor fail and never counted', () => {
+    const answer = 'BQ-05: Dev confirmed bulk read of FREE_TEXT is intentionally not supported';
+    // What notApplicable() records: a `not-applicable` annotation plus Playwright's own skip annotation.
+    const na = t('AISLE-BR-009', 'SKIPPED', {
+      area: 'batch',
+      endpoints: ['batchReadPii'],
+      annotations: [
+        { type: 'not-applicable', description: answer },
+        { type: 'skip', description: `NOT APPLICABLE (BQ-05): ${answer.slice(7)}` },
+      ],
+    });
+    expect(isNotApplicable(na)).toBe(true);
+    expect(testOutcome(na)).toEqual({ outcome: 'Not Applicable', remark: `NOT APPLICABLE — ${answer}` });
+    expect(dependencyOf(na)).toBe(answer);
+    // Not part of the run, or a test that ran anyway, is never Not Applicable.
+    expect(testOutcome({ ...na, notRun: true }).outcome).toBe('Not Tested');
+    expect(testOutcome({ ...na, status: 'PASS', rawStatus: 'passed' }).outcome).toBe('Pass');
+    expect(testOutcome({ ...na, status: 'FAIL', rawStatus: 'failed' }).outcome).toBe('Fail');
+    // A plain skip stays Skipped; a blocked skip stays Blocked (with its dependency).
+    const blocked = t('AISLE-BR-010', 'SKIPPED', {
+      area: 'batch',
+      annotations: [{ type: 'blocked', description: 'BQ-01: EMAIL access not granted' }],
+    });
+    expect(testOutcome(blocked).outcome).toBe('Blocked');
+    expect(dependencyOf(blocked)).toBe('BQ-01: EMAIL access not granted');
+    expect(dependencyOf(t('AISLE-BR-001', 'PASS'))).toBe('');
+
+    // Counts: its own bucket.
+    const passes = [
+      t('AISLE-BR-001', 'PASS', { area: 'batch', endpoints: ['batchReadPii'] }),
+      t('AISLE-WR-001', 'PASS'),
+      t('AISLE-RD-001', 'PASS', { area: 'read', endpoints: ['readPii'] }),
+    ];
+    expect(outcomeCounts([...passes, na])).toMatchObject({ Pass: 3, 'Not Applicable': 1, Skipped: 0 });
+    // Pass rate: unaffected.
+    expect(passRate(countStatuses([...passes, na]))).toBe(1);
+    // Gates: a gate never warns about (or waits on) a Not Applicable test — same result as without it.
+    const gates = (tests: ReportTest[]) => evaluateGates(tests, cfg.gates).map((g) => [g.gate.key, g.status]);
+    expect(gates([...passes, na])).toEqual(gates(passes));
+    // An ordinary skip in the same gate DOES count as not executed (control).
+    const plainSkip = t('AISLE-BR-011', 'SKIPPED', { area: 'batch' });
+    const batchGate = cfg.gates.find((g) => g.areas.includes('batch'));
+    if (batchGate?.warnOnNotExecuted)
+      expect(evaluateGates([...passes, plainSkip], cfg.gates).find((g) => g.gate === batchGate)?.status).toBe(
+        'WARNING',
+      );
+    // Health: execution completeness ignores it.
+    const health = (tests: ReportTest[]) => healthScore(tests, endpoints, cfg.health);
+    expect(health([...passes, na]).score).toBe(health(passes).score);
+    expect(health([...passes, na]).components.find((c) => c.key === 'completion')?.value).toBe(1);
+
+    // CSV: status column + the new inventory columns.
+    const csv = testsToCsv([na]).trim().split('\n');
+    const header = csv[0]!.split(',');
+    for (const col of ['module', 'method', 'request', 'validation', 'dependency'])
+      expect(header, col).toContain(col);
+    expect(csv[1]).toContain(`,Not Applicable,NOT APPLICABLE — ${answer}`);
+    // Chat summary: its own count and the BQ reason.
+    const report = {
+      meta: { product: 'P', dataSource: 'REAL' },
+      run: { label: 'r', environment: 'staging', startedAt: new Date(0).toISOString(), durationMs: 1 },
+      endpoints,
+      config: cfg,
+      tests: [...passes, na],
+    } as unknown as ReportData;
+    const summary = chatSummary(report, report.tests);
+    expect(summary).toContain('Not Applicable: 1');
+    expect(summary).toContain(`- AISLE-BR-009 ${answer}`);
   });
 });

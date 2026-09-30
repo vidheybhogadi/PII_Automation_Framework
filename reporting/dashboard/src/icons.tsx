@@ -101,6 +101,13 @@ const P: Record<string, JSX.Element> = {
     </>
   ),
   minus: <path d="M5 12h14" />,
+  /** Not Applicable: a circle with a slash ("not supported"). */
+  ban: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M5.6 5.6l12.8 12.8" />
+    </>
+  ),
   alert: (
     <>
       <circle cx="12" cy="12" r="9" />

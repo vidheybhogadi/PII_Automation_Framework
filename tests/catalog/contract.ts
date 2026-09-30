@@ -10,6 +10,14 @@ export const CONTRACT_CASES: TestCaseCatalog = {
     ],
     expected:
       'Every reply has exactly status, message, data and error. The data has exactly the fields seen today (for example, a save has tenant_id, user_id, field and key_version). The tenant (customer account) is always “aisle”. Only field names are compared, never values.',
+    request:
+      'GET /api/v1/pii-test/health/ready · POST /api/v1/pii-test (fake name) · POST /api/v1/pii-test/read · POST /api/v1/pii-test/batch/read (two fake users)',
+    validation: [
+      'Every reply has exactly status, message, data and error',
+      'Save data has exactly tenant_id, user_id, field, key_version',
+      'Read and bulk-read data and items have exactly the observed fields',
+      'Tenant is “aisle” in every reply',
+    ],
     type: 'Contract',
     priority: 'High',
     endpoint: 'crossEndpoint',
@@ -24,6 +32,13 @@ export const CONTRACT_CASES: TestCaseCatalog = {
     ],
     expected:
       '401 (refused: not signed in): empty body, sent as a web page (text/html). 400 (refused: body could not be read): exactly status false, error “Invalid JSON” and message “Request body must be valid JSON”. 422 (refused: request format invalid): only a “detail” list of problems. These are today’s formats; the intended single format is waiting on Dev (question BQ-09).',
+    request:
+      'POST /api/v1/pii-test/read without Authorization header · POST /api/v1/pii-test with a broken body · POST /api/v1/pii-test {"user_id":"<fake user>","field":"NAME","value":""}',
+    validation: [
+      '401: empty body, content type text/html',
+      '400: exactly status false, error “Invalid JSON”, message “Request body must be valid JSON”',
+      '422: only a “detail” list naming value',
+    ],
     type: 'Contract',
     priority: 'Medium',
     endpoint: 'crossEndpoint',
