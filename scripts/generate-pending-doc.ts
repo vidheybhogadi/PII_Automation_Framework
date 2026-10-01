@@ -33,10 +33,7 @@ const SETTINGS: Record<string, { from: string; unblocks: string }> = {
 
 /** Runtime blockers used in tests (src/fixtures/steps.ts BLOCKERS) → question ID. */
 const BLOCKER_IDS: Record<string, string> = {
-  email: 'BQ-01',
-  search: 'BQ-01',
   transient: 'BQ-02',
-  freeText: 'BQ-02',
   phone: 'BQ-03',
 };
 
@@ -171,7 +168,7 @@ export function buildPendingDoc(): string {
     '',
     '## Checklist',
     '',
-    '1. [ ] Aisle caller access to EMAIL, EMAIL search, temporary phones and free-text keys (BQ-01, BQ-02)',
+    '1. [ ] Temporary-phone access confirmed for the Aisle caller (BQ-02)',
     '2. [ ] Approved test phone numbers (BQ-03) — section 1',
     `3. [ ] Read-only DB access and the PII table/column layout (BQ-04) — sections 1–2 (${dbTokens.size} DB placeholders)`,
     `4. [ ] Answers to the open questions behind ${blocked.length} blockable tests — sections 3–4`,

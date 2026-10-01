@@ -3,6 +3,8 @@ import { expect, test } from '@playwright/test';
 import {
   expectError,
   expectExactKeys,
+  expectNoData,
+  expectNoServerError,
   expectRejected,
   expectRequestValidationError,
   expectSuccess,
@@ -176,5 +178,20 @@ test.describe('UNIT assertions', () => {
       freeTextKeyDataSchema.safeParse({ ...base, key: Buffer.alloc(16).toString('base64') }).success,
     ).toBe(false);
     expect(freeTextKeyDataSchema.safeParse({ ...base, key: 'not base64!!' }).success).toBe(false);
+  });
+
+  test('UT-AST-011 A server error (5xx) is never accepted as a refusal, and a refusal must carry no data', () => {
+    expectNoServerError(response(422, { detail: [] }));
+    const msg = failureMessage(() =>
+      expectNoServerError(response(502, { detail: SECRET_EMAIL }), 'bad input'),
+    );
+    expect(msg).toContain('server error (5xx)');
+    expect(msg).not.toContain(SECRET_EMAIL);
+    // The 422 helpers report a 5xx as a server error, not just as "wrong status".
+    expect(failureMessage(() => expectRequestValidationError(response(500, {})))).toContain(
+      'server error (5xx)',
+    );
+    expectNoData(response(404, { status: false, data: null, error: { code: 'X', message: 'm' } }));
+    expect(failureMessage(() => expectNoData(response(405, readOk)))).not.toContain(SECRET_EMAIL);
   });
 });

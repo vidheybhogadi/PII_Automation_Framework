@@ -48,16 +48,37 @@ export const DATABASE_CASES: TestCaseCatalog = {
     priority: 'High',
     preconditions: DB_BLOCKED,
   },
-  'AISLE-DB-003': {
-    what: 'Sends a save of a fake name for a new fake user with no token (the secret pass proving the caller is Aisle’s test app), then looks in the database for that user.',
-    why: 'A refused request must leave nothing behind.',
-    steps: ['Send a save with no token', 'Check it is refused with 401', 'Look up that user in the database'],
-    expected: '401 Unauthorized (refused: not signed in), and no record exists for that user.',
+  'AISLE-DB-004': {
+    what: 'Saves a fake email through the facade, then looks it up directly in the database (read-only).',
+    why: 'Emails must be stored for the right person only, and never as readable text in the database.',
+    steps: [
+      'Save a fake email for a new fake user',
+      'Look up that user’s EMAIL record in the database',
+      'Check the stored value',
+    ],
+    expected:
+      'Exactly one record for that user and field EMAIL, under and the stored value does not contain the email in readable form.',
     request:
-      'POST /api/v1/pii-test {"user_id":"<new fake user>","field":"NAME","value":"QA Automation User"} without Authorization header · database query for that user',
-    validation: ['The save gets 401 with no data', 'No stored record exists for that user'],
+      'POST /api/v1/pii-test {"user_id":"<new fake user>","field":"EMAIL","value":"<fake email>"} · read-only database lookup',
+    validation: ['One record', 'Right user, field and tenant', 'Email not stored as readable text'],
     type: 'Database',
     priority: 'High',
+    preconditions: DB_BLOCKED,
+  },
+  'AISLE-DB-005': {
+    what: 'Sends a save with a value of only spaces (refused with 422), then looks for that user in the database (read-only).',
+    why: 'A refused save must leave nothing behind, not even a half-written record.',
+    steps: [
+      'Send a save with value "   " for a new fake user',
+      'Check it is refused (422)',
+      'Look up the user in the database',
+    ],
+    expected: 'The save gets 422 Unprocessable Entity, and the database holds no record for that user.',
+    request:
+      'POST /api/v1/pii-test {"user_id":"<new fake user>","field":"NAME","value":"   "} · read-only database lookup',
+    validation: ['Save is 422', 'No database record for the user'],
+    type: 'Database',
+    priority: 'Medium',
     preconditions: DB_BLOCKED,
   },
 };

@@ -23,7 +23,7 @@ const PHONE_DIGITS = { min: 8, max: 15 } as const;
 
 // ---- Expected normalization rules ---------------------------------------------------------------
 
-/** Email: trimmed and converted to lowercase (expected; unconfirmed through the facade — BQ-01). */
+/** Email: trimmed and converted to lowercase (observed on staging 2026-10-01). */
 export function normalizeEmail(input: string): string {
   return input.trim().toLowerCase();
 }

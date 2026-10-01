@@ -10,12 +10,12 @@ export const POC_CASES: TestCaseCatalog = {
       'Check the reply',
     ],
     expected:
-      '201 Created (a new value was saved) with the message “PII write successful”. The reply names tenant “aisle” (the customer account the data belongs to), the same user ID, the field NAME and a key version (the number of the encryption key used) of 1 or more. The name itself is not repeated in the reply.',
+      '201 Created (a new value was saved). The reply names the same user ID, the field NAME and a key version (the number of the encryption key used) of 1 or more. The name itself is not repeated in the reply.',
     request:
       'POST /api/v1/pii-test {"user_id":"<new fake user>","field":"NAME","value":"QA Automation User <letters>"}',
     validation: [
-      'Status is 201 and the message is “PII write successful”',
-      'Reply data has tenant “aisle”, the same user ID and field NAME',
+      'Status is 201',
+      'Reply data has the same user ID and field NAME',
       'Key version is a whole number of 1 or more',
       'The fake name does not appear anywhere in the reply',
     ],
@@ -31,13 +31,13 @@ export const POC_CASES: TestCaseCatalog = {
       'Compare the returned value with the expected clean form',
     ],
     expected:
-      '200 OK with the message “PII read successful”. Exactly one item (count 1) for that user, tenant “aisle” (the customer account the data belongs to) and field NAME. The value has the outer spaces removed and each run of inner spaces turned into one space, as seen on staging.',
+      '200 OK. Exactly one item (count 1) for that user and field NAME. The value has the outer spaces removed and each run of inner spaces turned into one space, as seen on staging.',
     request:
       'POST /api/v1/pii-test {"user_id":"<new fake user>","field":"NAME","value":"   QA   Automation   User <letters>  "} · POST /api/v1/pii-test/read {"user_id":"<same user>","field_names":["NAME"]}',
     validation: [
-      'Read status is 200 and the message is “PII read successful”',
+      'Read status is 200',
       'Count is 1',
-      'The item has tenant “aisle”, the same user ID and field NAME',
+      'The item has the same user ID and field NAME',
       'The value equals the clean name (trimmed, single spaces, capitals kept)',
     ],
     type: 'Positive',

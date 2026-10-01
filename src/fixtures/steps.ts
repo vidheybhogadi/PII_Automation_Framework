@@ -26,13 +26,20 @@ export interface Blocker {
   reason: string;
 }
 
-/** Access blockers known today (403 AUTHORIZATION_DENIED on staging, 2026-09-29). */
+/**
+ * Access gates. EMAIL, search and free-text-key access were granted on 2026-10-01: if one of them answers
+ * 403 AUTHORIZATION_DENIED again, the access was withdrawn and the test is marked BLOCKED ("ACCESS") with the real
+ * reply, so the reason is visible. Temporary phones (BQ-02) and approved phones (BQ-03) are still open questions.
+ */
 export const BLOCKERS = {
-  email: { id: 'BQ-01', reason: 'EMAIL access not granted to the Aisle caller' },
-  search: { id: 'BQ-01', reason: 'EMAIL search access not granted to the Aisle caller' },
-  transient: { id: 'BQ-02', reason: 'Temporary-phone access not granted to the Aisle caller' },
-  freeText: { id: 'BQ-02', reason: 'Free-text key access not granted to the Aisle caller' },
-  phone: { id: 'BQ-03', reason: 'PHONE access / approved test phones not available' },
+  email: { id: 'ACCESS', reason: 'EMAIL access (granted 2026-10-01) is refused again — ask Dev' },
+  search: { id: 'ACCESS', reason: 'EMAIL search access (granted 2026-10-01) is refused again — ask Dev' },
+  transient: { id: 'BQ-02', reason: 'Temporary-phone access not confirmed for the Aisle caller' },
+  freeText: {
+    id: 'ACCESS',
+    reason: 'Free-text key access (granted 2026-10-01) is refused again — ask Dev',
+  },
+  phone: { id: 'BQ-03', reason: 'Approved test phone numbers not available' },
 } as const satisfies Record<string, Blocker>;
 
 /**

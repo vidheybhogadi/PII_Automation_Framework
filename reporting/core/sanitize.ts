@@ -68,7 +68,8 @@ export function maskRequestId(id: string | undefined): string {
 /** Strings that must never appear anywhere in a rendered report (used by tests and the self-check). */
 export const FORBIDDEN_REPORT_PATTERNS: RegExp[] = [
   /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
-  // emails, except the synthetic @example… test domain in any letter case (normalization tests send mixed case)
-  /[A-Za-z0-9._%+-]+@(?![Ee][Xx][Aa][Mm][Pp][Ll][Ee]\b)[A-Za-z0-9.-]+\.[A-Za-z]{2,}/,
+  // emails, except the synthetic @example… test domain and its sub-domains, in any letter case (normalization and
+  // EMAIL format/length tests send mixed case and sub-domains such as mail.example.test)
+  /[A-Za-z0-9._%+-]+@(?!(?:[A-Za-z0-9-]+\.)*[Ee][Xx][Aa][Mm][Pp][Ll][Ee]\b)[A-Za-z0-9.-]+\.[A-Za-z]{2,}/,
   /[A-Za-z0-9+/]{86}==/, // Ed25519 signature shape
 ];

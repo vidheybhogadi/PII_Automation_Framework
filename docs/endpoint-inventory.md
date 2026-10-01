@@ -7,19 +7,19 @@ Requests never contain `tenant_id` — Aisle sets it (responses show `"tenant_id
 Source: the Aisle "PII Test API Curl Collection" + staging behaviour observed on 2026-09-29. Code:
 [src/clients/endpoints.ts](../src/clients/endpoints.ts).
 
-| Key                     | Method + path                                    | Body                             | Access today (2026-09-29)                    |
-| ----------------------- | ------------------------------------------------ | -------------------------------- | -------------------------------------------- |
-| `healthReady`           | `GET /api/v1/pii-test/health/ready`              | —                                | ✔ 200 `{"data":{"status":"ready"}}`          |
-| `writePii`              | `POST /api/v1/pii-test`                          | `{user_id, field, value}`        | ✔ NAME (201 new / 200 replace) · ✘ EMAIL 403 |
-| `readPii`               | `POST /api/v1/pii-test/read`                     | `{user_id, field_names[]}`       | ✔ NAME · ✘ EMAIL 403                         |
-| `searchPii`             | `POST /api/v1/pii-test/{FIELD}/search`           | `{value, limit, include_values}` | ✘ 403 (BQ-01)                                |
-| `batchReadPii`          | `POST /api/v1/pii-test/batch/read`               | `{user_ids[], fields[]}`         | ✔ NAME · ✘ EMAIL 403                         |
-| `createTransientPhone`  | `POST /api/v1/pii-test/transient/phones`         | `{phone, ttl_seconds}`           | ✘ 403 (BQ-02)                                |
-| `resolveTransientPhone` | `POST /api/v1/pii-test/transient/phones/resolve` | `{transient_id}`                 | ✘ 403 (BQ-02)                                |
-| `promoteTransientPhone` | `POST /api/v1/pii-test/transient/phones/promote` | `{transient_id, user_id}`        | ✘ 403 (BQ-02)                                |
-| `createFreeTextKey`     | `POST /api/v1/pii-test/free-text/keys`           | `{}`                             | ✘ 403 (BQ-02)                                |
-| `readFreeTextKey`       | `POST /api/v1/pii-test/free-text/keys/read`      | `{key_id}`                       | ✘ 403 (BQ-02)                                |
-| `revokeFreeTextKey`     | `POST /api/v1/pii-test/free-text/keys/revoke`    | `{key_id}`                       | ✘ 403 (BQ-02)                                |
+| Key                     | Method + path                                    | Body                             | Access today (2026-10-01)                |
+| ----------------------- | ------------------------------------------------ | -------------------------------- | ---------------------------------------- |
+| `healthReady`           | `GET /api/v1/pii-test/health/ready`              | —                                | ✔ 200 `{"data":{"status":"ready"}}`      |
+| `writePii`              | `POST /api/v1/pii-test`                          | `{user_id, field, value}`        | ✔ NAME (201 new / 200 replace) · ✔ EMAIL |
+| `readPii`               | `POST /api/v1/pii-test/read`                     | `{user_id, field_names[]}`       | ✔ NAME · ✔ EMAIL                         |
+| `searchPii`             | `POST /api/v1/pii-test/{FIELD}/search`           | `{value, limit, include_values}` | ✔ EMAIL (since 2026-10-01)               |
+| `batchReadPii`          | `POST /api/v1/pii-test/batch/read`               | `{user_ids[], fields[]}`         | ✔ NAME · ✔ EMAIL                         |
+| `createTransientPhone`  | `POST /api/v1/pii-test/transient/phones`         | `{phone, ttl_seconds}`           | Not probed (BQ-02, BQ-03)                |
+| `resolveTransientPhone` | `POST /api/v1/pii-test/transient/phones/resolve` | `{transient_id}`                 | Not probed (BQ-02, BQ-03)                |
+| `promoteTransientPhone` | `POST /api/v1/pii-test/transient/phones/promote` | `{transient_id, user_id}`        | Not probed (BQ-02, BQ-03)                |
+| `createFreeTextKey`     | `POST /api/v1/pii-test/free-text/keys`           | `{}`                             | ✔ (since 2026-10-01)                     |
+| `readFreeTextKey`       | `POST /api/v1/pii-test/free-text/keys/read`      | `{key_id}`                       | ✔ (since 2026-10-01)                     |
+| `revokeFreeTextKey`     | `POST /api/v1/pii-test/free-text/keys/revoke`    | `{key_id}`                       | ✔ (since 2026-10-01)                     |
 
 ## Observed response formats
 

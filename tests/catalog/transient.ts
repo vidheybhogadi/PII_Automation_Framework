@@ -81,4 +81,82 @@ export const TRANSIENT_CASES: TestCaseCatalog = {
     priority: 'Medium',
     preconditions: TRANSIENT_BLOCKED,
   },
+  'AISLE-TR-005': {
+    what: 'Creates a temporary phone (a short-lived phone record for someone not yet signed up) with a short lifetime and looks it up after it expires.',
+    why: 'Expired temporary phones must disappear, or phone numbers stay readable longer than allowed.',
+    steps: ['Create a temporary phone with a short lifetime', 'Wait until it expires', 'Look it up'],
+    expected:
+      'Blocked: needs approved test phone numbers and the lifetime rules (questions BQ-03, BQ-28). Expected: 404 Not Found after expiry.',
+    request:
+      'POST /api/v1/pii-test/transient/phones {"phone":"<approved test phone>","ttl_seconds":<short>} · …/resolve',
+    validation: ['Blocked until approved phones exist'],
+    type: 'Negative',
+    priority: 'Medium',
+    preconditions: TRANSIENT_BLOCKED,
+    endpoint: 'resolveTransientPhone',
+  },
+  'AISLE-TR-006': {
+    what: 'Creates temporary phones with a lifetime of 0, a negative number, or a huge number.',
+    why: 'A wrong lifetime could keep a phone number forever or make it unusable.',
+    steps: ['Send create with each lifetime', 'Check the replies'],
+    expected:
+      'Blocked: the allowed lifetime range is unknown (question BQ-28) and approved test phones are missing (question BQ-03).',
+    request:
+      'POST /api/v1/pii-test/transient/phones {"phone":"<approved test phone>","ttl_seconds":0} (and -1, huge)',
+    validation: ['Blocked until the lifetime rules are known'],
+    type: 'Negative',
+    priority: 'Medium',
+    preconditions: TRANSIENT_BLOCKED,
+  },
+  'AISLE-TR-007': {
+    what: 'Tries to promote (turn into the user’s permanent phone) a temporary phone after it has expired.',
+    why: 'An expired temporary phone must never become someone’s permanent phone.',
+    steps: [
+      'Create a short-lived temporary phone',
+      'Wait until it expires',
+      'Promote it for a fake user',
+      'Read the user’s phone',
+    ],
+    expected:
+      'Blocked: needs approved test phone numbers (question BQ-03). Expected: refused, and nothing saved for the user.',
+    request:
+      'POST /api/v1/pii-test/transient/phones/promote {"transient_id":"<expired ID>","user_id":"<fake user>"}',
+    validation: ['Blocked until approved phones exist'],
+    type: 'Negative',
+    priority: 'Medium',
+    preconditions: TRANSIENT_BLOCKED,
+    endpoint: 'promoteTransientPhone',
+  },
+  'AISLE-TR-008': {
+    what: 'Promotes a temporary phone onto a fake user who already has a phone.',
+    why: 'Records whether the old phone is replaced or the promote is refused, so no number is lost silently.',
+    steps: [
+      'Save an approved test phone for a fake user',
+      'Create and promote another temporary phone for the same user',
+      'Read the user’s phone',
+    ],
+    expected:
+      'Blocked: needs approved test phone numbers (question BQ-03); replace-versus-refuse will be observed then.',
+    request:
+      'POST /api/v1/pii-test/transient/phones/promote {"transient_id":"<ID>","user_id":"<user with a phone>"}',
+    validation: ['Blocked until approved phones exist'],
+    type: 'Positive',
+    priority: 'Medium',
+    preconditions: TRANSIENT_BLOCKED,
+    endpoint: 'promoteTransientPhone',
+  },
+  'AISLE-TR-009': {
+    what: 'Sends an invalid phone when creating a temporary phone, and a badly formed user ID when promoting one.',
+    why: 'Bad input must be refused before anything is stored.',
+    steps: ['Create with an invalid phone', 'Promote with a badly formed user ID'],
+    expected:
+      'Blocked: temporary phones are not probed until approved test phone numbers exist (question BQ-03). Expected: 422 for each.',
+    request:
+      'POST /api/v1/pii-test/transient/phones {"phone":"not-a-phone",…} · …/promote {"transient_id":"<ID>","user_id":"<badly formed>"}',
+    validation: ['Blocked until approved phones exist'],
+    type: 'Negative',
+    priority: 'Medium',
+    preconditions: TRANSIENT_BLOCKED,
+    endpoint: 'crossEndpoint',
+  },
 };

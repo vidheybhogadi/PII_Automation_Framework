@@ -10,7 +10,7 @@ All commands run from the project root. The facade tests need `.env` with `AISLE
 | `npm run verify`            | typecheck + lint + format check + framework self-tests (no network)                               |
 | `npm run check-env`         | validates `.env`, checks the token against the facade, shows which fields are accessible          |
 | `npm run test:poc`          | POC-001…003 — the email proof of concept (save → read → DB)                                       |
-| `npm run test:phase1`       | the 10 Phase-1 tests that prove the migration to the Aisle facade                                 |
+| `npm run test:phase1`       | the 8 Phase-1 tests that prove the migration to the Aisle facade                                  |
 | `npm run test:smoke`        | the Smoke suite                                                                                   |
 | `npm run test:regression`   | the Regression suite                                                                              |
 | `npm run test:security`     | token, tenant-spoofing and leak checks                                                            |

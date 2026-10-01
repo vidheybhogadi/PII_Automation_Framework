@@ -96,9 +96,16 @@ test.describe('UNIT configuration', () => {
       DB_NAME: 'pii',
       DB_USER: 'qa_readonly',
       DB_PASSWORD: 'x-unit-password',
-      DB_QUERIES_FILE: 'config/db-queries.json',
+      DB_QUERIES_FILE: 'config/db-queries.example.json', // an existing catalog file
     });
     expect(isDbConfigured(full)).toBe(true);
+    const noCatalog = loadConfig({
+      ...{ DB_ENGINE: 'postgres', DB_HOST: 'db.example', DB_NAME: 'pii' },
+      DB_USER: 'qa_readonly',
+      DB_PASSWORD: 'x-unit-password',
+      DB_QUERIES_FILE: 'config/does-not-exist.json',
+    });
+    expect(isDbConfigured(noCatalog), 'without the query catalog the DB tests stay Blocked').toBe(false);
   });
 
   test('UT-CFG-009 Endpoint scope accepts a subset and rejects unknown endpoint names', () => {

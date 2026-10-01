@@ -3,11 +3,11 @@
  *
  * Requests carry NO tenant_id: Aisle sets the tenant itself (observed: every response says "aisle").
  * Write / read / batch-read response shapes and the limits below were OBSERVED on staging (2026-09-29).
- * Search response shapes are PROVISIONAL (from the PII Service guide): search returns 403 today (BQ-01).
+ * Search response shapes were OBSERVED on staging on 2026-10-01 (EMAIL search access granted that day).
  */
 import { z } from 'zod';
 
-/** Fields used through the facade. Only NAME is accessible today; EMAIL/PHONE return 403 (BQ-01, BQ-03). */
+/** Fields used through the facade. NAME, EMAIL and PHONE are accessible (2026-10-01); no approved test phones yet (BQ-03). */
 export const PII_FIELDS = { EMAIL: 'EMAIL', PHONE: 'PHONE', NAME: 'NAME' } as const;
 export type PiiFieldName = (typeof PII_FIELDS)[keyof typeof PII_FIELDS];
 

@@ -86,4 +86,40 @@ export const FREE_TEXT_CASES: TestCaseCatalog = {
     preconditions:
       'Blocked until Dev answers question BQ-33 (should revoking an already-revoked key return 404 or 200?).',
   },
+  'AISLE-FT-005': {
+    what: 'Creates two free-text keys (secrets used to encrypt notes) one after the other and compares them without printing them.',
+    why: 'If two keys were the same, opening one person’s notes would open another’s.',
+    steps: ['Create a key', 'Create a second key', 'Compare their key IDs and keys'],
+    expected: 'Both creates succeed; the two key IDs differ and the two keys differ. Seen on 2026-10-01.',
+    request: 'POST /api/v1/pii-test/free-text/keys {} (twice)',
+    validation: ['Key IDs differ', 'Keys differ'],
+    type: 'Security',
+    priority: 'High',
+    preconditions: FREE_TEXT_ACCESS,
+  },
+  'AISLE-FT-006': {
+    what: 'Reads and revokes keys using a key ID that is badly formed, empty, or a number.',
+    why: 'Bad key IDs must be refused clearly, never matched to some other key.',
+    steps: ['Send read with each bad key ID', 'Send revoke with each bad key ID', 'Check the replies'],
+    expected:
+      'Every request gets 422 Unprocessable Entity (refused: the request format is invalid) naming key_id. Seen on 2026-10-01.',
+    request:
+      'POST /api/v1/pii-test/free-text/keys/read {"key_id":"not-a-uuid"} · {"key_id":""} · {"key_id":123} (and the same for /revoke)',
+    validation: ['Each is 422 naming key_id', 'No server error (5xx)'],
+    type: 'Negative',
+    priority: 'Medium',
+    preconditions: FREE_TEXT_ACCESS,
+  },
+  'AISLE-FT-007': {
+    what: 'Revokes a made-up key ID (a valid-looking ID that never existed).',
+    why: 'Revoking something that does not exist must say so, not pretend it worked.',
+    steps: ['Make a random key ID', 'Send the revoke request', 'Check the reply'],
+    expected:
+      '404 Not Found with code FREE_TEXT_KEY_NOT_FOUND and the message “Free-text key not found”. Seen on 2026-10-01.',
+    request: 'POST /api/v1/pii-test/free-text/keys/revoke {"key_id":"<random ID>"}',
+    validation: ['Status 404 FREE_TEXT_KEY_NOT_FOUND', 'Message “Free-text key not found”'],
+    type: 'Negative',
+    priority: 'Medium',
+    preconditions: FREE_TEXT_ACCESS,
+  },
 };

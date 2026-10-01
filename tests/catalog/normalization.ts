@@ -47,4 +47,41 @@ export const NORMALIZATION_CASES: TestCaseCatalog = {
     preconditions:
       'Blocked: PHONE access and the phone length rule are not confirmed for the facade (question BQ-03).',
   },
+  'AISLE-NRM-004': {
+    what: 'Saves five fake names that each hide one invisible character between two words: a tab, a line break, a carriage return, a non-breaking space and a zero-width space. Reads each back.',
+    why: 'Names copied from documents often carry hidden characters. They decide whether two names look equal and whether searches match.',
+    steps: [
+      'Save a fake name with one hidden character between two words',
+      'Read it back',
+      'Repeat for each of the five hidden characters',
+    ],
+    expected:
+      'Tab, line break, carriage return and non-breaking space are turned into a normal space. The zero-width space is kept unchanged. Seen on 2026-10-01; Dev still to confirm the rule (question BQ-36).',
+    request:
+      'POST /api/v1/pii-test {"user_id":"<new fake user>","field":"NAME","value":"QA\\tAutomation User <letters>"} (one per hidden character)',
+    validation: [
+      'Tab, line break, carriage return, non-breaking space → a normal space',
+      'Zero-width space → kept as sent',
+    ],
+    type: 'Positive',
+    priority: 'Medium',
+  },
+  'AISLE-NRM-005': {
+    what: 'Saves an accented letter (é) written in its two Unicode forms (one combined character, or “e” plus a separate accent mark) and checks that saving and searching treat them as the same text.',
+    why: 'Different keyboards and phones produce different forms of the same letter. If they are not treated the same, a person can fail to be found.',
+    steps: [
+      'Save a fake name and a fake email with é written as one character',
+      'Read and search them using e + accent mark',
+      'Compare the results',
+    ],
+    expected:
+      'Blocked: on 2026-10-01 names were stored exactly as sent (no conversion), and an email saved with é as one character was NOT found when searched with e + accent mark. Dev must decide whether they should match (question BQ-36).',
+    request:
+      'POST /api/v1/pii-test {"field":"NAME","value":"QA José …"} · POST /api/v1/pii-test/EMAIL/search {"value":"<email with e + accent mark>"}',
+    validation: ['Blocked until Dev decides the Unicode rule'],
+    type: 'Positive',
+    priority: 'Low',
+    preconditions: 'Blocked until Dev decides whether both Unicode forms must match (question BQ-36).',
+    endpoint: 'crossEndpoint',
+  },
 };

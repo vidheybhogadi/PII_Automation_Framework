@@ -12,12 +12,13 @@ import {
 } from '../../src/assertions/security.assertions';
 import { BLOCKERS, createTransient } from '../../src/fixtures/steps';
 import {
+  blockedBy,
   blockIfAccessDenied,
-  expect,
   noteAssumption,
   onlyIfInScope,
   requireApprovedPhones,
   test,
+  expect,
 } from '../../src/fixtures/test-fixtures';
 import { PII_FIELDS, readPiiDataSchema } from '../../src/models/pii.models';
 import {
@@ -120,5 +121,31 @@ test.describe('Aisle facade — temporary phones', () => {
 
     const malformed = await aisle.resolveTransientPhone({ transient_id: 'not-a-valid-id' });
     expectValidationError(malformed, 'transient_id');
+  });
+
+  test('AISLE-TR-005 A temporary phone with a short lifetime can no longer be looked up after it expires (404)', async () => {
+    blockedBy(
+      'BQ-03',
+      'Needs approved test phone numbers; expiry behaviour also depends on the lifetime rules (BQ-28)',
+    );
+  });
+
+  test('AISLE-TR-006 A lifetime of 0, a negative number or a huge number is handled by a clear rule', async () => {
+    blockedBy(
+      'BQ-28',
+      'The allowed lifetime (ttl_seconds) range is unknown, and approved test phones are missing (BQ-03)',
+    );
+  });
+
+  test('AISLE-TR-007 Promoting a temporary phone after it has expired is refused and saves nothing', async () => {
+    blockedBy('BQ-03', 'Needs approved test phone numbers; the refusal status is not yet observed');
+  });
+
+  test('AISLE-TR-008 Promoting a temporary phone onto a user who already has a phone replaces that phone', async () => {
+    blockedBy('BQ-03', 'Needs approved test phone numbers; replace-versus-refuse is not yet observed');
+  });
+
+  test('AISLE-TR-009 An invalid phone on create, or an invalid user ID on promote, is rejected (422)', async () => {
+    blockedBy('BQ-03', 'Temporary phones are not probed until approved test phone numbers exist');
   });
 });

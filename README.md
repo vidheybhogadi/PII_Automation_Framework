@@ -58,7 +58,7 @@ npm run test:all
 ```
 PII_Automation_Framework/
 │
-├── tests/                          THE TESTS (54 planned) — one folder per area
+├── tests/                          THE TESTS (98 planned) — one folder per area
 │   ├── poc/                          POC-001…003: save name → read name → check DB (the first proof)
 │   ├── health/                       facade readiness
 │   ├── pii/                          save · read · search · bulk read · clean-up rules
@@ -113,8 +113,7 @@ test(
     const read = expectSuccess(
       await aisle.readPii({ user_id: userId, field_names: ['NAME'] }), // 3. Bearer-authenticated call, no tenant_id
       200,
-      readPiiDataSchema,
-      'PII read successful', // 4. expected status + shape + message (observed)
+      readPiiDataSchema, // 4. expected status + data shape (observed; the facade's message is not checked)
     );
     expectSecretEquals(read.items[0]?.value, name, 'NAME'); // 5. compare without printing the value
   },
@@ -164,7 +163,7 @@ npm run check-env                  # checks settings, the token and which fields
 
 ```bash
 npm run test:poc                   # POC-001…003 (NAME) — POC-003 is Blocked until read-only DB access (BQ-04)
-npm run test:phase1                # the 10 Phase-1 tests that prove the migration
+npm run test:phase1                # the 8 Phase-1 tests that prove the migration
 npm run test:all                   # all tests → report → PDF → Excel
 npm run report                     # rebuild the report from the last run
 npm run report:open
@@ -192,8 +191,8 @@ Subsets: `npm run test:smoke` · `npm run test:security` · `npm run test:db` ·
 
 | Part                 | Tests | Status                                                                                   |
 | -------------------- | :---: | ---------------------------------------------------------------------------------------- |
-| Framework self-tests |  60   | passing (`npm run verify`)                                                               |
-| Aisle facade tests   |  54   | written; see the migration report for the latest staging run and what is Blocked and why |
+| Framework self-tests |  64   | passing (`npm run verify`)                                                               |
+| Aisle facade tests   |  98   | written; see the migration report for the latest staging run and what is Blocked and why |
 
 [Backend open questions](docs/backend-open-questions.md) · [Coverage matrix](docs/coverage-matrix.md) ·
 [Pending placeholders](PENDING-PLACEHOLDERS.md) · [Test cases (Excel)](docs/test-cases.xlsx) ·

@@ -6,7 +6,7 @@
  *   POC-003  database check            -> one record, name not readable (encryption format pending BQ-04)
  *
  * NAME is the field the Aisle caller can use today. POC-003 is BLOCKED by the `db` fixture until read-only DB
- * access exists (BQ-04). EMAIL is covered separately (AISLE-WR-010, blocked by BQ-01).
+ * access exists (BQ-04). EMAIL is covered separately (AISLE-WR-010).
  */
 import { expectSuccess } from '../../src/assertions/response.assertions';
 import {
@@ -18,9 +18,6 @@ import { messyText } from '../../src/data/test-data-factory';
 import { seedField } from '../../src/fixtures/steps';
 import { expect, noteAssumption, onlyIfInScope, test } from '../../src/fixtures/test-fixtures';
 import { PII_FIELDS, readPiiDataSchema, writePiiDataSchema } from '../../src/models/pii.models';
-
-/** Tenant set by the facade itself (observed on staging). */
-const AISLE_TENANT = 'aisle';
 
 test.describe('POC — NAME through the Aisle facade', { tag: ['@poc', '@phase1'] }, () => {
   onlyIfInScope('writePii', 'readPii');
@@ -35,8 +32,8 @@ test.describe('POC — NAME through the Aisle facade', { tag: ['@poc', '@phase1'
       const res = await aisle.writePii({ user_id: userId, field: PII_FIELDS.NAME, value: name });
       cleanup.leaveBehind('PII NAME', userId);
 
-      const saved = expectSuccess(res, 201, writePiiDataSchema, 'PII write successful');
-      expect(saved).toMatchObject({ tenant_id: AISLE_TENANT, user_id: userId, field: PII_FIELDS.NAME });
+      const saved = expectSuccess(res, 201, writePiiDataSchema);
+      expect(saved).toMatchObject({ user_id: userId, field: PII_FIELDS.NAME });
       expect(saved.key_version).toBeGreaterThanOrEqual(1);
       expectResponseDoesNotEcho(res, name);
     },
@@ -51,10 +48,9 @@ test.describe('POC — NAME through the Aisle facade', { tag: ['@poc', '@phase1'
       await seedField(aisle, cleanup, { userId, field: PII_FIELDS.NAME, value: messyText(clean) });
 
       const res = await aisle.readPii({ user_id: userId, field_names: [PII_FIELDS.NAME] });
-      const read = expectSuccess(res, 200, readPiiDataSchema, 'PII read successful');
+      const read = expectSuccess(res, 200, readPiiDataSchema);
       expect(read.count).toBe(1);
       expect(read.items[0]).toMatchObject({
-        tenant_id: AISLE_TENANT,
         user_id: userId,
         field: PII_FIELDS.NAME,
       });

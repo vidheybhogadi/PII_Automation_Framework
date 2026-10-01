@@ -30,8 +30,21 @@ function describe(res: ApiResponse): string {
   return `${res.summary()}${serverMessage}`;
 }
 
+/**
+ * Cross-cutting rule for every negative / invalid-input test: the facade must answer a bad request itself
+ * (4xx) and never crash (5xx — e.g. 500, 502, 522). Checked first, so a server error is reported as such.
+ */
+export function expectNoServerError(res: ApiResponse, context = ''): void {
+  expect(
+    res.status < 500,
+    `${context ? `${context}: ` : ''}server error (5xx) instead of a clean refusal: ${res.summary()}`,
+  ).toBe(true);
+}
+
 export function expectStatus(res: ApiResponse, expected: number | readonly number[], context = ''): void {
   const allowed = Array.isArray(expected) ? expected : [expected];
+  // Whenever a non-5xx answer is expected (every negative test), a 5xx is reported as a server error first.
+  if (allowed.every((st) => st < 500)) expectNoServerError(res, context);
   expect(
     allowed.includes(res.status),
     `${context ? `${context}: ` : ''}expected HTTP ${allowed.join(' or ')} but got ${describe(res)}`,
@@ -87,6 +100,7 @@ export function expectError(
 
 /** HTTP 422 in either known shape (FastAPI `detail` list — observed — or the error envelope). */
 export function expectRequestValidationError(res: ApiResponse): 'fastapi-detail' | 'error-envelope' {
+  expectNoServerError(res);
   expectStatus(res, 422);
   const body = res.json();
   if (fastApiValidationSchema.safeParse(body).success) return 'fastapi-detail';
@@ -99,6 +113,7 @@ export function expectRequestValidationError(res: ApiResponse): 'fastapi-detail'
  * 401, Content-Type text/html, empty body. The body must never contain JSON data (and so no personal data).
  */
 export function expectUnauthorized(res: ApiResponse, context = ''): void {
+  expectNoServerError(res, context);
   expectStatus(res, 401, context);
   const body = res.json() as { data?: unknown } | undefined;
   expect(
@@ -112,6 +127,7 @@ export function expectUnauthorized(res: ApiResponse, context = ''): void {
  * Observed on staging: `{"detail":[{"type","loc":["body","<field>"],"msg","input",…}]}`.
  */
 export function expectValidationError(res: ApiResponse, field?: string): void {
+  expectNoServerError(res);
   expectStatus(res, 422);
   expect(
     fastApiValidationSchema.safeParse(res.json()).success,
@@ -135,6 +151,7 @@ export function expectRejected(
   allowedStatuses: readonly number[],
   questionRef: string,
 ): void {
+  expectNoServerError(res, `Rejection (${questionRef})`);
   expectStatus(res, allowedStatuses, `Rejection (exact status pending ${questionRef})`);
   if (res.status === 422) {
     expectRequestValidationError(res);
@@ -160,4 +177,20 @@ export function expectExactKeys(obj: unknown, documentedKeys: readonly string[],
     missing: [],
     extra: [],
   });
+}
+
+/**
+ * A refused request carries no `data` (and so no personal data): the body is empty, not JSON, or has
+ * `data` null/absent. Safe message: never prints the body.
+ */
+export function expectNoData(res: ApiResponse, context = ''): void {
+  const body = res.json() as { data?: unknown } | undefined;
+  expect(
+    body === undefined ||
+      typeof body !== 'object' ||
+      body === null ||
+      body.data === undefined ||
+      body.data === null,
+    `${context ? `${context}: ` : ''}refused reply must not contain data (${res.summary()})`,
+  ).toBe(true);
 }

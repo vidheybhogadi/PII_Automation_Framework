@@ -9,6 +9,7 @@
  * Secrets (the Aisle test token, the DB password) are wrapped in `Secret` so they cannot leak through
  * logs, reports, error messages or `console.log(config)`.
  */
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { ENDPOINT_KEYS, type EndpointKey } from '../clients/endpoints';
 import { registerSecretValue } from '../utils/redaction';
@@ -184,8 +185,19 @@ export function requireValue<T>(value: T | undefined, envVar: string, purpose: s
   return value;
 }
 
-/** True when read-only DB validation is configured (engine, connection and query catalog). */
+/**
+ * True when read-only DB validation is configured: engine, connection AND an existing query catalog
+ * (config/db-queries.json with the confirmed table/column names). Without the catalog the DB tests stay BLOCKED.
+ */
 export function isDbConfigured(config: FrameworkConfig): boolean {
   const d = config.db;
-  return Boolean(d.engine !== 'none' && d.host && d.database && d.user && d.password && d.queriesFile);
+  return Boolean(
+    d.engine !== 'none' &&
+    d.host &&
+    d.database &&
+    d.user &&
+    d.password &&
+    d.queriesFile &&
+    existsSync(d.queriesFile),
+  );
 }

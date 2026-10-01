@@ -249,6 +249,14 @@ export function noteAssumption(id: string, text: string): void {
 }
 
 /**
+ * Record where an expected result comes from when no open question is attached (the behaviour was observed on
+ * staging and the related question was closed), e.g. noteObserved('2026-10-01', 'a 1 MB body → 413').
+ */
+export function noteObserved(date: string, text: string): void {
+  test.info().annotations.push({ type: 'assumption', description: `Observed on staging ${date}: ${text}` });
+}
+
+/**
  * Skip a describe block when its endpoints are excluded via PII_ENDPOINTS_IN_SCOPE.
  * The skip reason is shown in the report, so exclusion is explicit — never silent.
  */

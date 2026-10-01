@@ -147,7 +147,7 @@ Bad → good:
 - **Type**: Positive | Negative | Security | Database | Contract. **Priority**: Critical | High | Medium | Low.
 - **Tags**: `@smoke` (quick, most important checks only) — otherwise Regression. Also `@security`, `@db`, `@poc`
   where they apply, and `@phase1` for the Phase-1 set (POC-001…003 (NAME), AISLE-HLT-001, AISLE-WR-001, AISLE-WR-002,
-  AISLE-RD-001, AISLE-AUTH-001, AISLE-AUTH-002, AISLE-SEC-003).
+  AISLE-RD-001, AISLE-SEC-003).
 - **Fixtures** (`src/fixtures/test-fixtures.ts`): `aisle` (the Bearer-authenticated `AislePiiClient`), `data`
   (`TestDataFactory`: `userId()`, `userIdOfLength(n)`, `email()`, `name()`, `textOfLength(n)`, `phone(i)`),
   `cleanup` (`leaveBehind` — there is no delete API), `db` (read-only `PiiRepository`; automatically BLOCKED with

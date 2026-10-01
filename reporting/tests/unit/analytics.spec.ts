@@ -374,7 +374,7 @@ test.describe('REPORT analytics', () => {
 
     // FAIL + `security-finding` annotation → Security finding; the remark uses the annotation text only.
     const findingDesc = 'BQ-08: 422 errors echo the submitted value and internal tenant_id';
-    const finding = t('AISLE-SEC-001', 'FAIL', {
+    const finding = t('AISLE-SEC-901', 'FAIL', {
       annotations: [{ type: 'security-finding', description: findingDesc }],
       errors: [{ message: 'expected error body not to contain the submitted value [REDACTED]' }],
     });
@@ -423,7 +423,7 @@ test.describe('REPORT analytics', () => {
   });
 
   test('RPT-AN-018 a security finding still fails the gates and the verdict; blocked is not a failure', () => {
-    const finding = t('AISLE-SEC-001', 'FAIL', {
+    const finding = t('AISLE-SEC-901', 'FAIL', {
       area: 'responseSecurity',
       annotations: [{ type: 'security-finding', description: 'BQ-08: echo' }],
     });
@@ -447,13 +447,13 @@ test.describe('REPORT analytics', () => {
       ['AISLE-NRM-001', 'PII-NRM-001'],
       ['AISLE-TR-001', 'PII-TR-001'],
       ['AISLE-FT-001', 'PII-FT-001'],
-      ['AISLE-AUTH-001', 'PII-AUTH-001'],
-      ['AISLE-SEC-001', 'PII-SEC-001'],
+      ['AISLE-AUTH-901', 'PII-AUTH-001'],
+      ['AISLE-SEC-901', 'PII-SEC-001'],
       ['AISLE-CON-001', 'PII-CON-001'],
       ['AISLE-DB-001', 'PII-DB-001'],
     ])
       expect(areaForId(a as string), a).toBe(areaForId(b as string));
-    expect(areaForId('AISLE-SEC-001')).toBe('responseSecurity');
+    expect(areaForId('AISLE-SEC-901')).toBe('responseSecurity');
     expect(areaForId('POC-001')).toBe('poc');
     expect(areaForId('PII-AZ-001')).toBe('authorization');
     expect(areaForId('AISLE-XYZ-001')).toBe('other');

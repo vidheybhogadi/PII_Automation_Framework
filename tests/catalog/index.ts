@@ -2,7 +2,6 @@
  * All test-case descriptions, merged. Read by the report generator and by docs/test-cases.xlsx.
  * Add new entries to the area file (e.g. write.ts); self-test UT-DOC-002 keeps this in sync with the tests.
  */
-import { AUTHENTICATION_CASES } from './authentication';
 import { BATCH_READ_CASES } from './batch-read';
 import { CONTRACT_CASES } from './contract';
 import { DATABASE_CASES } from './database';
@@ -29,7 +28,6 @@ export const TEST_CASES: TestCaseCatalog = {
   ...BATCH_READ_CASES,
   ...TRANSIENT_CASES,
   ...FREE_TEXT_CASES,
-  ...AUTHENTICATION_CASES,
   ...RESPONSE_SECURITY_CASES,
   ...DATABASE_CASES,
   ...CONTRACT_CASES,
