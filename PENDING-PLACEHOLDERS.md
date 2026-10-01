@@ -95,39 +95,21 @@ Blocked only if staging still denies access (403) or the setting is missing — 
 
 | ID | Status | Question |
 |---|---|---|
-| BQ-21 | Observed | (Q1) Does the Aisle caller have READ permission for NAME? |
-| BQ-22 | Observed | (Q2) Does the Aisle caller have WRITE permission for NAME? |
 | BQ-01 | Open | (Q3) Please grant the Aisle caller READ, WRITE, SEARCH and BULK_READ on EMAIL, and confirm EMAIL normalization (trim + lower-case?). |
 | BQ-03 | Open | (Q4) Does the Aisle caller have READ/WRITE on PHONE? Please provide approved test phone numbers (nobody's real number); `+91 98765 43210` from the … |
 | BQ-23 | Open | (Q5) Which SEARCH permissions are enabled for the Aisle caller (which fields)? |
-| BQ-24 | Observed | (Q6) Which BULK_READ permissions are enabled (which fields)? |
 | BQ-02 | Open | Are temporary phones and free-text encryption keys meant to be used through the facade? If yes, please grant that access. |
-| BQ-25 | Observed | (Q7) What are the expected HTTP status codes for success? |
-| BQ-09 | Observed | (Q8) Which status codes and error format are the contract for validation errors? Today: 401 empty `text/html`; 400 `error` as a string; 403/404 `er… |
-| BQ-26 | Observed | (Q9) What is the expected response for a user / field that does not exist? |
-| BQ-27 | Observed | (Q10) What are the supported field names? |
-| BQ-12 | Observed | What should an unsupported field name return? Is 403 intended, or should it be a validation error (400/422)? |
-| BQ-05 | Observed | (Q11, Q13) Are the observed limits the contract? `user_id` 1–128, `value` 1–1,024, `field_names` ≥ 1, bulk `fields` ≥ 1, search `limit` 1–100. Is t… |
-| BQ-18 | Observed | (Q12) What is the bulk-read size limit? 201 IDs → 422 `too_long` (max 200), but exactly 200 IDs returned 403 `AUTHORIZATION_DENIED`. Why 403? |
 | BQ-28 | Open | (Q14) What are the temporary-phone TTL (`ttl_seconds`) limits? |
 | BQ-13 | Open | Search with no match: 200 with `count: 0`, or 404? |
-| BQ-14 | Observed | Permission is checked before value validation (an invalid email returns 403, not a validation error). Is that intended? |
-| BQ-19 | Observed | Duplicate entries are not de-duplicated: `field_names: ["NAME","NAME"]` and `user_ids: [u,u]` each return two items. Intended? |
-| BQ-06 | Observed | (Q15) What should happen if the client sends `tenant_id`: ignored (current behaviour) or rejected? |
 | BQ-07 | Open | (Q16, Q17) What is the expected cross-user authorization behaviour? Is the Aisle test token allowed to read and write arbitrary user IDs? |
 | BQ-08 | Open | (Q18) Security finding: should error responses ever contain submitted PII? Today 422 errors echo the request in `detail[].input` — the submitted va… |
 | BQ-29 | Open | (Q19) Which internal PII-service details must never reach the QA-facing response? Are `tenant_id` and `key_version` in success responses intended? |
-| BQ-17 | Observed | The facade accepts the token without "Bearer" (and with lower-case "bearer"). Intended? |
 | BQ-04 | Open | (Q20–Q23) Which DB/table stores the PII? Which columns hold tenant, user, field and stored value (and key version)? What is the encryption / storag… |
 | BQ-30 | Open | (Q24) What DB validation is officially expected from QA (existence, association, protected storage, replacement, audit)? |
 | BQ-11 | Open | (Q25) How can QA obtain an expired (or revoked) Aisle test token for negative testing? |
 | BQ-31 | Open | (Q26) Are there separate QA tokens for different authorization scenarios (e.g. read-only)? |
 | BQ-32 | Open | (Q27, Q28) Is NAME search supported? The only documented search endpoint is `/api/v1/pii-test/EMAIL/search`; QA keeps the EMAIL search tests separa… |
 | BQ-10 | Open | Is there an approved way to purge run-prefixed synthetic test data (`qa-auto-…`) on staging? There is no delete API. |
-| BQ-15 | Observed | The first health call took ~14 s (later 100–250 ms). Cold start? Which timeout should QA use? |
-| BQ-16 | Observed | Is `testa2.aisle.co` the long-term QA target? (`testa3.aisle.co` does not resolve.) |
-| BQ-20 | Observed | `POST /api/v1/pii-test/health/ready` (wrong method) and unknown paths return a 502 HTML page instead of 405 / 404. Intended? |
-| BQ-33 | Observed | Staging availability: on 2026-09-30 every facade call (even without a token) returned the gateway page "502: Bad gateway". Planned downtime? |
 
 ## 5. CI settings (GitHub environment)
 
