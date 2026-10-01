@@ -11,6 +11,7 @@ import {
 } from '../../src/assertions/response.assertions';
 import {
   containsPlaintext,
+  expectBytesNotStored,
   expectNoSecretsIn,
   expectNoStore,
   expectNotStoredAsPlaintext,
@@ -193,5 +194,19 @@ test.describe('UNIT assertions', () => {
     );
     expectNoData(response(404, { status: false, data: null, error: { code: 'X', message: 'm' } }));
     expect(failureMessage(() => expectNoData(response(405, readOk)))).not.toContain(SECRET_EMAIL);
+  });
+
+  test('UT-AST-012 Secret key bytes are found in stored data as raw bytes, Base64 or hex, without printing them', () => {
+    const secret = Buffer.alloc(32, 7);
+    expectBytesNotStored(Buffer.from([1, 2, 3, 4]), secret, 'stored');
+    for (const stored of [
+      Buffer.concat([Buffer.from([9]), secret]),
+      `prefix:${secret.toString('base64')}`,
+      Buffer.from(secret.toString('hex').toUpperCase(), 'utf8'),
+    ]) {
+      const message = failureMessage(() => expectBytesNotStored(stored, secret, 'stored'));
+      expect(message).toContain('stored data contains the secret');
+      expect(message).not.toContain(secret.toString('base64'));
+    }
   });
 });

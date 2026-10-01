@@ -1,18 +1,27 @@
 {
   "$comment": [
     "TEMPLATE for READ-ONLY DB validation of the Aisle → PII service integration. Copy to config/db-queries.json (git-ignored) and replace every PENDING_… placeholder with the table/column names Dev confirms (docs/backend-open-questions.md BQ-04). A query that still contains PENDING_ is treated as not configured and never runs; the DB tests show as BLOCKED until then.",
-    "Nothing here is assumed: the PII DB schema has not been confirmed for the Aisle facade. (An older PII-service tech doc named user_pii_field_value(user_id, field_name, ciphertext, key_version) — ask Dev whether that is still correct.)",
+    "Target ONLY the PII service's own database (design: pii_db). NEVER the Aisle app database (aisleweb): it is out of scope and holds real users' data.",
+    "Nothing here is verified. The PII-service design (tech doc v3) names user_pii_field_value(user_id, field_name, ciphertext, nonce, auth_tag, key_version, lookup_token, created_at, updated_at) and pii_key_registry(key_version, status, …); it has no tenant column. Free-text key storage is undocumented (BQ-45). Confirm every name with Dev.",
+    "findKeyRegistry may select ONLY the key version and status: never '*' and never the wrapped key (DEK) columns — the framework rejects such a query.",
     "The tenant is set by Aisle (observed value \"aisle\"). Tests pass the tenant_id taken from the API response, never one chosen by QA.",
-    "Rules: read-only SELECT/WITH only (DELETE/UPDATE/INSERT/DROP/TRUNCATE are rejected by the framework); one statement; $1.. placeholders for postgres; 'params' lists named parameters in placeholder order; each query MUST return the column aliases in docs/database-setup.md."
+    "Rules: read-only SELECT/WITH only (DELETE/UPDATE/INSERT/DROP/TRUNCATE are rejected by the framework); one statement; $1.. placeholders for postgres; 'params' lists named parameters in placeholder order; each query MUST return the column aliases in docs/database-setup.md.",
+    "The audit trail (MongoDB audit_trails) is not read through this SQL file; see src/db/audit-repository.ts (BQ-30)."
   ],
   "engine": "postgres",
   "queries": {
     "findPiiRecords": {
-      "sql": "SELECT PENDING_TENANT_COL AS tenant_id, PENDING_USER_COL AS user_id, PENDING_FIELD_COL AS field, PENDING_CIPHERTEXT_COL AS encrypted_value, PENDING_KEY_VERSION_COL AS key_version FROM PENDING_PII_TABLE WHERE PENDING_TENANT_COL = $1 AND PENDING_USER_COL = $2 AND PENDING_FIELD_COL = $3",
+      "sql": "SELECT PENDING_TENANT_COL AS tenant_id, PENDING_USER_COL AS user_id, PENDING_FIELD_COL AS field, PENDING_CIPHERTEXT_COL AS encrypted_value, PENDING_KEY_VERSION_COL AS key_version, PENDING_NONCE_COL AS nonce, PENDING_AUTH_TAG_COL AS auth_tag, PENDING_LOOKUP_TOKEN_COL AS lookup_token, PENDING_CREATED_AT_COL AS created_at, PENDING_UPDATED_AT_COL AS updated_at FROM PENDING_PII_TABLE WHERE PENDING_TENANT_COL = $1 AND PENDING_USER_COL = $2 AND PENDING_FIELD_COL = $3",
       "params": ["tenant_id", "user_id", "field"]
     },
     "findTransientPhone": null,
-    "findFreeTextKey": null,
-    "findAuditEventsByRequestId": null
+    "findFreeTextKey": {
+      "sql": "SELECT PENDING_FT_STATUS_COL AS status, PENDING_FT_CREATED_AT_COL AS created_at, PENDING_FT_REVOKED_AT_COL AS revoked_at, PENDING_FT_KEY_MATERIAL_COL AS encrypted_key_material FROM PENDING_FREE_TEXT_KEY_TABLE WHERE PENDING_FT_KEY_ID_COL = $1",
+      "params": ["key_id"]
+    },
+    "findKeyRegistry": {
+      "sql": "SELECT PENDING_KEY_VERSION_COL AS key_version, PENDING_KEY_STATUS_COL AS status FROM PENDING_KEY_REGISTRY_TABLE",
+      "params": []
+    }
   }
 }

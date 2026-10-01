@@ -20,6 +20,7 @@
     "test:debug": "PII_LOG_TO_CONSOLE=true LOG_LEVEL=debug playwright test --project=api --workers=1 --retries=0 --reporter=list",
     "test:list": "playwright test --list",
     "check-env": "tsx scripts/check-env.ts",
+    "ci:sync-env": "tsx scripts/sync-ci-env.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p reporting/dashboard && tsc --noEmit -p reporting/tests",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

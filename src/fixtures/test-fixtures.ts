@@ -22,6 +22,7 @@ import type { EndpointKey } from '../clients/endpoints';
 import { assertIntegrationConfig, isDbConfigured, loadConfig, type FrameworkConfig } from '../config/config';
 import { TestDataFactory } from '../data/test-data-factory';
 import { generateRunId } from '../data/test-identifiers';
+import { AUDIT_BLOCKER, type AuditRepository } from '../db/audit-repository';
 import { createDbAdapter } from '../db/db-client';
 import { loadQueryCatalog, PiiRepository } from '../db/pii-repository';
 import { ERROR_CODES } from '../models/common.models';
@@ -48,6 +49,11 @@ export interface TestFixtures {
    * never failed and never silently skipped.
    */
   db: PiiRepository;
+  /**
+   * Read-only audit-trail repository. No audit source exists yet, so the test is marked BLOCKED (BQ-30) —
+   * never failed and never silently skipped.
+   */
+  audit: AuditRepository;
   /** Automatic: fails the test with a clear, recorded reason when the worker's readiness check failed. */
   serviceReady: void;
 }
@@ -58,6 +64,8 @@ export interface WorkerFixtures {
   preflight: PreflightResult;
   /** Read-only DB repository, or `undefined` while DB access is not configured. */
   dbRepository: PiiRepository | undefined;
+  /** Read-only audit repository, or `undefined` while no audit source is configured (BQ-30). */
+  auditRepository: AuditRepository | undefined;
 }
 
 /** Outcome of the once-per-worker readiness check (GET /api/v1/pii-test/health/ready). */
@@ -141,6 +149,27 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       return;
     }
     await use(dbRepository);
+  },
+
+  // No audit source is implemented yet: QA has no read-only access to the audit trail (BQ-30). When access is
+  // granted, create the read-only implementation here (see src/db/audit-repository.ts).
+  auditRepository: [
+    async ({}, use) => {
+      await use(undefined);
+    },
+    { scope: 'worker' },
+  ],
+
+  audit: async ({ auditRepository }, use, testInfo) => {
+    if (!auditRepository) {
+      testInfo.annotations.push({
+        type: 'blocked',
+        description: `${AUDIT_BLOCKER.id}: ${AUDIT_BLOCKER.reason}`,
+      });
+      testInfo.skip(true, `BLOCKED (${AUDIT_BLOCKER.id}): ${AUDIT_BLOCKER.reason}`);
+      return;
+    }
+    await use(auditRepository);
   },
 
   log: async ({ config }, use, testInfo) => {

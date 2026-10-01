@@ -139,19 +139,56 @@ erDiagram
 
 ## 3. Which endpoint uses which table
 
-| Facade endpoint                         | What happens in the DB                                                                                                     | Tables                                                                                  |
-| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `GET /health/ready`                     | Readiness: configuration, containers, Postgres, keys, canary, replay store, audit. KMS and Mongo do not block readiness.   | (connectivity only)                                                                     |
-| `POST /pii-test` (write)                | **Upsert one row** for `(user_id, field)`                                                                                  | **writes** `user_pii_field_value` · reads the 4 rule tables · `idempotency_key` if used |
-| `POST /pii-test/read`                   | Selects the user's rows, then decrypts each one with its own `key_version`                                                 | reads `user_pii_field_value`                                                            |
-| `POST /pii-test/batch/read`             | **One** query: `WHERE user_id IN (…) AND field_name IN (…)`. Missing fields are left out.                                  | reads `user_pii_field_value` (needs `can_bulk_read` for every field)                    |
-| `POST /pii-test/{field}/search`         | Computes the lookup token and finds matching `user_id`s, `ORDER BY created_at LIMIT n`. Decrypts only if `include_values`. | reads `user_pii_field_value.lookup_token`                                               |
-| `POST /transient/phones` (+ resolve)    | Temporary phone mapping with a TTL                                                                                         | **In no version of the design**: storage unknown (BQ-02, BQ-04)                         |
-| `POST /transient/phones/promote`        | Stores the phone permanently as `PHONE` PII                                                                                | `user_pii_field_value` (field `PHONE`) per the API doc. The temporary store is unknown. |
-| `POST /free-text/keys` (+ read, revoke) | Caller-owned free-text encryption keys                                                                                     | **In no version of the design**: storage unknown (BQ-04)                                |
-| _every call above_                      | One audit document (see §6)                                                                                                | **MongoDB** `audit_trails` (not Postgres)                                               |
+| Facade endpoint                         | What happens in the DB                                                                                                                | Tables                                                                                  |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `GET /health/ready`                     | Readiness: configuration, containers, Postgres, keys, canary, replay store, audit. KMS and Mongo do not block readiness.              | (connectivity only)                                                                     |
+| `POST /pii-test` (write)                | **Upsert one row** for `(user_id, field)`                                                                                             | **writes** `user_pii_field_value` · reads the 4 rule tables · `idempotency_key` if used |
+| `POST /pii-test/read`                   | Selects the user's rows, then decrypts each one with its own `key_version`                                                            | reads `user_pii_field_value`                                                            |
+| `POST /pii-test/batch/read`             | **One** query: `WHERE user_id IN (…) AND field_name IN (…)`. Missing fields are left out.                                             | reads `user_pii_field_value` (needs `can_bulk_read` for every field)                    |
+| `POST /pii-test/{field}/search`         | Computes the lookup token and finds matching `user_id`s, `ORDER BY created_at LIMIT n`. Decrypts only if `include_values`.            | reads `user_pii_field_value.lookup_token`                                               |
+| `POST /transient/phones` (+ resolve)    | Temporary phone mapping with a TTL                                                                                                    | **In no version of the design**: storage unknown (BQ-02, BQ-04)                         |
+| `POST /transient/phones/promote`        | Stores the phone permanently as `PHONE` PII                                                                                           | `user_pii_field_value` (field `PHONE`) per the API doc. The temporary store is unknown. |
+| `POST /free-text/keys` (+ read, revoke) | Creates / returns / revokes an encryption **key**. **No text is ever sent** (see [§3.1](#31-free-text-the-pii-db-holds-only-the-key)) | Key in the PII DB, table unknown (BQ-45). The text itself is in aisleweb (BQ-46).       |
+| _every call above_                      | One audit document (see §6)                                                                                                           | **MongoDB** `audit_trails` (not Postgres)                                               |
 
 There are **no update or delete endpoints** in the design, so a value can be replaced but never removed (BQ-10).
+
+### 3.1 Free text: the PII DB holds only the key
+
+You cannot save free text (a bio, a chat message) through the PII service: there is no endpoint for it. The free-text
+endpoints manage **keys**:
+
+| Endpoint                      | You send | You get back                                                                         |
+| ----------------------------- | -------- | ------------------------------------------------------------------------------------ |
+| `POST /free-text/keys`        | `{}`     | `key_id` (UUID), **`key`** (raw 256-bit AES key), `algorithm: AES-256-GCM`, `ACTIVE` |
+| `POST /free-text/keys/read`   | `key_id` | The same key again (only while it is `ACTIVE`)                                       |
+| `POST /free-text/keys/revoke` | `key_id` | `status: REVOKED`, `revoked_at`                                                      |
+
+The most likely flow, using a bio as the example. **Steps 2, 3, 5 and 6 are QA's reading and are not yet confirmed (BQ-46, BQ-47):**
+
+```
+          PII service (PII DB)                          Aisle (aisleweb)
+1. Aisle: "give me a key"  ──►  creates key K1
+                           ◄──  key_id=K1 + key
+2.                                                      Aisle encrypts the bio with that key
+3.                                                      Aisle saves bio_ciphertext + bio_key_id = K1   ◄── the link
+── later, to show the bio ──
+4. Aisle: "give me key K1" ──►  checks K1 is ACTIVE, returns it
+5.                                                      Aisle decrypts the bio
+── account deleted (DPDP erasure) ──
+6. Aisle: "revoke K1"      ──►  K1 → REVOKED          ciphertext stays, but can never be decrypted again
+```
+
+Step 6 is called **crypto-shredding**. Long texts stay in Aisle's own database, and the PII service controls whether they can ever be read.
+
+| Data type            | Who encrypts                                | Where the encrypted value lives    | What links the two DBs | What the PII DB holds |
+| -------------------- | ------------------------------------------- | ---------------------------------- | ---------------------- | --------------------- |
+| Name / email / phone | PII service                                 | **PII DB**, `user_pii_field_value` | `user_id`              | The encrypted value   |
+| Free text            | **Aisle** (with a key from the PII service) | **aisleweb**                       | **`key_id`**           | Only the key          |
+
+None of the design docs (v1–v3) mentions free-text keys. The Jeevansathi reference keeps free text unencrypted, so
+Aisle has chosen a stronger model here. Open questions: **BQ-45** (key table), **BQ-46** (text storage and key
+granularity), **BQ-47** (revoke = erasure).
 
 ---
 
@@ -234,7 +271,8 @@ This matches the design: the PII service has **its own** database (`pii_db`), se
 
 1. Host, database name and a **read-only** user for the PII service's own PostgreSQL on staging. The user needs SELECT on the ciphertext columns (see §2.7).
 2. Confirm the real columns of `user_pii_field_value`: where `tenant_id` lives, and that `user_id` is VARCHAR(128). Confirm the field names (`NAME` vs `FIRST_NAME`/`LAST_NAME`).
-3. Which tables hold **transient phones** and **free-text keys**? Neither appears in any version of the design.
+3. Which tables hold **transient phones** and **free-text keys**? Neither appears in any version of the design. For
+   free text, see BQ-45 to BQ-47.
 4. Is `idempotency_key` in use?
 5. Read access to MongoDB `audit_trails` (BQ-30).
 6. Confirm the DB server behind `aisleweb` is staging (several `_production` database names are on it).

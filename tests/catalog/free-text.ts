@@ -1,7 +1,7 @@
 import type { TestCaseCatalog } from './types';
 
 const FREE_TEXT_ACCESS =
-  'Needs free-text key access for the Aisle caller (granted on 2026-10-01, question BQ-02). If a call is refused with 403 (access denied), the test is marked Blocked and the report shows that real reply.';
+  'Needs free-text key access for the Aisle caller (granted on 2026-10-01). If a call is refused with 403 (access denied), the test is marked Blocked and the report shows that real reply.';
 
 export const FREE_TEXT_CASES: TestCaseCatalog = {
   'AISLE-FT-001': {
@@ -13,7 +13,7 @@ export const FREE_TEXT_CASES: TestCaseCatalog = {
       'Search our test log for the key',
     ],
     expected:
-      '201 Created with a key ID and a 256-bit key (32 bytes, written in Base64 characters). The header “Cache-Control: no-store” (tells browsers and proxies not to keep a copy) is present. The key does not appear in our logs. To be confirmed by Dev (question BQ-02).',
+      '201 Created with a key ID and a 256-bit key (32 bytes, written in Base64 characters). The header “Cache-Control: no-store” (tells browsers and proxies not to keep a copy) is present. The key does not appear in our logs. Seen on staging on 2026-10-01.',
     request: 'POST /api/v1/pii-test/free-text/keys {}',
     validation: [
       'Status is 201',
@@ -30,7 +30,7 @@ export const FREE_TEXT_CASES: TestCaseCatalog = {
     why: 'Encrypted notes can only be opened again with exactly the same key.',
     steps: ['Create a key', 'Send the read-key request with its key ID', 'Compare the two keys'],
     expected:
-      '200 OK with the same key, and the header “Cache-Control: no-store” (tells browsers and proxies not to keep a copy). To be confirmed by Dev (question BQ-02).',
+      '200 OK with the same key, and the header “Cache-Control: no-store” (tells browsers and proxies not to keep a copy). Seen on staging on 2026-10-01.',
     request:
       'POST /api/v1/pii-test/free-text/keys {} · POST /api/v1/pii-test/free-text/keys/read {"key_id":"<key ID>"}',
     validation: [
@@ -44,7 +44,7 @@ export const FREE_TEXT_CASES: TestCaseCatalog = {
   },
   'AISLE-FT-003': {
     what: 'Creates a fake free-text key (a secret used to encrypt notes) and revokes it (switches it off for good). Then tries to read that key, and also tries to read a made-up key ID that never existed.',
-    why: 'Revoking must really switch a key off, for example after it leaked. Asking for a key that does not exist must not return anything.',
+    why: 'Revoking must really switch a key off, for example after it leaked. Asking for a key that does not exist must not return anything. Revoking is also expected to be how free text is erased (crypto-shredding: the encrypted text stays in Aisle’s database, but can never be decrypted again because the key is gone); to be confirmed by Dev (question BQ-47).',
     steps: [
       'Create a fake key',
       'Revoke it and check the reply',
@@ -52,7 +52,7 @@ export const FREE_TEXT_CASES: TestCaseCatalog = {
       'Try to read a made-up key ID',
     ],
     expected:
-      'Revoke returns 200 OK with status REVOKED. Reading the revoked key returns 404 Not Found (the key is gone). Reading the made-up key ID also returns 404 Not Found. Seen on staging on 2026-10-01; Dev still to confirm it is intended (question BQ-02). Revoking the same key a second time is checked separately in AISLE-FT-004.',
+      'Revoke returns 200 OK with status REVOKED. Reading the revoked key returns 404 Not Found (the key is gone). Reading the made-up key ID also returns 404 Not Found. Seen on staging on 2026-10-01. Revoking the same key a second time is checked separately in AISLE-FT-004.',
     request:
       'POST /api/v1/pii-test/free-text/keys {} · POST /api/v1/pii-test/free-text/keys/revoke {"key_id":"<key ID>"} · POST /api/v1/pii-test/free-text/keys/read {"key_id":"<same key ID>"} · POST /api/v1/pii-test/free-text/keys/read {"key_id":"<made-up ID>"}',
     validation: [
@@ -121,5 +121,30 @@ export const FREE_TEXT_CASES: TestCaseCatalog = {
     type: 'Negative',
     priority: 'Medium',
     preconditions: FREE_TEXT_ACCESS,
+  },
+  'AISLE-FT-008': {
+    what: 'Creates a free-text key (a secret used to encrypt long texts such as a bio). On the test machine, uses it to encrypt a fake bio with AES-256-GCM (the encryption method named in the reply) and a fresh random 12-byte nonce (a number used once). Then reads the key again by its key ID and decrypts the fake bio with the key it got back.',
+    why: 'This is how Aisle will protect long texts: encrypt with the key now, and decrypt later with the same key fetched from the service. If the key returned later did not work, users’ texts could never be shown again.',
+    steps: [
+      'Create a free-text key and check the reply',
+      'Encrypt a fake bio on the test machine with that key',
+      'Read the key again by its key ID',
+      'Decrypt the fake bio with the re-read key',
+      'Compare the result with the original fake bio',
+    ],
+    expected:
+      'Create gets 201 Created with algorithm AES-256-GCM. Read gets 200 OK. Decryption succeeds (the tamper seal, which rejects wrong keys or changed data, is accepted), and the text equals the original fake bio exactly. The key is never printed; it is only compared through a hash. The encryption is done by the test, not by the service: this proves the key the service hands out is usable and stays the same. Create and read were seen on staging on 2026-10-01.',
+    request:
+      'POST /api/v1/pii-test/free-text/keys {} · POST /api/v1/pii-test/free-text/keys/read {"key_id":"<key ID>"}',
+    validation: [
+      'Create is 201 with algorithm AES-256-GCM',
+      'Read is 200',
+      'Decryption with the re-read key succeeds',
+      'The decrypted text equals the original fake bio',
+    ],
+    type: 'Positive',
+    priority: 'Medium',
+    preconditions: FREE_TEXT_ACCESS,
+    endpoint: 'readFreeTextKey',
   },
 };

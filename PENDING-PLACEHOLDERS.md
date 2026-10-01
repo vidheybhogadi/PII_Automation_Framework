@@ -16,8 +16,8 @@ environment), then run `npm run check-env`.
 
 1. [ ] Temporary-phone access confirmed for the Aisle caller (BQ-02)
 2. [ ] Approved test phone numbers in AISLE_TEST_PHONES (provided 2026-10-01; keep them in .env) — section 1
-3. [ ] Read-only DB access and the PII table/column layout (BQ-04) — sections 1–2 (6 DB placeholders)
-4. [ ] Answers to the open questions behind 32 blockable tests — sections 3–4
+3. [ ] Read-only DB access and the PII table/column layout (BQ-04) — sections 1–2 (19 DB placeholders)
+4. [ ] Answers to the open questions behind 43 blockable tests — sections 3–4
 
 ## 1. Settings (`.env.example`)
 
@@ -37,12 +37,25 @@ contains `PENDING_` counts as not configured and never runs.
 
 | Placeholder | Where |
 |---|---|
-| `PENDING_TENANT_COL` | `config/db-queries.example.json:11` |
-| `PENDING_USER_COL` | `config/db-queries.example.json:11` |
-| `PENDING_FIELD_COL` | `config/db-queries.example.json:11` |
-| `PENDING_CIPHERTEXT_COL` | `config/db-queries.example.json:11` |
-| `PENDING_KEY_VERSION_COL` | `config/db-queries.example.json:11` |
-| `PENDING_PII_TABLE` | `config/db-queries.example.json:11` |
+| `PENDING_TENANT_COL` | `config/db-queries.example.json:14` |
+| `PENDING_USER_COL` | `config/db-queries.example.json:14` |
+| `PENDING_FIELD_COL` | `config/db-queries.example.json:14` |
+| `PENDING_CIPHERTEXT_COL` | `config/db-queries.example.json:14` |
+| `PENDING_KEY_VERSION_COL` | `config/db-queries.example.json:14` |
+| `PENDING_NONCE_COL` | `config/db-queries.example.json:14` |
+| `PENDING_AUTH_TAG_COL` | `config/db-queries.example.json:14` |
+| `PENDING_LOOKUP_TOKEN_COL` | `config/db-queries.example.json:14` |
+| `PENDING_CREATED_AT_COL` | `config/db-queries.example.json:14` |
+| `PENDING_UPDATED_AT_COL` | `config/db-queries.example.json:14` |
+| `PENDING_PII_TABLE` | `config/db-queries.example.json:14` |
+| `PENDING_FT_STATUS_COL` | `config/db-queries.example.json:19` |
+| `PENDING_FT_CREATED_AT_COL` | `config/db-queries.example.json:19` |
+| `PENDING_FT_REVOKED_AT_COL` | `config/db-queries.example.json:19` |
+| `PENDING_FT_KEY_MATERIAL_COL` | `config/db-queries.example.json:19` |
+| `PENDING_FREE_TEXT_KEY_TABLE` | `config/db-queries.example.json:19` |
+| `PENDING_FT_KEY_ID_COL` | `config/db-queries.example.json:19` |
+| `PENDING_KEY_STATUS_COL` | `config/db-queries.example.json:23` |
+| `PENDING_KEY_REGISTRY_TABLE` | `config/db-queries.example.json:23` |
 
 ## 3. Tests that can be blocked
 
@@ -55,11 +68,22 @@ Blocked only if staging still denies access (403) or the setting is missing — 
 | AISLE-BR-009 | BQ-38 | runtime | `tests/pii/batch-read.spec.ts:167` |
 | AISLE-BR-011 | BQ-42 | runtime | `tests/pii/batch-read.spec.ts:216` |
 | AISLE-BR-013 | BQ-18 | static | `tests/pii/batch-read.spec.ts:287` |
-| AISLE-DB-001 | BQ-04 | runtime | `tests/db/db-persistence.spec.ts:19` |
-| AISLE-DB-002 | BQ-04 | runtime | `tests/db/db-persistence.spec.ts:44` |
-| AISLE-DB-004 | BQ-04 | runtime | `tests/db/db-persistence.spec.ts:68` |
-| AISLE-DB-005 | BQ-04 | runtime | `tests/db/db-persistence.spec.ts:93` |
-| AISLE-FT-004 | BQ-33 | static | `tests/free-text/free-text-keys.spec.ts:83` |
+| AISLE-DB-001 | BQ-04 | runtime | `tests/db/db-persistence.spec.ts:141` |
+| AISLE-DB-002 | BQ-04 | runtime | `tests/db/db-persistence.spec.ts:166` |
+| AISLE-DB-004 | BQ-04 | runtime | `tests/db/db-persistence.spec.ts:190` |
+| AISLE-DB-005 | BQ-04 | runtime | `tests/db/db-persistence.spec.ts:215` |
+| AISLE-DB-006 | BQ-04 | runtime | `tests/db/db-persistence.spec.ts:228` |
+| AISLE-DB-007 | BQ-04 | runtime | `tests/db/db-persistence.spec.ts:245` |
+| AISLE-DB-008 | BQ-04 | runtime | `tests/db/db-persistence.spec.ts:275` |
+| AISLE-DB-009 | BQ-04 | runtime | `tests/db/db-persistence.spec.ts:304` |
+| AISLE-DB-010 | BQ-02, BQ-04 | runtime | `tests/db/db-persistence.spec.ts:338` |
+| AISLE-DB-011 | BQ-04 | runtime | `tests/db/db-persistence.spec.ts:363` |
+| AISLE-DB-012 | BQ-04 | runtime | `tests/db/db-persistence.spec.ts:394` |
+| AISLE-DB-013 | BQ-04, BQ-45 | runtime | `tests/db/db-persistence.spec.ts:439` |
+| AISLE-DB-014 | BQ-30 | runtime | `tests/db/db-persistence.spec.ts:466` |
+| AISLE-DB-015 | BQ-30 | runtime | `tests/db/db-persistence.spec.ts:526` |
+| AISLE-FT-003 | BQ-47 | runtime | `tests/free-text/free-text-keys.spec.ts:68` |
+| AISLE-FT-004 | BQ-33 | static | `tests/free-text/free-text-keys.spec.ts:87` |
 | AISLE-NRM-004 | BQ-36 | runtime | `tests/pii/normalization.spec.ts:67` |
 | AISLE-NRM-005 | BQ-36 | static | `tests/pii/normalization.spec.ts:97` |
 | AISLE-RD-009 | BQ-38 | runtime | `tests/pii/read-pii.spec.ts:155` |
@@ -107,6 +131,9 @@ Blocked only if staging still denies access (403) or the setting is missing — 
 | BQ-43 | Open | Does the PII service limit how many requests one caller may send (HTTP 429)? If so, what is the limit for the QA caller? |
 | BQ-04 | Open | (Q20–Q23) Which DB/table stores the PII? Which columns hold tenant, user, field and stored value (and key version)? What is the encryption / storag… |
 | BQ-30 | Open | (Q24) What DB validation is officially expected from QA (existence, association, protected storage, replacement, audit)? What is recorded in the au… |
+| BQ-45 | Open | Free-text keys: which PII-DB table stores them (key_id, tenant, status, created/revoked time), and is the key stored wrapped (encrypted) like the P… |
+| BQ-46 | Open | Free-text flow: does Aisle encrypt the text itself with the returned key and store the ciphertext plus `key_id` in its own DB (aisleweb)? Which tab… |
+| BQ-47 | Open | Is revoking a free-text key the planned way to erase free text (crypto-shredding: ciphertext stays in aisleweb but can never be decrypted)? |
 | BQ-32 | Open | (Q27, Q28) Is NAME search supported? The only documented search endpoint is `/api/v1/pii-test/EMAIL/search`; QA keeps the EMAIL search tests separa… |
 | BQ-10 | Open | Is there an approved way to purge run-prefixed synthetic test data (`qa-auto-…`) on staging? There is no delete API. Is a delete API (right to eras… |
 

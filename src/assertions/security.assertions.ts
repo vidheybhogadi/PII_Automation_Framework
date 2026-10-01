@@ -76,6 +76,31 @@ export function expectNotStoredAsPlaintext(
 }
 
 /**
+ * Secret BYTES (e.g. a raw 256-bit key) must not appear in stored data: neither as the raw bytes nor written as
+ * Base64 or hex text. Reports only a fingerprint of the secret, never the secret.
+ */
+export function expectBytesNotStored(
+  stored: Buffer | string | null | undefined,
+  secret: Buffer,
+  label: string,
+): void {
+  expect(stored !== null && stored !== undefined, `${label}: stored value is null/undefined`).toBe(true);
+  const hay = Buffer.isBuffer(stored) ? stored : Buffer.from(String(stored), 'utf8');
+  const texts = [hay.toString('utf8'), hay.toString('latin1')];
+  const forms = [
+    secret.toString('base64'),
+    secret.toString('base64url'),
+    secret.toString('hex'),
+    secret.toString('hex').toUpperCase(),
+  ];
+  const found = hay.includes(secret) || forms.some((form) => texts.some((text) => text.includes(form)));
+  expect(
+    found,
+    `${label}: stored data contains the secret (${fingerprint(secret)}) as raw bytes, Base64 or hex`,
+  ).toBe(false);
+}
+
+/**
  * Leak detection over any text sink (log lines, report attachments, response text).
  * Reports only how many secrets leaked and where — not the secrets.
  */

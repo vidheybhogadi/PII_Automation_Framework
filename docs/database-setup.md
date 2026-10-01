@@ -37,13 +37,28 @@ Each query is `{ "sql": "...", "params": [...] }` or `null`. Rules (enforced by 
 - use the engine's placeholders (`$1, $2…` for PostgreSQL, `?` for MySQL), in the order listed in `params`
 - return **exactly these column aliases**:
 
-| Query            | Params (order)              | Required aliases                                                | Optional aliases    |
-| ---------------- | --------------------------- | --------------------------------------------------------------- | ------------------- |
-| `findPiiRecords` | `tenant_id, user_id, field` | `tenant_id`, `user_id`, `field`, `encrypted_value` (bytes/text) | `key_version` (int) |
+| Query             | Params (order)              | Required aliases                                                | Optional aliases                                                                                                      |
+| ----------------- | --------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `findPiiRecords`  | `tenant_id, user_id, field` | `tenant_id`, `user_id`, `field`, `encrypted_value` (bytes/text) | `key_version` (int); `nonce`, `auth_tag`, `lookup_token` (bytes, `bytea`); `created_at`, `updated_at` (timestamps)    |
+| `findKeyRegistry` | _(none)_                    | `key_version` (int), `status`                                   | — (never `*`, never a wrapped-key / DEK column: rejected by the framework, UT-DB-009)                                 |
+| `findFreeTextKey` | `key_id`                    | `status`                                                        | `tenant_id`, `caller_id`, `created_at`, `revoked_at`, `encrypted_key_material` (every column that could hold the key) |
 
-The tenant passed is the one the facade **returns** (observed `"aisle"`) — QA never chooses it.
-`findTransientPhone`, `findFreeTextKey` and `findAuditEventsByRequestId` stay `null` until those flows are
-accessible through the facade and their storage is confirmed (BQ-02, BQ-04).
+The tenant passed is the one the facade **returns** (observed `"aisle"`) — QA never chooses it. The PII-service design
+(tech doc v3) has no tenant column; ask Dev how the tenant is stored (BQ-04).
+
+The design-format tests (AISLE-DB-006…012) need `nonce`, `auth_tag`, `lookup_token`, `created_at` and `updated_at`;
+the QA database user therefore needs SELECT on the encrypted-value, nonce and auth-tag columns (the design's
+`pii_readonly_ops` role cannot see them). `nonce`, `auth_tag` and `lookup_token` must come back as bytes.
+`findTransientPhone` stays `null` until temporary-phone storage is confirmed (BQ-02, BQ-04); `findFreeTextKey`
+needs the free-text key table (BQ-45).
+
+**Never** point these queries at the Aisle app database (`aisleweb`): it is out of scope and holds real users' data.
+
+### Audit trail (MongoDB)
+
+The audit trail lives in MongoDB `audit_trails`, not in SQL. Tests read it through `AuditRepository`
+(`src/db/audit-repository.ts`): one read-only look-up by request ID. No implementation exists yet, so AISLE-DB-014
+and AISLE-DB-015 are **Blocked (BQ-30)** until Dev provides read-only access; the MongoDB driver is added then.
 
 ## 4. Safety measures built in
 
@@ -56,7 +71,11 @@ accessible through the facade and their storage is confirmed (BQ-02, BQ-04).
 
 ## 5. What the DB tests do and do not claim
 
-They verify: the record exists after a save, the user/field (and tenant, if stored) association, a single row after
+AISLE-DB-006…013 also check the storage layout from the PII-service design (12-byte nonce, 16-byte auth tag, key
+version, fresh encryption on every save, search fingerprints, one active key, free-text key storage). Those
+expectations come from the design and are marked "to be confirmed by Dev" (BQ-04, BQ-45).
+
+The basic tests verify: the record exists after a save, the user/field (and tenant, if stored) association, a single row after
 a replace, that the stored bytes change when the value changes, that the readable value (plain, hex, Base64) is not
 stored, and that the key version matches the API. They **do not** claim that "readable value absent" proves strong
 encryption — that needs the storage format from Dev (BQ-04).

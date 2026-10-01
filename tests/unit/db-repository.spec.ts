@@ -130,15 +130,37 @@ test.describe('UNIT DB layer', () => {
       parseQueryCatalog({
         engine: 'postgres',
         queries: {
-          findAuditEventsByRequestId: {
-            sql: 'SELECT PENDING_EVENT_TYPE_COL AS event_type FROM PENDING_AUDIT_TABLE WHERE PENDING_REQUEST_ID_COL = $1',
-            params: ['request_id'],
+          findFreeTextKey: {
+            sql: 'SELECT PENDING_STATUS_COL AS status FROM PENDING_FREE_TEXT_KEY_TABLE WHERE PENDING_KEY_ID_COL = $1',
+            params: ['key_id'],
           },
         },
       }),
     );
-    expect(repo.has('findAuditEventsByRequestId')).toBe(false);
-    await expect(repo.findAuditEventsByRequestId('r')).rejects.toBeInstanceOf(DbQueryNotConfiguredError);
+    expect(repo.has('findFreeTextKey')).toBe(false);
+    await expect(repo.findFreeTextKey('k')).rejects.toBeInstanceOf(DbQueryNotConfiguredError);
     expect(adapter.calls).toHaveLength(0);
+  });
+
+  test('UT-DB-009 The key-list query may read only key numbers and statuses, never the wrapped keys', async () => {
+    for (const sql of [
+      'SELECT * FROM pii_key_registry',
+      'SELECT key_version, status, primary_provider_wrapped_dek FROM pii_key_registry',
+    ]) {
+      expect(
+        () => parseQueryCatalog({ engine: 'postgres', queries: { findKeyRegistry: { sql, params: [] } } }),
+        sql,
+      ).toThrow(/findKeyRegistry/);
+    }
+    const repo = new PiiRepository(
+      new FakeAdapter([{ key_version: '1', status: 'ACTIVE' }]),
+      parseQueryCatalog({
+        engine: 'postgres',
+        queries: {
+          findKeyRegistry: { sql: 'SELECT key_version, status FROM pii_key_registry', params: [] },
+        },
+      }),
+    );
+    expect(await repo.findKeyRegistry()).toEqual([{ key_version: 1, status: 'ACTIVE' }]);
   });
 });

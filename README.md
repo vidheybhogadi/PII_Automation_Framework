@@ -58,7 +58,7 @@ npm run test:all
 ```
 PII_Automation_Framework/
 │
-├── tests/                          THE TESTS (98 planned) — one folder per area
+├── tests/                          THE TESTS (109 planned) — one folder per area
 │   ├── poc/                          POC-001…003: save name → read name → check DB (the first proof)
 │   ├── health/                       facade readiness
 │   ├── pii/                          save · read · search · bulk read · clean-up rules
@@ -191,8 +191,8 @@ Subsets: `npm run test:smoke` · `npm run test:security` · `npm run test:db` ·
 
 | Part                 | Tests | Status                                                                                   |
 | -------------------- | :---: | ---------------------------------------------------------------------------------------- |
-| Framework self-tests |  64   | passing (`npm run verify`)                                                               |
-| Aisle facade tests   |  98   | written; see the migration report for the latest staging run and what is Blocked and why |
+| Framework self-tests |  66   | passing (`npm run verify`)                                                               |
+| Aisle facade tests   |  109  | written; see the migration report for the latest staging run and what is Blocked and why |
 
 [Backend open questions](docs/backend-open-questions.md) · [Coverage matrix](docs/coverage-matrix.md) ·
 [Pending placeholders](PENDING-PLACEHOLDERS.md) · [Test cases (Excel)](docs/test-cases.xlsx) ·

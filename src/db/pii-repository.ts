@@ -23,7 +23,7 @@ export const QUERY_NAMES = [
   'findPiiRecords',
   'findTransientPhone',
   'findFreeTextKey',
-  'findAuditEventsByRequestId',
+  'findKeyRegistry',
 ] as const;
 export type QueryName = (typeof QUERY_NAMES)[number];
 
@@ -32,8 +32,14 @@ export const QUERY_PARAMS: Record<QueryName, readonly string[]> = {
   findPiiRecords: ['tenant_id', 'user_id', 'field'],
   findTransientPhone: ['transient_id'],
   findFreeTextKey: ['key_id'],
-  findAuditEventsByRequestId: ['request_id'],
+  findKeyRegistry: [],
 };
+
+/**
+ * The key list (design: pii_key_registry) also holds the WRAPPED data keys. QA may read only the key number and
+ * status, so a findKeyRegistry query that selects everything (*) or names a wrapped-key / DEK column is rejected.
+ */
+const KEY_MATERIAL_COLUMN = /\*|wrapped|dek/i;
 
 const catalogEntrySchema = z
   .object({ sql: z.string().min(1), params: z.array(z.string()) })
@@ -60,6 +66,12 @@ export function parseQueryCatalog(json: unknown): QueryCatalog {
     const entry = parsed.data.queries[name];
     if (!entry) continue;
     assertReadOnlySql(entry.sql);
+    if (name === 'findKeyRegistry' && KEY_MATERIAL_COLUMN.test(entry.sql)) {
+      throw new DbConfigError(
+        'Query "findKeyRegistry" may select only the key version and status columns — never "*" or any wrapped ' +
+          'key (DEK) column.',
+      );
+    }
     const expected = QUERY_PARAMS[name];
     const unknown = entry.params.filter((p) => !expected.includes(p));
     if (unknown.length > 0) {
@@ -107,6 +119,14 @@ export const piiRecordRowSchema = z.object({
   encrypted_value: bytesOrText,
   /** Optional: DEK version stored with the row, compared with the API's informational key_version. */
   key_version: intLike.nullable().optional(),
+  /** Optional (design v3, BQ-04): random number used once per encryption — 12 bytes for AES-256-GCM. */
+  nonce: bytesOrText.nullable().optional(),
+  /** Optional (design v3, BQ-04): GCM tamper seal — 16 bytes. */
+  auth_tag: bytesOrText.nullable().optional(),
+  /** Optional (design v3, BQ-04): search fingerprint; set only for searchable fields (EMAIL, PHONE). */
+  lookup_token: bytesOrText.nullable().optional(),
+  created_at: timestamp.nullable().optional(),
+  updated_at: timestamp.nullable().optional(),
 });
 export type PiiRecordRow = z.infer<typeof piiRecordRowSchema>;
 
@@ -121,17 +141,20 @@ export const transientPhoneRowSchema = z.object({
 export type TransientPhoneRow = z.infer<typeof transientPhoneRowSchema>;
 
 export const freeTextKeyRowSchema = z.object({
-  tenant_id: z.string(),
+  /** Optional: design v3 has no tenant column (one database per application). */
+  tenant_id: z.string().nullable().optional(),
   caller_id: z.string().nullable().optional(),
   status: z.string(),
+  created_at: timestamp.nullable().optional(),
   revoked_at: timestamp.nullable().optional(),
   /** Optional: stored (wrapped/encrypted) key material, used for a "not stored raw" check. */
   encrypted_key_material: bytesOrText.nullable().optional(),
 });
 export type FreeTextKeyRow = z.infer<typeof freeTextKeyRowSchema>;
 
-export const auditEventRowSchema = z.object({ event_type: z.string() });
-export type AuditEventRow = z.infer<typeof auditEventRowSchema>;
+/** Key list row: key number and status ONLY (design statuses READY / ACTIVE / READ_ONLY). */
+export const keyRegistryRowSchema = z.object({ key_version: intLike, status: z.string() });
+export type KeyRegistryRow = z.infer<typeof keyRegistryRowSchema>;
 
 export class DbQueryNotConfiguredError extends DbConfigError {
   constructor(readonly queryName: QueryName) {
@@ -195,8 +218,9 @@ export class PiiRepository {
     return rows[0];
   }
 
-  findAuditEventsByRequestId(requestId: string): Promise<AuditEventRow[]> {
-    return this.run('findAuditEventsByRequestId', { request_id: requestId }, auditEventRowSchema);
+  /** Key number and status of every encryption key (never the key material). */
+  findKeyRegistry(): Promise<KeyRegistryRow[]> {
+    return this.run('findKeyRegistry', {}, keyRegistryRowSchema);
   }
 
   close(): Promise<void> {

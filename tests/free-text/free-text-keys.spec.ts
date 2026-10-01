@@ -4,7 +4,7 @@
  * 404 behaviour are observed on staging (recorded as notes).
  * The second-revoke reply is open (BQ-33). Keys are never logged or printed.
  */
-import { randomUUID } from 'node:crypto';
+import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from 'node:crypto';
 import {
   expectError,
   expectStatus,
@@ -74,6 +74,10 @@ test.describe('Aisle facade — free-text keys', () => {
     const res = await aisle.revokeFreeTextKey({ key_id: key.key_id });
     blockIfAccessDenied(res, BLOCKERS.freeText.id, BLOCKERS.freeText.reason);
     noteObserved('2026-10-01', 'revoke → 200 REVOKED, read after revoke → 404, unknown key ID → 404');
+    noteAssumption(
+      'BQ-47',
+      'revoking is expected to be how free text is erased (crypto-shredding) — to be confirmed by Dev',
+    );
     expectSuccess(res, 200, revokeFreeTextKeyDataSchema);
 
     expectStatus(await aisle.readFreeTextKey({ key_id: key.key_id }), 404, 'read after revoke');
@@ -132,5 +136,37 @@ test.describe('Aisle facade — free-text keys', () => {
     blockIfAccessDenied(res, BLOCKERS.freeText.id, BLOCKERS.freeText.reason);
     const error = expectError(res, 404, ERROR_CODES.FREE_TEXT_KEY_NOT_FOUND);
     expect(error.message).toBe('Free-text key not found');
+  });
+
+  test('AISLE-FT-008 A free-text key from the service can encrypt a fake bio, and the same key read back by its ID decrypts it', async ({
+    aisle,
+    cleanup,
+  }) => {
+    noteObserved('2026-10-01', 'create → 201 and read → 200 return the same 256-bit AES-256-GCM key');
+    const key = await createKey(aisle, cleanup);
+    const bio = `QA automation fake bio ${randomUUID()}`;
+
+    // Test-side encryption, as Aisle would do it: AES-256-GCM with a fresh random 12-byte nonce.
+    const nonce = randomBytes(12);
+    const cipher = createCipheriv('aes-256-gcm', Buffer.from(key.key, 'base64'), nonce);
+    const encrypted = Buffer.concat([cipher.update(bio, 'utf8'), cipher.final()]);
+    const tag = cipher.getAuthTag();
+
+    const res = await aisle.readFreeTextKey({ key_id: key.key_id });
+    blockIfAccessDenied(res, BLOCKERS.freeText.id, BLOCKERS.freeText.reason);
+    const reread = expectSuccess(res, 200, freeTextKeyDataSchema);
+
+    let decrypted: string | undefined;
+    try {
+      const decipher = createDecipheriv('aes-256-gcm', Buffer.from(reread.key, 'base64'), nonce);
+      decipher.setAuthTag(tag);
+      decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]).toString('utf8');
+    } catch {
+      decrypted = undefined; // wrong key or tampered data: the tamper seal is rejected
+    }
+    expect(decrypted !== undefined, 'decrypting with the re-read key succeeds (tamper seal accepted)').toBe(
+      true,
+    );
+    expectSecretEquals(decrypted, bio, 'decrypted fake bio');
   });
 });

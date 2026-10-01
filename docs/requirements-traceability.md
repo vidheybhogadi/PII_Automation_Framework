@@ -12,7 +12,7 @@ requirement — VERIFIED / FAILED / PARTIAL / BLOCKED / NOT EXECUTED — comes f
 report dashboard (Requirements section) and its PDF. Test references ending in `*` cover every test with
 that ID prefix.
 
-**37 requirements** in 14 groups · 17 depend on an open backend question.
+**40 requirements** in 15 groups · 20 depend on an open backend question.
 
 ## Authentication
 
@@ -90,9 +90,9 @@ that ID prefix.
 
 ## Free-text keys
 
-| Req      | Requirement                                                                                                                      | Type    | Source                       | Endpoints                                                                                                                              | Tests        | Open question |
-| -------- | -------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------ | ------------- |
-| FR-FT-01 | A free-text key can be created, read and revoked; every key is unique; revoked or unknown keys are gone; bad key IDs are refused | Derived | Staging, observed 2026-10-01 | `POST /api/v1/pii-test/free-text/keys`<br>`POST /api/v1/pii-test/free-text/keys/read`<br>`POST /api/v1/pii-test/free-text/keys/revoke` | `AISLE-FT-*` | BQ-33         |
+| Req      | Requirement                                                                                                                                                                       | Type    | Source                       | Endpoints                                                                                                                              | Tests        | Open question |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------ | ------------- |
+| FR-FT-01 | A free-text key can be created, read and revoked; a key read back decrypts text encrypted with it; every key is unique; revoked or unknown keys are gone; bad key IDs are refused | Derived | Staging, observed 2026-10-01 | `POST /api/v1/pii-test/free-text/keys`<br>`POST /api/v1/pii-test/free-text/keys/read`<br>`POST /api/v1/pii-test/free-text/keys/revoke` | `AISLE-FT-*` | BQ-33         |
 
 ## Contract
 
@@ -111,9 +111,17 @@ that ID prefix.
 
 ## Storage
 
-| Req      | Requirement                                                                                                                            | Type   | Source | Endpoints               | Tests                   | Open question |
-| -------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------ | ----------------------- | ----------------------- | ------------- |
-| FR-DB-01 | Saved values are stored once per user and field and are not readable; refused saves leave nothing; encryption not yet proven (blocked) | Policy | BQ-04  | `POST /api/v1/pii-test` | `AISLE-DB-*`, `POC-003` | BQ-04         |
+| Req      | Requirement                                                                                                                                                                                                                                                                                                          | Type   | Source                                                                          | Endpoints                                                                                                                                                                                   | Tests                                                                                                          | Open question |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------- |
+| FR-DB-01 | Saved values are stored once per user and field and are not readable; refused saves leave nothing; encryption not yet proven (blocked)                                                                                                                                                                               | Policy | BQ-04                                                                           | `POST /api/v1/pii-test`                                                                                                                                                                     | `POC-003`, `AISLE-DB-001`, `AISLE-DB-002`, `AISLE-DB-004`, `AISLE-DB-005`                                      | BQ-04         |
+| FR-DB-02 | Stored values follow the designed encrypted layout (12-byte nonce, 16-byte tamper seal, valid key version); every save is freshly encrypted; only EMAIL and PHONE have a search fingerprint; promoted phones are stored the same way; every record points to an existing, active key; reads change nothing (blocked) | Policy | PII-service design v3 (tech_doc_v3_detailed.md), to be confirmed by Dev — BQ-04 | `POST /api/v1/pii-test`<br>`POST /api/v1/pii-test/transient/phones/promote`<br>`POST /api/v1/pii-test/read`<br>`POST /api/v1/pii-test/batch/read`<br>`POST /api/v1/pii-test/{field}/search` | `AISLE-DB-006`, `AISLE-DB-007`, `AISLE-DB-008`, `AISLE-DB-009`, `AISLE-DB-010`, `AISLE-DB-011`, `AISLE-DB-012` | BQ-04         |
+| FR-DB-03 | Free-text keys are not stored readable, and a revoke is recorded in storage (blocked)                                                                                                                                                                                                                                | Policy | BQ-45                                                                           | `POST /api/v1/pii-test/free-text/keys`<br>`POST /api/v1/pii-test/free-text/keys/read`<br>`POST /api/v1/pii-test/free-text/keys/revoke`                                                      | `AISLE-DB-013`                                                                                                 | BQ-45         |
+
+## Audit
+
+| Req       | Requirement                                                                                                               | Type   | Source                                                                          | Endpoints                                                                                         | Tests                          | Open question |
+| --------- | ------------------------------------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------ | ------------- |
+| FR-AUD-01 | Every save, read, search and refused call leaves one audit entry, with no personal values or search terms in it (blocked) | Policy | PII-service design v3 (tech_doc_v3_detailed.md), to be confirmed by Dev — BQ-30 | `POST /api/v1/pii-test`<br>`POST /api/v1/pii-test/read`<br>`POST /api/v1/pii-test/{field}/search` | `AISLE-DB-014`, `AISLE-DB-015` | BQ-30         |
 
 ## Health
 
