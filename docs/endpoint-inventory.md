@@ -14,9 +14,9 @@ Source: the Aisle "PII Test API Curl Collection" + staging behaviour observed on
 | `readPii`               | `POST /api/v1/pii-test/read`                     | `{user_id, field_names[]}`       | ✔ NAME · ✔ EMAIL                         |
 | `searchPii`             | `POST /api/v1/pii-test/{FIELD}/search`           | `{value, limit, include_values}` | ✔ EMAIL (since 2026-10-01)               |
 | `batchReadPii`          | `POST /api/v1/pii-test/batch/read`               | `{user_ids[], fields[]}`         | ✔ NAME · ✔ EMAIL                         |
-| `createTransientPhone`  | `POST /api/v1/pii-test/transient/phones`         | `{phone, ttl_seconds}`           | Not probed (BQ-02, BQ-03)                |
-| `resolveTransientPhone` | `POST /api/v1/pii-test/transient/phones/resolve` | `{transient_id}`                 | Not probed (BQ-02, BQ-03)                |
-| `promoteTransientPhone` | `POST /api/v1/pii-test/transient/phones/promote` | `{transient_id, user_id}`        | Not probed (BQ-02, BQ-03)                |
+| `createTransientPhone`  | `POST /api/v1/pii-test/transient/phones`         | `{phone, ttl_seconds}`           | ✔ (since 2026-10-01; format BQ-02)       |
+| `resolveTransientPhone` | `POST /api/v1/pii-test/transient/phones/resolve` | `{transient_id}`                 | ✔ (since 2026-10-01; format BQ-02)       |
+| `promoteTransientPhone` | `POST /api/v1/pii-test/transient/phones/promote` | `{transient_id, user_id}`        | ✔ (since 2026-10-01; format BQ-02)       |
 | `createFreeTextKey`     | `POST /api/v1/pii-test/free-text/keys`           | `{}`                             | ✔ (since 2026-10-01)                     |
 | `readFreeTextKey`       | `POST /api/v1/pii-test/free-text/keys/read`      | `{key_id}`                       | ✔ (since 2026-10-01)                     |
 | `revokeFreeTextKey`     | `POST /api/v1/pii-test/free-text/keys/revoke`    | `{key_id}`                       | ✔ (since 2026-10-01)                     |

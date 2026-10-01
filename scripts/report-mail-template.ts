@@ -52,7 +52,7 @@ export interface ReportFacts {
 
 const SEVERITY_ORDER = ['critical', 'high', 'medium', 'low'];
 
-/** "BLOCKED — BQ-03: No approved test phones; … — observed POST … -> HTTP 403" → { BQ-03, "No approved test phones; …" } */
+/** "BLOCKED — BQ-04: Read-only DB access not provided; … — observed POST … -> HTTP 403" → { BQ-04, "Read-only DB access not provided; …" } */
 function blockReason(remarks: string | null | undefined): { code: string; reason: string } {
   const text = (remarks ?? '').replace(/^[A-Z ]+(\([^)]*\))?\s*—\s*/, '');
   const m = /^(BQ-\d+):\s*(.*)$/.exec(text);

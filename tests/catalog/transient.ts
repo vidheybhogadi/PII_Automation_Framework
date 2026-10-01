@@ -1,7 +1,7 @@
 import type { TestCaseCatalog } from './types';
 
-const TRANSIENT_BLOCKED =
-  'Blocked until approved test phone numbers are provided (question BQ-03) and Dev gives the Aisle caller temporary-phone access (question BQ-02). Today these calls return 403 (refused: access denied).';
+const TRANSIENT_PHONES =
+  'Needs the team-approved test phone numbers in AISLE_TEST_PHONES (never a real person’s number). Without them the test is marked Blocked (CONFIG). Response format observed 2026-10-01; Dev to confirm (question BQ-02).';
 
 export const TRANSIENT_CASES: TestCaseCatalog = {
   'AISLE-TR-001': {
@@ -22,7 +22,7 @@ export const TRANSIENT_CASES: TestCaseCatalog = {
     ],
     type: 'Positive',
     priority: 'High',
-    preconditions: TRANSIENT_BLOCKED,
+    preconditions: TRANSIENT_PHONES,
   },
   'AISLE-TR-002': {
     what: 'Creates a temporary phone from an approved test number, then looks it up by its temporary ID.',
@@ -43,7 +43,7 @@ export const TRANSIENT_CASES: TestCaseCatalog = {
     ],
     type: 'Positive',
     priority: 'High',
-    preconditions: TRANSIENT_BLOCKED,
+    preconditions: TRANSIENT_PHONES,
   },
   'AISLE-TR-003': {
     what: 'Creates a temporary phone, promotes it (turns it into the permanent PHONE of a new fake test user), then tries to look it up and promote it again.',
@@ -66,7 +66,7 @@ export const TRANSIENT_CASES: TestCaseCatalog = {
     ],
     type: 'Positive',
     priority: 'High',
-    preconditions: TRANSIENT_BLOCKED,
+    preconditions: TRANSIENT_PHONES,
   },
   'AISLE-TR-004': {
     what: 'Looks up a made-up but correctly formed temporary ID, then a badly formed one.',
@@ -79,84 +79,111 @@ export const TRANSIENT_CASES: TestCaseCatalog = {
     validation: ['Unknown ID → 404', 'Badly formed ID → 422 naming transient_id', 'No phone is returned'],
     type: 'Negative',
     priority: 'Medium',
-    preconditions: TRANSIENT_BLOCKED,
+    preconditions: TRANSIENT_PHONES,
   },
   'AISLE-TR-005': {
-    what: 'Creates a temporary phone (a short-lived phone record for someone not yet signed up) with a short lifetime and looks it up after it expires.',
+    what: 'Creates a temporary phone (a short-lived phone record for someone not yet signed up) with the shortest lifetime and looks it up after it expires.',
     why: 'Expired temporary phones must disappear, or phone numbers stay readable longer than allowed.',
-    steps: ['Create a temporary phone with a short lifetime', 'Wait until it expires', 'Look it up'],
+    steps: ['Create a temporary phone with the shortest lifetime', 'Wait until it expires', 'Look it up'],
     expected:
-      'Blocked: needs approved test phone numbers and the lifetime rules (questions BQ-03, BQ-28). Expected: 404 Not Found after expiry.',
+      'Blocked: the shortest allowed lifetime is 300 seconds (seen 2026-10-01), so this test would have to wait at least 5 minutes. Waiting for Dev to offer a shorter test lifetime or to accept a 5-minute test (question BQ-28).',
     request:
-      'POST /api/v1/pii-test/transient/phones {"phone":"<approved test phone>","ttl_seconds":<short>} · …/resolve',
-    validation: ['Blocked until approved phones exist'],
+      'POST /api/v1/pii-test/transient/phones {"phone":"<approved test phone 1>","ttl_seconds":300} · …/resolve',
+    validation: ['Blocked until the expiry wait is agreed'],
     type: 'Negative',
     priority: 'Medium',
-    preconditions: TRANSIENT_BLOCKED,
+    preconditions: 'Blocked until Dev answers question BQ-28.',
     endpoint: 'resolveTransientPhone',
   },
   'AISLE-TR-006': {
-    what: 'Creates temporary phones with a lifetime of 0, a negative number, or a huge number.',
-    why: 'A wrong lifetime could keep a phone number forever or make it unusable.',
-    steps: ['Send create with each lifetime', 'Check the replies'],
+    what: 'Creates temporary phones for approved test phone 1 with lifetimes of 0, −1, 299 seconds, 604,801 seconds and 1,000,000,000 seconds, and with exactly 300 seconds and 604,800 seconds (7 days).',
+    why: 'A wrong lifetime could keep a phone number forever or make it unusable. The edges of the allowed range must work.',
+    steps: [
+      'Create with lifetime 0 and −1',
+      'Create with 299, 604,801 and 1,000,000,000 seconds',
+      'Create with 300 and 604,800 seconds and check the expiry time',
+    ],
     expected:
-      'Blocked: the allowed lifetime range is unknown (question BQ-28) and approved test phones are missing (question BQ-03).',
+      '0 and −1 get 422 Unprocessable Entity naming ttl_seconds. 299, 604,801 and 1,000,000,000 get 400 VALIDATION_ERROR with no data. 300 and 604,800 get 201 Created with an expiry time that many seconds away. Seen on staging on 2026-10-01; Dev still to confirm the range (question BQ-28).',
     request:
-      'POST /api/v1/pii-test/transient/phones {"phone":"<approved test phone>","ttl_seconds":0} (and -1, huge)',
-    validation: ['Blocked until the lifetime rules are known'],
+      'POST /api/v1/pii-test/transient/phones {"phone":"<approved test phone 1>","ttl_seconds":0} (and the other lifetimes)',
+    validation: [
+      '0 / −1 → 422 naming ttl_seconds',
+      '299 / 604,801 / 10⁹ → 400 VALIDATION_ERROR, no data',
+      '300 / 604,800 → 201, expiry about that far away',
+      'No server error (5xx)',
+    ],
     type: 'Negative',
     priority: 'Medium',
-    preconditions: TRANSIENT_BLOCKED,
+    preconditions:
+      'Needs the team-approved test phone numbers in AISLE_TEST_PHONES (never a real person’s number). Without them the test is marked Blocked (CONFIG).',
   },
   'AISLE-TR-007': {
     what: 'Tries to promote (turn into the user’s permanent phone) a temporary phone after it has expired.',
     why: 'An expired temporary phone must never become someone’s permanent phone.',
     steps: [
-      'Create a short-lived temporary phone',
+      'Create a temporary phone with the shortest lifetime',
       'Wait until it expires',
-      'Promote it for a fake user',
+      'Promote it for a new fake user',
       'Read the user’s phone',
     ],
     expected:
-      'Blocked: needs approved test phone numbers (question BQ-03). Expected: refused, and nothing saved for the user.',
+      'Blocked: the shortest allowed lifetime is 300 seconds (seen 2026-10-01), so this test would have to wait at least 5 minutes. Waiting for Dev to offer a shorter test lifetime or to accept a 5-minute test (question BQ-28).',
     request:
-      'POST /api/v1/pii-test/transient/phones/promote {"transient_id":"<expired ID>","user_id":"<fake user>"}',
-    validation: ['Blocked until approved phones exist'],
+      'POST /api/v1/pii-test/transient/phones/promote {"transient_id":"<expired ID>","user_id":"<new fake user>"}',
+    validation: ['Blocked until the expiry wait is agreed'],
     type: 'Negative',
     priority: 'Medium',
-    preconditions: TRANSIENT_BLOCKED,
+    preconditions: 'Blocked until Dev answers question BQ-28.',
     endpoint: 'promoteTransientPhone',
   },
   'AISLE-TR-008': {
-    what: 'Promotes a temporary phone onto a fake user who already has a phone.',
-    why: 'Records whether the old phone is replaced or the promote is refused, so no number is lost silently.',
+    what: 'Saves approved test phone 1 for a new fake user, then creates a temporary phone for approved test phone 2 and promotes it onto that user.',
+    why: 'A promote must replace the old phone cleanly and say so, so no number is lost silently.',
     steps: [
-      'Save an approved test phone for a fake user',
-      'Create and promote another temporary phone for the same user',
-      'Read the user’s phone',
+      'Save approved test phone 1 for a new fake user',
+      'Create a temporary phone for approved test phone 2',
+      'Promote it onto the user',
+      'Read the user’s phone and look up the temporary phone again',
     ],
     expected:
-      'Blocked: needs approved test phone numbers (question BQ-03); replace-versus-refuse will be observed then.',
+      '200 OK with created false (an existing phone was replaced) and consumed true. The user’s phone is now phone 2 (digits only). Looking up the temporary phone afterwards gets 404 TRANSIENT_PHONE_NOT_FOUND. Seen on staging on 2026-10-01.',
     request:
-      'POST /api/v1/pii-test/transient/phones/promote {"transient_id":"<ID>","user_id":"<user with a phone>"}',
-    validation: ['Blocked until approved phones exist'],
+      'POST /api/v1/pii-test {"field":"PHONE","value":"<approved test phone 1>"} · POST /api/v1/pii-test/transient/phones {"phone":"<approved test phone 2>","ttl_seconds":900} · …/promote {"transient_id":"<ID>","user_id":"<same user>"}',
+    validation: [
+      'Promote 200 with created false and consumed true',
+      'User’s phone is phone 2',
+      'Lookup afterwards → 404 TRANSIENT_PHONE_NOT_FOUND',
+    ],
     type: 'Positive',
-    priority: 'Medium',
-    preconditions: TRANSIENT_BLOCKED,
+    priority: 'High',
+    preconditions:
+      'Needs the team-approved test phone numbers in AISLE_TEST_PHONES (never a real person’s number). Without them the test is marked Blocked (CONFIG).',
     endpoint: 'promoteTransientPhone',
   },
   'AISLE-TR-009': {
-    what: 'Sends an invalid phone when creating a temporary phone, and a badly formed user ID when promoting one.',
-    why: 'Bad input must be refused before anything is stored.',
-    steps: ['Create with an invalid phone', 'Promote with a badly formed user ID'],
+    what: 'Creates temporary phones with made-up invalid phones (5 digits, 16 digits, letters), then promotes a valid temporary phone with bad user IDs (empty, a number, null, 129 characters).',
+    why: 'Bad input must be refused before anything is stored, and a refused promote must not use up the temporary phone.',
+    steps: [
+      'Create with each made-up invalid phone',
+      'Create a temporary phone for approved test phone 1',
+      'Promote it with each bad user ID',
+      'Look the temporary phone up again',
+    ],
     expected:
-      'Blocked: temporary phones are not probed until approved test phone numbers exist (question BQ-03). Expected: 422 for each.',
+      'Invalid phones get 400 VALIDATION_ERROR with no data. Each bad user ID gets 422 Unprocessable Entity naming user_id. The temporary phone can still be looked up (200) afterwards. Seen on staging on 2026-10-01.',
     request:
-      'POST /api/v1/pii-test/transient/phones {"phone":"not-a-phone",…} · …/promote {"transient_id":"<ID>","user_id":"<badly formed>"}',
-    validation: ['Blocked until approved phones exist'],
+      'POST /api/v1/pii-test/transient/phones {"phone":"12345","ttl_seconds":900} · …/promote {"transient_id":"<ID>","user_id":""}',
+    validation: [
+      'Invalid phones → 400 VALIDATION_ERROR, no data',
+      'Bad user IDs → 422 naming user_id',
+      'Lookup afterwards → 200',
+      'No server error (5xx)',
+    ],
     type: 'Negative',
     priority: 'Medium',
-    preconditions: TRANSIENT_BLOCKED,
+    preconditions:
+      'Needs the team-approved test phone numbers in AISLE_TEST_PHONES (never a real person’s number). Without them the test is marked Blocked (CONFIG).',
     endpoint: 'crossEndpoint',
   },
 };

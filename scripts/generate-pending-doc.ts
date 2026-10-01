@@ -21,7 +21,7 @@ const read = (rel: string) => readFileSync(path.join(ROOT, rel), 'utf8');
 /** Who provides each PENDING_ setting and what it unblocks. A PENDING_ setting without an entry fails the build. */
 const SETTINGS: Record<string, { from: string; unblocks: string }> = {
   AISLE_TEST_PHONES: {
-    from: 'QA lead / Aisle backend (BQ-03)',
+    from: 'QA lead / Aisle backend (team-approved test numbers only)',
     unblocks: 'Phone normalization and temporary-phone tests (approved numbers only)',
   },
   DB_HOST: { from: 'Aisle backend / DBA (BQ-04)', unblocks: 'All @db tests and POC-003' },
@@ -34,7 +34,6 @@ const SETTINGS: Record<string, { from: string; unblocks: string }> = {
 /** Runtime blockers used in tests (src/fixtures/steps.ts BLOCKERS) → question ID. */
 const BLOCKER_IDS: Record<string, string> = {
   transient: 'BQ-02',
-  phone: 'BQ-03',
 };
 
 const TEST_ID = /(POC-\d{3}|AISLE-[A-Z]+-\d{3})/;
@@ -74,7 +73,6 @@ export function blockedTests(): BlockedTest[] {
         const id = BLOCKER_IDS[m[1] as string];
         if (id) qs.add(id);
       }
-      if (/requireApprovedPhones\(/.test(body)) qs.add('BQ-03');
       const signature = body.slice(0, body.indexOf('=>') > 0 ? body.indexOf('=>') : 0);
       if (/[{,]\s*db\s*[,}]/.test(signature)) qs.add('BQ-04');
       if (qs.size === 0) return;
@@ -169,7 +167,7 @@ export function buildPendingDoc(): string {
     '## Checklist',
     '',
     '1. [ ] Temporary-phone access confirmed for the Aisle caller (BQ-02)',
-    '2. [ ] Approved test phone numbers (BQ-03) — section 1',
+    '2. [ ] Approved test phone numbers in AISLE_TEST_PHONES (provided 2026-10-01; keep them in .env) — section 1',
     `3. [ ] Read-only DB access and the PII table/column layout (BQ-04) — sections 1–2 (${dbTokens.size} DB placeholders)`,
     `4. [ ] Answers to the open questions behind ${blocked.length} blockable tests — sections 3–4`,
     '',

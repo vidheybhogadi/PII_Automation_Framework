@@ -1,8 +1,17 @@
 /** Value clean-up (normalization) through the Aisle facade: save a messy value, read the clean one back. */
+import { expectError, expectNoData } from '../../src/assertions/response.assertions';
 import { expectSecretEquals } from '../../src/assertions/security.assertions';
-import { messyText } from '../../src/data/test-data-factory';
-import { readValue, seedField } from '../../src/fixtures/steps';
-import { blockedBy, noteAssumption, onlyIfInScope, test } from '../../src/fixtures/test-fixtures';
+import { formattedPhone, messyText } from '../../src/data/test-data-factory';
+import { expectNotPersisted, readValue, seedField } from '../../src/fixtures/steps';
+import {
+  blockedBy,
+  noteAssumption,
+  noteObserved,
+  onlyIfInScope,
+  requireApprovedPhones,
+  test,
+} from '../../src/fixtures/test-fixtures';
+import { ERROR_CODES } from '../../src/models/common.models';
 import { PII_FIELDS } from '../../src/models/pii.models';
 
 test.describe('Aisle facade — normalization', () => {
@@ -20,12 +29,39 @@ test.describe('Aisle facade — normalization', () => {
     expectSecretEquals(await readValue(aisle, { userId, field: PII_FIELDS.NAME }), clean, 'cleaned NAME');
   });
 
-  test('AISLE-NRM-002 A formatted approved test phone is saved as digits only', async () => {
-    blockedBy('BQ-03', 'No approved test phones; PHONE access and phone clean-up rules are not confirmed');
+  test('AISLE-NRM-002 An approved test phone written with “+”, spaces, brackets and dashes is saved as digits only', async ({
+    aisle,
+    data,
+    cleanup,
+    config,
+  }) => {
+    requireApprovedPhones(config);
+    noteObserved('2026-10-01', 'PHONE "+NN (NNN) NNN-NNNN" and "+digits" → 201, read back as digits only');
+    const phone = data.phone(0);
+    for (const written of [formattedPhone(phone.normalized), `+${phone.normalized}`]) {
+      const userId = data.userId('nrm2');
+      await seedField(aisle, cleanup, { userId, field: PII_FIELDS.PHONE, value: written });
+      expectSecretEquals(
+        await readValue(aisle, { userId, field: PII_FIELDS.PHONE }),
+        phone.normalized,
+        'PHONE saved as digits only',
+      );
+    }
   });
 
-  test('AISLE-NRM-003 A phone that is too short or too long after clean-up is rejected', async () => {
-    blockedBy('BQ-03', 'PHONE access and the phone length rule are not confirmed for the facade');
+  test('AISLE-NRM-003 A phone that is too short or too long after clean-up, or has no digits, is rejected (400) and nothing is saved', async ({
+    aisle,
+    data,
+  }) => {
+    noteObserved('2026-10-01', 'PHONE of 5 / 7 / 16 digits or with no digits → 400 VALIDATION_ERROR');
+    // Made-up invalid values only — never a number that could belong to a real person.
+    for (const invalid of ['12345', '1234567', '1234567890123456', '+-() ']) {
+      const userId = data.userId('nrm3');
+      const res = await aisle.call('writePii', { user_id: userId, field: PII_FIELDS.PHONE, value: invalid });
+      expectError(res, 400, ERROR_CODES.VALIDATION_ERROR);
+      expectNoData(res);
+      await expectNotPersisted(aisle, { userId, field: PII_FIELDS.PHONE });
+    }
   });
 
   test('AISLE-NRM-004 Hidden characters in a name: tab, line break, carriage return and non-breaking space become a normal space; a zero-width space is kept', async ({

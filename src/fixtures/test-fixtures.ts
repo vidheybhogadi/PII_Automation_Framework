@@ -221,7 +221,7 @@ export function blockIfAccessDenied(res: ApiResponse, questionId: string, what: 
 /** BLOCK when no approved test phone numbers are configured (never invent real phone numbers). */
 export function requireApprovedPhones(config: FrameworkConfig): void {
   if (config.testData.phones.length === 0) {
-    block('BQ-03', 'No approved test phone numbers configured (AISLE_TEST_PHONES)');
+    block('CONFIG', 'No approved test phone numbers configured (set AISLE_TEST_PHONES in .env)');
   }
 }
 

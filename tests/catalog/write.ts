@@ -413,21 +413,27 @@ export const WRITE_CASES: TestCaseCatalog = {
     priority: 'High',
   },
   'AISLE-WR-028': {
-    what: 'For one fake user with a name and an email, saves a phone, replaces it, reads all three fields and bulk reads the phone.',
-    why: 'Phones must behave like the other personal fields when a user has several of them.',
+    what: 'For one new fake user, saves a fake name, a fake email and approved test phone 1, replaces the phone with approved test phone 2, then reads all three fields and bulk reads the phone.',
+    why: 'Phones must behave like the other personal fields: a replace must win and must not disturb the other fields.',
     steps: [
-      'Save a fake name and email',
-      'Save and replace an approved test phone',
-      'Read all three fields',
-      'Bulk read the phone',
+      'Save a fake name and a fake email for a new fake user',
+      'Save approved test phone 1, then replace it with approved test phone 2',
+      'Read NAME, EMAIL and PHONE together',
+      'Bulk read the PHONE',
     ],
     expected:
-      'Blocked: needs approved test phone numbers (nobody’s real number) from the team (question BQ-03). No phone number is sent until then.',
-    request: `${SAVE} {"user_id":"<fake user>","field":"PHONE","value":"<approved test phone>"} · ${READ} {"field_names":["NAME","EMAIL","PHONE"]}`,
-    validation: ['Blocked until approved test phones exist'],
+      'The first phone save is 201 Created and the replace 200 OK. The read returns count 3 with the name, the email and phone 2 (digits only). The bulk read returns phone 2. Seen on staging on 2026-10-01.',
+    request:
+      'POST /api/v1/pii-test {"field":"PHONE","value":"<approved test phone 1>"} · {… "value":"<approved test phone 2>"} · POST /api/v1/pii-test/read {"field_names":["NAME","EMAIL","PHONE"]} · POST /api/v1/pii-test/batch/read {"fields":["PHONE"]}',
+    validation: [
+      'Phone save 201, replace 200',
+      'Read count 3 with the right name, email and phone 2',
+      'Bulk read returns phone 2',
+    ],
     type: 'Positive',
-    priority: 'Medium',
-    preconditions: 'Blocked until approved test phone numbers are provided (question BQ-03).',
+    priority: 'High',
+    preconditions:
+      'Needs the team-approved test phone numbers in AISLE_TEST_PHONES (never a real person’s number). Without them the test is marked Blocked (CONFIG).',
     endpoint: 'crossEndpoint',
   },
   'AISLE-WR-029': {

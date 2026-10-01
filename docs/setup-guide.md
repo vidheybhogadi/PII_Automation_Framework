@@ -27,7 +27,7 @@ Fill in `.env` (git-ignored, keep it private — `chmod 600 .env`):
 | `AISLE_TEST_TOKEN`                      | every facade test             | Aisle backend team. **Secret** — never commit, paste into chats, tickets or screenshots.      |
 | `AISLE_BASE_URL`                        | every facade test             | Defaults to the verified staging facade `https://testa2.aisle.co/V1` (`testa3` doesn't exist) |
 | `AISLE_TEST_EMAIL_DOMAIN`               | email tests                   | Default `example.test` (reserved — can never receive mail)                                    |
-| `AISLE_TEST_PHONES`                     | phone / temporary-phone tests | QA lead / Aisle backend: team-approved test numbers only (BQ-03). Empty → those tests Blocked |
+| `AISLE_TEST_PHONES`                     | phone / temporary-phone tests | QA lead / Aisle backend: team-approved test numbers only. Empty → those tests Blocked         |
 | `AISLE_TEST_USER_ID`, `…_OTHER_USER_ID` | optional                      | Only if Dev asks QA to use fixed approved test users; otherwise tests generate their own      |
 | `DB_*` + `config/db-queries.json`       | POC-003, AISLE-DB-\*          | Aisle backend / DBA: read-only access and the table layout (BQ-04). Missing → Blocked         |
 

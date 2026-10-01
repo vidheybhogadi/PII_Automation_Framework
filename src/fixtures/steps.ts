@@ -29,7 +29,7 @@ export interface Blocker {
 /**
  * Access gates. EMAIL, search and free-text-key access were granted on 2026-10-01: if one of them answers
  * 403 AUTHORIZATION_DENIED again, the access was withdrawn and the test is marked BLOCKED ("ACCESS") with the real
- * reply, so the reason is visible. Temporary phones (BQ-02) and approved phones (BQ-03) are still open questions.
+ * reply, so the reason is visible. Temporary-phone access is still an open question (BQ-02).
  */
 export const BLOCKERS = {
   email: { id: 'ACCESS', reason: 'EMAIL access (granted 2026-10-01) is refused again — ask Dev' },
@@ -39,7 +39,7 @@ export const BLOCKERS = {
     id: 'ACCESS',
     reason: 'Free-text key access (granted 2026-10-01) is refused again — ask Dev',
   },
-  phone: { id: 'BQ-03', reason: 'Approved test phone numbers not available' },
+  phone: { id: 'CONFIG', reason: 'Approved test phone numbers not configured (AISLE_TEST_PHONES)' },
 } as const satisfies Record<string, Blocker>;
 
 /**

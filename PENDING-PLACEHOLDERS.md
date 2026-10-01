@@ -15,15 +15,15 @@ environment), then run `npm run check-env`.
 ## Checklist
 
 1. [ ] Temporary-phone access confirmed for the Aisle caller (BQ-02)
-2. [ ] Approved test phone numbers (BQ-03) — section 1
+2. [ ] Approved test phone numbers in AISLE_TEST_PHONES (provided 2026-10-01; keep them in .env) — section 1
 3. [ ] Read-only DB access and the PII table/column layout (BQ-04) — sections 1–2 (6 DB placeholders)
-4. [ ] Answers to the open questions behind 35 blockable tests — sections 3–4
+4. [ ] Answers to the open questions behind 32 blockable tests — sections 3–4
 
 ## 1. Settings (`.env.example`)
 
 | Setting | Placeholder | Where | From | Unblocks |
 |---|---|---|---|---|
-| `AISLE_TEST_PHONES` | `PENDING_APPROVED_TEST_PHONES` | `.env.example:35` | QA lead / Aisle backend (BQ-03) | Phone normalization and temporary-phone tests (approved numbers only) |
+| `AISLE_TEST_PHONES` | `PENDING_APPROVED_TEST_PHONES` | `.env.example:35` | QA lead / Aisle backend (team-approved test numbers only) | Phone normalization and temporary-phone tests (approved numbers only) |
 | `DB_HOST` | `PENDING_DB_HOST` | `.env.example:42` | Aisle backend / DBA (BQ-04) | All @db tests and POC-003 |
 | `DB_PORT` | `PENDING_DB_PORT` | `.env.example:43` | Aisle backend / DBA (BQ-04) | All @db tests and POC-003 |
 | `DB_NAME` | `PENDING_DB_NAME` | `.env.example:44` | Aisle backend / DBA (BQ-04) | All @db tests and POC-003 |
@@ -60,40 +60,36 @@ Blocked only if staging still denies access (403) or the setting is missing — 
 | AISLE-DB-004 | BQ-04 | runtime | `tests/db/db-persistence.spec.ts:68` |
 | AISLE-DB-005 | BQ-04 | runtime | `tests/db/db-persistence.spec.ts:93` |
 | AISLE-FT-004 | BQ-33 | static | `tests/free-text/free-text-keys.spec.ts:83` |
-| AISLE-NRM-002 | BQ-03 | static | `tests/pii/normalization.spec.ts:23` |
-| AISLE-NRM-003 | BQ-03 | static | `tests/pii/normalization.spec.ts:27` |
-| AISLE-NRM-004 | BQ-36 | runtime | `tests/pii/normalization.spec.ts:31` |
-| AISLE-NRM-005 | BQ-36 | static | `tests/pii/normalization.spec.ts:61` |
+| AISLE-NRM-004 | BQ-36 | runtime | `tests/pii/normalization.spec.ts:67` |
+| AISLE-NRM-005 | BQ-36 | static | `tests/pii/normalization.spec.ts:97` |
 | AISLE-RD-009 | BQ-38 | runtime | `tests/pii/read-pii.spec.ts:155` |
 | AISLE-SEC-005 | BQ-29 | runtime | `tests/security/response-security.spec.ts:58` |
 | AISLE-SEC-006 | BQ-39 | static | `tests/security/response-security.spec.ts:91` |
 | AISLE-SR-013 | BQ-40 | runtime | `tests/pii/search-pii.spec.ts:331` |
 | AISLE-SR-015 | BQ-32 | runtime | `tests/pii/search-pii.spec.ts:389` |
 | AISLE-SR-016 | BQ-41 | static | `tests/pii/search-pii.spec.ts:416` |
-| AISLE-TR-001 | BQ-02, BQ-03 | runtime | `tests/transient/transient-phone.spec.ts:36` |
-| AISLE-TR-002 | BQ-02, BQ-03 | runtime | `tests/transient/transient-phone.spec.ts:57` |
-| AISLE-TR-003 | BQ-02, BQ-03 | runtime | `tests/transient/transient-phone.spec.ts:77` |
-| AISLE-TR-004 | BQ-02, BQ-03 | runtime | `tests/transient/transient-phone.spec.ts:112` |
-| AISLE-TR-005 | BQ-03 | static | `tests/transient/transient-phone.spec.ts:126` |
-| AISLE-TR-006 | BQ-28 | static | `tests/transient/transient-phone.spec.ts:133` |
-| AISLE-TR-007 | BQ-03 | static | `tests/transient/transient-phone.spec.ts:140` |
-| AISLE-TR-008 | BQ-03 | static | `tests/transient/transient-phone.spec.ts:144` |
-| AISLE-TR-009 | BQ-03 | static | `tests/transient/transient-phone.spec.ts:148` |
-| AISLE-WR-012 | BQ-34 | runtime | `tests/pii/write-pii.spec.ts:248` |
-| AISLE-WR-013 | BQ-35 | runtime | `tests/pii/write-pii.spec.ts:287` |
-| AISLE-WR-020 | BQ-29 | runtime | `tests/pii/write-pii.spec.ts:440` |
-| AISLE-WR-024 | BQ-37 | static | `tests/pii/write-pii.spec.ts:532` |
-| AISLE-WR-025 | BQ-37 | runtime | `tests/pii/write-pii.spec.ts:555` |
-| AISLE-WR-028 | BQ-03 | static | `tests/pii/write-pii.spec.ts:607` |
+| AISLE-TR-001 | BQ-02 | runtime | `tests/transient/transient-phone.spec.ts:44` |
+| AISLE-TR-002 | BQ-02 | runtime | `tests/transient/transient-phone.spec.ts:65` |
+| AISLE-TR-003 | BQ-02 | runtime | `tests/transient/transient-phone.spec.ts:85` |
+| AISLE-TR-004 | BQ-02 | runtime | `tests/transient/transient-phone.spec.ts:120` |
+| AISLE-TR-005 | BQ-28 | static | `tests/transient/transient-phone.spec.ts:134` |
+| AISLE-TR-006 | BQ-02, BQ-28 | runtime | `tests/transient/transient-phone.spec.ts:141` |
+| AISLE-TR-007 | BQ-28 | static | `tests/transient/transient-phone.spec.ts:170` |
+| AISLE-TR-008 | BQ-02 | runtime | `tests/transient/transient-phone.spec.ts:177` |
+| AISLE-TR-009 | BQ-02 | runtime | `tests/transient/transient-phone.spec.ts:215` |
+| AISLE-WR-012 | BQ-34 | runtime | `tests/pii/write-pii.spec.ts:249` |
+| AISLE-WR-013 | BQ-35 | runtime | `tests/pii/write-pii.spec.ts:288` |
+| AISLE-WR-020 | BQ-29 | runtime | `tests/pii/write-pii.spec.ts:441` |
+| AISLE-WR-024 | BQ-37 | static | `tests/pii/write-pii.spec.ts:533` |
+| AISLE-WR-025 | BQ-37 | runtime | `tests/pii/write-pii.spec.ts:556` |
 | POC-003 | BQ-04 | runtime | `tests/poc/name-poc.spec.ts:61` |
 
 ## 4. Open questions
 
 | ID | Status | Question |
 |---|---|---|
-| BQ-03 | Open | (Q4) Please provide approved test phone numbers (nobody's real number); `+91 98765 43210` from the curl collection is not assumed approved. |
-| BQ-02 | Open | Are temporary phones meant to be used through the facade? If yes, please confirm the access and the response format. |
-| BQ-28 | Open | (Q14) What are the temporary-phone TTL (`ttl_seconds`) limits? |
+| BQ-02 | Open | Are temporary phones meant to be used through the facade? Please confirm the response format seen on staging. |
+| BQ-28 | Open | (Q14) Temporary-phone lifetime (`ttl_seconds`): please confirm the limits seen on staging. Can QA get a shorter lifetime for tests (the minimum of … |
 | BQ-33 | Open | Revoking a free-text key that is already revoked: 404, or 200 (idempotent)? |
 | BQ-18 | Open | Bulk read: what is the real maximum number of user IDs? The 422 rule says 200, but exactly 200 users returned 403. |
 | BQ-34 | Open | User IDs: is the PII service meant to trim spaces around a user ID and treat it as case-sensitive? And which layer does the trimming — the PII serv… |

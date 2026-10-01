@@ -17,7 +17,7 @@ import { SAFE_ID_PATTERN } from './test-identifiers';
 /**
  * Sanity range for configured approved phones: E.164 numbers have at most 15 digits; shorter than 8 cannot
  * be a real subscriber number. This checks OUR configuration only — the service's own phone rules are
- * unconfirmed (docs/backend-open-questions.md BQ-03).
+ * observed on staging 2026-10-01 (digits only; 5–7 and 16 digits refused).
  */
 const PHONE_DIGITS = { min: 8, max: 15 } as const;
 
@@ -28,7 +28,7 @@ export function normalizeEmail(input: string): string {
   return input.trim().toLowerCase();
 }
 
-/** Phone: all non-digits removed (expected; unconfirmed through the facade — BQ-03). */
+/** Phone: all non-digits removed (observed on staging 2026-10-01). */
 export function normalizePhone(input: string): string {
   return input.replace(/\D/g, '');
 }

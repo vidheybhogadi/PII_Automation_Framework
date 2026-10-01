@@ -20,6 +20,7 @@ import {
   noteAssumption,
   noteObserved,
   onlyIfInScope,
+  requireApprovedPhones,
   test,
 } from '../../src/fixtures/test-fixtures';
 import { ERROR_CODES } from '../../src/models/common.models';
@@ -604,8 +605,65 @@ test.describe('Aisle facade — save PII', () => {
     expectSecretEquals(await readValue(aisle, { userId, field: PII_FIELDS.NAME }), name, 'NAME kept');
   });
 
-  test('AISLE-WR-028 A phone next to a name and an email: replacing the phone, reading all three fields and bulk reading the phone', async () => {
-    blockedBy('BQ-03', 'Needs approved test phone numbers; no phone number is ever sent until they exist');
+  test('AISLE-WR-028 A phone next to a name and an email: replacing the phone, reading all three fields and bulk reading the phone', async ({
+    aisle,
+    data,
+    cleanup,
+    config,
+  }) => {
+    requireApprovedPhones(config);
+    noteObserved(
+      '2026-10-01',
+      'PHONE save 201, replace 200; read of 3 fields → count 3; bulk PHONE → the new phone',
+    );
+    const userId = data.userId('wr28');
+    const name = data.name();
+    const email = data.email('wr28');
+    const [first, second] = [data.phone(0), data.phone(1)];
+    await seedField(aisle, cleanup, { userId, field: PII_FIELDS.NAME, value: name });
+    await seedField(aisle, cleanup, {
+      userId,
+      field: PII_FIELDS.EMAIL,
+      value: email,
+      blocker: BLOCKERS.email,
+    });
+
+    expectSuccess(
+      await aisle.writePii({ user_id: userId, field: PII_FIELDS.PHONE, value: first.input }),
+      201,
+      writePiiDataSchema,
+    );
+    cleanup.leaveBehind('PII PHONE', userId);
+    expectSuccess(
+      await aisle.writePii({ user_id: userId, field: PII_FIELDS.PHONE, value: second.input }),
+      200,
+      writePiiDataSchema,
+    );
+
+    const read = expectSuccess(
+      await aisle.readPii({
+        user_id: userId,
+        field_names: [PII_FIELDS.NAME, PII_FIELDS.EMAIL, PII_FIELDS.PHONE],
+      }),
+      200,
+      readPiiDataSchema,
+    );
+    expect(read.count).toBe(3);
+    expectSecretEquals(read.items.find((i) => i.field === PII_FIELDS.NAME)?.value, name, 'NAME');
+    expectSecretEquals(read.items.find((i) => i.field === PII_FIELDS.EMAIL)?.value, email, 'EMAIL');
+    expectSecretEquals(
+      read.items.find((i) => i.field === PII_FIELDS.PHONE)?.value,
+      second.normalized,
+      'replaced PHONE',
+    );
+
+    const bulk = expectSuccess(
+      await aisle.batchRead({ user_ids: [userId], fields: [PII_FIELDS.PHONE] }),
+      200,
+      batchReadDataSchema,
+    );
+    expect(bulk.count).toBe(1);
+    expectSecretEquals(bulk.items[0]?.value, second.normalized, 'bulk-read PHONE');
   });
 
   test('AISLE-WR-029 Ten saves for ten different fake users sent at the same moment all succeed (201) and each user gets their own name', async ({

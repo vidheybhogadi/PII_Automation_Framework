@@ -574,12 +574,11 @@ export const REQUIREMENTS: Requirement[] = [
   req(
     'FR-NRM-03',
     'Normalization',
-    'Phones are stored as digits only and invalid phones are refused (blocked)',
+    'Phones are stored as digits only, invalid phones are refused, and a phone can be replaced next to other fields',
     'Derived',
-    'BQ-03',
+    OBS2,
     ['writePii', 'readPii'],
     ['AISLE-NRM-002', 'AISLE-NRM-003', 'AISLE-WR-028'],
-    'BQ-03',
   ),
   req(
     'FR-EML-01',
@@ -649,12 +648,12 @@ export const REQUIREMENTS: Requirement[] = [
   req(
     'FR-TR-01',
     'Temporary phone',
-    'A temporary phone can be created, resolved and promoted once, expires on time and refuses bad input (blocked)',
+    'A temporary phone can be created, resolved and promoted once (also onto a user who has a phone), has a lifetime of 300 s–7 days, expires on time (blocked) and refuses bad input',
     'Derived',
-    'BQ-02',
+    OBS2,
     TR,
     ['AISLE-TR-*'],
-    'BQ-03',
+    'BQ-28',
   ),
   req(
     'FR-FT-01',

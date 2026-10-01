@@ -12,7 +12,7 @@ requirement — VERIFIED / FAILED / PARTIAL / BLOCKED / NOT EXECUTED — comes f
 report dashboard (Requirements section) and its PDF. Test references ending in `*` cover every test with
 that ID prefix.
 
-**37 requirements** in 14 groups · 18 depend on an open backend question.
+**37 requirements** in 14 groups · 17 depend on an open backend question.
 
 ## Authentication
 
@@ -61,11 +61,11 @@ that ID prefix.
 
 ## Normalization
 
-| Req       | Requirement                                                                                            | Type    | Source                       | Endpoints                                               | Tests                                                        | Open question |
-| --------- | ------------------------------------------------------------------------------------------------------ | ------- | ---------------------------- | ------------------------------------------------------- | ------------------------------------------------------------ | ------------- |
-| FR-NRM-01 | Names are trimmed and runs of spaces collapsed (tabs and line breaks become spaces); capitals are kept | Derived | Staging, observed 2026-09-29 | `POST /api/v1/pii-test`<br>`POST /api/v1/pii-test/read` | `AISLE-NRM-001`, `AISLE-NRM-004`, `AISLE-NRM-005`, `POC-002` | BQ-36         |
-| FR-NRM-02 | Emails are trimmed and lower-cased                                                                     | Derived | Staging, observed 2026-10-01 | `POST /api/v1/pii-test`<br>`POST /api/v1/pii-test/read` | `AISLE-WR-010`                                               | —             |
-| FR-NRM-03 | Phones are stored as digits only and invalid phones are refused (blocked)                              | Derived | BQ-03                        | `POST /api/v1/pii-test`<br>`POST /api/v1/pii-test/read` | `AISLE-NRM-002`, `AISLE-NRM-003`, `AISLE-WR-028`             | BQ-03         |
+| Req       | Requirement                                                                                                    | Type    | Source                       | Endpoints                                               | Tests                                                        | Open question |
+| --------- | -------------------------------------------------------------------------------------------------------------- | ------- | ---------------------------- | ------------------------------------------------------- | ------------------------------------------------------------ | ------------- |
+| FR-NRM-01 | Names are trimmed and runs of spaces collapsed (tabs and line breaks become spaces); capitals are kept         | Derived | Staging, observed 2026-09-29 | `POST /api/v1/pii-test`<br>`POST /api/v1/pii-test/read` | `AISLE-NRM-001`, `AISLE-NRM-004`, `AISLE-NRM-005`, `POC-002` | BQ-36         |
+| FR-NRM-02 | Emails are trimmed and lower-cased                                                                             | Derived | Staging, observed 2026-10-01 | `POST /api/v1/pii-test`<br>`POST /api/v1/pii-test/read` | `AISLE-WR-010`                                               | —             |
+| FR-NRM-03 | Phones are stored as digits only, invalid phones are refused, and a phone can be replaced next to other fields | Derived | Staging, observed 2026-10-01 | `POST /api/v1/pii-test`<br>`POST /api/v1/pii-test/read` | `AISLE-NRM-002`, `AISLE-NRM-003`, `AISLE-WR-028`             | —             |
 
 ## Email flow
 
@@ -84,9 +84,9 @@ that ID prefix.
 
 ## Temporary phone
 
-| Req      | Requirement                                                                                                   | Type    | Source | Endpoints                                                                                                                                        | Tests        | Open question |
-| -------- | ------------------------------------------------------------------------------------------------------------- | ------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------ | ------------- |
-| FR-TR-01 | A temporary phone can be created, resolved and promoted once, expires on time and refuses bad input (blocked) | Derived | BQ-02  | `POST /api/v1/pii-test/transient/phones`<br>`POST /api/v1/pii-test/transient/phones/resolve`<br>`POST /api/v1/pii-test/transient/phones/promote` | `AISLE-TR-*` | BQ-03         |
+| Req      | Requirement                                                                                                                                                                      | Type    | Source                       | Endpoints                                                                                                                                        | Tests        | Open question |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------ | ------------- |
+| FR-TR-01 | A temporary phone can be created, resolved and promoted once (also onto a user who has a phone), has a lifetime of 300 s–7 days, expires on time (blocked) and refuses bad input | Derived | Staging, observed 2026-10-01 | `POST /api/v1/pii-test/transient/phones`<br>`POST /api/v1/pii-test/transient/phones/resolve`<br>`POST /api/v1/pii-test/transient/phones/promote` | `AISLE-TR-*` | BQ-28         |
 
 ## Free-text keys
 

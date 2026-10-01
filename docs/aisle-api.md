@@ -100,7 +100,7 @@ JSON
 
 ## Create Transient Phone
 
-Creates a temporary encrypted phone mapping. Use only an approved test number (`AISLE_TEST_PHONES`, see BQ-03) —
+Creates a temporary encrypted phone mapping. Use only an approved test number (`AISLE_TEST_PHONES`) —
 never a real person's number.
 
 ```bash

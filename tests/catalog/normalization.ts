@@ -18,34 +18,42 @@ export const NORMALIZATION_CASES: TestCaseCatalog = {
     priority: 'High',
   },
   'AISLE-NRM-002': {
-    what: 'Saves an approved test phone number (a number Dev confirmed is nobody’s real phone) written with spaces, dashes and brackets, then reads it back.',
-    why: 'Phones typed in different formats must match the same stored number.',
+    what: 'Saves approved test phone 1 (a number the team confirmed is nobody’s real phone) for a new fake user, once written with “+”, spaces, brackets and dashes, and once as “+” plus digits. Reads each back.',
+    why: 'People type phone numbers in many styles. The service must store one clean form, or searches and comparisons fail.',
     steps: [
-      'Take an approved test phone from the settings',
-      'Save it with formatting for a new fake user',
-      'Read the PHONE field back',
+      'Save approved test phone 1 written as “+NN (NNN) NNN-NNNN” for a new fake user',
+      'Save it written as “+” and digits for another new fake user',
+      'Read each phone back',
     ],
-    expected: '200 OK. The value is digits only.',
+    expected:
+      'Both saves succeed and both reads return the phone as digits only. Seen on staging on 2026-10-01.',
     request:
-      'POST /api/v1/pii-test {"user_id":"<new fake user>","field":"PHONE","value":"<approved test phone with spaces, dashes, brackets>"} · POST /api/v1/pii-test/read {"user_id":"<same user>","field_names":["PHONE"]}',
-    validation: ['Save succeeds', 'Read status is 200', 'The value contains digits only'],
+      'POST /api/v1/pii-test {"user_id":"<new fake user>","field":"PHONE","value":"<approved test phone 1, formatted>"} · POST /api/v1/pii-test/read {"field_names":["PHONE"]}',
+    validation: ['Both saves succeed', 'Both reads return digits only'],
     type: 'Positive',
     priority: 'High',
     preconditions:
-      'Blocked: no approved test phone numbers yet, and PHONE access and the phone clean-up rule are not confirmed (question BQ-03).',
+      'Needs the team-approved test phone numbers in AISLE_TEST_PHONES (never a real person’s number). Without them the test is marked Blocked (CONFIG).',
   },
   'AISLE-NRM-003': {
-    what: 'Tries to save a 5-digit and a 16-digit value as a phone. Neither can be a real phone number (real international numbers have at most 15 digits).',
-    why: 'Invalid phones would make texts and calls fail.',
-    steps: ['Save a 5-digit phone for a new fake user', 'Save a 16-digit phone', 'Check both replies'],
-    expected: 'Both are refused and nothing is saved. The exact status is waiting on Dev (question BQ-03).',
+    what: 'Tries to save made-up invalid phone values for new fake users: 5 digits, 7 digits, 16 digits, and only symbols (no digits).',
+    why: 'A phone that is too short, too long or empty after clean-up can never reach anyone; storing it would be wrong data.',
+    steps: [
+      'Send each invalid value as a PHONE save for a new fake user',
+      'Check each reply',
+      'Read each user',
+    ],
+    expected:
+      'Each save gets 400 VALIDATION_ERROR (the value breaks a rule) with no data, never a server error, and nothing is saved (404 on read). Seen on staging on 2026-10-01. Only made-up values are used, never a number that could be someone’s.',
     request:
-      'POST /api/v1/pii-test {"user_id":"<new fake user>","field":"PHONE","value":"12345"} · {… "value":"<16 digits>"}',
-    validation: ['Both saves are refused', 'Nothing is saved for the user'],
+      'POST /api/v1/pii-test {"user_id":"<new fake user>","field":"PHONE","value":"12345"} · {"value":"1234567"} · {"value":"1234567890123456"} · {"value":"+-() "}',
+    validation: [
+      'Each save is 400 VALIDATION_ERROR with no data',
+      'No server error (5xx)',
+      'Nothing saved (404)',
+    ],
     type: 'Negative',
-    priority: 'Medium',
-    preconditions:
-      'Blocked: PHONE access and the phone length rule are not confirmed for the facade (question BQ-03).',
+    priority: 'High',
   },
   'AISLE-NRM-004': {
     what: 'Saves five fake names that each hide one invisible character between two words: a tab, a line break, a carriage return, a non-breaking space and a zero-width space. Reads each back.',

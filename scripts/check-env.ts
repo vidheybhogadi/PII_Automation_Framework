@@ -36,7 +36,7 @@ async function main(): Promise<void> {
   ok('AISLE_TEST_TOKEN set (value never printed)');
   ok(`Test email domain: ${config.testData.emailDomain}`);
   if (config.testData.phones.length === 0)
-    warn('AISLE_TEST_PHONES empty — phone / temporary-phone tests will be BLOCKED (BQ-03)');
+    warn('AISLE_TEST_PHONES empty — phone / temporary-phone tests will be BLOCKED (CONFIG)');
   else ok(`${config.testData.phones.length} approved test phone(s) configured`);
   if (isDbConfigured(config)) ok(`DB validation configured (${config.db.engine}, read-only)`);
   else warn('DB validation not configured — @db tests will be BLOCKED (BQ-04)');

@@ -7,7 +7,7 @@
  */
 import { z } from 'zod';
 
-/** Fields used through the facade. NAME, EMAIL and PHONE are accessible (2026-10-01); no approved test phones yet (BQ-03). */
+/** Fields used through the facade. NAME, EMAIL and PHONE are accessible (2026-10-01). */
 export const PII_FIELDS = { EMAIL: 'EMAIL', PHONE: 'PHONE', NAME: 'NAME' } as const;
 export type PiiFieldName = (typeof PII_FIELDS)[keyof typeof PII_FIELDS];
 

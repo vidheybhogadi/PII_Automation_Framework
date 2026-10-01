@@ -1,26 +1,34 @@
 /**
  * Temporary (transient) phones through the Aisle facade: create → resolve → promote.
- * BLOCKED today: no approved test phones (BQ-03) and every temporary-phone call returns 403 (BQ-02).
- * Response shapes and 404/422 behaviour are not confirmed for the facade — recorded as assumptions.
+ * Runs with the approved test phones in AISLE_TEST_PHONES (blocked as CONFIG when none are set). Behaviour observed
+ * on staging 2026-10-01; response format (BQ-02) and lifetime limits (BQ-28) still to be confirmed by Dev.
  */
 import { randomUUID } from 'node:crypto';
-import { expectStatus, expectSuccess, expectValidationError } from '../../src/assertions/response.assertions';
+import {
+  expectError,
+  expectNoData,
+  expectStatus,
+  expectSuccess,
+  expectValidationError,
+} from '../../src/assertions/response.assertions';
 import {
   expectNoStore,
   expectResponseDoesNotEcho,
   expectSecretEquals,
 } from '../../src/assertions/security.assertions';
-import { BLOCKERS, createTransient } from '../../src/fixtures/steps';
+import { BLOCKERS, createTransient, readValue, seedField } from '../../src/fixtures/steps';
 import {
   blockedBy,
   blockIfAccessDenied,
+  expect,
   noteAssumption,
+  noteObserved,
   onlyIfInScope,
   requireApprovedPhones,
   test,
-  expect,
 } from '../../src/fixtures/test-fixtures';
-import { PII_FIELDS, readPiiDataSchema } from '../../src/models/pii.models';
+import { ERROR_CODES } from '../../src/models/common.models';
+import { LIMITS, PII_FIELDS, readPiiDataSchema } from '../../src/models/pii.models';
 import {
   createTransientPhoneDataSchema,
   promoteTransientPhoneDataSchema,
@@ -125,27 +133,116 @@ test.describe('Aisle facade — temporary phones', () => {
 
   test('AISLE-TR-005 A temporary phone with a short lifetime can no longer be looked up after it expires (404)', async () => {
     blockedBy(
-      'BQ-03',
-      'Needs approved test phone numbers; expiry behaviour also depends on the lifetime rules (BQ-28)',
+      'BQ-28',
+      'the shortest allowed lifetime is 300 s (observed 2026-10-01), so this test would wait at least 5 minutes; waiting for a shorter test lifetime or approval of a slow test',
     );
   });
 
-  test('AISLE-TR-006 A lifetime of 0, a negative number or a huge number is handled by a clear rule', async () => {
-    blockedBy(
+  test('AISLE-TR-006 A lifetime of 0, a negative number or a huge number is refused; 300 seconds to 7 days is accepted', async ({
+    aisle,
+    data,
+    config,
+    cleanup,
+  }) => {
+    requireApprovedPhones(config);
+    noteAssumption(
       'BQ-28',
-      'The allowed lifetime (ttl_seconds) range is unknown, and approved test phones are missing (BQ-03)',
+      'observed 2026-10-01: ttl_seconds ≤ 0 → 422 (minimum 1); 1–299 and > 604,800 → 400 VALIDATION_ERROR; 300 and 604,800 → 201',
     );
+    const phone = data.phone(0).input;
+    const create = (ttl: number) => aisle.call('createTransientPhone', { phone, ttl_seconds: ttl });
+
+    for (const ttl of [0, -1]) expectValidationError(await create(ttl), 'ttl_seconds');
+    for (const ttl of [299, 604_801, 1_000_000_000]) {
+      const res = await create(ttl);
+      blockIfAccessDenied(res, BLOCKERS.transient.id, BLOCKERS.transient.reason);
+      expectError(res, 400, ERROR_CODES.VALIDATION_ERROR);
+      expectNoData(res);
+    }
+    for (const ttl of [300, 604_800]) {
+      const created = expectSuccess(await create(ttl), 201, createTransientPhoneDataSchema);
+      cleanup.leaveBehind('temporary phone', created.transient_id);
+      const seconds = (Date.parse(created.expires_at) - Date.now()) / 1000;
+      expect(Math.abs(seconds - ttl), `expiry is about ${ttl} s away`).toBeLessThan(60);
+    }
   });
 
   test('AISLE-TR-007 Promoting a temporary phone after it has expired is refused and saves nothing', async () => {
-    blockedBy('BQ-03', 'Needs approved test phone numbers; the refusal status is not yet observed');
+    blockedBy(
+      'BQ-28',
+      'the shortest allowed lifetime is 300 s (observed 2026-10-01), so this test would wait at least 5 minutes; waiting for a shorter test lifetime or approval of a slow test',
+    );
   });
 
-  test('AISLE-TR-008 Promoting a temporary phone onto a user who already has a phone replaces that phone', async () => {
-    blockedBy('BQ-03', 'Needs approved test phone numbers; replace-versus-refuse is not yet observed');
+  test('AISLE-TR-008 Promoting a temporary phone onto a user who already has a phone replaces that phone', async ({
+    aisle,
+    data,
+    config,
+    cleanup,
+  }) => {
+    requireApprovedPhones(config);
+    noteObserved(
+      '2026-10-01',
+      'promote onto a user with a PHONE → 200, created false, consumed true; PHONE replaced; resolve → 404',
+    );
+    const [first, second] = [data.phone(0), data.phone(1)];
+    const userId = data.userId('tr8');
+    await seedField(aisle, cleanup, { userId, field: PII_FIELDS.PHONE, value: first.input });
+    const created = await createTransient(aisle, { phone: second.input, ttlSeconds: TTL_SECONDS });
+
+    const res = await aisle.promoteTransientPhone({ transient_id: created.transient_id, user_id: userId });
+    blockIfAccessDenied(res, BLOCKERS.transient.id, BLOCKERS.transient.reason);
+    const promoted = expectSuccess(res, 200, promoteTransientPhoneDataSchema);
+    expect(promoted).toMatchObject({
+      user_id: userId,
+      field: PII_FIELDS.PHONE,
+      created: false,
+      consumed: true,
+    });
+
+    expectSecretEquals(
+      await readValue(aisle, { userId, field: PII_FIELDS.PHONE }),
+      second.normalized,
+      'PHONE replaced by the promoted phone',
+    );
+    expectError(
+      await aisle.resolveTransientPhone({ transient_id: created.transient_id }),
+      404,
+      ERROR_CODES.TRANSIENT_PHONE_NOT_FOUND,
+    );
   });
 
-  test('AISLE-TR-009 An invalid phone on create, or an invalid user ID on promote, is rejected (422)', async () => {
-    blockedBy('BQ-03', 'Temporary phones are not probed until approved test phone numbers exist');
+  test('AISLE-TR-009 An invalid phone on create, or an invalid user ID on promote, is rejected and nothing is used up', async ({
+    aisle,
+    data,
+    config,
+    cleanup,
+  }) => {
+    requireApprovedPhones(config);
+    noteObserved(
+      '2026-10-01',
+      'create with 5 / 16 digits or letters → 400 VALIDATION_ERROR; promote with "" / number / null / 129 characters → 422; the mapping stays usable',
+    );
+    // Made-up invalid phones only — never a number that could belong to a real person.
+    for (const phone of ['12345', '1234567890123456', 'not-a-phone']) {
+      const res = await aisle.call('createTransientPhone', { phone, ttl_seconds: TTL_SECONDS });
+      blockIfAccessDenied(res, BLOCKERS.transient.id, BLOCKERS.transient.reason);
+      expectError(res, 400, ERROR_CODES.VALIDATION_ERROR);
+      expectNoData(res);
+    }
+
+    const created = await createTransient(aisle, { phone: data.phone(0).input, ttlSeconds: TTL_SECONDS });
+    cleanup.leaveBehind('temporary phone', created.transient_id);
+    for (const userId of ['', 123, null, data.userIdOfLength(LIMITS.userId.max + 1)]) {
+      expectValidationError(
+        await aisle.call('promoteTransientPhone', { transient_id: created.transient_id, user_id: userId }),
+        'user_id',
+      );
+    }
+    expectSuccess(
+      await aisle.resolveTransientPhone({ transient_id: created.transient_id }),
+      200,
+      resolveTransientPhoneDataSchema,
+    );
   });
 });
