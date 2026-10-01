@@ -195,6 +195,6 @@ Subsets: `npm run test:smoke` · `npm run test:security` · `npm run test:db` ·
 
 [Backend open questions](docs/backend-open-questions.md) · [Coverage matrix](docs/coverage-matrix.md) ·
 [Pending placeholders](PENDING-PLACEHOLDERS.md) · [Test cases (Excel)](docs/test-cases.xlsx) ·
-[Setup](docs/setup-guide.md) · [Commands](docs/execution-guide.md) · [Endpoints](docs/endpoint-inventory.md) ·
+[Setup](docs/setup-guide.md) · [Commands](docs/execution-guide.md) · [Endpoints](docs/endpoint-inventory.md) · [Aisle API (curl)](docs/aisle-api.md) ·
 [Architecture](docs/framework-architecture.md) · [Database](docs/database-setup.md) · [Report](docs/reporting.md) ·
 [Troubleshooting](docs/troubleshooting.md) · [Archive (old direct-PII design)](docs/archive/)
