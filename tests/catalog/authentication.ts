@@ -69,16 +69,4 @@ export const AUTHENTICATION_CASES: TestCaseCatalog = {
     priority: 'Critical',
     endpoint: 'crossEndpoint',
   },
-  'AISLE-AUTH-005': {
-    what: 'Tries to read a fake user’s name with a token (the secret pass that proves who is calling) that has already expired.',
-    why: 'Old tokens found in logs or on lost devices must stop working.',
-    steps: ['Send a read request with the expired test token', 'Check the reply'],
-    expected: '401 Unauthorized (refused: not signed in) with no data.',
-    request:
-      'POST /api/v1/pii-test/read {"user_id":"<fake user>","field_names":["NAME"]} with Authorization: Bearer <expired test token>',
-    validation: ['Status is 401', 'The reply contains no data'],
-    type: 'Security',
-    priority: 'High',
-    preconditions: 'Blocked until Dev provides an expired test token (question BQ-11).',
-  },
 };

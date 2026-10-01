@@ -1,7 +1,8 @@
 /**
  * Free-text encryption keys through the Aisle facade: create → read → revoke.
- * BLOCKED today: every free-text-key call returns 403 (BQ-02). Response shapes, "no-store" and 404 behaviour
- * are not confirmed for the facade — recorded as assumptions. Keys are never logged or printed.
+ * Access granted 2026-10-01 (BQ-02); a 403 would still mark a test BLOCKED at runtime. Response shapes,
+ * "no-store" and 404 behaviour are observed on staging but not confirmed by Dev — recorded as assumptions.
+ * The second-revoke reply is open (BQ-33). Keys are never logged or printed.
  */
 import { randomUUID } from 'node:crypto';
 import { expectStatus, expectSuccess } from '../../src/assertions/response.assertions';
@@ -11,7 +12,13 @@ import {
   expectSecretEquals,
 } from '../../src/assertions/security.assertions';
 import { BLOCKERS, createKey } from '../../src/fixtures/steps';
-import { blockIfAccessDenied, noteAssumption, onlyIfInScope, test } from '../../src/fixtures/test-fixtures';
+import {
+  blockedBy,
+  blockIfAccessDenied,
+  noteAssumption,
+  onlyIfInScope,
+  test,
+} from '../../src/fixtures/test-fixtures';
 import { freeTextKeyDataSchema, revokeFreeTextKeyDataSchema } from '../../src/models/free-text.models';
 import { runInPhase } from '../../src/utils/phase';
 
@@ -53,7 +60,7 @@ test.describe('Aisle facade — free-text keys', () => {
     expectNoStore(res);
   });
 
-  test('AISLE-FT-003 A revoked key can no longer be read or revoked again (404), and unknown key IDs return 404', async ({
+  test('AISLE-FT-003 A revoked free-text key can no longer be read (404), and a made-up key ID also returns 404', async ({
     aisle,
     cleanup,
   }) => {
@@ -63,12 +70,31 @@ test.describe('Aisle facade — free-text keys', () => {
     blockIfAccessDenied(res, BLOCKERS.freeText.id, BLOCKERS.freeText.reason);
     noteAssumption(
       'BQ-02',
-      'revoke response shape and 404 for revoked/unknown keys — to be confirmed by Dev',
+      'observed 2026-10-01: revoke → 200 REVOKED, read after revoke → 404, unknown key ID → 404 — Dev to confirm',
     );
     expectSuccess(res, 200, revokeFreeTextKeyDataSchema);
 
     expectStatus(await aisle.readFreeTextKey({ key_id: key.key_id }), 404, 'read after revoke');
-    expectStatus(await aisle.revokeFreeTextKey({ key_id: key.key_id }), 404, 'second revoke');
     expectStatus(await aisle.readFreeTextKey({ key_id: randomUUID() }), 404, 'unknown key ID');
+  });
+
+  test('AISLE-FT-004 Revoking a free-text key that is already revoked: expected reply waiting on Dev (404 or 200)', async ({
+    aisle,
+    cleanup,
+  }) => {
+    blockedBy(
+      'BQ-33',
+      'second revoke: 404 or 200 (idempotent)? Staging returned 200 on 2026-10-01 — expected reply not decided',
+    );
+    const key = await createKey(aisle, cleanup);
+
+    const first = await aisle.revokeFreeTextKey({ key_id: key.key_id });
+    blockIfAccessDenied(first, BLOCKERS.freeText.id, BLOCKERS.freeText.reason);
+    expectSuccess(first, 200, revokeFreeTextKeyDataSchema);
+
+    const second = await aisle.revokeFreeTextKey({ key_id: key.key_id });
+    // No expected status is guessed: the assertion for the second revoke is added once Dev answers BQ-33.
+    // Until then this test is BLOCKED (its body does not run).
+    noteAssumption('BQ-33', `second revoke answered HTTP ${second.status}`);
   });
 });

@@ -6,6 +6,7 @@ import { expect, test } from '@playwright/test';
 import { expectUnauthorized, expectValidationError } from '../../src/assertions/response.assertions';
 import { AislePiiClient } from '../../src/clients/aisle-pii-client';
 import { ApiTransportError } from '../../src/clients/base-api-client';
+import { ExchangeRecorder } from '../../src/utils/exchange-recorder';
 import { registerSecretValue } from '../../src/utils/redaction';
 import { Logger } from '../../src/utils/logger';
 import { Secret } from '../../src/utils/secret';
@@ -13,7 +14,7 @@ import { CaptureServer } from './helpers/capture-server';
 
 /** Synthetic token — NOT a real credential (32 hex chars, like the Aisle test token). */
 const TOKEN = '0123456789abcdef0123456789abcdef';
-registerSecretValue(TOKEN);
+registerSecretValue(TOKEN, '$AISLE_TEST_TOKEN');
 
 const server = new CaptureServer();
 test.beforeAll(async () => server.start());
@@ -22,13 +23,18 @@ test.beforeEach(() => {
   server.requests.length = 0;
 });
 
-function client(logger = new Logger({ level: 'debug' }), baseUrl = server.baseUrl): AislePiiClient {
+function client(
+  logger = new Logger({ level: 'debug' }),
+  baseUrl = server.baseUrl,
+  recorder?: ExchangeRecorder,
+): AislePiiClient {
   return new AislePiiClient({
     baseUrl,
     timeoutMs: 5_000,
     retryPolicy: { maxRetries: 2, baseDelayMs: 0 },
     logger,
     token: new Secret(TOKEN),
+    ...(recorder ? { recorder } : {}),
   });
 }
 
@@ -126,5 +132,30 @@ test.describe('UNIT Aisle client wire behaviour', () => {
     expectValidationError(res, 'user_id');
     expect(res.validationIssues).toEqual(['body.user_id:missing']);
     expect(res.validationIssues.join(' ')).not.toContain('Echoed Name');
+  });
+
+  test('UT-ACL-009 The report capture holds the exact request (as curl) and response, but never the token', async () => {
+    const recorder = new ExchangeRecorder();
+    const body = JSON.stringify({
+      status: true,
+      message: 'PII write successful',
+      data: { field: 'NAME' },
+      error: null,
+    });
+    server.enqueue({ status: 201, body });
+    const payload = { user_id: 'qa-auto-u1', field: 'NAME', value: "QA Automation User O'Brien" };
+    await client(undefined, undefined, recorder).writePii(payload);
+    await client(undefined, undefined, recorder).call('readPii', {}, { tamper: { authorization: null } });
+
+    const [write, noToken] = recorder.exchanges();
+    expect(write?.requestBody).toBe(JSON.stringify(payload)); // exact (fake) body
+    expect(write?.responseBody).toBe(body); // exact response
+    expect(write?.status).toBe(201);
+    expect(write?.curl).toContain('-H "Authorization: Bearer $AISLE_TEST_TOKEN"');
+    expect(write?.curl).toContain(
+      `--data-raw '{"user_id":"qa-auto-u1","field":"NAME","value":"QA Automation User O'\\''Brien"}'`,
+    );
+    expect(noToken?.requestHeaders.Authorization).toBeUndefined();
+    expect(JSON.stringify(recorder.exchanges())).not.toContain(TOKEN);
   });
 });

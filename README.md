@@ -58,7 +58,7 @@ npm run test:all
 ```
 PII_Automation_Framework/
 │
-├── tests/                          THE TESTS (55 planned) — one folder per area
+├── tests/                          THE TESTS (54 planned) — one folder per area
 │   ├── poc/                          POC-001…003: save name → read name → check DB (the first proof)
 │   ├── health/                       facade readiness
 │   ├── pii/                          save · read · search · bulk read · clean-up rules
@@ -139,7 +139,7 @@ test(
 | ---------------------- | ------------------------------------------------------------------------------------------------------------ |
 | ✔ **Pass**             | Ran and passed                                                                                               |
 | ✘ **Fail**             | Ran and failed — an automation or product problem to investigate ("Expected …, got …")                       |
-| ⚠ **Security finding** | Ran and failed on a **known security defect** reported to Dev (e.g. BQ-08). Not an automation problem.       |
+| ⚠ **Security finding** | Ran and failed on a **known security defect** reported to Dev (none today). Not an automation problem.       |
 | ⏸ **Blocked**          | Could not be tested: access, data or an answer from Dev is missing. The reason (BQ-xx) is shown. Not a pass. |
 | ↷ **Skipped**          | Deliberately not run (e.g. out of scope via settings)                                                        |
 | — **Not Tested**       | Not part of this run (or the facade was unreachable)                                                         |
@@ -179,7 +179,9 @@ Subsets: `npm run test:smoke` · `npm run test:security` · `npm run test:db` ·
 
 - The Aisle test token lives only in `.env` / CI secrets. It is never hard-coded, printed, logged, put in reports or
   error messages; the logger scrubs it and any `Authorization` header.
-- Never print or log personal data, free-text keys or DB passwords. Assertions compare without printing values.
+- Logs never contain bodies or personal data. The **report** shows each call's exact request (curl) and response for
+  debugging — safe because all test data is fake — with the token always shown as `$AISLE_TEST_TOKEN`.
+  Assertions compare without printing values.
 - Fake data only (`qa-auto-…` users, `example.test` emails, team-approved phone numbers). Never production data.
 - The database is read-only (SELECT only — writes are rejected by the framework).
 - Never fake results: a test that can't run shows as **Blocked** or **Skipped**, with the reason.
@@ -191,7 +193,7 @@ Subsets: `npm run test:smoke` · `npm run test:security` · `npm run test:db` ·
 | Part                 | Tests | Status                                                                                   |
 | -------------------- | :---: | ---------------------------------------------------------------------------------------- |
 | Framework self-tests |  60   | passing (`npm run verify`)                                                               |
-| Aisle facade tests   |  55   | written; see the migration report for the latest staging run and what is Blocked and why |
+| Aisle facade tests   |  54   | written; see the migration report for the latest staging run and what is Blocked and why |
 
 [Backend open questions](docs/backend-open-questions.md) · [Coverage matrix](docs/coverage-matrix.md) ·
 [Pending placeholders](PENDING-PLACEHOLDERS.md) · [Test cases (Excel)](docs/test-cases.xlsx) ·

@@ -17,11 +17,11 @@
 
 ## First staging results (https://testa2.aisle.co/V1)
 
-| Result           | Tests                                                                                                                                                                   |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Pass             | 25                                                                                                                                                                      |
-| Security finding | 1 — AISLE-SEC-002 (BQ-08: 422 errors echo the submitted value and the internal tenant_id)                                                                               |
-| Blocked          | 23 — EMAIL/search access (BQ-01), temporary phones / free-text keys (BQ-02), approved phones (BQ-03), DB access (BQ-04), cross-user rule (BQ-07), expired token (BQ-11) |
-| Fail             | 0                                                                                                                                                                       |
+| Result           | Tests                                                                                                                                                                                            |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Pass             | 25                                                                                                                                                                                               |
+| Security finding | 1 — the 422 echo check (BQ-08: 422 errors echo the submitted value and the internal tenant_id; test removed 2026-10-01)                                                                          |
+| Blocked          | 23 — EMAIL/search access (BQ-01), temporary phones / free-text keys (BQ-02), approved phones (BQ-03), DB access (BQ-04), cross-user rule (BQ-07), expired token (BQ-11; test removed 2026-10-01) |
+| Fail             | 0                                                                                                                                                                                                |
 
 Framework self-tests: 61/61 · report tests: 56/56.

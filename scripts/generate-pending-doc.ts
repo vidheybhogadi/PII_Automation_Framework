@@ -174,8 +174,7 @@ export function buildPendingDoc(): string {
     '1. [ ] Aisle caller access to EMAIL, EMAIL search, temporary phones and free-text keys (BQ-01, BQ-02)',
     '2. [ ] Approved test phone numbers (BQ-03) — section 1',
     `3. [ ] Read-only DB access and the PII table/column layout (BQ-04) — sections 1–2 (${dbTokens.size} DB placeholders)`,
-    '4. [ ] An expired Aisle test token, if possible (BQ-11) — `AISLE_EXPIRED_TEST_TOKEN`',
-    `5. [ ] Answers to the open questions behind ${blocked.length} blockable tests — sections 3–4`,
+    `4. [ ] Answers to the open questions behind ${blocked.length} blockable tests — sections 3–4`,
     '',
     '## 1. Settings (`.env.example`)',
     '',
@@ -216,9 +215,13 @@ export function buildPendingDoc(): string {
     '',
     '## 4. Open questions',
     '',
-    '| ID | Status | Question |',
-    '|---|---|---|',
-    ...[...qs].map(([id, q]) => `| ${id} | ${q.status} | ${esc(q.text)} |`),
+    ...(qs.size
+      ? [
+          '| ID | Status | Question |',
+          '|---|---|---|',
+          ...[...qs].map(([id, q]) => `| ${id} | ${q.status} | ${esc(q.text)} |`),
+        ]
+      : ['✅ **All clear** — no open questions for the backend team. 🎉']),
     '',
     '## 5. CI settings (GitHub environment)',
     '',

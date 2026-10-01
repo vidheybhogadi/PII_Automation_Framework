@@ -1,7 +1,7 @@
 import type { TestCaseCatalog } from './types';
 
-const SEARCH_BLOCKED =
-  'Blocked until Dev gives the Aisle caller EMAIL and search access (question BQ-01). Today search returns 403 (refused: access denied), and the report shows that real reply.';
+const SEARCH_ACCESS =
+  'Needs EMAIL and search access for the Aisle caller (granted on 2026-10-01, question BQ-01). If search is refused with 403 (access denied), the test is marked Blocked and the report shows that real reply.';
 
 export const SEARCH_CASES: TestCaseCatalog = {
   'AISLE-SR-001': {
@@ -23,7 +23,7 @@ export const SEARCH_CASES: TestCaseCatalog = {
     ],
     type: 'Positive',
     priority: 'High',
-    preconditions: SEARCH_BLOCKED,
+    preconditions: SEARCH_ACCESS,
   },
   'AISLE-SR-002': {
     what: 'Saves a fake email for a new fake test user, then searches for it with values switched on.',
@@ -44,7 +44,7 @@ export const SEARCH_CASES: TestCaseCatalog = {
     ],
     type: 'Positive',
     priority: 'Medium',
-    preconditions: SEARCH_BLOCKED,
+    preconditions: SEARCH_ACCESS,
   },
   'AISLE-SR-003': {
     what: 'Saves the same fake email for two new fake test users, then searches with a limit (the most results to return) of 1.',
@@ -61,7 +61,7 @@ export const SEARCH_CASES: TestCaseCatalog = {
     validation: ['Search status is 200', 'Exactly 1 match', '“truncated” is true'],
     type: 'Positive',
     priority: 'Medium',
-    preconditions: SEARCH_BLOCKED,
+    preconditions: SEARCH_ACCESS,
   },
   'AISLE-SR-004': {
     what: 'Searches for a fake email with a limit (the most results to return) of 0, then of 101.',
@@ -76,19 +76,26 @@ export const SEARCH_CASES: TestCaseCatalog = {
     priority: 'Medium',
   },
   'AISLE-SR-005': {
-    what: 'Searches for a fake email that was never saved.',
-    why: 'The app must handle “no match” without errors and without other people’s data.',
-    steps: ['Make a fake email that was never saved', 'Search for it', 'Check the reply'],
+    what: 'Makes a fake email address that has never been saved (unique to this test run) and searches the EMAIL field for it, with values switched off (asking for user IDs only).',
+    why: '“Nobody found” is a normal answer. The app must get a clean, empty reply, not an error and not someone else’s data.',
+    steps: [
+      'Make a fake email that was never saved',
+      'Search the EMAIL field for it, with values off',
+      'Check the reply is 200 with an empty list and a count of 0',
+    ],
     expected:
-      'An empty result. Whether that is 200 OK with a count of 0 or 404 (not found) is waiting on Dev (question BQ-13).',
+      '200 OK with the message “PII search successful”. The reply data has exactly these parts: tenant_id, field, matches, count and truncated. The list of matches is empty, the count is 0, and “truncated” (the flag meaning “more results were cut off”) is false. No user ID or email is returned. Seen on staging on 2026-10-01; Dev still to confirm it is intended (question BQ-13).',
     request:
       'POST /api/v1/pii-test/EMAIL/search {"value":"<never-saved fake email>","limit":10,"include_values":false}',
     validation: [
-      'Search is not refused for access (today it is: 403, test blocked)',
-      'Then blocked until Dev defines the no-match reply (BQ-13)',
+      'Status is 200 with message “PII search successful”',
+      'Reply data has exactly tenant_id, field, matches, count, truncated',
+      'matches is empty',
+      'count is 0',
+      'truncated is false',
     ],
     type: 'Negative',
     priority: 'Medium',
-    preconditions: `${SEARCH_BLOCKED} After access is granted it stays blocked until Dev answers question BQ-13.`,
+    preconditions: SEARCH_ACCESS,
   },
 };

@@ -59,13 +59,16 @@ PII_TEST_RUN_ID=qa-auto-20260929t101500-ab12 npm run test:api -- -g AISLE-RD-001
 ```
 
 Every test attaches a redacted `api-calls.log` (method, path, status, request ID, error code — never the token,
-bodies or personal data) to the Playwright report (`npm run report:playwright`).
+bodies or personal data) and `api-exchanges.json`: the **exact request (as a copy-paste curl) and response** of
+each call. The report's test details show the latter — expand a request to copy the curl; failed tests also show
+**Expected vs actual response**. Test data is fake, so bodies are shown in full; the token is always replaced by
+`$AISLE_TEST_TOKEN`, so a copied curl runs with your own `.env`.
 
 ## Reading the results
 
 - **Pass / Fail** — ran; Fail means investigate.
-- **Security finding** — failed on a known, reported defect (e.g. AISLE-SEC-002 / BQ-08). Expected until Dev
-  fixes it; it still makes the run "not green".
+- **Security finding** — failed on a known, reported defect (a test marked with a BQ-xx security finding; none
+  today). Expected until Dev fixes it; it still makes the run "not green".
 - **Blocked** — could not be tested; the reason names the BQ-xx question (e.g. EMAIL access denied with the real
   403). These run for real automatically once the blocker is removed.
 - **Skipped / Not Tested** — deliberately not run / not part of this run.

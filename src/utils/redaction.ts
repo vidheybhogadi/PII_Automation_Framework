@@ -42,12 +42,29 @@ const SENSITIVE_KEYS = new Set(
   ].map((k) => k.toLowerCase()),
 );
 
-/** Exact secret values (token, DB password) registered by the config loader. Never exported or logged. */
-const SECRET_VALUES = new Set<string>();
+/**
+ * Exact secret values (token, DB password) registered by the config loader → the placeholder shown instead
+ * (e.g. "$AISLE_TEST_TOKEN"). Never exported or logged.
+ */
+const SECRET_VALUES = new Map<string, string>();
 
-/** Remove this exact value from every scrubbed text from now on. Values shorter than 8 chars are ignored. */
-export function registerSecretValue(value: string): void {
-  if (value.length >= 8) SECRET_VALUES.add(value);
+/**
+ * Remove this exact value from every scrubbed text from now on. Values shorter than 8 chars are ignored.
+ * @param placeholder what to show instead in captured requests (default "[REDACTED_SECRET]").
+ */
+export function registerSecretValue(value: string, placeholder = '[REDACTED_SECRET]'): void {
+  if (value.length >= 8) SECRET_VALUES.set(value, placeholder);
+}
+
+/**
+ * Replace ONLY registered secrets (the token, the DB password) with their placeholders and leave everything else
+ * as is. Used for the request/response capture in reports, where the (synthetic) test data is shown in full but
+ * the token must never appear.
+ */
+export function maskSecretsOnly(text: string): string {
+  let out = text;
+  for (const [value, placeholder] of SECRET_VALUES) out = out.split(value).join(placeholder);
+  return out;
 }
 
 export function isSensitiveKey(key: string): boolean {
@@ -79,7 +96,7 @@ export function scrubText(input: string): string {
   };
 
   let text = input;
-  for (const value of SECRET_VALUES) text = text.split(value).join('[REDACTED_SECRET]');
+  for (const value of SECRET_VALUES.keys()) text = text.split(value).join('[REDACTED_SECRET]');
   text = text.replace(BEARER_PATTERN, 'Bearer [REDACTED_TOKEN]');
   text = text.replace(UUID_PATTERN, protect).replace(ISO_DATETIME_PATTERN, protect);
   text = text

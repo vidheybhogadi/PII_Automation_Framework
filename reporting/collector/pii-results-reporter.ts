@@ -117,6 +117,65 @@ function authOf(entry: Record<string, unknown>): Pick<ApiCallRecord, 'auth'> {
 }
 
 /** Parse the framework's redacted per-test log: keep only allow-listed fields of "HTTP call" entries. */
+/** Exact secret values from the environment → the placeholder shown instead (defence in depth). */
+function envSecrets(): [string, string][] {
+  const pairs: [string, string][] = [];
+  for (const [name, placeholder] of [
+    ['AISLE_TEST_TOKEN', '$AISLE_TEST_TOKEN'],
+    ['AISLE_EXPIRED_TEST_TOKEN', '$AISLE_EXPIRED_TEST_TOKEN'],
+    ['DB_PASSWORD', '[REDACTED_SECRET]'],
+    ['SMTP_PASSWORD', '[REDACTED_SECRET]'],
+  ] as const) {
+    const v = process.env[name]?.trim();
+    if (v && v.length >= 8) pairs.push([v, placeholder]);
+  }
+  return pairs;
+}
+
+/** Replace exact secret values (token, passwords) with placeholders; leave the synthetic test data untouched. */
+export function maskEnvSecrets(text: string, secrets: [string, string][] = envSecrets()): string {
+  let out = text;
+  for (const [value, placeholder] of secrets) out = out.split(value).join(placeholder);
+  return out;
+}
+
+/**
+ * The `api-exchanges.json` attachment → requestId → exchange (curl + exact response). Bodies are kept in full
+ * (synthetic data); the token is masked again here in case anything bypassed the client-side masking.
+ */
+export function parseExchanges(text: string): Map<string, NonNullable<ApiCallRecord['exchange']>> {
+  const out = new Map<string, NonNullable<ApiCallRecord['exchange']>>();
+  let list: unknown;
+  try {
+    list = JSON.parse(maskEnvSecrets(text));
+  } catch {
+    return out;
+  }
+  if (!Array.isArray(list)) return out;
+  const str = (v: unknown) => (typeof v === 'string' ? v : null);
+  for (const raw of list) {
+    const e = raw as Record<string, unknown>;
+    const id = str(e.requestId);
+    const curl = str(e.curl);
+    const url = str(e.url);
+    if (!id || !curl || !url) continue;
+    const headers: Record<string, string> = {};
+    for (const [k, v] of Object.entries((e.requestHeaders as Record<string, unknown>) ?? {}))
+      if (typeof v === 'string') headers[k] = v;
+    out.set(id, {
+      url,
+      curl,
+      requestHeaders: headers,
+      requestBody: str(e.requestBody),
+      ...(e.requestBodyTruncated === true ? { requestBodyTruncated: true } : {}),
+      responseContentType: str(e.responseContentType),
+      responseBody: str(e.responseBody),
+      ...(e.responseBodyTruncated === true ? { responseBodyTruncated: true } : {}),
+    });
+  }
+  return out;
+}
+
 export function parseApiCalls(logText: string): ApiCallRecord[] {
   const calls: ApiCallRecord[] = [];
   for (const line of logText.split('\n')) {
@@ -324,11 +383,13 @@ export default class PiiResultsReporter implements Reporter {
     const status = mapStatus(result?.status, annotations);
 
     let apiCalls: ApiCallRecord[] = [];
+    let exchanges = new Map<string, NonNullable<ApiCallRecord['exchange']>>();
     let cleanup: CollectedTest['cleanup'];
     for (const att of result?.attachments ?? []) {
       const body = att.body ?? (att.path ? safeRead(att.path) : undefined);
       if (!body) continue;
       if (att.name === 'api-calls.log') apiCalls = parseApiCalls(body.toString('utf8'));
+      if (att.name === 'api-exchanges.json') exchanges = parseExchanges(body.toString('utf8'));
       if (att.name === 'cleanup-summary.json') {
         try {
           const s = JSON.parse(body.toString('utf8')) as {
@@ -345,6 +406,13 @@ export default class PiiResultsReporter implements Reporter {
           /* ignore malformed attachment */
         }
       }
+    }
+
+    if (exchanges.size > 0) {
+      apiCalls = apiCalls.map((c) => {
+        const ex = c.requestId ? exchanges.get(c.requestId) : undefined;
+        return ex ? { ...c, exchange: ex } : c;
+      });
     }
 
     const titlePath = test.titlePath().filter(Boolean);

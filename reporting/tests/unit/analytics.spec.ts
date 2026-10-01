@@ -386,7 +386,7 @@ test.describe('REPORT analytics', () => {
     // A PASS with the annotation (Dev fixed it) is a Pass; a FAIL without it is an ordinary Fail.
     expect(
       testOutcome(
-        t('AISLE-SEC-002', 'PASS', { annotations: [{ type: 'security-finding', description: 'x' }] }),
+        t('AISLE-SEC-900', 'PASS', { annotations: [{ type: 'security-finding', description: 'x' }] }),
       ).outcome,
     ).toBe('Pass');
     const plainFail = t('AISLE-SEC-003', 'FAIL', {

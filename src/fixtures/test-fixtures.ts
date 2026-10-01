@@ -26,6 +26,7 @@ import { createDbAdapter } from '../db/db-client';
 import { loadQueryCatalog, PiiRepository } from '../db/pii-repository';
 import { ERROR_CODES } from '../models/common.models';
 import { CleanupRegistry } from '../utils/cleanup';
+import { ExchangeRecorder } from '../utils/exchange-recorder';
 import { Logger } from '../utils/logger';
 import { runInPhase } from '../utils/phase';
 
@@ -153,8 +154,17 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     await testInfo.attach('api-calls.log', { body: logger.lines().join('\n'), contentType: 'text/plain' });
   },
 
-  aisle: async ({ config, log }, use) => {
-    await use(createAisleClient(config, log));
+  aisle: async ({ config, log }, use, testInfo) => {
+    // Exact requests/responses for the report's test details (token shown only as $AISLE_TEST_TOKEN).
+    const recorder = new ExchangeRecorder();
+    await use(createAisleClient(config, log, { recorder }));
+    const exchanges = recorder.exchanges();
+    if (exchanges.length > 0) {
+      await testInfo.attach('api-exchanges.json', {
+        body: JSON.stringify(exchanges, null, 2),
+        contentType: 'application/json',
+      });
+    }
   },
 
   data: async ({ config }, use, testInfo) => {

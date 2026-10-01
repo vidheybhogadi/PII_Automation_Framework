@@ -1,7 +1,7 @@
 import type { TestCaseCatalog } from './types';
 
-const FREE_TEXT_BLOCKED =
-  'Blocked until Dev gives the Aisle caller free-text key access (question BQ-02). Today these calls return 403 (refused: access denied).';
+const FREE_TEXT_ACCESS =
+  'Needs free-text key access for the Aisle caller (granted on 2026-10-01, question BQ-02). If a call is refused with 403 (access denied), the test is marked Blocked and the report shows that real reply.';
 
 export const FREE_TEXT_CASES: TestCaseCatalog = {
   'AISLE-FT-001': {
@@ -23,7 +23,7 @@ export const FREE_TEXT_CASES: TestCaseCatalog = {
     ],
     type: 'Positive',
     priority: 'High',
-    preconditions: FREE_TEXT_BLOCKED,
+    preconditions: FREE_TEXT_ACCESS,
   },
   'AISLE-FT-002': {
     what: 'Creates a free-text key (a secret used to encrypt notes), then reads it again by its key ID.',
@@ -40,24 +40,50 @@ export const FREE_TEXT_CASES: TestCaseCatalog = {
     ],
     type: 'Positive',
     priority: 'High',
-    preconditions: FREE_TEXT_BLOCKED,
+    preconditions: FREE_TEXT_ACCESS,
   },
   'AISLE-FT-003': {
-    what: 'Creates and revokes (permanently switches off) a free-text key, then tries to read it and revoke it again. Also reads a made-up key ID.',
-    why: 'Revoking must really switch a key off, for example after it leaked.',
-    steps: ['Create a key', 'Revoke it', 'Read it and revoke it again', 'Read a made-up key ID'],
+    what: 'Creates a fake free-text key (a secret used to encrypt notes) and revokes it (switches it off for good). Then tries to read that key, and also tries to read a made-up key ID that never existed.',
+    why: 'Revoking must really switch a key off, for example after it leaked. Asking for a key that does not exist must not return anything.',
+    steps: [
+      'Create a fake key',
+      'Revoke it and check the reply',
+      'Try to read the revoked key',
+      'Try to read a made-up key ID',
+    ],
     expected:
-      'Revoke returns 200 OK with status REVOKED. The later read, the second revoke and the made-up key ID all return 404 (not found). To be confirmed by Dev (question BQ-02).',
+      'Revoke returns 200 OK with status REVOKED. Reading the revoked key returns 404 Not Found (the key is gone). Reading the made-up key ID also returns 404 Not Found. Seen on staging on 2026-10-01; Dev still to confirm it is intended (question BQ-02). Revoking the same key a second time is checked separately in AISLE-FT-004.',
     request:
-      'POST /api/v1/pii-test/free-text/keys {} · POST /api/v1/pii-test/free-text/keys/revoke {"key_id":"<key ID>"} · POST /api/v1/pii-test/free-text/keys/read and /revoke again · POST /api/v1/pii-test/free-text/keys/read {"key_id":"<made-up ID>"}',
+      'POST /api/v1/pii-test/free-text/keys {} · POST /api/v1/pii-test/free-text/keys/revoke {"key_id":"<key ID>"} · POST /api/v1/pii-test/free-text/keys/read {"key_id":"<same key ID>"} · POST /api/v1/pii-test/free-text/keys/read {"key_id":"<made-up ID>"}',
     validation: [
       'Revoke status is 200 with status REVOKED',
-      'Read after revoke → 404',
-      'Second revoke → 404',
-      'Made-up key ID → 404',
+      'Reading the revoked key → 404',
+      'Reading a made-up key ID → 404',
     ],
     type: 'Positive',
     priority: 'High',
-    preconditions: FREE_TEXT_BLOCKED,
+    preconditions: FREE_TEXT_ACCESS,
+  },
+  'AISLE-FT-004': {
+    what: 'Creates a fake free-text key (a secret used to encrypt notes), revokes it (switches it off for good), then sends the same revoke request a second time.',
+    why: 'Apps may repeat a revoke, for example after a network error. The reply must be predictable, so a repeat is not mistaken for a failure, or a failure for success.',
+    steps: [
+      'Create a fake key',
+      'Revoke it and check the reply is 200 with status REVOKED',
+      'Revoke the same key again',
+      'Check the reply to the second revoke',
+    ],
+    expected:
+      'Not decided yet. On 2026-10-01 staging answered the second revoke with 200 OK. Dev must say whether that is intended (200: “already revoked, nothing to do”) or whether it should be 404 Not Found. Blocked until Dev answers question BQ-33.',
+    request:
+      'POST /api/v1/pii-test/free-text/keys {} · POST /api/v1/pii-test/free-text/keys/revoke {"key_id":"<key ID>"} (twice)',
+    validation: [
+      'First revoke: status 200 with status REVOKED',
+      'Second revoke: the status agreed with Dev (added once question BQ-33 is answered)',
+    ],
+    type: 'Negative',
+    priority: 'Medium',
+    preconditions:
+      'Blocked until Dev answers question BQ-33 (should revoking an already-revoked key return 404 or 200?).',
   },
 };

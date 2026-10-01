@@ -28,7 +28,6 @@ Fill in `.env` (git-ignored, keep it private — `chmod 600 .env`):
 | `AISLE_BASE_URL`                        | every facade test             | Defaults to the verified staging facade `https://testa2.aisle.co/V1` (`testa3` doesn't exist) |
 | `AISLE_TEST_EMAIL_DOMAIN`               | email tests                   | Default `example.test` (reserved — can never receive mail)                                    |
 | `AISLE_TEST_PHONES`                     | phone / temporary-phone tests | QA lead / Aisle backend: team-approved test numbers only (BQ-03). Empty → those tests Blocked |
-| `AISLE_EXPIRED_TEST_TOKEN`              | AISLE-AUTH-005                | Aisle backend, if they can provide one (BQ-11). Empty → Blocked                               |
 | `AISLE_TEST_USER_ID`, `…_OTHER_USER_ID` | optional                      | Only if Dev asks QA to use fixed approved test users; otherwise tests generate their own      |
 | `DB_*` + `config/db-queries.json`       | POC-003, AISLE-DB-\*          | Aisle backend / DBA: read-only access and the table layout (BQ-04). Missing → Blocked         |
 
@@ -54,12 +53,11 @@ fields the Aisle caller can use (a read of a random user that cannot exist — i
 
 The GitHub workflow (`.github/workflows/pii-api-tests.yml`) needs, in the GitHub Environment (`staging`):
 
-| Name                       | Kind     | Notes                                               |
-| -------------------------- | -------- | --------------------------------------------------- |
-| `AISLE_TEST_TOKEN`         | Secret   | required                                            |
-| `AISLE_BASE_URL`           | Variable | optional (defaults to `https://testa2.aisle.co/V1`) |
-| `AISLE_TEST_PHONES`        | Secret   | optional                                            |
-| `AISLE_EXPIRED_TEST_TOKEN` | Secret   | optional                                            |
-| `DB_*`, `DB_QUERIES_JSON`  | Var/Sec  | optional (read-only DB validation)                  |
+| Name                      | Kind     | Notes                                               |
+| ------------------------- | -------- | --------------------------------------------------- |
+| `AISLE_TEST_TOKEN`        | Secret   | required                                            |
+| `AISLE_BASE_URL`          | Variable | optional (defaults to `https://testa2.aisle.co/V1`) |
+| `AISLE_TEST_PHONES`       | Secret   | optional                                            |
+| `DB_*`, `DB_QUERIES_JSON` | Var/Sec  | optional (read-only DB validation)                  |
 
 Until `AISLE_TEST_TOKEN` is set there, the scheduled integration job fails at `check-env` (by design).

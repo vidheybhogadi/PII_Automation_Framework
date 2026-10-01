@@ -1,4 +1,5 @@
 import { requireToken, type FrameworkConfig } from '../config/config';
+import type { ExchangeRecorder } from '../utils/exchange-recorder';
 import type { Logger } from '../utils/logger';
 import { AislePiiClient } from './aisle-pii-client';
 
@@ -9,7 +10,7 @@ import { AislePiiClient } from './aisle-pii-client';
 export function createAisleClient(
   config: FrameworkConfig,
   logger: Logger,
-  { authenticated = true }: { authenticated?: boolean } = {},
+  { authenticated = true, recorder }: { authenticated?: boolean; recorder?: ExchangeRecorder } = {},
 ): AislePiiClient {
   return new AislePiiClient({
     baseUrl: config.baseUrl,
@@ -17,5 +18,6 @@ export function createAisleClient(
     retryPolicy: { maxRetries: config.http.retryMaxAttempts, baseDelayMs: config.http.retryBaseDelayMs },
     logger,
     token: authenticated ? requireToken(config) : undefined,
+    ...(recorder ? { recorder } : {}),
   });
 }

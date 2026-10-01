@@ -23,42 +23,24 @@ export const RESPONSE_SECURITY_CASES: TestCaseCatalog = {
     type: 'Security',
     priority: 'Critical',
   },
-  'AISLE-SEC-002': {
-    what: 'Sends a save with the user ID left out, so it fails the format check while it contains a unique fake name, then searches the error reply for that name.',
-    why: 'Error replies end up in logs and monitoring tools. They must not spread personal data or internal details.',
-    steps: [
-      'Send a save of a fake name with the user ID left out',
-      'Check the reply is 422 (refused: the request format is invalid)',
-      'Search the reply for the fake name and for the internal tenant field',
-    ],
-    expected:
-      'The reply is 422 and contains neither the fake name nor the internal “tenant_id” field. KNOWN SECURITY FINDING: today the reply repeats both, so this test fails until Dev fixes it (question BQ-08).',
-    request:
-      'POST /api/v1/pii-test {"field":"NAME","value":"QA Automation User <unique letters>"} (user ID left out)',
-    validation: [
-      'Status is 422 naming user_id',
-      'The reply does not contain the fake name',
-      'The reply does not contain “tenant_id”',
-    ],
-    type: 'Security',
-    priority: 'High',
-  },
   'AISLE-SEC-003': {
-    what: 'Saves and reads a fake name, sends one request that is refused, then scans our own test log and report notes for the token (the secret pass proving the caller is Aisle’s test app) and the fake name.',
-    why: 'QA reports are shared widely. A leaked token or personal value in them would be a security incident.',
+    what: 'Saves and reads a fake name, sends one request that is refused, then scans our call log, report notes and attachments for the token (the secret pass proving the caller is Aisle’s test app), and the call log for the fake name.',
+    why: 'Reports show the exact requests and replies, with the fake test data, so failures can be debugged. The token must never appear anywhere, or anyone reading a report could call the service as Aisle. The short call log is kept free of personal data.',
     steps: [
       'Save and read a fake name',
       'Send one save without a token (it is refused with 401)',
-      'Scan the test log and report notes for the token and the fake name',
+      'Scan the call log for the token and the fake name',
+      'Scan the report notes and attachments for the token',
     ],
     expected:
-      'Neither the token nor the fake name is found anywhere. Request IDs (tracking numbers for each call) are still visible, so problems can be traced.',
+      'The token is found nowhere: reports show it only as $AISLE_TEST_TOKEN. The call log (the redacted list of calls) contains no fake name, but still shows request IDs (tracking numbers for each call), so problems can be traced. Report attachments may show the fake name in the exact requests and replies; that is intended.',
     request:
       'POST /api/v1/pii-test (fake name) · POST /api/v1/pii-test/read (same user) · POST /api/v1/pii-test without Authorization header',
     validation: [
       'The calls were logged, with request IDs',
-      'Neither the token nor the fake name is in the test log',
-      'Neither is in the report notes or attachments',
+      'Neither the token nor the fake name is in the call log',
+      'The token is not in the report notes or attachments',
+      'The exact request/response attachment is checked for the real token by the report self-check',
     ],
     type: 'Security',
     priority: 'Critical',

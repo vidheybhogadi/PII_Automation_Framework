@@ -15,6 +15,7 @@ import { chatSummary, resultsJson, testsToCsv } from '../core/exporters';
 import { FORBIDDEN_REPORT_PATTERNS } from '../core/sanitize';
 import type { ReportData } from '../core/types';
 import { bundleDashboard } from './bundle';
+import { knownSecrets } from './secrets';
 
 const TEMPLATE = path.resolve(__dirname, '../templates/index.html');
 const BOOT_SCRIPT = path.resolve(__dirname, '../templates/boot.js');
@@ -41,6 +42,14 @@ export function reportDataScript(report: ReportData): string {
 
 /** Self-check: refuse to publish a report whose data contains key material, emails or signatures. */
 export function assertNoSensitiveData(content: string, label: string): void {
+  // The real Aisle token (and other secrets) must never be written, whatever path it took.
+  for (const [value, , name] of knownSecrets()) {
+    if (content.includes(value)) {
+      throw new Error(
+        `Report self-check failed: ${label} contains the value of ${name}. The report was NOT written.`,
+      );
+    }
+  }
   for (const pattern of FORBIDDEN_REPORT_PATTERNS) {
     if (pattern.test(content)) {
       throw new Error(

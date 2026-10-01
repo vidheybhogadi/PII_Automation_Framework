@@ -17,19 +17,18 @@ environment), then run `npm run check-env`.
 1. [ ] Aisle caller access to EMAIL, EMAIL search, temporary phones and free-text keys (BQ-01, BQ-02)
 2. [ ] Approved test phone numbers (BQ-03) — section 1
 3. [ ] Read-only DB access and the PII table/column layout (BQ-04) — sections 1–2 (6 DB placeholders)
-4. [ ] An expired Aisle test token, if possible (BQ-11) — `AISLE_EXPIRED_TEST_TOKEN`
-5. [ ] Answers to the open questions behind 38 blockable tests — sections 3–4
+4. [ ] Answers to the open questions behind 37 blockable tests — sections 3–4
 
 ## 1. Settings (`.env.example`)
 
 | Setting | Placeholder | Where | From | Unblocks |
 |---|---|---|---|---|
 | `AISLE_TEST_PHONES` | `PENDING_APPROVED_TEST_PHONES` | `.env.example:35` | QA lead / Aisle backend (BQ-03) | Phone normalization and temporary-phone tests (approved numbers only) |
-| `DB_HOST` | `PENDING_DB_HOST` | `.env.example:44` | Aisle backend / DBA (BQ-04) | All @db tests and POC-003 |
-| `DB_PORT` | `PENDING_DB_PORT` | `.env.example:45` | Aisle backend / DBA (BQ-04) | All @db tests and POC-003 |
-| `DB_NAME` | `PENDING_DB_NAME` | `.env.example:46` | Aisle backend / DBA (BQ-04) | All @db tests and POC-003 |
-| `DB_USER` | `PENDING_DB_READONLY_USER` | `.env.example:48` | Aisle backend / DBA (BQ-04, read-only user) | All @db tests and POC-003 |
-| `DB_PASSWORD` | `PENDING_DB_READONLY_PASSWORD` | `.env.example:49` | Aisle backend / DBA (BQ-04, read-only user) | All @db tests and POC-003 |
+| `DB_HOST` | `PENDING_DB_HOST` | `.env.example:42` | Aisle backend / DBA (BQ-04) | All @db tests and POC-003 |
+| `DB_PORT` | `PENDING_DB_PORT` | `.env.example:43` | Aisle backend / DBA (BQ-04) | All @db tests and POC-003 |
+| `DB_NAME` | `PENDING_DB_NAME` | `.env.example:44` | Aisle backend / DBA (BQ-04) | All @db tests and POC-003 |
+| `DB_USER` | `PENDING_DB_READONLY_USER` | `.env.example:46` | Aisle backend / DBA (BQ-04, read-only user) | All @db tests and POC-003 |
+| `DB_PASSWORD` | `PENDING_DB_READONLY_PASSWORD` | `.env.example:47` | Aisle backend / DBA (BQ-04, read-only user) | All @db tests and POC-003 |
 
 ## 2. Database query template (`config/db-queries.example.json`)
 
@@ -54,7 +53,6 @@ Blocked only if staging still denies access (403) or the setting is missing — 
 |---|---|---|---|
 | AISLE-AUTH-003 | BQ-17 | runtime | `tests/security/authentication.spec.ts:58` |
 | AISLE-AUTH-004 | BQ-09 | runtime | `tests/security/authentication.spec.ts:71` |
-| AISLE-AUTH-005 | BQ-11 | runtime | `tests/security/authentication.spec.ts:106` |
 | AISLE-BR-003 | BQ-18 | runtime | `tests/pii/batch-read.spec.ts:71` |
 | AISLE-BR-004 | BQ-19 | runtime | `tests/pii/batch-read.spec.ts:89` |
 | AISLE-BR-005 | BQ-09 | runtime | `tests/pii/batch-read.spec.ts:109` |
@@ -63,23 +61,23 @@ Blocked only if staging still denies access (403) or the setting is missing — 
 | AISLE-DB-001 | BQ-04 | runtime | `tests/db/db-persistence.spec.ts:19` |
 | AISLE-DB-002 | BQ-04 | runtime | `tests/db/db-persistence.spec.ts:44` |
 | AISLE-DB-003 | BQ-04 | runtime | `tests/db/db-persistence.spec.ts:68` |
-| AISLE-FT-001 | BQ-02 | runtime | `tests/free-text/free-text-keys.spec.ts:21` |
-| AISLE-FT-002 | BQ-02 | runtime | `tests/free-text/free-text-keys.spec.ts:42` |
-| AISLE-FT-003 | BQ-02 | runtime | `tests/free-text/free-text-keys.spec.ts:56` |
+| AISLE-FT-001 | BQ-02 | runtime | `tests/free-text/free-text-keys.spec.ts:28` |
+| AISLE-FT-002 | BQ-02 | runtime | `tests/free-text/free-text-keys.spec.ts:49` |
+| AISLE-FT-003 | BQ-02 | runtime | `tests/free-text/free-text-keys.spec.ts:63` |
+| AISLE-FT-004 | BQ-02, BQ-33 | static | `tests/free-text/free-text-keys.spec.ts:81` |
 | AISLE-HLT-001 | BQ-15 | runtime | `tests/health/health.spec.ts:9` |
 | AISLE-NRM-002 | BQ-03 | static | `tests/pii/normalization.spec.ts:23` |
 | AISLE-NRM-003 | BQ-03 | static | `tests/pii/normalization.spec.ts:27` |
 | AISLE-RD-002 | BQ-01 | runtime | `tests/pii/read-pii.spec.ts:42` |
 | AISLE-RD-005 | BQ-12 | runtime | `tests/pii/read-pii.spec.ts:89` |
-| AISLE-SEC-001 | BQ-06 | runtime | `tests/security/response-security.spec.ts:19` |
-| AISLE-SEC-002 | BQ-08 | runtime | `tests/security/response-security.spec.ts:64` |
-| AISLE-SEC-004 | BQ-07 | static | `tests/security/response-security.spec.ts:122` |
-| AISLE-SEC-005 | BQ-29 | runtime | `tests/security/response-security.spec.ts:126` |
-| AISLE-SR-001 | BQ-01 | runtime | `tests/pii/search-pii.spec.ts:24` |
-| AISLE-SR-002 | BQ-01 | runtime | `tests/pii/search-pii.spec.ts:53` |
-| AISLE-SR-003 | BQ-01 | runtime | `tests/pii/search-pii.spec.ts:79` |
-| AISLE-SR-004 | BQ-05 | runtime | `tests/pii/search-pii.spec.ts:105` |
-| AISLE-SR-005 | BQ-01, BQ-13 | runtime | `tests/pii/search-pii.spec.ts:119` |
+| AISLE-SEC-001 | BQ-06 | runtime | `tests/security/response-security.spec.ts:20` |
+| AISLE-SEC-004 | BQ-07 | static | `tests/security/response-security.spec.ts:108` |
+| AISLE-SEC-005 | BQ-29 | runtime | `tests/security/response-security.spec.ts:112` |
+| AISLE-SR-001 | BQ-01 | runtime | `tests/pii/search-pii.spec.ts:32` |
+| AISLE-SR-002 | BQ-01 | runtime | `tests/pii/search-pii.spec.ts:61` |
+| AISLE-SR-003 | BQ-01 | runtime | `tests/pii/search-pii.spec.ts:87` |
+| AISLE-SR-004 | BQ-05 | runtime | `tests/pii/search-pii.spec.ts:113` |
+| AISLE-SR-005 | BQ-01, BQ-13 | runtime | `tests/pii/search-pii.spec.ts:127` |
 | AISLE-TR-001 | BQ-02, BQ-03 | runtime | `tests/transient/transient-phone.spec.ts:35` |
 | AISLE-TR-002 | BQ-02, BQ-03 | runtime | `tests/transient/transient-phone.spec.ts:56` |
 | AISLE-TR-003 | BQ-02, BQ-03 | runtime | `tests/transient/transient-phone.spec.ts:76` |
@@ -95,18 +93,15 @@ Blocked only if staging still denies access (403) or the setting is missing — 
 
 | ID | Status | Question |
 |---|---|---|
-| BQ-01 | Open | (Q3) Please grant the Aisle caller READ, WRITE, SEARCH and BULK_READ on EMAIL, and confirm EMAIL normalization (trim + lower-case?). |
-| BQ-03 | Open | (Q4) Does the Aisle caller have READ/WRITE on PHONE? Please provide approved test phone numbers (nobody's real number); `+91 98765 43210` from the … |
-| BQ-23 | Open | (Q5) Which SEARCH permissions are enabled for the Aisle caller (which fields)? |
-| BQ-02 | Open | Are temporary phones and free-text encryption keys meant to be used through the facade? If yes, please grant that access. |
+| BQ-03 | Open | (Q4) Please provide approved test phone numbers (nobody's real number); `+91 98765 43210` from the curl collection is not assumed approved. |
+| BQ-02 | Open | Are temporary phones meant to be used through the facade? If yes, please confirm the access and the response format. |
 | BQ-28 | Open | (Q14) What are the temporary-phone TTL (`ttl_seconds`) limits? |
-| BQ-13 | Open | Search with no match: 200 with `count: 0`, or 404? |
+| BQ-33 | Open | Revoking a free-text key that is already revoked: 404, or 200 (idempotent)? |
 | BQ-07 | Open | (Q16, Q17) What is the expected cross-user authorization behaviour? Is the Aisle test token allowed to read and write arbitrary user IDs? |
-| BQ-08 | Open | (Q18) Security finding: should error responses ever contain submitted PII? Today 422 errors echo the request in `detail[].input` — the submitted va… |
+| BQ-08 | Open | (Q18) Low-priority hygiene fix: please stop echoing request values in 422 error replies (`detail[].input` contains the submitted value and the inte… |
 | BQ-29 | Open | (Q19) Which internal PII-service details must never reach the QA-facing response? Are `tenant_id` and `key_version` in success responses intended? |
 | BQ-04 | Open | (Q20–Q23) Which DB/table stores the PII? Which columns hold tenant, user, field and stored value (and key version)? What is the encryption / storag… |
 | BQ-30 | Open | (Q24) What DB validation is officially expected from QA (existence, association, protected storage, replacement, audit)? |
-| BQ-11 | Open | (Q25) How can QA obtain an expired (or revoked) Aisle test token for negative testing? |
 | BQ-31 | Open | (Q26) Are there separate QA tokens for different authorization scenarios (e.g. read-only)? |
 | BQ-32 | Open | (Q27, Q28) Is NAME search supported? The only documented search endpoint is `/api/v1/pii-test/EMAIL/search`; QA keeps the EMAIL search tests separa… |
 | BQ-10 | Open | Is there an approved way to purge run-prefixed synthetic test data (`qa-auto-…`) on staging? There is no delete API. |
@@ -117,19 +112,18 @@ Blocked only if staging still denies access (403) or the setting is missing — 
 |---|---|---|
 | `AISLE_BASE_URL` | Variable | `.github/workflows/pii-api-tests.yml:89` |
 | `AISLE_TEST_TOKEN` | Secret | `.github/workflows/pii-api-tests.yml:91` |
-| `AISLE_EXPIRED_TEST_TOKEN` | Secret | `.github/workflows/pii-api-tests.yml:92` |
-| `AISLE_TEST_EMAIL_DOMAIN` | Variable | `.github/workflows/pii-api-tests.yml:93` |
-| `AISLE_TEST_PHONES` | Secret | `.github/workflows/pii-api-tests.yml:94` |
-| `DB_ENGINE` | Variable | `.github/workflows/pii-api-tests.yml:95` |
-| `DB_HOST` | Variable | `.github/workflows/pii-api-tests.yml:96` |
-| `DB_PORT` | Variable | `.github/workflows/pii-api-tests.yml:97` |
-| `DB_NAME` | Variable | `.github/workflows/pii-api-tests.yml:98` |
-| `DB_USER` | Variable | `.github/workflows/pii-api-tests.yml:99` |
-| `DB_READONLY_PASSWORD` | Secret | `.github/workflows/pii-api-tests.yml:100` |
-| `DB_QUERIES_JSON` | Secret | `.github/workflows/pii-api-tests.yml:112` |
-| `SMTP_HOST` | Variable | `.github/workflows/pii-api-tests.yml:152` |
-| `SMTP_PORT` | Variable | `.github/workflows/pii-api-tests.yml:153` |
-| `SMTP_USER` | Secret | `.github/workflows/pii-api-tests.yml:154` |
-| `SMTP_PASSWORD` | Secret | `.github/workflows/pii-api-tests.yml:155` |
-| `REPORT_MAIL_FROM` | Variable | `.github/workflows/pii-api-tests.yml:156` |
-| `REPORT_MAIL_TO` | Variable | `.github/workflows/pii-api-tests.yml:157` |
+| `AISLE_TEST_EMAIL_DOMAIN` | Variable | `.github/workflows/pii-api-tests.yml:92` |
+| `AISLE_TEST_PHONES` | Secret | `.github/workflows/pii-api-tests.yml:93` |
+| `DB_ENGINE` | Variable | `.github/workflows/pii-api-tests.yml:94` |
+| `DB_HOST` | Variable | `.github/workflows/pii-api-tests.yml:95` |
+| `DB_PORT` | Variable | `.github/workflows/pii-api-tests.yml:96` |
+| `DB_NAME` | Variable | `.github/workflows/pii-api-tests.yml:97` |
+| `DB_USER` | Variable | `.github/workflows/pii-api-tests.yml:98` |
+| `DB_READONLY_PASSWORD` | Secret | `.github/workflows/pii-api-tests.yml:99` |
+| `DB_QUERIES_JSON` | Secret | `.github/workflows/pii-api-tests.yml:111` |
+| `SMTP_HOST` | Variable | `.github/workflows/pii-api-tests.yml:151` |
+| `SMTP_PORT` | Variable | `.github/workflows/pii-api-tests.yml:152` |
+| `SMTP_USER` | Secret | `.github/workflows/pii-api-tests.yml:153` |
+| `SMTP_PASSWORD` | Secret | `.github/workflows/pii-api-tests.yml:154` |
+| `REPORT_MAIL_FROM` | Variable | `.github/workflows/pii-api-tests.yml:155` |
+| `REPORT_MAIL_TO` | Variable | `.github/workflows/pii-api-tests.yml:156` |

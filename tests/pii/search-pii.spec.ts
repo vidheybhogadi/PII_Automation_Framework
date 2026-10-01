@@ -1,22 +1,30 @@
 /**
  * Search PII — POST /api/v1/pii-test/{FIELD}/search through the Aisle facade.
- * Search returns 403 AUTHORIZATION_DENIED today, so every test is gated at runtime (BQ-01) and shows the real
- * response. Response shapes, the "truncated" flag and the limit range are NOT confirmed for the facade yet —
- * each is recorded as an assumption to be confirmed by Dev.
+ * EMAIL search access was granted on 2026-10-01 (BQ-01); a 403 would still mark a test BLOCKED at runtime.
+ * Response shapes, the "truncated" flag, the limit range and the no-match reply are observed on staging but not
+ * confirmed by Dev — each is recorded as an assumption.
  */
-import { expectSuccess, expectValidationError } from '../../src/assertions/response.assertions';
+import {
+  expectExactKeys,
+  expectSuccess,
+  expectValidationError,
+} from '../../src/assertions/response.assertions';
 import { expectSecretEquals } from '../../src/assertions/security.assertions';
 import { messyEmail } from '../../src/data/test-data-factory';
 import { BLOCKERS, seedField } from '../../src/fixtures/steps';
 import {
-  block,
   blockIfAccessDenied,
   expect,
   noteAssumption,
   onlyIfInScope,
   test,
 } from '../../src/fixtures/test-fixtures';
-import { PII_FIELDS, searchIdsOnlyDataSchema, searchWithValuesDataSchema } from '../../src/models/pii.models';
+import {
+  PII_FIELDS,
+  SEARCH_DATA_KEYS,
+  searchIdsOnlyDataSchema,
+  searchWithValuesDataSchema,
+} from '../../src/models/pii.models';
 
 test.describe('Aisle facade — search PII', () => {
   onlyIfInScope('searchPii', 'writePii');
@@ -116,13 +124,24 @@ test.describe('Aisle facade — search PII', () => {
     expectValidationError(tooMany, 'limit');
   });
 
-  test('AISLE-SR-005 Searching an email nobody has returns an empty result', async ({ aisle, data }) => {
+  test('AISLE-SR-005 Searching for a fake email nobody has saved returns 200 with an empty list (count 0)', async ({
+    aisle,
+    data,
+  }) => {
     const res = await aisle.searchPii(PII_FIELDS.EMAIL, {
       value: data.email('sr5-never-saved'),
       limit: 10,
       include_values: false,
     });
     blockIfAccessDenied(res, BLOCKERS.search.id, BLOCKERS.search.reason);
-    block('BQ-13', 'no-match behaviour not confirmed (200 with count 0, or 404)');
+    noteAssumption(
+      'BQ-13',
+      'observed 2026-10-01: no match → 200 "PII search successful", empty matches, count 0, truncated false — Dev to confirm',
+    );
+    const found = expectSuccess(res, 200, searchIdsOnlyDataSchema, 'PII search successful');
+    expectExactKeys(found, SEARCH_DATA_KEYS, 'no-match search reply data');
+    expect(found.matches, 'no user matches a never-saved email').toEqual([]);
+    expect(found.count, 'match count').toBe(0);
+    expect(found.truncated, 'truncated flag').toBe(false);
   });
 });

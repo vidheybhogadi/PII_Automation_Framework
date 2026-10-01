@@ -14,6 +14,22 @@ import type {
 } from '../core/types';
 import { testCaseInfo } from '../../tests/catalog';
 import type { InventoryTest } from './inventory';
+import { knownSecrets, maskKnownSecrets } from './secrets';
+import type { ApiExchange } from '../core/types';
+
+/** Mask every known secret (the token, passwords) in a captured exchange — the last line of defence. */
+function maskExchange(e: ApiExchange): ApiExchange {
+  const secrets = knownSecrets();
+  const m = (s: string) => maskKnownSecrets(s, secrets);
+  return {
+    ...e,
+    url: m(e.url),
+    curl: m(e.curl),
+    requestHeaders: Object.fromEntries(Object.entries(e.requestHeaders).map(([k, v]) => [k, m(v)])),
+    requestBody: e.requestBody === null ? null : m(e.requestBody),
+    responseBody: e.responseBody === null ? null : m(e.responseBody),
+  };
+}
 
 export const PRODUCT = 'Aisle PII API Automation';
 /** The architecture under test (QA automation calls only the Aisle facade). */
@@ -59,6 +75,8 @@ export function enrichTests(run: CollectedRun): ReportTest[] {
         ...(c.auth ? { auth: c.auth } : {}),
         ...(c.transportError ? { transportError: sanitizeText(c.transportError, 60) } : {}),
         ...(c.phase ? { phase: c.phase } : {}),
+        // Exact request/response for debugging (synthetic data in full; token masked again here).
+        ...(c.exchange ? { exchange: maskExchange(c.exchange) } : {}),
       })),
       area,
       endpoints: resolveEndpoints(t.id),

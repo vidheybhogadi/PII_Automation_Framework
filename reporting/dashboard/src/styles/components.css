@@ -2459,3 +2459,49 @@
   gap: 3px;
   line-height: 1.5;
 }
+
+/* ---- Exact request / response (test details) ---------------------------------------------------- */
+.call {
+  flex-wrap: wrap;
+}
+.exchange {
+  flex-basis: 100%;
+  margin-top: 6px;
+}
+.exchange > summary {
+  cursor: pointer;
+  font-size: var(--fs-xs, 0.75rem);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+.exchange__part {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+}
+.exchange__body {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--code-bg, oklch(50% 0.02 262 / 0.08));
+  border: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 320px;
+  overflow: auto;
+}
+.diff--stack {
+  grid-template-columns: 1fr;
+}
+.diff__box .exchange__body {
+  background: transparent;
+  border: 0;
+  padding: 4px 0 0;
+}
+html[data-print='true'] .exchange__body {
+  max-height: none;
+  overflow: visible;
+}

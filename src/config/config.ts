@@ -29,8 +29,6 @@ export interface FrameworkConfig {
   readonly baseUrl: string;
   /** The Aisle test token (Bearer). */
   readonly token: Secret | undefined;
-  /** An expired Aisle test token, if Dev provided one (AISLE-AUTH-005). */
-  readonly expiredToken: Secret | undefined;
   readonly http: { timeoutMs: number; retryMaxAttempts: number; retryBaseDelayMs: number };
   readonly endpointsInScope: readonly EndpointKey[];
   readonly testData: {
@@ -62,7 +60,6 @@ export const ENV_HELP: Record<string, string> = {
   AISLE_BASE_URL: 'Aisle PII facade base URL (default https://testa2.aisle.co/V1, the verified staging).',
   AISLE_TEST_TOKEN:
     'The Aisle testing token, sent as "Authorization: Bearer …" (Aisle backend team). Keep it in .env or a CI secret.',
-  AISLE_EXPIRED_TEST_TOKEN: 'An expired Aisle test token for the expired-token test (Aisle backend team).',
   AISLE_TEST_EMAIL_DOMAIN:
     'Approved non-deliverable email domain for synthetic emails (default example.test).',
   AISLE_TEST_PHONES:
@@ -95,10 +92,13 @@ function parseEndpointScope(raw: string | undefined): EndpointKey[] {
   return requested as EndpointKey[];
 }
 
-/** Wrap a secret and teach the log scrubber its exact value, so it is removed wherever it might appear. */
-function secret(value: string | undefined): Secret | undefined {
+/**
+ * Wrap a secret and teach the scrubber its exact value, so it is removed wherever it might appear. In captured
+ * requests it is shown as `placeholder` (e.g. "$AISLE_TEST_TOKEN"), so a copied curl works with your own .env.
+ */
+function secret(value: string | undefined, placeholder?: string): Secret | undefined {
   if (value === undefined) return undefined;
-  registerSecretValue(value);
+  registerSecretValue(value, placeholder);
   return new Secret(value);
 }
 
@@ -122,8 +122,7 @@ export function loadConfig(
   return {
     environment: e.PII_ENVIRONMENT,
     baseUrl: e.AISLE_BASE_URL.replace(/\/+$/, ''),
-    token: secret(e.AISLE_TEST_TOKEN),
-    expiredToken: secret(e.AISLE_EXPIRED_TEST_TOKEN),
+    token: secret(e.AISLE_TEST_TOKEN, '$AISLE_TEST_TOKEN'),
     http: {
       timeoutMs: e.PII_HTTP_TIMEOUT_MS,
       retryMaxAttempts: e.PII_RETRY_MAX_ATTEMPTS,

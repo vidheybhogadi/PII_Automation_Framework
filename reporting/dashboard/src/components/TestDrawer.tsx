@@ -13,7 +13,8 @@ import { Icon } from '../icons';
 import { endpointOf, plainEndpoint, plainTitle } from '../plain';
 import { useApp } from '../store';
 import { copyText, fmtDateTime, isTypingTarget } from '../utils';
-import { KV, Method, OutcomeBadge, RequestId } from './ui';
+import { CopyButton, KV, Method, OutcomeBadge, RequestId } from './ui';
+import type { ApiExchange } from '../../../core/types';
 
 const IMPORTANCE: Record<string, string> = {
   critical: 'Critical',
@@ -73,6 +74,8 @@ export function TestDrawer() {
   const waiting = test.annotations.filter((a) => ['blocked', 'fixme', 'skip'].includes(a.type));
   const ep = plainEndpoint(endpointOf(test), report.endpoints);
   const calls = test.apiCalls.filter((c) => c.phase !== 'preflight');
+  // The response the test judged: the last call made in the "test" phase that has a captured exchange.
+  const actualCall = [...calls].reverse().find((c) => (c.phase ?? 'test') === 'test' && c.exchange);
   const outcome = testOutcome(test);
   const info = test.info;
   const notApplicable =
@@ -308,6 +311,27 @@ export function TestDrawer() {
             </div>
           )}
 
+          {(outcome.outcome === 'Fail' || outcome.outcome === 'Security finding') && actualCall?.exchange && (
+            <section class="stack" aria-label="Expected and actual response">
+              <div class="subhead">Expected vs actual response</div>
+              <div class="diff diff--stack">
+                <div class="diff__box diff__box--exp">
+                  <div class="xsmall muted">Expected</div>
+                  <div class="small">{info?.expected ?? 'See the failure message above.'}</div>
+                </div>
+                <div class="diff__box diff__box--got">
+                  <div class="xsmall muted">
+                    Actual — {actualCall.method} {actualCall.path} → HTTP {actualCall.status ?? 'no reply'}
+                    {actualCall.exchange.responseContentType
+                      ? ` (${actualCall.exchange.responseContentType})`
+                      : ''}
+                  </div>
+                  <pre class="exchange__body">{prettyBody(actualCall.exchange.responseBody)}</pre>
+                </div>
+              </div>
+            </section>
+          )}
+
           <section aria-label="Details">
             <div class="subhead">Details</div>
             <KV
@@ -351,6 +375,7 @@ export function TestDrawer() {
                       {c.status === null ? '' : `${Math.round(c.durationMs)} ms`}
                     </span>
                     <RequestId id={c.requestId} />
+                    {c.exchange && <ExchangeDetails exchange={c.exchange} status={c.status} />}
                   </li>
                 ))}
               </ul>
@@ -384,11 +409,55 @@ export function TestDrawer() {
           )}
 
           <p class="xsmall faint">
-            <Icon name="eyeOff" size={12} /> Request and response contents, keys and signatures are never
-            recorded.
+            <Icon name="eyeOff" size={12} /> Requests and responses are shown in full — all test data is fake.
+            The Aisle token is never recorded: it appears as <code>$AISLE_TEST_TOKEN</code>.
           </p>
         </div>
       </aside>
     </>
+  );
+}
+
+/** Pretty-print JSON bodies; anything else is shown as received. */
+function prettyBody(body: string | null): string {
+  if (body === null) return '(no body)';
+  if (body.trim() === '') return '(empty body)';
+  try {
+    return JSON.stringify(JSON.parse(body), null, 2);
+  } catch {
+    return body;
+  }
+}
+
+/** One request: copy-paste curl (token as $AISLE_TEST_TOKEN), the request body and the exact response. */
+function ExchangeDetails({ exchange, status }: { exchange: ApiExchange; status: number | null }) {
+  return (
+    <details class="exchange">
+      <summary>Request (curl) and response</summary>
+      <div class="exchange__part">
+        <div class="row row--between">
+          <span class="xsmall muted">Request — copy and run (uses $AISLE_TEST_TOKEN from your .env)</span>
+          <CopyButton text={exchange.curl} label="Copy curl" />
+        </div>
+        <pre class="exchange__body">{exchange.curl}</pre>
+        {exchange.requestBody !== null && (
+          <>
+            <div class="xsmall muted">Request body{exchange.requestBodyTruncated ? ' (shortened)' : ''}</div>
+            <pre class="exchange__body">{prettyBody(exchange.requestBody)}</pre>
+          </>
+        )}
+      </div>
+      <div class="exchange__part">
+        <div class="row row--between">
+          <span class="xsmall muted">
+            Response — HTTP {status ?? 'no reply'}
+            {exchange.responseContentType ? ` · ${exchange.responseContentType}` : ''}
+            {exchange.responseBodyTruncated ? ' (shortened)' : ''}
+          </span>
+          {exchange.responseBody ? <CopyButton text={exchange.responseBody} label="Copy response" /> : null}
+        </div>
+        <pre class="exchange__body">{prettyBody(exchange.responseBody)}</pre>
+      </div>
+    </details>
   );
 }

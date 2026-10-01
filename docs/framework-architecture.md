@@ -42,3 +42,8 @@ The token is only read from `.env` / CI secrets, wrapped in `Secret` (not printa
 scrubber (removed from any text), sent only in the `Authorization` header, and never logged — log lines record
 `auth: "token" | "none" | "custom"` instead. Axios is used instead of Playwright's request API so traces can
 never capture headers or bodies.
+
+**Request/response capture for debugging** (`src/utils/exchange-recorder.ts`): every call is recorded as a curl
+plus the exact response and shown in the report's test details. Bodies are kept in full because all test data is
+synthetic; the token is replaced by `$AISLE_TEST_TOKEN` in the recorder, again in the collector and report
+builder, and the report self-check refuses to write a report that contains the real token.

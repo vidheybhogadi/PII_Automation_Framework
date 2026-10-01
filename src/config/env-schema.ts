@@ -101,8 +101,6 @@ export const envSchema = z.object({
     blankToUndefined,
     z.string().min(1).max(64).default('QA_AUTOMATION_UNKNOWN_FIELD'),
   ),
-  /** An expired Aisle test token, if Dev can provide one (AISLE-AUTH-005). SECRET. */
-  AISLE_EXPIRED_TEST_TOKEN: optionalString,
 
   // ---- Database (read-only validation; schema supplied by Dev — see docs/database-setup.md) --------
   DB_ENGINE: z.preprocess(blankToUndefined, z.enum(['none', 'postgres', 'mysql']).default('none')),

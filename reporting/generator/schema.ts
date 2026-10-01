@@ -16,6 +16,18 @@ const apiCall = z.object({
   auth: z.enum(['token', 'none', 'custom']).optional(),
   transportError: z.string().optional(),
   phase: z.enum(['test', 'setup', 'verify', 'preflight']).optional(),
+  exchange: z
+    .object({
+      url: z.string(),
+      curl: z.string(),
+      requestHeaders: z.record(z.string(), z.string()),
+      requestBody: z.string().nullable(),
+      requestBodyTruncated: z.boolean().optional(),
+      responseContentType: z.string().nullable(),
+      responseBody: z.string().nullable(),
+      responseBodyTruncated: z.boolean().optional(),
+    })
+    .optional(),
 });
 
 const test = z.object({

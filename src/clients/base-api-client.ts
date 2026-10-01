@@ -15,6 +15,7 @@
  */
 import axios, { type AxiosResponse } from 'axios';
 import { performance } from 'node:perf_hooks';
+import type { ExchangeRecorder } from '../utils/exchange-recorder';
 import type { Logger } from '../utils/logger';
 import { currentPhase } from '../utils/phase';
 import { newRequestId } from '../utils/request-id';
@@ -81,6 +82,11 @@ export interface BaseClientOptions {
   logger: Logger;
   /** The Aisle test token. Omit only for clients that must never authenticate. */
   token?: Secret;
+  /**
+   * Optional per-test capture of exact requests/responses for the report (token replaced by
+   * $AISLE_TEST_TOKEN). The redacted log line is written either way.
+   */
+  recorder?: ExchangeRecorder;
 }
 
 export class ApiTransportError extends Error {
@@ -191,6 +197,17 @@ export class BaseApiClient {
     } catch (error) {
       const durationMs = Math.round(performance.now() - started);
       const code = (error as { code?: string }).code ?? 'UNKNOWN';
+      this.options.recorder?.record({
+        requestId: request.requestId,
+        phase: currentPhase(),
+        method: request.method,
+        url: request.url,
+        requestHeaders: request.headers,
+        requestBody: request.bodyBytes,
+        status: null,
+        transportError: code,
+        durationMs,
+      });
       this.options.logger.error('HTTP transport failure', {
         endpoint: endpointKey,
         phase: currentPhase(),
@@ -224,6 +241,19 @@ export class BaseApiClient {
       request.auth,
       typeof response.data === 'string' ? response.data : '',
     );
+
+    this.options.recorder?.record({
+      requestId: request.requestId,
+      phase: currentPhase(),
+      method: request.method,
+      url: request.url,
+      requestHeaders: request.headers,
+      requestBody: request.bodyBytes,
+      status: result.status,
+      responseContentType: result.header('content-type') ?? null,
+      responseBody: result.rawText(),
+      durationMs,
+    });
 
     this.options.logger.info('HTTP call', {
       endpoint: endpointKey,

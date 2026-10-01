@@ -89,7 +89,6 @@ jobs:
       AISLE_BASE_URL: ${{ vars.AISLE_BASE_URL || 'https://testa2.aisle.co/V1' }}
       # The Aisle test token is a secret: GitHub masks it, and the framework never prints it.
       AISLE_TEST_TOKEN: ${{ secrets.AISLE_TEST_TOKEN }}
-      AISLE_EXPIRED_TEST_TOKEN: ${{ secrets.AISLE_EXPIRED_TEST_TOKEN }}
       AISLE_TEST_EMAIL_DOMAIN: ${{ vars.AISLE_TEST_EMAIL_DOMAIN || 'example.test' }}
       AISLE_TEST_PHONES: ${{ secrets.AISLE_TEST_PHONES }}
       DB_ENGINE: ${{ vars.DB_ENGINE || 'none' }}

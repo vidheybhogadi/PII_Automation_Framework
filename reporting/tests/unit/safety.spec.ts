@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { mapStatus, parseApiCalls, runProfile } from '../../collector/pii-results-reporter';
+import { mapStatus, parseApiCalls, parseExchanges, runProfile } from '../../collector/pii-results-reporter';
 import { areaForId, matchesRef, REQUIREMENTS } from '../../core/catalog';
 import { testsToCsv } from '../../core/exporters';
 import { maskRequestId, maskUrl, sanitizeText } from '../../core/sanitize';
@@ -370,5 +370,40 @@ test.describe('REPORT safety', () => {
     writeFileSync(xlsx2, again.buffer);
     const ws2 = (await read(xlsx2)).getWorksheet('Test Cases')!;
     expect(cellsOf(ws2, naId).getCell(NOTES).text).toBe('Confirmed with Dev on the call');
+  });
+
+  test('RPT-SF-014 captured requests keep the fake test data but never the Aisle token (collector + report self-check)', () => {
+    const fakeToken = 'feedfacecafebeef0123456789abcdef'; // synthetic, NOT a real credential
+    const saved = process.env.AISLE_TEST_TOKEN;
+    process.env.AISLE_TEST_TOKEN = fakeToken;
+    try {
+      const attachment = JSON.stringify([
+        {
+          requestId: 'r-1',
+          phase: 'test',
+          method: 'POST',
+          url: 'https://staging.example.test/api/v1/pii-test',
+          requestHeaders: { Authorization: `Bearer ${fakeToken}` },
+          requestBody: '{"user_id":"qa-auto-u1","field":"NAME","value":"QA Automation User Bcdab"}',
+          curl: `curl -X POST -H "Authorization: Bearer ${fakeToken}"`,
+          status: 201,
+          responseContentType: 'application/json',
+          responseBody: '{"status":true}',
+          durationMs: 5,
+        },
+      ]);
+      const ex = parseExchanges(attachment).get('r-1');
+      expect(ex?.requestBody).toContain('QA Automation User Bcdab'); // synthetic data kept in full
+      expect(JSON.stringify(ex)).not.toContain(fakeToken);
+      expect(ex?.curl).toContain('Bearer $AISLE_TEST_TOKEN');
+      // Whatever path it took, a report containing the token is refused.
+      expect(() => assertNoSensitiveData(`{"curl":"Bearer ${fakeToken}"}`, 'unit')).toThrow(
+        /AISLE_TEST_TOKEN/,
+      );
+      expect(() => assertNoSensitiveData('{"curl":"Bearer $AISLE_TEST_TOKEN"}', 'unit')).not.toThrow();
+    } finally {
+      if (saved === undefined) delete process.env.AISLE_TEST_TOKEN;
+      else process.env.AISLE_TEST_TOKEN = saved;
+    }
   });
 });

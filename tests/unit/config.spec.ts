@@ -1,6 +1,7 @@
 /** UNIT — configuration parsing, secret handling and actionable errors. */
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { inspect } from 'node:util';
 import {
   ConfigError,
@@ -135,4 +136,27 @@ test.describe('UNIT configuration', () => {
 test('UT-DOC-001 PENDING-PLACEHOLDERS.md lists every placeholder and is up to date (npm run docs:pending)', () => {
   const current = readFileSync(PENDING_DOC, 'utf8');
   expect(current, 'PENDING-PLACEHOLDERS.md is stale — run: npm run docs:pending').toBe(buildPendingDoc());
+});
+
+test('UT-DOC-003 backend-open-questions.md keeps only OPEN questions, or says "All clear" when none are left', () => {
+  const text = readFileSync(path.resolve(__dirname, '../../docs/backend-open-questions.md'), 'utf8');
+  const visible = text.replace(/<!--[\s\S]*?-->/g, ''); // ignore the template comment
+  const lines = visible.split('\n');
+  const rows = lines.filter((l) => /^\|\s*BQ-\d+\s*\|/.test(l));
+  const notOpen = rows
+    .map((l) => ({ id: /BQ-\d+/.exec(l)?.[0], status: l.split('|').slice(-2, -1)[0]?.trim() }))
+    .filter((r) => r.status !== 'Open')
+    .map((r) => `${r.id} [${r.status}]`);
+  expect(
+    notOpen,
+    'answered / observed / closed questions must be deleted, not kept with another status',
+  ).toEqual([]);
+  // A table header left without any question under it (all its questions were removed) must be deleted too.
+  const emptyTables = lines
+    .map((l, i) => ({ l, i }))
+    .filter(({ l, i }) => /^\|\s*ID\s*\|/.test(l) && !/^\|\s*BQ-\d+/.test(lines[i + 2] ?? ''))
+    .map(({ i }) => `table at line ${i + 1}`);
+  expect(emptyTables, 'remove empty question tables (and their headings)').toEqual([]);
+  if (rows.length === 0)
+    expect(visible, 'with no open questions the file must say so').toContain('All clear');
 });

@@ -7,7 +7,7 @@ import { expectUnauthorized } from '../../src/assertions/response.assertions';
 import { expectResponseDoesNotEcho, expectSecretEquals } from '../../src/assertions/security.assertions';
 import { readValue, seedField } from '../../src/fixtures/steps';
 import { ENDPOINT_KEYS, type EndpointKey } from '../../src/clients/endpoints';
-import { block, expect, noteAssumption, test } from '../../src/fixtures/test-fixtures';
+import { expect, noteAssumption, test } from '../../src/fixtures/test-fixtures';
 import { PII_FIELDS } from '../../src/models/pii.models';
 
 /** A made-up token: clearly fake, never the real one. */
@@ -101,19 +101,5 @@ test.describe('Aisle facade — token authentication', { tag: ['@security'] }, (
         notRefused.push(`${key}: HTTP ${res.status}${hasData ? ' with data' : ''}`);
     }
     expect(notRefused, 'endpoints that did not refuse a request without a token').toEqual([]);
-  });
-
-  test('AISLE-AUTH-005 An expired token is refused (401)', async ({ aisle, data, config }) => {
-    const expired = config.expiredToken;
-    if (!expired) {
-      block('BQ-11', 'No expired test token configured');
-      return;
-    }
-    const res = await aisle.call(
-      'readPii',
-      { user_id: data.userId('auth5'), field_names: [PII_FIELDS.NAME] },
-      { tamper: { authorization: `Bearer ${expired.reveal()}` } },
-    );
-    expectUnauthorized(res, 'expired token');
   });
 });

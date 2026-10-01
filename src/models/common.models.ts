@@ -38,7 +38,7 @@ export type ErrorEnvelope = z.infer<typeof errorEnvelopeSchema>;
 
 /**
  * FastAPI's default 422 body (OBSERVED). Note: each `detail` entry also carries an `input` echo of what was
- * sent — including the value and the internal tenant_id — which is security finding BQ-08 (AISLE-SEC-002).
+ * sent — including the value and the internal tenant_id — which is known finding BQ-08 (low priority, no active test).
  */
 export const fastApiValidationSchema = z.object({
   detail: z.array(

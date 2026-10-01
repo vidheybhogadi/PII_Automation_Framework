@@ -38,6 +38,23 @@ export interface ApiCallRecord {
    * check (e.g. "nothing was persisted"); `preflight` = the per-worker readiness check. Absent in older data (= test).
    */
   phase?: CallPhase;
+  /**
+   * The exact exchange for debugging (from the per-test `api-exchanges.json` attachment): a copy-paste curl and
+   * the exact response. Test data is synthetic, so bodies are shown in full; the Aisle token is ALWAYS replaced by
+   * `$AISLE_TEST_TOKEN` (enforced again by the collector and by the report self-check).
+   */
+  exchange?: ApiExchange;
+}
+
+export interface ApiExchange {
+  url: string;
+  curl: string;
+  requestHeaders: Record<string, string>;
+  requestBody: string | null;
+  requestBodyTruncated?: boolean;
+  responseContentType: string | null;
+  responseBody: string | null;
+  responseBodyTruncated?: boolean;
 }
 
 export type CallPhase = 'test' | 'setup' | 'verify' | 'preflight';
