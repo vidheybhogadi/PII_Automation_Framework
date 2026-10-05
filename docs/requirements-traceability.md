@@ -84,9 +84,9 @@ that ID prefix.
 
 ## Temporary phone
 
-| Req      | Requirement                                                                                                                                                                      | Type    | Source                       | Endpoints                                                                                                                                        | Tests        | Open question |
-| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------ | ------------- |
-| FR-TR-01 | A temporary phone can be created, resolved and promoted once (also onto a user who has a phone), has a lifetime of 300 s–7 days, expires on time (blocked) and refuses bad input | Derived | Staging, observed 2026-10-01 | `POST /api/v1/pii-test/transient/phones`<br>`POST /api/v1/pii-test/transient/phones/resolve`<br>`POST /api/v1/pii-test/transient/phones/promote` | `AISLE-TR-*` | BQ-28         |
+| Req      | Requirement                                                                                                                                                            | Type    | Source                       | Endpoints                                                                                                                                        | Tests        | Open question |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------ | ------------- |
+| FR-TR-01 | A temporary phone can be created, resolved and promoted once (also onto a user who has a phone), has a lifetime of 300 s–7 days, expires on time and refuses bad input | Derived | Staging, observed 2026-10-01 | `POST /api/v1/pii-test/transient/phones`<br>`POST /api/v1/pii-test/transient/phones/resolve`<br>`POST /api/v1/pii-test/transient/phones/promote` | `AISLE-TR-*` | BQ-28         |
 
 ## Free-text keys
 

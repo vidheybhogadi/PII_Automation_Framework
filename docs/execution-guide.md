@@ -12,7 +12,7 @@ All commands run from the project root. The facade tests need `.env` with `AISLE
 | `npm run test:poc`          | POC-001…003 — the email proof of concept (save → read → DB)                                       |
 | `npm run test:phase1`       | the 8 Phase-1 tests that prove the migration to the Aisle facade                                  |
 | `npm run test:smoke`        | the Smoke suite                                                                                   |
-| `npm run test:regression`   | the Regression suite                                                                              |
+| `npm run test:regression`   | the Regression suite (includes the two `@slow` expiry tests, ~5½ min, run in parallel)            |
 | `npm run test:security`     | token, tenant-spoofing and leak checks                                                            |
 | `npm run test:db`           | read-only DB validation (Blocked until DB access is given)                                        |
 | `npm run test:api`          | every facade test                                                                                 |
@@ -32,8 +32,11 @@ then opens the dashboard in your browser. Auto-open is skipped in CI; turn it of
 ## Daily run and report email (GitHub Actions)
 
 [`.github/workflows/pii-api-tests.yml`](../.github/workflows/pii-api-tests.yml) runs the full `npm run test:all`
-on staging **every day at 08:00 IST** (cron `30 2 * * *`, UTC; GitHub may start it a few minutes late, and only
-from `main`). Pull requests run only the offline checks. After the report and PDF are built, `npm run report:mail`
+on staging **Monday to Friday** (only from `main`). The cron is `30 20 * * 0-4` (UTC), which is **02:00 IST**
+Mon–Fri. It is set 6 hours before the wanted 08:00 IST because GitHub has been starting scheduled runs about 6 hours
+late. GitHub does not guarantee the start time, so on a day it runs on time, the run happens at 02:00 IST. A first
+job (`schedule-gate`) skips any scheduled run that starts on a Saturday or Sunday in IST. Pull requests run only the
+offline checks. After the report and PDF are built, `npm run report:mail`
 emails it: a short summary and the run link, then **every PDF page shown inline** in the body (no attachment). If
 no report was produced, a short "run failed" email is sent instead. A manual run (Actions → Run workflow) can
 switch the email off with `send_email`.

@@ -16,9 +16,14 @@ import {
   expectResponseDoesNotEcho,
   expectSecretEquals,
 } from '../../src/assertions/security.assertions';
-import { BLOCKERS, createTransient, readValue, seedField } from '../../src/fixtures/steps';
 import {
-  blockedBy,
+  BLOCKERS,
+  createTransient,
+  expectNotPersisted,
+  readValue,
+  seedField,
+} from '../../src/fixtures/steps';
+import {
   blockIfAccessDenied,
   expect,
   noteAssumption,
@@ -37,6 +42,26 @@ import {
 
 /** Lifetime used for temporary phones. The allowed range is not confirmed yet (BQ-02). */
 const TTL_SECONDS = 900;
+/** Shortest lifetime the service accepts (observed 2026-10-01: 300 → 201, 299 → 400; BQ-28). */
+const SHORTEST_TTL_SECONDS = 300;
+/** Extra wait after expires_at, so the expiry has certainly happened on the server. */
+const EXPIRY_MARGIN_MS = 12_000;
+/** The expiry tests wait ~5 minutes; they get 7 minutes in total. Tagged @slow. */
+const SLOW_TEST_TIMEOUT_MS = 7 * 60_000;
+
+/**
+ * Wait until a temporary phone has expired: until its expires_at plus a small margin. Refuses to wait longer than
+ * the shortest lifetime plus one minute, so a wrong expiry time fails clearly instead of hanging the run.
+ */
+async function waitUntilExpired(expiresAt: string): Promise<void> {
+  const waitMs = Date.parse(expiresAt) - Date.now() + EXPIRY_MARGIN_MS;
+  expect(waitMs, 'expiry time is within the shortest lifetime (plus a minute) from now').toBeLessThanOrEqual(
+    (SHORTEST_TTL_SECONDS + 60) * 1000 + EXPIRY_MARGIN_MS,
+  );
+  await test.step(`wait ${Math.round(waitMs / 1000)} s for the temporary phone to expire`, async () => {
+    await new Promise((resolve) => setTimeout(resolve, Math.max(0, waitMs)));
+  });
+}
 
 test.describe('Aisle facade — temporary phones', () => {
   onlyIfInScope('createTransientPhone', 'resolveTransientPhone', 'promoteTransientPhone');
@@ -131,12 +156,34 @@ test.describe('Aisle facade — temporary phones', () => {
     expectValidationError(malformed, 'transient_id');
   });
 
-  test('AISLE-TR-005 A temporary phone with a short lifetime can no longer be looked up after it expires (404)', async () => {
-    blockedBy(
-      'BQ-28',
-      'the shortest allowed lifetime is 300 s (observed 2026-10-01), so this test would wait at least 5 minutes; waiting for a shorter test lifetime or approval of a slow test',
-    );
-  });
+  test(
+    'AISLE-TR-005 A temporary phone with the shortest lifetime can no longer be looked up after it expires (404)',
+    { tag: ['@slow'] },
+    async ({ aisle, data, config, cleanup }) => {
+      requireApprovedPhones(config);
+      test.setTimeout(SLOW_TEST_TIMEOUT_MS);
+      noteObserved(
+        '2026-10-05',
+        'lifetime 300 s: resolve → 200 before expiry, 404 TRANSIENT_PHONE_NOT_FOUND after',
+      );
+      const created = await createTransient(aisle, {
+        phone: data.phone(0).input,
+        ttlSeconds: SHORTEST_TTL_SECONDS,
+      });
+      cleanup.leaveBehind('temporary phone', created.transient_id);
+      expectSuccess(
+        await aisle.resolveTransientPhone({ transient_id: created.transient_id }),
+        200,
+        resolveTransientPhoneDataSchema,
+      );
+
+      await waitUntilExpired(created.expires_at);
+
+      const res = await aisle.resolveTransientPhone({ transient_id: created.transient_id });
+      expectError(res, 404, ERROR_CODES.TRANSIENT_PHONE_NOT_FOUND);
+      expectNoData(res);
+    },
+  );
 
   test('AISLE-TR-006 A lifetime of 0, a negative number or a huge number is refused; 300 seconds to 7 days is accepted', async ({
     aisle,
@@ -167,12 +214,36 @@ test.describe('Aisle facade — temporary phones', () => {
     }
   });
 
-  test('AISLE-TR-007 Promoting a temporary phone after it has expired is refused and saves nothing', async () => {
-    blockedBy(
-      'BQ-28',
-      'the shortest allowed lifetime is 300 s (observed 2026-10-01), so this test would wait at least 5 minutes; waiting for a shorter test lifetime or approval of a slow test',
-    );
-  });
+  test(
+    'AISLE-TR-007 Promoting a temporary phone after it has expired is refused (404) and saves nothing',
+    { tag: ['@slow'] },
+    async ({ aisle, data, config, cleanup }) => {
+      requireApprovedPhones(config);
+      test.setTimeout(SLOW_TEST_TIMEOUT_MS);
+      noteObserved(
+        '2026-10-05',
+        'lifetime 300 s: promote after expiry → 404 TRANSIENT_PHONE_NOT_FOUND; user PHONE → 404',
+      );
+      const userId = data.userId('tr7');
+      const created = await createTransient(aisle, {
+        phone: data.phone(1).input,
+        ttlSeconds: SHORTEST_TTL_SECONDS,
+      });
+      cleanup.leaveBehind('temporary phone', created.transient_id);
+      expectSuccess(
+        await aisle.resolveTransientPhone({ transient_id: created.transient_id }),
+        200,
+        resolveTransientPhoneDataSchema,
+      );
+
+      await waitUntilExpired(created.expires_at);
+
+      const res = await aisle.promoteTransientPhone({ transient_id: created.transient_id, user_id: userId });
+      expectError(res, 404, ERROR_CODES.TRANSIENT_PHONE_NOT_FOUND);
+      expectNoData(res);
+      await expectNotPersisted(aisle, { userId, field: PII_FIELDS.PHONE });
+    },
+  );
 
   test('AISLE-TR-008 Promoting a temporary phone onto a user who already has a phone replaces that phone', async ({
     aisle,

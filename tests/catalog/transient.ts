@@ -82,17 +82,26 @@ export const TRANSIENT_CASES: TestCaseCatalog = {
     preconditions: TRANSIENT_PHONES,
   },
   'AISLE-TR-005': {
-    what: 'Creates a temporary phone (a short-lived phone record for someone not yet signed up) with the shortest lifetime and looks it up after it expires.',
+    what: 'Creates a temporary phone (a short-lived phone record for someone not yet signed up) for approved test phone 1 with the shortest allowed lifetime (300 seconds), checks it can be looked up, waits until it has expired, then looks it up again.',
     why: 'Expired temporary phones must disappear, or phone numbers stay readable longer than allowed.',
-    steps: ['Create a temporary phone with the shortest lifetime', 'Wait until it expires', 'Look it up'],
+    steps: [
+      'Create a temporary phone with a lifetime of 300 seconds',
+      'Look it up and check it is found (200)',
+      'Wait until its expiry time plus about 12 seconds',
+      'Look it up again',
+    ],
     expected:
-      'Blocked: the shortest allowed lifetime is 300 seconds (seen 2026-10-01), so this test would have to wait at least 5 minutes. Waiting for Dev to offer a shorter test lifetime or to accept a 5-minute test (question BQ-28).',
+      'Before expiry: 200 OK. After expiry: 404 Not Found with code TRANSIENT_PHONE_NOT_FOUND and no data, never a server error. Seen on staging on 2026-10-05. Slow test (about 5½ minutes, tag @slow).',
     request:
-      'POST /api/v1/pii-test/transient/phones {"phone":"<approved test phone 1>","ttl_seconds":300} · …/resolve',
-    validation: ['Blocked until the expiry wait is agreed'],
+      'POST /api/v1/pii-test/transient/phones {"phone":"<approved test phone 1>","ttl_seconds":300} · POST /api/v1/pii-test/transient/phones/resolve {"transient_id":"<ID>"} (before and after expiry)',
+    validation: [
+      'Lookup before expiry → 200',
+      'Lookup after expiry → 404 TRANSIENT_PHONE_NOT_FOUND, no data',
+      'The expiry time is no more than about 6 minutes away (otherwise the test stops instead of waiting)',
+    ],
     type: 'Negative',
     priority: 'Medium',
-    preconditions: 'Blocked until Dev answers question BQ-28.',
+    preconditions: `${TRANSIENT_PHONES} Takes about 5½ minutes (tag @slow).`,
     endpoint: 'resolveTransientPhone',
   },
   'AISLE-TR-006': {
@@ -119,22 +128,26 @@ export const TRANSIENT_CASES: TestCaseCatalog = {
       'Needs the team-approved test phone numbers in AISLE_TEST_PHONES (never a real person’s number). Without them the test is marked Blocked (CONFIG).',
   },
   'AISLE-TR-007': {
-    what: 'Tries to promote (turn into the user’s permanent phone) a temporary phone after it has expired.',
+    what: 'Creates a temporary phone for approved test phone 2 with the shortest allowed lifetime (300 seconds), checks it can be looked up, waits until it has expired, then tries to promote it (make it the permanent phone) for a new fake user.',
     why: 'An expired temporary phone must never become someone’s permanent phone.',
     steps: [
-      'Create a temporary phone with the shortest lifetime',
-      'Wait until it expires',
+      'Create a temporary phone with a lifetime of 300 seconds and check it is found (200)',
+      'Wait until its expiry time plus about 12 seconds',
       'Promote it for a new fake user',
-      'Read the user’s phone',
+      'Read that user’s phone',
     ],
     expected:
-      'Blocked: the shortest allowed lifetime is 300 seconds (seen 2026-10-01), so this test would have to wait at least 5 minutes. Waiting for Dev to offer a shorter test lifetime or to accept a 5-minute test (question BQ-28).',
+      'The promote gets 404 Not Found with code TRANSIENT_PHONE_NOT_FOUND and no data, never a server error. Reading the user’s phone gets 404 (nothing was saved). Seen on staging on 2026-10-05. Slow test (about 5½ minutes, tag @slow).',
     request:
-      'POST /api/v1/pii-test/transient/phones/promote {"transient_id":"<expired ID>","user_id":"<new fake user>"}',
-    validation: ['Blocked until the expiry wait is agreed'],
+      'POST /api/v1/pii-test/transient/phones {"phone":"<approved test phone 2>","ttl_seconds":300} · POST /api/v1/pii-test/transient/phones/promote {"transient_id":"<expired ID>","user_id":"<new fake user>"} · POST /api/v1/pii-test/read {"field_names":["PHONE"]}',
+    validation: [
+      'Lookup before expiry → 200',
+      'Promote after expiry → 404 TRANSIENT_PHONE_NOT_FOUND, no data',
+      'The user has no saved phone (404)',
+    ],
     type: 'Negative',
     priority: 'Medium',
-    preconditions: 'Blocked until Dev answers question BQ-28.',
+    preconditions: `${TRANSIENT_PHONES} Takes about 5½ minutes (tag @slow).`,
     endpoint: 'promoteTransientPhone',
   },
   'AISLE-TR-008': {

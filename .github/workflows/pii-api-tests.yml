@@ -1,6 +1,6 @@
 # PII service API automation.
 # - Pull requests: static checks + unit tests only (no secrets exposed to PR code from forks).
-# - Daily 08:00 IST and manual runs: Aisle PII facade suites (QA → Aisle → PII service → DB) against a chosen
+# - Scheduled (Mon–Fri IST, see `schedule`) and manual runs: Aisle PII facade suites (QA → Aisle → PII service → DB) against a chosen
 #   environment, using GitHub Environment secrets (AISLE_TEST_TOKEN). The report is then emailed with every
 #   PDF page shown inline (scripts/send-report-mail.ts) to the REPORT_MAIL_TO list.
 name: PII API tests
@@ -24,7 +24,10 @@ on:
         type: boolean
         default: true
   schedule:
-    - cron: '30 2 * * *' # every day 08:00 IST (02:30 UTC): full npm run test:all on the Aisle staging facade + email
+    # 02:00 IST Mon–Fri = 20:30 UTC the evening before (Sun–Thu). Set 6 h before the wanted 08:00 IST because
+    # GitHub has been starting scheduled runs ~6 h late. If GitHub runs on time, the run happens at 02:00 IST.
+    # Full npm run test:all on the Aisle staging facade + email. Weekend runs are also skipped by `schedule-gate`.
+    - cron: '30 20 * * 0-4'
 
 permissions:
   contents: read
@@ -34,7 +37,29 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  schedule-gate:
+    # Scheduled runs that start on a Saturday or Sunday in IST (e.g. a late-delayed run) are skipped.
+    # Pull requests and manual runs always continue.
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      run: ${{ steps.day.outputs.run }}
+    steps:
+      - id: day
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          DOW=$(TZ=Asia/Kolkata date +%u) # 1 = Monday … 7 = Sunday
+          if [ "$EVENT" = "schedule" ] && [ "$DOW" -ge 6 ]; then
+            echo "Weekend in IST ($(TZ=Asia/Kolkata date '+%a %d %b %H:%M')): skipping the scheduled run."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
   verify:
+    needs: schedule-gate
+    if: needs.schedule-gate.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -54,6 +79,8 @@ jobs:
 
   report-tests:
     # Tests the reporting layer (dashboard UI, exports, PDF, redaction) against SYNTHETIC fixtures.
+    needs: schedule-gate
+    if: needs.schedule-gate.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

@@ -88,7 +88,7 @@ PII_Automation_Framework/
 ├── docs/                           guides — start with backend-open-questions.md and coverage-matrix.md
 │   └── test-cases.xlsx               ALL TEST CASES in Excel, grouped by endpoint
 ├── config/db-queries.example.json  template for the read-only DB queries (all names PENDING until Dev confirms)
-├── .github/workflows/              CI: checks every pull request; facade tests daily 08:00 IST + report email, or on demand
+├── .github/workflows/              CI: checks every pull request; facade tests Mon–Fri (scheduled) + report email, or on demand
 ├── .env.example                    settings template (no real values)
 ├── PENDING-PLACEHOLDERS.md         everything still owed by Dev, and which tests it blocks (generated)
 └── playwright.config.ts            test runner: projects (unit / api), reporters
@@ -123,7 +123,9 @@ test(
 - **IDs** never change: `POC-001…003` (the NAME proof of concept) and `AISLE-<AREA>-NNN` —
   `HLT` health · `WR` save · `RD` read · `SR` search · `BR` bulk read · `NRM` clean-up rules · `TR` temporary
   phones · `FT` free-text keys · `AUTH` token · `SEC` security · `CON` response format · `DB` database.
-- **Tags**: `@smoke` · `@phase1` · `@security` · `@db` · `@poc` (everything else is Regression).
+- **Tags**: `@smoke` · `@phase1` · `@security` · `@db` · `@poc` · `@slow` (everything else is Regression).
+  `@slow` marks tests that wait for something to expire (AISLE-TR-005/007, about 5½ minutes each, run in parallel);
+  skip them locally with `--grep-invert @slow`.
 - **Every test has a plain-English description** in `tests/catalog/<area>.ts` (what, why, steps, expected, the
   request sent, the checks made, type, priority). Self-test UT-DOC-002 fails until it exists. Test cases are added/changed/removed through the
   **testcase-manager** agent (see [CLAUDE.md](CLAUDE.md)): it proposes first, and changes nothing until approved.

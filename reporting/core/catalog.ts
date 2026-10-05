@@ -659,7 +659,7 @@ export const REQUIREMENTS: Requirement[] = [
   req(
     'FR-TR-01',
     'Temporary phone',
-    'A temporary phone can be created, resolved and promoted once (also onto a user who has a phone), has a lifetime of 300 s–7 days, expires on time (blocked) and refuses bad input',
+    'A temporary phone can be created, resolved and promoted once (also onto a user who has a phone), has a lifetime of 300 s–7 days, expires on time and refuses bad input',
     'Derived',
     OBS2,
     TR,

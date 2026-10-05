@@ -17,7 +17,7 @@ environment), then run `npm run check-env`.
 1. [ ] Temporary-phone access confirmed for the Aisle caller (BQ-02)
 2. [ ] Approved test phone numbers in AISLE_TEST_PHONES (provided 2026-10-01; keep them in .env) — section 1
 3. [ ] Read-only DB access and the PII table/column layout (BQ-04) — sections 1–2 (19 DB placeholders)
-4. [ ] Answers to the open questions behind 43 blockable tests — sections 3–4
+4. [ ] Answers to the open questions behind 41 blockable tests — sections 3–4
 
 ## 1. Settings (`.env.example`)
 
@@ -92,15 +92,13 @@ Blocked only if staging still denies access (403) or the setting is missing — 
 | AISLE-SR-013 | BQ-40 | runtime | `tests/pii/search-pii.spec.ts:331` |
 | AISLE-SR-015 | BQ-32 | runtime | `tests/pii/search-pii.spec.ts:389` |
 | AISLE-SR-016 | BQ-41 | static | `tests/pii/search-pii.spec.ts:416` |
-| AISLE-TR-001 | BQ-02 | runtime | `tests/transient/transient-phone.spec.ts:44` |
-| AISLE-TR-002 | BQ-02 | runtime | `tests/transient/transient-phone.spec.ts:65` |
-| AISLE-TR-003 | BQ-02 | runtime | `tests/transient/transient-phone.spec.ts:85` |
-| AISLE-TR-004 | BQ-02 | runtime | `tests/transient/transient-phone.spec.ts:120` |
-| AISLE-TR-005 | BQ-28 | static | `tests/transient/transient-phone.spec.ts:134` |
-| AISLE-TR-006 | BQ-02, BQ-28 | runtime | `tests/transient/transient-phone.spec.ts:141` |
-| AISLE-TR-007 | BQ-28 | static | `tests/transient/transient-phone.spec.ts:170` |
-| AISLE-TR-008 | BQ-02 | runtime | `tests/transient/transient-phone.spec.ts:177` |
-| AISLE-TR-009 | BQ-02 | runtime | `tests/transient/transient-phone.spec.ts:215` |
+| AISLE-TR-001 | BQ-02 | runtime | `tests/transient/transient-phone.spec.ts:69` |
+| AISLE-TR-002 | BQ-02 | runtime | `tests/transient/transient-phone.spec.ts:90` |
+| AISLE-TR-003 | BQ-02 | runtime | `tests/transient/transient-phone.spec.ts:110` |
+| AISLE-TR-004 | BQ-02 | runtime | `tests/transient/transient-phone.spec.ts:145` |
+| AISLE-TR-006 | BQ-02, BQ-28 | runtime | `tests/transient/transient-phone.spec.ts:188` |
+| AISLE-TR-008 | BQ-02 | runtime | `tests/transient/transient-phone.spec.ts:248` |
+| AISLE-TR-009 | BQ-02 | runtime | `tests/transient/transient-phone.spec.ts:286` |
 | AISLE-WR-012 | BQ-34 | runtime | `tests/pii/write-pii.spec.ts:249` |
 | AISLE-WR-013 | BQ-35 | runtime | `tests/pii/write-pii.spec.ts:288` |
 | AISLE-WR-020 | BQ-29 | runtime | `tests/pii/write-pii.spec.ts:441` |
@@ -113,7 +111,7 @@ Blocked only if staging still denies access (403) or the setting is missing — 
 | ID | Status | Question |
 |---|---|---|
 | BQ-02 | Open | Are temporary phones meant to be used through the facade? Please confirm the response format seen on staging. |
-| BQ-28 | Open | (Q14) Temporary-phone lifetime (`ttl_seconds`): please confirm the limits seen on staging. Can QA get a shorter lifetime for tests (the minimum of … |
+| BQ-28 | Open | (Q14) Temporary-phone lifetime (`ttl_seconds`): please confirm the limits seen on staging (300 s to 7 days). |
 | BQ-33 | Open | Revoking a free-text key that is already revoked: 404, or 200 (idempotent)? |
 | BQ-18 | Open | Bulk read: what is the real maximum number of user IDs? The 422 rule says 200, but exactly 200 users returned 403. |
 | BQ-34 | Open | User IDs: is the PII service meant to trim spaces around a user ID and treat it as case-sensitive? And which layer does the trimming — the PII serv… |
@@ -141,20 +139,20 @@ Blocked only if staging still denies access (403) or the setting is missing — 
 
 | Name | Kind | Where |
 |---|---|---|
-| `AISLE_BASE_URL` | Variable | `.github/workflows/pii-api-tests.yml:89` |
-| `AISLE_TEST_TOKEN` | Secret | `.github/workflows/pii-api-tests.yml:91` |
-| `AISLE_TEST_EMAIL_DOMAIN` | Variable | `.github/workflows/pii-api-tests.yml:92` |
-| `AISLE_TEST_PHONES` | Secret | `.github/workflows/pii-api-tests.yml:93` |
-| `DB_ENGINE` | Variable | `.github/workflows/pii-api-tests.yml:94` |
-| `DB_HOST` | Variable | `.github/workflows/pii-api-tests.yml:95` |
-| `DB_PORT` | Variable | `.github/workflows/pii-api-tests.yml:96` |
-| `DB_NAME` | Variable | `.github/workflows/pii-api-tests.yml:97` |
-| `DB_USER` | Variable | `.github/workflows/pii-api-tests.yml:98` |
-| `DB_READONLY_PASSWORD` | Secret | `.github/workflows/pii-api-tests.yml:99` |
-| `DB_QUERIES_JSON` | Secret | `.github/workflows/pii-api-tests.yml:111` |
-| `SMTP_HOST` | Variable | `.github/workflows/pii-api-tests.yml:151` |
-| `SMTP_PORT` | Variable | `.github/workflows/pii-api-tests.yml:152` |
-| `SMTP_USER` | Secret | `.github/workflows/pii-api-tests.yml:153` |
-| `SMTP_PASSWORD` | Secret | `.github/workflows/pii-api-tests.yml:154` |
-| `REPORT_MAIL_FROM` | Variable | `.github/workflows/pii-api-tests.yml:155` |
-| `REPORT_MAIL_TO` | Variable | `.github/workflows/pii-api-tests.yml:156` |
+| `AISLE_BASE_URL` | Variable | `.github/workflows/pii-api-tests.yml:116` |
+| `AISLE_TEST_TOKEN` | Secret | `.github/workflows/pii-api-tests.yml:118` |
+| `AISLE_TEST_EMAIL_DOMAIN` | Variable | `.github/workflows/pii-api-tests.yml:119` |
+| `AISLE_TEST_PHONES` | Secret | `.github/workflows/pii-api-tests.yml:120` |
+| `DB_ENGINE` | Variable | `.github/workflows/pii-api-tests.yml:121` |
+| `DB_HOST` | Variable | `.github/workflows/pii-api-tests.yml:122` |
+| `DB_PORT` | Variable | `.github/workflows/pii-api-tests.yml:123` |
+| `DB_NAME` | Variable | `.github/workflows/pii-api-tests.yml:124` |
+| `DB_USER` | Variable | `.github/workflows/pii-api-tests.yml:125` |
+| `DB_READONLY_PASSWORD` | Secret | `.github/workflows/pii-api-tests.yml:126` |
+| `DB_QUERIES_JSON` | Secret | `.github/workflows/pii-api-tests.yml:138` |
+| `SMTP_HOST` | Variable | `.github/workflows/pii-api-tests.yml:178` |
+| `SMTP_PORT` | Variable | `.github/workflows/pii-api-tests.yml:179` |
+| `SMTP_USER` | Secret | `.github/workflows/pii-api-tests.yml:180` |
+| `SMTP_PASSWORD` | Secret | `.github/workflows/pii-api-tests.yml:181` |
+| `REPORT_MAIL_FROM` | Variable | `.github/workflows/pii-api-tests.yml:182` |
+| `REPORT_MAIL_TO` | Variable | `.github/workflows/pii-api-tests.yml:183` |
