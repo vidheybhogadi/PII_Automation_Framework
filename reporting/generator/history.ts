@@ -3,7 +3,7 @@
  *
  *   reports/history/2026-09-26_140312__qa-auto-20260926t140300-ab12.json   (one compact HistoryEntry per run)
  *
- * CI keeps history across runs by restoring/saving this folder (see .github/workflows/pii-api-tests.yml).
+ * CI keeps history across runs by restoring/saving this folder (see .github/workflows/m1-pii-api-tests.yml).
  * Only REAL runs are ever written. Demo history lives in reporting/fixtures and is never mixed in.
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -16,6 +16,17 @@ export function historyFileName(entry: HistoryEntry): string {
   return `${stamp}__${safeId}.json`;
 }
 
+/**
+ * Runs recorded before the M1/M2 restructure (2026-10-19) keyed tests as `<project>::tests/…`; the specs now live
+ * in m1/tests/. Re-key them so trends, comparisons and flaky detection still match.
+ */
+function migrateTestKeys(e: HistoryEntry): HistoryEntry {
+  const tests: HistoryEntry['tests'] = {};
+  for (const [key, value] of Object.entries(e.tests))
+    tests[key.replace(/^([^:]+)::tests\//, '$1::m1/tests/')] = value;
+  return { ...e, tests };
+}
+
 export function loadHistory(dir: string, limit: number): { entries: HistoryEntry[]; skipped: string[] } {
   if (!existsSync(dir)) return { entries: [], skipped: [] };
   const entries: HistoryEntry[] = [];
@@ -24,7 +35,7 @@ export function loadHistory(dir: string, limit: number): { entries: HistoryEntry
     try {
       const e = JSON.parse(readFileSync(path.join(dir, file), 'utf8')) as HistoryEntry;
       if (typeof e.runId === 'string' && typeof e.startedAt === 'string' && e.counts && e.tests)
-        entries.push(e);
+        entries.push(migrateTestKeys(e));
       else skipped.push(file);
     } catch {
       skipped.push(file);

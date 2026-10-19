@@ -1,5 +1,5 @@
 /**
- * All test-case descriptions, merged. Read by the report generator and by docs/test-cases.xlsx.
+ * All test-case descriptions, merged. Read by the report generator and by m1/docs/test-cases.xlsx.
  * Add new entries to the area file (e.g. write.ts); self-test UT-DOC-002 keeps this in sync with the tests.
  */
 import { BATCH_READ_CASES } from './batch-read';

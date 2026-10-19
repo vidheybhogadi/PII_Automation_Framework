@@ -3,8 +3,8 @@ import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { loadConfig } from '../../src/config/config';
-import { DbConfigError, assertReadOnlySql, type DbAdapter } from '../../src/db/db-adapter';
-import { createDbAdapter } from '../../src/db/db-client';
+import { DbConfigError, assertReadOnlySql, type DbAdapter } from '../../../core/db/db-adapter';
+import { createDbAdapter } from '../../../core/db/db-client';
 import {
   DbQueryNotConfiguredError,
   PiiRepository,

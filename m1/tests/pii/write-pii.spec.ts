@@ -1,7 +1,7 @@
 /**
  * Save PII — POST /api/v1/pii-test through the Aisle facade.
  * Expected results are OBSERVED on staging (2026-09-29 / 2026-10-01); open points are listed in
- * docs/backend-open-questions.md. EMAIL calls keep a runtime access gate in case access is withdrawn.
+ * m1/docs/backend-open-questions.md. EMAIL calls keep a runtime access gate in case access is withdrawn.
  */
 import {
   expectError,

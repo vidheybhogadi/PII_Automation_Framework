@@ -1,7 +1,7 @@
 /**
  * Static catalog: what the suite is DESIGNED to test through the Aisle PII facade
  * (QA automation → Aisle PII facade → PII service → PII DB), derived from the integration guide, the Aisle
- * curl collection and the test suite (docs/requirements-traceability.md, docs/test-scenarios.md).
+ * curl collection and the test suite (m1/docs/requirements-traceability.md, docs/test-scenarios.md).
  *
  * This is knowledge about test DESIGN, never about results. Results always come from executed runs.
  * Test references are display IDs ("PII-WR-001") or prefix patterns ("PII-NRM-*").
@@ -332,7 +332,7 @@ export const ENDPOINT_GROUP_ORDER = [
 
 /**
  * The endpoint a test belongs under: its first mapped endpoint (the one it mainly tests), or CROSS_ENDPOINT
- * when it spans 3+ endpoints or none. Used by the report and by docs/test-cases.xlsx so both group alike.
+ * when it spans 3+ endpoints or none. Used by the report and by m1/docs/test-cases.xlsx so both group alike.
  */
 export function primaryEndpoint(endpoints: readonly string[]): string {
   return endpoints.length === 0 || endpoints.length > 2 ? CROSS_ENDPOINT : (endpoints[0] as string);
@@ -343,7 +343,7 @@ export function matchesRef(id: string, ref: TestRef): boolean {
   return ref.endsWith('*') ? id.startsWith(ref.slice(0, -1)) : id === ref;
 }
 
-// ---- Requirements (machine-readable version of docs/requirements-traceability.md) --------------------
+// ---- Requirements (machine-readable version of m1/docs/requirements-traceability.md) --------------------
 
 const req = (
   id: string,
@@ -367,7 +367,7 @@ const req = (
 
 /**
  * Requirements for the Aisle PII facade. Source of truth: behaviour OBSERVED on staging (2026-09-29) and the
- * backend questions in docs/backend-open-questions.md (BQ-xx). Type: Derived = observed behaviour we rely on ·
+ * backend questions in m1/docs/backend-open-questions.md (BQ-xx). Type: Derived = observed behaviour we rely on ·
  * Policy = security expectation. "(blocked)" = every test for it is blocked today.
  */
 const OBS = 'Staging, observed 2026-09-29';

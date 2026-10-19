@@ -19,7 +19,7 @@ The top bar links straight to each part (Summary · Problems · Endpoints · Tes
 
 Also on the page: light, dark and auto themes; six accent colours; a floating quick-action bar whose last button
 folds it away (back-to-top only appears once you scroll); and Export (PDF, Excel, raw CSV, JSON, Slack/ClickUp summary). The Excel file is built by the same code as
-`docs/test-cases.xlsx`, so it has exactly the same design.
+`m1/docs/test-cases.xlsx`, so it has exactly the same design.
 
 **Keyboard:** `⌘/Ctrl K` search · `/` search tests · `1`–`4` sections · `0`/`Home` top · `F` `W` `A` fail / not tested /
 all · `←` `→` pages · `J` `K` next / previous test · `E` export · `D` dark mode · `Q` quick-action bar · `Esc` close ·
@@ -28,7 +28,7 @@ all · `←` `→` pages · `J` `K` next / previous test · `E` export · `D` da
 ## Commands
 
 ```bash
-npm run test:all        # run service tests → report → PDF (pass Playwright args after --, e.g. -- --grep @smoke)
+npm run m1:test:all        # run service tests → report → PDF (pass Playwright args after --, e.g. -- --grep @smoke)
 npm run report          # build the report from the last run  → reports/qa-report/index.html
 npm run report:pdf      # PDF of it                           → reports/qa-report/report.pdf
 npm run report:open     # open it
@@ -84,7 +84,7 @@ Playwright run ─▶ reporting/collector  (allow-listed, sanitized)  ─▶ rep
 
 Screenshots 01–06 use demo data. Screenshot 07 is a real local run where only the framework self-tests ran.
 
-The same endpoint grouping is used in [test-cases.xlsx](test-cases.xlsx): one “Test Cases” sheet with a linked
+The same endpoint grouping is used in [test-cases.xlsx](../m1/docs/test-cases.xlsx): one “Test Cases” sheet with a linked
 summary at the top and a coloured section per endpoint. The report’s Export → Excel (.xlsx) gives the same file.
 
 **Statuses.** Only Pass, Fail and Not Tested are shown. Every test in the suite is always listed; tests that were not

@@ -6,7 +6,9 @@
     "../core/**/*.ts",
     "../generator/**/*.ts",
     "../collector/**/*.ts",
-    "../../src/**/*.ts"
+    "../../core/**/*.ts",
+    "../../m1/**/*.ts",
+    "../../m2/**/*.ts"
   ],
   "exclude": []
 }

@@ -11,7 +11,7 @@ Each cell holds one of:
 - **Not planned – reason.** Nothing meaningful to test in that cell. This is QA's judgement, NOT a Dev-confirmed
   "Not Applicable": no feature has been confirmed as unsupported by Dev yet, so no cell is marked N/A.
 
-Question IDs refer to [backend-open-questions.md](backend-open-questions.md). The target is the **PII service's**
+Question IDs refer to [backend-open-questions.md](./backend-open-questions.md). The target is the **PII service's**
 behaviour; the facade (token, tenant, signing, routing, edge) is temporary QA scaffolding and is tested only as far as
 the test harness needs it. NAME, EMAIL and free-text keys are accessible (since 2026-10-01).
 

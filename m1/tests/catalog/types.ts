@@ -1,11 +1,11 @@
 /**
  * Test-case catalog: the plain-English description of every service test, keyed by its test ID.
  *
- * This is what the Excel sheet (docs/test-cases.xlsx) and the HTML report show to a reader, so it must be
+ * This is what the Excel sheet (m1/docs/test-cases.xlsx) and the HTML report show to a reader, so it must be
  * understandable by someone new to the project. Self-test UT-DOC-002 fails if a test has no entry here, or if an
  * entry has no test — so the catalog always matches the code.
  *
- * When you add a test, add its entry to the file for that area (tests/catalog/<area>.ts).
+ * When you add a test, add its entry to the file for that area (m1/tests/catalog/<area>.ts).
  */
 import type { EndpointKey } from '../../src/clients/endpoints';
 

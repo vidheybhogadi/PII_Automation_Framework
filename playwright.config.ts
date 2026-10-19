@@ -1,7 +1,7 @@
 import { defineConfig } from '@playwright/test';
 import dotenv from 'dotenv';
 import path from 'node:path';
-import { generateRunId } from './src/data/test-identifiers';
+import { generateRunId } from './m1/src/data/test-identifiers';
 
 /**
  * Environment selection:
@@ -21,7 +21,7 @@ process.env.PII_TEST_RUN_ID ??= generateRunId(process.env.PII_TEST_RUN_PREFIX ||
 const isCI = Boolean(process.env.CI);
 
 export default defineConfig({
-  testDir: './tests',
+  testDir: '.',
   outputDir: './test-results',
   fullyParallel: true,
   forbidOnly: isCI,
@@ -47,16 +47,23 @@ export default defineConfig({
     video: 'off',
   },
   projects: [
+    // ---- Milestone 1: Aisle PII facade (m1/) ---------------------------------------------------------------
+    // Project names stay "unit" / "api": the reporting layer, run history and demo data key on them.
     {
       // Framework self-tests: no network, no .env needed.
       name: 'unit',
-      testDir: './tests/unit',
+      testDir: './m1/tests/unit',
     },
     {
-      // Live PII service tests. Requires .env / CI secrets (see docs/setup-guide.md).
+      // Live PII facade tests. Requires .env / CI secrets (see docs/setup-guide.md).
       name: 'api',
-      testDir: './tests',
+      testDir: './m1/tests',
       testIgnore: ['unit/**'],
+    },
+    // ---- Milestone 2: Aisle business APIs (m2/) — tagged @m2, always run separately from M1 ------------------
+    {
+      name: 'm2-api',
+      testDir: './m2/tests',
     },
   ],
 });

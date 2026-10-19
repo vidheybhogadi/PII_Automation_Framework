@@ -1,10 +1,10 @@
 /**
  * One command for the full pipeline:
- *   1. execute tests (default: the service-test project `api`; pass Playwright args after --, e.g. `npm run test:all -- --project=api --grep @smoke`)
+ *   1. execute tests (default: the service-test project `api`; pass Playwright args after --, e.g. `npm run m1:test:all -- --project=api --grep @smoke`)
  *   2. collect results        (reporting/collector → reports/latest/run-data.json, written by Playwright)
  *   3. generate analytics + HTML dashboard + run history + archive
  *   4. generate the PDF
- *   5. refresh the test-case sheet (docs/test-cases.xlsx) and inventory (docs/test-case-inventory.md) with this run's results
+ *   5. refresh the test-case sheet (m1/docs/test-cases.xlsx) and inventory (m1/docs/test-case-inventory.md) with this run's results
  *   6. print artifact locations and open the dashboard in the browser (skipped in CI, with --no-open or REPORT_OPEN=false)
  * Exits with the TEST exit code (report generation never masks test failures).
  */
@@ -51,15 +51,15 @@ async function main(): Promise<number> {
   } catch (e) {
     console.error(`  PDF generation failed (dashboard is still available): ${(e as Error).message}`);
   }
-  console.log('▶ 5/5 Updating the test-case sheet (docs/test-cases.xlsx) and inventory');
-  const sheet = spawnSync('npx', ['tsx', 'scripts/generate-test-cases-xlsx.ts'], {
+  console.log('▶ 5/5 Updating the test-case sheet (m1/docs/test-cases.xlsx) and inventory');
+  const sheet = spawnSync('npx', ['tsx', 'm1/scripts/generate-test-cases-xlsx.ts'], {
     cwd: ROOT,
     stdio: 'inherit',
     shell: process.platform === 'win32',
   });
   if (sheet.status !== 0) console.error('  Test-case sheet was not updated (the report is unaffected).');
-  console.log('  Updating the test-case inventory (docs/test-case-inventory.md)');
-  const inventoryDoc = spawnSync('npm', ['run', '-s', 'docs:inventory'], {
+  console.log('  Updating the test-case inventory (m1/docs/test-case-inventory.md)');
+  const inventoryDoc = spawnSync('npm', ['run', '-s', 'm1:docs:inventory'], {
     cwd: ROOT,
     stdio: 'inherit',
     shell: process.platform === 'win32',

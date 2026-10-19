@@ -28,7 +28,7 @@ import {
 } from '../../src/fixtures/test-fixtures';
 import { ERROR_CODES } from '../../src/models/common.models';
 import { freeTextKeyDataSchema, revokeFreeTextKeyDataSchema } from '../../src/models/free-text.models';
-import { runInPhase } from '../../src/utils/phase';
+import { runInPhase } from '../../../core/utils/phase';
 
 test.describe('Aisle facade — free-text keys', () => {
   onlyIfInScope('createFreeTextKey', 'readFreeTextKey', 'revokeFreeTextKey');

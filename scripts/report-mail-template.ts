@@ -358,7 +358,7 @@ ${f.areas
     blockedTable
       ? section(
           'Blocked — waiting on Dev answers or setup',
-          'Not failures: these checks cannot run until the question is answered (docs/backend-open-questions.md)',
+          'Not failures: these checks cannot run until the question is answered (m1/docs/backend-open-questions.md)',
           blockedTable,
         )
       : '',

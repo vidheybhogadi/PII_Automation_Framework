@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { FIXTURES, INJECTED_SECRETS, STATUS_FIXTURE } from '../fixtures';
 import { expectNoHorizontalOverflow, openReport } from './helpers';
-import { TEST_CASES } from '../../../tests/catalog';
+import { TEST_CASES } from '../../../m1/tests/catalog';
 
 type FixtureTest = { status: string; kind: string; title: string };
 /** The report is about service (integration) tests; framework self-tests are summarised separately. */
@@ -59,7 +59,7 @@ test.describe('REPORT UI — at a glance', () => {
     await attention.getByRole('button', { name: /Request without a Content-Type header/ }).click();
     const drawer = page.getByRole('dialog', { name: /Request without a Content-Type header/ });
     // Every test explains itself in plain language, for someone new to the project. The demo data keeps the old
-    // PII-* IDs; once tests/catalog only describes the live AISLE-* tests, the panel says so instead.
+    // PII-* IDs; once m1/tests/catalog only describes the live AISLE-* tests, the panel says so instead.
     const described = (
       JSON.parse(readFileSync(path.join(FIXTURES.demo, 'data/report.json'), 'utf8')) as {
         tests: { id: string; info?: unknown }[];

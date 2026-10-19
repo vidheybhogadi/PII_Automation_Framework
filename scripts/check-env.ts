@@ -11,10 +11,10 @@
 import dotenv from 'dotenv';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
-import { createAisleClient } from '../src/clients/client-factory';
-import { assertIntegrationConfig, isDbConfigured, loadConfig } from '../src/config/config';
-import { pendingSettings } from '../src/config/placeholders';
-import { Logger } from '../src/utils/logger';
+import { createAisleClient } from '../m1/src/clients/client-factory';
+import { assertIntegrationConfig, isDbConfigured, loadConfig } from '../m1/src/config/config';
+import { pendingSettings } from '../core/config/placeholders';
+import { Logger } from '../core/utils/logger';
 
 dotenv.config({ path: path.resolve(process.cwd(), process.env.ENV_FILE ?? '.env'), quiet: true });
 
@@ -28,7 +28,7 @@ async function main(): Promise<void> {
   const pending = pendingSettings(process.env);
   if (pending.length)
     warn(
-      `${pending.length} setting(s) still hold a PENDING_ placeholder (see PENDING-PLACEHOLDERS.md): ` +
+      `${pending.length} setting(s) still hold a PENDING_ placeholder (see m1/docs/PENDING-PLACEHOLDERS.md): ` +
         pending.join(', '),
     );
   assertIntegrationConfig(config);

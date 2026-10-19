@@ -8,9 +8,9 @@ node_modules/
 secrets/
 *.pem
 *.key
-config/db-queries.json
-config/db-queries.*.json
-!config/db-queries.example.json
+m1/config/db-queries.json
+m1/config/db-queries.*.json
+!m1/config/db-queries.example.json
 
 # Test output (may contain request IDs / masked identifiers — keep out of git)
 reports/

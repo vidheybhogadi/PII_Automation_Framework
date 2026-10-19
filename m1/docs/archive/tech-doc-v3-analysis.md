@@ -50,7 +50,7 @@ deployed?**
 | Every request sends the same UUIDv4 as both `X-Request-Id` and `X-PII-Request-Id`; "no request ID" tests remove both | Header name differs between the documents                       | Yes                                   |
 | `X-PII-Body-Hash` added to the logger's denylist (new self-test UT-RED-008)                                          | It is an unkeyed hash of a body containing PII (tech doc §29.2) | —                                     |
 | `.env.example`: `DB_ENGINE=postgres`, `PII_MAX_BODY_BYTES=1048576`                                                   | Tech doc §1.4 and §12.4                                         | Yes (confirm the QA value)            |
-| `config/db-queries.example.json`: PII table and columns filled from tech doc §24                                     | Q-03 answered                                                   | Tenant column still pending (Q-37)    |
+| `m1/config/db-queries.example.json`: PII table and columns filled from tech doc §24                                  | Q-03 answered                                                   | Tenant column still pending (Q-37)    |
 | Bulk-read audit query set to `null`                                                                                  | Audit is in MongoDB, not SQL (§39)                              | PII-DB-007 waits on Q-35              |
 | Waiting-test notes (Q-14, Q-17, Q-21) now quote the tech doc's answer                                                | Clear next step once Q-38 / Q-34 are answered                   | —                                     |
 | `known-gaps-and-questions.md`: tech doc answers (§1b) and new questions Q-30–Q-39                                    | Traceability                                                    | —                                     |
@@ -75,7 +75,7 @@ answers (§1b of the questions list) to tighten tests that currently accept seve
 | Health                                | `{status, checks}`; add `/health/live`                                                                                                                                        | 2 tests                                                       |
 | New tests the tech doc makes possible | Body-hash mismatch → 401; `/api/v1/auth/verify`; `Cache-Control: no-store` on every response; uniform 401 body; `BATCH_TOO_LARGE`; `FIELD_NOT_SEARCHABLE`; 201 vs 200 on save | New                                                           |
 
-Estimate for the rework: about 3–5 days, mostly in `src/clients`, `src/models` and the request builders.
+Estimate for the rework: about 3–5 days, mostly in `m1/src/clients`, `m1/src/models` and the request builders.
 
 ## 5. Useful facts for the test environment (from the tech doc)
 

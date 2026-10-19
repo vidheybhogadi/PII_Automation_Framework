@@ -16,6 +16,13 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "scripts/**/*.ts", "reporting/**/*.ts", "playwright.config.ts"],
+  "include": [
+    "core/**/*.ts",
+    "m1/**/*.ts",
+    "m2/**/*.ts",
+    "scripts/**/*.ts",
+    "reporting/**/*.ts",
+    "playwright.config.ts"
+  ],
   "exclude": ["reporting/dashboard/**", "reporting/tests/**"]
 }

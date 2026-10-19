@@ -5,7 +5,7 @@ Base URL (verified staging): `https://testa2.aisle.co/V1`. Every endpoint needs
 Requests never contain `tenant_id` — Aisle sets it (responses show `"tenant_id": "aisle"`).
 
 Source: the Aisle "PII Test API Curl Collection" + staging behaviour observed on 2026-09-29. Code:
-[src/clients/endpoints.ts](../src/clients/endpoints.ts).
+[m1/src/clients/endpoints.ts](../src/clients/endpoints.ts).
 
 | Key                     | Method + path                                    | Body                             | Access today (2026-10-01)                |
 | ----------------------- | ------------------------------------------------ | -------------------------------- | ---------------------------------------- |
@@ -34,4 +34,4 @@ Source: the Aisle "PII Test API Curl Collection" + staging behaviour observed on
 
 Observed limits: `user_id` 1–128 chars, `value` 1–1,024 chars, `field_names` ≥ 1, bulk read `user_ids` 1–200
 (exactly 200 returned 403 — BQ-18), `fields` ≥ 1. Unconfirmed items are listed in
-[backend-open-questions.md](backend-open-questions.md).
+[backend-open-questions.md](./backend-open-questions.md).

@@ -1,8 +1,8 @@
 /** UNIT — endpoint inventory (Aisle facade) and retry policy. */
 import { expect, test } from '@playwright/test';
 import { ENDPOINTS, ENDPOINT_KEYS, FACADE_PREFIX, buildPath } from '../../src/clients/endpoints';
-import { CleanupRegistry } from '../../src/utils/cleanup';
-import { backoffDelayMs, withRetry } from '../../src/utils/retry';
+import { CleanupRegistry } from '../../../core/utils/cleanup';
+import { backoffDelayMs, withRetry } from '../../../core/utils/retry';
 
 test.describe('UNIT endpoint inventory & utilities', () => {
   test('UT-END-001 The endpoint list is the Aisle facade: 11 endpoints, all under /api/v1/pii-test, all need the token', () => {

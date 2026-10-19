@@ -1,6 +1,6 @@
 /**
  * Makes sure the GitHub Actions environment (default "staging") has every secret and variable the CI workflow
- * (.github/workflows/pii-api-tests.yml) reads. For each one:
+ * (.github/workflows/m1-pii-api-tests.yml) reads. For each one:
  *   - already there in GitHub   → left alone (never overwritten)
  *   - missing, value in .env    → created from the local .env value
  *   - missing, no local value   → skipped and listed (empty or PENDING_ in .env)
@@ -28,9 +28,9 @@ interface Setting {
   onlyIfFile?: string;
 }
 
-const DB_CATALOG = 'config/db-queries.json';
+const DB_CATALOG = 'm1/config/db-queries.json';
 
-/** Everything .github/workflows/pii-api-tests.yml reads from the environment. */
+/** Everything .github/workflows/m1-pii-api-tests.yml reads from the environment. */
 const SETTINGS: Setting[] = [
   { name: 'AISLE_TEST_TOKEN', kind: 'secret', from: { env: 'AISLE_TEST_TOKEN' } },
   { name: 'AISLE_TEST_PHONES', kind: 'secret', from: { env: 'AISLE_TEST_PHONES' } },

@@ -1,7 +1,7 @@
 /** UNIT — redaction and the centralized logger. */
 import { expect, test } from '@playwright/test';
-import { Logger } from '../../src/utils/logger';
-import { REDACTED, maskIdentifier, redact, scrubText } from '../../src/utils/redaction';
+import { Logger } from '../../../core/utils/logger';
+import { REDACTED, maskIdentifier, redact, scrubText } from '../../../core/utils/redaction';
 
 const EMAIL = 'Jane.Sample@corp.example';
 const PHONE = '+91 98765 43210';

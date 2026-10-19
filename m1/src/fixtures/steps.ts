@@ -2,7 +2,7 @@
  * Reusable test steps (setup actions shared by many specs). Each step asserts its own success so a setup
  * failure is reported as such, not as a confusing failure later in the test.
  *
- * Every step runs in a call phase (src/utils/phase.ts) so reports can tell seeding and verification calls
+ * Every step runs in a call phase (core/utils/phase.ts) so reports can tell seeding and verification calls
  * apart from the request under test.
  *
  * Access gates: a setup call answered with 403 AUTHORIZATION_DENIED marks the test BLOCKED (the Aisle caller
@@ -15,12 +15,12 @@ import { ERROR_CODES } from '../models/common.models';
 import { freeTextKeyDataSchema, type FreeTextKeyData } from '../models/free-text.models';
 import { writePiiDataSchema, type WritePiiData } from '../models/pii.models';
 import { createTransientPhoneDataSchema, type CreateTransientPhoneData } from '../models/transient.models';
-import type { CleanupRegistry } from '../utils/cleanup';
-import { runInPhase } from '../utils/phase';
+import type { CleanupRegistry } from '../../../core/utils/cleanup';
+import { runInPhase } from '../../../core/utils/phase';
 import { blockIfAccessDenied } from './test-fixtures';
 
 export interface Blocker {
-  /** Question ID in docs/backend-open-questions.md, e.g. 'BQ-01'. */
+  /** Question ID in m1/docs/backend-open-questions.md, e.g. 'BQ-01'. */
   id: string;
   /** Plain-English reason, e.g. 'EMAIL access not granted to the Aisle caller'. */
   reason: string;

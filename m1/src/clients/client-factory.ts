@@ -1,6 +1,6 @@
 import { requireToken, type FrameworkConfig } from '../config/config';
-import type { ExchangeRecorder } from '../utils/exchange-recorder';
-import type { Logger } from '../utils/logger';
+import type { ExchangeRecorder } from '../../../core/utils/exchange-recorder';
+import type { Logger } from '../../../core/utils/logger';
 import { AislePiiClient } from './aisle-pii-client';
 
 /**

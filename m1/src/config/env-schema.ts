@@ -67,7 +67,7 @@ export const envSchema = z.object({
   /** Extra attempts for retry-safe (read-only) endpoints on HTTP 503. 0 disables retries. */
   PII_RETRY_MAX_ATTEMPTS: intWithDefault(2, 0, 5),
   PII_RETRY_BASE_DELAY_MS: intWithDefault(250, 0, 10_000),
-  /** Comma-separated endpoint keys (see src/clients/endpoints.ts) or "all". */
+  /** Comma-separated endpoint keys (see m1/src/clients/endpoints.ts) or "all". */
   PII_ENDPOINTS_IN_SCOPE: optionalString,
 
   // ---- Test data ------------------------------------------------------------------------------
@@ -102,7 +102,7 @@ export const envSchema = z.object({
     z.string().min(1).max(64).default('QA_AUTOMATION_UNKNOWN_FIELD'),
   ),
 
-  // ---- Database (read-only validation; schema supplied by Dev — see docs/database-setup.md) --------
+  // ---- Database (read-only validation; schema supplied by Dev — see m1/docs/database-setup.md) --------
   DB_ENGINE: z.preprocess(blankToUndefined, z.enum(['none', 'postgres', 'mysql']).default('none')),
   DB_HOST: optionalString,
   DB_PORT: optionalInt(1, 65_535),

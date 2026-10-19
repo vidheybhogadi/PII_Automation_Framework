@@ -12,7 +12,7 @@
  */
 import { z } from 'zod';
 
-/** Why audit tests are blocked while no audit source is configured (docs/backend-open-questions.md). */
+/** Why audit tests are blocked while no audit source is configured (m1/docs/backend-open-questions.md). */
 export const AUDIT_BLOCKER = {
   id: 'BQ-30',
   reason:

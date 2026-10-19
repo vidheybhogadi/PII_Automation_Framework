@@ -13,7 +13,7 @@
  *
  * Browser-safe: scrubText is a pure regex function.
  */
-import { scrubText } from '../../src/utils/redaction';
+import { scrubText } from '../../core/utils/redaction';
 
 const EXTRA_PATTERNS: [RegExp, string][] = [
   // Authorization headers / bearer tokens / cookies

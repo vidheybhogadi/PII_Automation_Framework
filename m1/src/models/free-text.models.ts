@@ -3,7 +3,7 @@
  *
  * PROVISIONAL: requests match the Aisle curl collection. The RESPONSE shapes below come from the PII Service
  * Integration Guide and are NOT yet confirmed through the facade — every call returns 403 today because the
- * Aisle caller has no access (docs/backend-open-questions.md BQ-02). Confirm them before relying on them.
+ * Aisle caller has no access (m1/docs/backend-open-questions.md BQ-02). Confirm them before relying on them.
  *
  * The raw key is sensitive. Tests must compare it via hashes/lengths only and never print it.
  * The client wraps responses so the key is not visible in reports (see ApiResponse).

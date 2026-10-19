@@ -26,7 +26,7 @@ test.describe('REPORT UI — exports', () => {
     );
   });
 
-  test('RPT-EX-006 Excel export is the styled test-case workbook (same design as docs/test-cases.xlsx)', async ({
+  test('RPT-EX-006 Excel export is the styled test-case workbook (same design as m1/docs/test-cases.xlsx)', async ({
     page,
   }) => {
     await openReport(page, FIXTURES.demo);

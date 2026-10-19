@@ -3,8 +3,8 @@
 Flow checked: **Aisle facade save → PII service → PII DB → read-only DB query → Aisle facade read**.
 
 > The PII DB schema has **not** been confirmed for the Aisle facade (**BQ-04** in
-> [backend-open-questions.md](backend-open-questions.md)). No table or column name in this repository is presented
-> as verified: every name in `config/db-queries.example.json` is a `PENDING_` placeholder. Until Dev provides
+> [backend-open-questions.md](./backend-open-questions.md)). No table or column name in this repository is presented
+> as verified: every name in `m1/config/db-queries.example.json` is a `PENDING_` placeholder. Until Dev provides
 > access and the layout, every DB test shows as **Blocked (BQ-04)** — never passed, never failed.
 
 ## 1. What to request from Dev
@@ -21,11 +21,11 @@ Flow checked: **Aisle facade save → PII service → PII DB → read-only DB qu
 DB_ENGINE=postgres            # or mysql
 DB_HOST=… DB_PORT=5432 DB_NAME=… DB_USER=<read-only user> DB_PASSWORD=<from secret store>
 DB_SSL=true
-DB_QUERIES_FILE=config/db-queries.json
+DB_QUERIES_FILE=m1/config/db-queries.json
 ```
 
 ```bash
-cp config/db-queries.example.json config/db-queries.json    # git-ignored
+cp m1/config/db-queries.example.json m1/config/db-queries.json    # git-ignored
 # replace every PENDING_… name with the confirmed table/column names
 ```
 
@@ -57,12 +57,12 @@ needs the free-text key table (BQ-45).
 ### Audit trail (MongoDB)
 
 The audit trail lives in MongoDB `audit_trails`, not in SQL. Tests read it through `AuditRepository`
-(`src/db/audit-repository.ts`): one read-only look-up by request ID. No implementation exists yet, so AISLE-DB-014
+(`m1/src/db/audit-repository.ts`): one read-only look-up by request ID. No implementation exists yet, so AISLE-DB-014
 and AISLE-DB-015 are **Blocked (BQ-30)** until Dev provides read-only access; the MongoDB driver is added then.
 
 ## 4. Safety measures built in
 
-- Session forced read-only (PostgreSQL `default_transaction_read_only=on`; MySQL `SET SESSION TRANSACTION READ ONLY`).
+- Read-only at the server: PostgreSQL runs every query in its own `BEGIN READ ONLY` transaction (works through PgBouncer, which rejects the `default_transaction_read_only` startup option); MySQL uses `SET SESSION TRANSACTION READ ONLY`.
 - SQL guard rejects anything but a single SELECT/WITH.
 - Parameters are always bound by the driver.
 - Rows are validated against the alias contract; errors list column names only, never values.

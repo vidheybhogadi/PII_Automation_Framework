@@ -3,7 +3,7 @@
  *
  * Any setting whose value starts with `PENDING_` (e.g. `DB_HOST=PENDING_DB_HOST`) is treated exactly
  * like an unset variable: it is never sent to the service or the database, and tests that need it fail with
- * the usual "missing setting" message. The full list lives in PENDING-PLACEHOLDERS.md (npm run docs:pending).
+ * the usual "missing setting" message. The full list lives in m1/docs/PENDING-PLACEHOLDERS.md (npm run m1:docs:pending).
  */
 export const PENDING_PREFIX = 'PENDING_';
 

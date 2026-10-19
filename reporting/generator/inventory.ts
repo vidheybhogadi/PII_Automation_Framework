@@ -1,7 +1,7 @@
 /**
  * The full list of tests in the suite, read from the code (`playwright test --list`) — not from a run.
  *
- * Used by the report and by docs/test-cases.xlsx so that EVERY test appears, even ones that were not part of the
+ * Used by the report and by m1/docs/test-cases.xlsx so that EVERY test appears, even ones that were not part of the
  * last run (they show as "Not Tested"). New tests appear automatically; nothing is hard-coded.
  */
 import { execSync } from 'node:child_process';

@@ -1,8 +1,8 @@
 /** The test-case catalog (plain-English descriptions) must match the real test suite exactly. */
 import { expect, test } from '@playwright/test';
-import { CROSS_ENDPOINT, primaryEndpoint } from '../../reporting/core/catalog';
-import { resolveEndpoints } from '../../reporting/generator/build-report-data';
-import { listInventory } from '../../reporting/generator/inventory';
+import { CROSS_ENDPOINT, primaryEndpoint } from '../../../reporting/core/catalog';
+import { resolveEndpoints } from '../../../reporting/generator/build-report-data';
+import { listInventory } from '../../../reporting/generator/inventory';
 import { TEST_CASES } from '../catalog';
 
 test.describe('UNIT test-case catalog', () => {
@@ -12,7 +12,7 @@ test.describe('UNIT test-case catalog', () => {
     const orphaned = Object.keys(TEST_CASES)
       .filter((id) => !ids.has(id))
       .sort();
-    expect(missing, 'tests without a description — add them to tests/catalog/<area>.ts').toEqual([]);
+    expect(missing, 'tests without a description — add them to m1/tests/catalog/<area>.ts').toEqual([]);
     expect(orphaned, 'descriptions for tests that no longer exist — remove them').toEqual([]);
     // Every test must land under a real endpoint heading, unless its entry says it spans several on purpose.
     const unplaced = [...ids].filter(

@@ -1,21 +1,21 @@
 /**
- * Builds docs/test-case-inventory.md — every Aisle PII API test case, one table per endpoint section, with:
+ * Builds m1/docs/test-case-inventory.md — every Aisle PII API test case, one table per endpoint section, with:
  *   Test ID | Test Name | Module | Endpoint | Method | Preconditions | Request | Expected Result | Validation |
  *   Status | Dependency/Blocker
  *
- *   npm run docs:inventory          (also run automatically at the end of npm run test:all)
+ *   npm run m1:docs:inventory          (also run automatically at the end of npm run m1:test:all)
  *
- * Same sources and rules as docs/test-cases.xlsx (scripts/generate-test-cases-xlsx.ts): the test list from the
- * code, descriptions from tests/catalog, status from the LAST run (reports/latest/run-data.json; missing → every
+ * Same sources and rules as m1/docs/test-cases.xlsx (m1/scripts/generate-test-cases-xlsx.ts): the test list from the
+ * code, descriptions from m1/tests/catalog, status from the LAST run (reports/latest/run-data.json; missing → every
  * test is Not Tested), blockers from the run or the test source. Missing values show as "—".
  *
  * Preview options: --run <run-data.json> --out <file.md>
  */
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { OUTCOMES } from '../reporting/core/analytics';
-import { moduleOf, NONE, requestOf, validationOf } from '../reporting/core/test-case';
-import { listInventory, type InventoryTest } from '../reporting/generator/inventory';
+import { OUTCOMES } from '../../reporting/core/analytics';
+import { moduleOf, NONE, requestOf, validationOf } from '../../reporting/core/test-case';
+import { listInventory, type InventoryTest } from '../../reporting/generator/inventory';
 import { TEST_CASES } from '../tests/catalog';
 import {
   endpointOf,
@@ -26,8 +26,8 @@ import {
   tally,
 } from './generate-test-cases-xlsx';
 
-const ROOT = path.resolve(__dirname, '..');
-export const TEST_INVENTORY_MD = path.join(ROOT, 'docs/test-case-inventory.md');
+const ROOT = path.resolve(__dirname, '../..');
+export const TEST_INVENTORY_MD = path.join(ROOT, 'm1/docs/test-case-inventory.md');
 
 const argValue = (flag: string) => {
   const i = process.argv.indexOf(flag);
@@ -82,7 +82,7 @@ export function buildTestInventoryDoc(opts: InventoryDocOptions): { markdown: st
     .join(' · ');
 
   const out: string[] = [
-    '<!-- GENERATED FILE — do not edit by hand. Source: tests/catalog + the last run · Regenerate: npm run docs:inventory -->',
+    '<!-- GENERATED FILE — do not edit by hand. Source: m1/tests/catalog + the last run · Regenerate: npm run m1:docs:inventory -->',
     '',
     '# Test-case inventory',
     '',
@@ -93,7 +93,7 @@ export function buildTestInventoryDoc(opts: InventoryDocOptions): { markdown: st
     'Status is from the last run only (the same rule as the HTML report). **Not Applicable** = Dev confirmed the',
     'feature is intentionally unsupported; it is neither a pass nor a failure. Dependency/Blocker shows the BQ',
     'question behind a Blocked / Not Applicable / Security finding result, or — for tests not in the last run —',
-    'the questions the test can block on. The same data, with steps and tester notes, is in `docs/test-cases.xlsx`.',
+    'the questions the test can block on. The same data, with steps and tester notes, is in `m1/docs/test-cases.xlsx`.',
     '',
     '## Sections',
     '',

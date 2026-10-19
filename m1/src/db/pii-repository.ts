@@ -3,7 +3,7 @@
  *
  * HOW IT WORKS
  *   The PII service's schema is NOT documented, so this file contains NO table or column names.
- *   The team supplies SQL in a JSON "catalog" (DB_QUERIES_FILE; template: config/db-queries.example.json).
+ *   The team supplies SQL in a JSON "catalog" (DB_QUERIES_FILE; template: m1/config/db-queries.example.json).
  *   Each named query must return rows using the COLUMN ALIASES defined by the row schemas below — the
  *   framework's contract. Example (PostgreSQL, illustrative only — real names come from the backend team):
  *
@@ -15,8 +15,8 @@
 import { readFileSync } from 'node:fs';
 import { z } from 'zod';
 import { formatZodIssues } from '../assertions/response.assertions';
-import { DbConfigError, assertReadOnlySql, type DbAdapter } from './db-adapter';
-import { PENDING_PREFIX } from '../config/placeholders';
+import { DbConfigError, assertReadOnlySql, type DbAdapter } from '../../../core/db/db-adapter';
+import { PENDING_PREFIX } from '../../../core/config/placeholders';
 
 // ---- Catalog ------------------------------------------------------------------------------------
 export const QUERY_NAMES = [
@@ -27,7 +27,7 @@ export const QUERY_NAMES = [
 ] as const;
 export type QueryName = (typeof QUERY_NAMES)[number];
 
-/** Params each query receives (documented in docs/database-setup.md). */
+/** Params each query receives (documented in m1/docs/database-setup.md). */
 export const QUERY_PARAMS: Record<QueryName, readonly string[]> = {
   findPiiRecords: ['tenant_id', 'user_id', 'field'],
   findTransientPhone: ['transient_id'],
@@ -86,8 +86,8 @@ export function parseQueryCatalog(json: unknown): QueryCatalog {
 export function loadQueryCatalog(filePath: string | undefined): QueryCatalog {
   if (!filePath) {
     throw new DbConfigError(
-      'DB_QUERIES_FILE is not set. Copy config/db-queries.example.json to config/db-queries.json, fill in the ' +
-        'SQL confirmed by the PII backend team, and set DB_QUERIES_FILE=config/db-queries.json.',
+      'DB_QUERIES_FILE is not set. Copy m1/config/db-queries.example.json to m1/config/db-queries.json, fill in the ' +
+        'SQL confirmed by the PII backend team, and set DB_QUERIES_FILE=m1/config/db-queries.json.',
     );
   }
   let text: string;
@@ -161,7 +161,7 @@ export class DbQueryNotConfiguredError extends DbConfigError {
     super(
       `DB query "${queryName}" is not defined in the SQL catalog (DB_QUERIES_FILE), or still holds a PENDING_ ` +
         `placeholder. Obtain the correct SQL ` +
-        `from the PII backend team; required column aliases are listed in docs/database-setup.md.`,
+        `from the PII backend team; required column aliases are listed in m1/docs/database-setup.md.`,
     );
     this.name = 'DbQueryNotConfiguredError';
   }

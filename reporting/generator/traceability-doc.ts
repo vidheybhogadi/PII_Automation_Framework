@@ -1,9 +1,9 @@
 /**
- * Generates docs/requirements-traceability.md from the catalog (reporting/core/catalog.ts) — the single
+ * Generates m1/docs/requirements-traceability.md from the catalog (reporting/core/catalog.ts) — the single
  * source of truth for requirement → endpoint → test mapping. The dashboard's Requirements view uses the same
  * catalog, so the document and the report can never disagree.
  *
- *   npm run docs:traceability          # regenerate
+ *   npm run m1:docs:traceability          # regenerate
  *   (reporting unit test RPT-SF-010 fails if the committed doc is stale)
  */
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -11,7 +11,7 @@ import path from 'node:path';
 import { REQUIREMENTS } from '../core/catalog';
 import { endpointInventory } from './build-report-data';
 
-export const TRACEABILITY_DOC = path.resolve(__dirname, '../../docs/requirements-traceability.md');
+export const TRACEABILITY_DOC = path.resolve(__dirname, '../../m1/docs/requirements-traceability.md');
 
 export function renderTraceabilityDoc(): string {
   const eps = new Map(endpointInventory().map((e) => [e.key, `${e.method} ${e.path}`]));
@@ -19,7 +19,7 @@ export function renderTraceabilityDoc(): string {
   const lines: string[] = [
     '# Requirements Traceability Matrix',
     '',
-    '<!-- GENERATED FILE — do not edit by hand. Source: reporting/core/catalog.ts · Regenerate: npm run docs:traceability -->',
+    '<!-- GENERATED FILE — do not edit by hand. Source: reporting/core/catalog.ts · Regenerate: npm run m1:docs:traceability -->',
     '',
     'Architecture under test: **QA automation → Aisle PII facade → PII service → PII DB**. Each requirement comes',
     'from behaviour observed on the Aisle staging facade or from the backend team (see',

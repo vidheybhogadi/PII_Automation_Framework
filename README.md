@@ -27,13 +27,13 @@ Every run ends with a **report** anyone can read in seconds, and an **Excel shee
 ### How one test run flows
 
 ```
-npm run test:all
+npm run m1:test:all
    │
-   ├─▶ tests/…              a test makes fake, unique data (qa-auto-<run>-…) and calls the facade
-   │     └─▶ src/clients        adds "Authorization: Bearer <token>" + JSON header centrally, sends, logs (redacted)
+   ├─▶ m1/tests/…              a test makes fake, unique data (qa-auto-<run>-…) and calls the facade
+   │     └─▶ m1/src/clients        adds "Authorization: Bearer <token>" + JSON header centrally, sends, logs (redacted)
    │           └─▶ Aisle facade    authenticates QA, sets tenant "aisle", signs, forwards to the PII service
-   │     ◀── src/assertions     checks status, response shape and values (never prints personal data)
-   │     ◀── src/db             optionally confirms in the DB that the value is stored protected (read-only)
+   │     ◀── m1/src/assertions     checks status, response shape and values (never prints personal data)
+   │     ◀── m1/src/db             optionally confirms in the DB that the value is stored protected (read-only)
    │
    ├─▶ reporting/collector    saves each result WITHOUT any personal data or token
    └─▶ reporting/generator    builds the report + PDF + Excel  →  reports/qa-report/index.html
@@ -55,44 +55,59 @@ npm run test:all
 
 ## Folder structure
 
+The repository is split by milestone. **M1** tests the Aisle PII facade; **M2** tests the Aisle business APIs that
+read and write first name, email and phone through the PII integration. Code both milestones use lives in `core/`
+and `reporting/`.
+
 ```
 PII_Automation_Framework/
 │
-├── tests/                          THE TESTS (109 planned) — one folder per area
-│   ├── poc/                          POC-001…003: save name → read name → check DB (the first proof)
-│   ├── health/                       facade readiness
-│   ├── pii/                          save · read · search · bulk read · clean-up rules
-│   ├── transient/                    temporary phones (create, resolve, promote)
-│   ├── free-text/                    free-text encryption keys (create, read, revoke)
-│   ├── security/                     token checks · tenant spoofing · leak checks
-│   ├── contract/                     response formats
-│   ├── db/                           read-only DB validation
-│   ├── catalog/                      plain-English description of every test (Excel + report read this)
-│   └── unit/                         self-tests of the framework itself (no network needed)
+├── core/                          SHARED FRAMEWORK (no milestone-specific code)
+│   ├── utils/                       logger that hides secrets, redaction, retry, request IDs, clean-up list
+│   ├── db/                          read-only DB adapter (PostgreSQL / MySQL, every query in a READ ONLY transaction)
+│   └── config/placeholders.ts       PENDING_… placeholder handling
 │
-├── src/                            THE FRAMEWORK
-│   ├── clients/
-│   │   ├── aisle-pii-client.ts         one method per facade endpoint: writePii(), readPii(), batchRead() …
-│   │   ├── base-api-client.ts          adds the Bearer token centrally, sends, logs safely
-│   │   └── endpoints.ts                the 11 facade endpoints (/api/v1/pii-test…)
-│   ├── fixtures/                     what every test receives (aisle, data, cleanup, db, log) + Blocked helpers
-│   ├── assertions/                   expectSuccess(), expectUnauthorized(), expectValidationError() …
-│   ├── models/                       expected request/response shapes (Zod) — observed on staging
-│   ├── data/                         fake, unique test data (user IDs, emails, names, approved phones)
-│   ├── db/                           read-only DB access + configurable query catalog
-│   ├── config/                       reads and validates .env; the token is kept secret
-│   └── utils/                        logger that hides secrets, retry, request IDs, clean-up list
+├── m1/                            MILESTONE 1 — Aisle PII facade (QA → facade → PII service → PII DB)
+│   ├── tests/                       THE TESTS (109) — one folder per area
+│   │   ├── poc/ health/ pii/ transient/ free-text/ security/ contract/ db/
+│   │   ├── catalog/                   plain-English description of every test (Excel + report read this)
+│   │   └── unit/                      framework self-tests (no network needed)
+│   ├── src/
+│   │   ├── clients/                   facade client: writePii(), readPii(), batchRead() … · the 11 endpoints
+│   │   ├── fixtures/                  what every test receives (aisle, data, cleanup, db, log) + Blocked helpers
+│   │   ├── assertions/                expectSuccess(), expectUnauthorized(), expectValidationError() …
+│   │   ├── models/                    request/response shapes (Zod) — observed on staging
+│   │   ├── data/                      fake, unique test data (user IDs, emails, names, approved phones)
+│   │   ├── db/                        PII repository (query catalog) + audit repository
+│   │   └── config/                    reads and validates .env; the token is kept secret
+│   ├── config/                      db-queries.example.json (template) · db-queries.json (git-ignored)
+│   ├── scripts/                     generators: test-cases.xlsx, test-case inventory, PENDING-PLACEHOLDERS.md
+│   ├── test-data/                   test-data rules (no data files)
+│   └── docs/                        backend-open-questions.md, coverage matrix, DB guides, test-cases.xlsx …
 │
-├── reporting/                      THE REPORT (dashboard, PDF, Excel/CSV/JSON export, history)
-├── scripts/                        helpers: test-all (tests → report → PDF → Excel), check-env, doc generators
-├── docs/                           guides — start with backend-open-questions.md and coverage-matrix.md
-│   └── test-cases.xlsx               ALL TEST CASES in Excel, grouped by endpoint
-├── config/db-queries.example.json  template for the read-only DB queries (all names PENDING until Dev confirms)
-├── .github/workflows/              CI: checks every pull request; facade tests Mon–Fri (scheduled) + report email, or on demand
-├── .env.example                    settings template (no real values)
-├── PENDING-PLACEHOLDERS.md         everything still owed by Dev, and which tests it blocks (generated)
-└── playwright.config.ts            test runner: projects (unit / api), reporters
+├── m2/                            MILESTONE 2 — Aisle business APIs (user / web / CMS JWT, TEST_TOKEN)
+│   ├── tests/                       M2 specs (Playwright project m2-api, tag @m2) — none yet
+│   ├── scripts/                     M2 design workbook generator + data
+│   └── docs/                        Dev API inventory (verbatim), m2-test-cases.xlsx, design summary
+│
+├── reporting/                     SHARED REPORT (dashboard, PDF, Excel/CSV/JSON export, history)
+├── scripts/                       SHARED helpers: test-all (tests → report → PDF → Excel), check-env, CI env sync, report mail
+├── docs/                          SHARED guides: setup, commands, architecture, reporting, troubleshooting
+├── .github/workflows/             m1-pii-api-tests.yml — PR checks; M1 facade tests Mon–Fri + report email, or on demand
+├── .env.example                   settings template (no real values)
+└── playwright.config.ts           projects: unit + api (M1) · m2-api (M2)
 ```
+
+### Commands
+
+Milestone commands carry the milestone prefix; shared tooling has none.
+
+| Area   | Commands                                                                                                                                      |
+| ------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| M1     | `m1:test:all` · `m1:test:api` · `m1:test:smoke` · `m1:test:phase1` · `m1:test:regression` · `m1:test:security` · `m1:test:db` · `m1:test:poc` |
+|        | `m1:test:unit` · `m1:test:debug` · `m1:test:list` · `m1:docs:testcases` · `m1:docs:inventory` · `m1:docs:pending` · `m1:docs:traceability`    |
+| M2     | `m2:test` · `m2:test:list` · `m2:docs`                                                                                                        |
+| Shared | `verify` · `typecheck` · `lint` · `format` · `check-env` · `ci:sync-env` · `report` · `report:*`                                              |
 
 **Created locally, never committed:** `.env` (your settings + the token) · `reports/` · `test-results/` ·
 `node_modules/`.
@@ -126,11 +141,11 @@ test(
 - **Tags**: `@smoke` · `@phase1` · `@security` · `@db` · `@poc` · `@slow` (everything else is Regression).
   `@slow` marks tests that wait for something to expire (AISLE-TR-005/007, about 5½ minutes each, run in parallel);
   skip them locally with `--grep-invert @slow`.
-- **Every test has a plain-English description** in `tests/catalog/<area>.ts` (what, why, steps, expected, the
+- **Every test has a plain-English description** in `m1/tests/catalog/<area>.ts` (what, why, steps, expected, the
   request sent, the checks made, type, priority). Self-test UT-DOC-002 fails until it exists. Test cases are added/changed/removed through the
   **testcase-manager** agent (see [CLAUDE.md](CLAUDE.md)): it proposes first, and changes nothing until approved.
 - **Nothing is guessed.** Expected results come from behaviour observed on staging or from Dev's answers. Anything
-  unconfirmed is marked **Blocked** with a question in [docs/backend-open-questions.md](docs/backend-open-questions.md).
+  unconfirmed is marked **Blocked** with a question in [m1/docs/backend-open-questions.md](./m1/docs/backend-open-questions.md).
 
 ---
 
@@ -164,14 +179,14 @@ npm run check-env                  # checks settings, the token and which fields
 **Run against the Aisle staging facade** (`https://testa2.aisle.co/V1`):
 
 ```bash
-npm run test:poc                   # POC-001…003 (NAME) — POC-003 is Blocked until read-only DB access (BQ-04)
-npm run test:phase1                # the 8 Phase-1 tests that prove the migration
-npm run test:all                   # all tests → report → PDF → Excel
+npm run m1:test:poc                   # POC-001…003 (NAME) — POC-003 is Blocked until read-only DB access (BQ-04)
+npm run m1:test:phase1                # the 8 Phase-1 tests that prove the migration
+npm run m1:test:all                   # all tests → report → PDF → Excel
 npm run report                     # rebuild the report from the last run
 npm run report:open
 ```
 
-Subsets: `npm run test:smoke` · `npm run test:security` · `npm run test:db` · one test:
+Subsets: `npm run m1:test:smoke` · `npm run m1:test:security` · `npm run m1:test:db` · one test:
 `npx playwright test --grep AISLE-RD-001`. All commands: [docs/execution-guide.md](docs/execution-guide.md).
 
 ---
@@ -196,8 +211,8 @@ Subsets: `npm run test:smoke` · `npm run test:security` · `npm run test:db` ·
 | Framework self-tests |  66   | passing (`npm run verify`)                                                               |
 | Aisle facade tests   |  109  | written; see the migration report for the latest staging run and what is Blocked and why |
 
-[Backend open questions](docs/backend-open-questions.md) · [Coverage matrix](docs/coverage-matrix.md) ·
-[Pending placeholders](PENDING-PLACEHOLDERS.md) · [Test cases (Excel)](docs/test-cases.xlsx) ·
-[Setup](docs/setup-guide.md) · [Commands](docs/execution-guide.md) · [Endpoints](docs/endpoint-inventory.md) · [Aisle API (curl)](docs/aisle-api.md) ·
-[Architecture](docs/framework-architecture.md) · [Database](docs/database-setup.md) · [Report](docs/reporting.md) ·
-[Troubleshooting](docs/troubleshooting.md) · [Archive (old direct-PII design)](docs/archive/)
+[Backend open questions](./m1/docs/backend-open-questions.md) · [Coverage matrix](./m1/docs/coverage-matrix.md) ·
+[Pending placeholders](./m1/docs/PENDING-PLACEHOLDERS.md) · [Test cases (Excel)](./m1/docs/test-cases.xlsx) ·
+[Setup](docs/setup-guide.md) · [Commands](docs/execution-guide.md) · [Endpoints](./m1/docs/endpoint-inventory.md) · [Aisle API (curl)](./m1/docs/aisle-api.md) ·
+[Architecture](docs/framework-architecture.md) · [Database](./m1/docs/database-setup.md) · [Report](docs/reporting.md) ·
+[Troubleshooting](docs/troubleshooting.md) · [Archive (old direct-PII design)](./m1/docs/archive/)

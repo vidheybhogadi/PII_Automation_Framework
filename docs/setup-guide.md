@@ -29,10 +29,10 @@ Fill in `.env` (git-ignored, keep it private — `chmod 600 .env`):
 | `AISLE_TEST_EMAIL_DOMAIN`               | email tests                   | Default `example.test` (reserved — can never receive mail)                                    |
 | `AISLE_TEST_PHONES`                     | phone / temporary-phone tests | QA lead / Aisle backend: team-approved test numbers only. Empty → those tests Blocked         |
 | `AISLE_TEST_USER_ID`, `…_OTHER_USER_ID` | optional                      | Only if Dev asks QA to use fixed approved test users; otherwise tests generate their own      |
-| `DB_*` + `config/db-queries.json`       | POC-003, AISLE-DB-\*          | Aisle backend / DBA: read-only access and the table layout (BQ-04). Missing → Blocked         |
+| `DB_*` + `m1/config/db-queries.json`    | POC-003, AISLE-DB-\*          | Aisle backend / DBA: read-only access and the table layout (BQ-04). Missing → Blocked         |
 
 Values starting with `PENDING_` count as "not set". The full list of what is still owed, and which tests it
-blocks, is generated in [PENDING-PLACEHOLDERS.md](../PENDING-PLACEHOLDERS.md).
+blocks, is generated in [m1/docs/PENDING-PLACEHOLDERS.md](../m1/docs/PENDING-PLACEHOLDERS.md).
 
 ## 3. Check
 
@@ -51,7 +51,7 @@ fields the Aisle caller can use (a read of a random user that cannot exist — i
 
 ## 4. CI
 
-The GitHub workflow (`.github/workflows/pii-api-tests.yml`) needs, in the GitHub Environment (`staging`):
+The GitHub workflow (`.github/workflows/m1-pii-api-tests.yml`) needs, in the GitHub Environment (`staging`):
 
 | Name                      | Kind     | Notes                                               |
 | ------------------------- | -------- | --------------------------------------------------- |

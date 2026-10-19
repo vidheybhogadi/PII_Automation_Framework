@@ -33,7 +33,7 @@ import {
   type CollectedTest,
   type TestStatus,
 } from '../core/types';
-import { isPending } from '../../src/config/placeholders';
+import { isPending } from '../../core/config/placeholders';
 
 interface Options {
   outputFile?: string;

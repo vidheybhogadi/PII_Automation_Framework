@@ -4,7 +4,7 @@
  * The integration guide does NOT document the PII service's database technology or schema. Instead of
  * guessing, the framework defines this small interface; `db-client.ts` provides PostgreSQL and MySQL
  * implementations selected by DB_ENGINE, and the actual SQL lives in a team-supplied catalog file
- * (see docs/database-setup.md). Tests only talk to PiiRepository, never to SQL directly.
+ * (see m1/docs/database-setup.md). Tests only talk to PiiRepository, never to SQL directly.
  */
 
 export type DbEngine = 'postgres' | 'mysql';

@@ -13,8 +13,8 @@ import {
 import { DEFAULT_AISLE_BASE_URL } from '../../src/config/env-schema';
 import { ENDPOINT_KEYS } from '../../src/clients/endpoints';
 import { buildPendingDoc, PENDING_DOC } from '../../scripts/generate-pending-doc';
-import { pendingSettings } from '../../src/config/placeholders';
-import { scrubText } from '../../src/utils/redaction';
+import { pendingSettings } from '../../../core/config/placeholders';
+import { scrubText } from '../../../core/utils/redaction';
 
 /** Synthetic test token — NOT a real credential. */
 const FAKE_TOKEN = 'unitTestToken0123456789abcdef0000';
@@ -96,7 +96,7 @@ test.describe('UNIT configuration', () => {
       DB_NAME: 'pii',
       DB_USER: 'qa_readonly',
       DB_PASSWORD: 'x-unit-password',
-      DB_QUERIES_FILE: 'config/db-queries.example.json', // an existing catalog file
+      DB_QUERIES_FILE: 'm1/config/db-queries.example.json', // an existing catalog file
     });
     expect(isDbConfigured(full)).toBe(true);
     const noCatalog = loadConfig({
@@ -140,9 +140,11 @@ test.describe('UNIT configuration', () => {
   });
 });
 
-test('UT-DOC-001 PENDING-PLACEHOLDERS.md lists every placeholder and is up to date (npm run docs:pending)', () => {
+test('UT-DOC-001 m1/docs/PENDING-PLACEHOLDERS.md lists every placeholder and is up to date (npm run m1:docs:pending)', () => {
   const current = readFileSync(PENDING_DOC, 'utf8');
-  expect(current, 'PENDING-PLACEHOLDERS.md is stale — run: npm run docs:pending').toBe(buildPendingDoc());
+  expect(current, 'm1/docs/PENDING-PLACEHOLDERS.md is stale — run: npm run m1:docs:pending').toBe(
+    buildPendingDoc(),
+  );
 });
 
 test('UT-DOC-003 backend-open-questions.md keeps only OPEN questions, or says "All clear" when none are left', () => {

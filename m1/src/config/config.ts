@@ -12,10 +12,10 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { ENDPOINT_KEYS, type EndpointKey } from '../clients/endpoints';
-import { registerSecretValue } from '../utils/redaction';
-import { Secret } from '../utils/secret';
+import { registerSecretValue } from '../../../core/utils/redaction';
+import { Secret } from '../../../core/utils/secret';
 import { envSchema, type RawEnv } from './env-schema';
-import { withoutPlaceholders } from './placeholders';
+import { withoutPlaceholders } from '../../../core/config/placeholders';
 
 export class ConfigError extends Error {
   constructor(message: string) {
@@ -69,7 +69,7 @@ export const ENV_HELP: Record<string, string> = {
   AISLE_TEST_OTHER_USER_ID: 'Optional second approved test user ID, for the cross-user test.',
   DB_ENGINE: 'Database technology of the PII DB: postgres | mysql (Aisle / PII backend team).',
   DB_QUERIES_FILE:
-    'Path to the read-only SQL catalog JSON (see config/db-queries.example.json and docs/database-setup.md).',
+    'Path to the read-only SQL catalog JSON (see m1/config/db-queries.example.json and m1/docs/database-setup.md).',
 };
 
 function describeVar(name: string): string {
@@ -187,7 +187,7 @@ export function requireValue<T>(value: T | undefined, envVar: string, purpose: s
 
 /**
  * True when read-only DB validation is configured: engine, connection AND an existing query catalog
- * (config/db-queries.json with the confirmed table/column names). Without the catalog the DB tests stay BLOCKED.
+ * (m1/config/db-queries.json with the confirmed table/column names). Without the catalog the DB tests stay BLOCKED.
  */
 export function isDbConfigured(config: FrameworkConfig): boolean {
   const d = config.db;

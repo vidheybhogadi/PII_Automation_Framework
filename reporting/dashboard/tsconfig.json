@@ -19,6 +19,6 @@
     "src/**/*.tsx",
     "src/**/*.css",
     "../core/**/*.ts",
-    "../../src/utils/redaction.ts"
+    "../../core/utils/redaction.ts"
   ]
 }

@@ -1,15 +1,15 @@
-<!-- GENERATED FILE — do not edit by hand. Source: tests/catalog + the last run · Regenerate: npm run docs:inventory -->
+<!-- GENERATED FILE — do not edit by hand. Source: m1/tests/catalog + the last run · Regenerate: npm run m1:docs:inventory -->
 
 # Test-case inventory
 
 **109 test cases** — Blocked 21 · Pass 88
 
-Last run: 2026-10-05 05:09 UTC · environment staging · projects=api · took 323.4s
+Last run: 2026-10-07 03:44 UTC · environment staging · projects=api · took 328.8s
 
 Status is from the last run only (the same rule as the HTML report). **Not Applicable** = Dev confirmed the
 feature is intentionally unsupported; it is neither a pass nor a failure. Dependency/Blocker shows the BQ
 question behind a Blocked / Not Applicable / Security finding result, or — for tests not in the last run —
-the questions the test can block on. The same data, with steps and tester notes, is in `docs/test-cases.xlsx`.
+the questions the test can block on. The same data, with steps and tester notes, is in `m1/docs/test-cases.xlsx`.
 
 ## Sections
 

@@ -23,7 +23,7 @@ import { listInventory, type InventoryTest } from './inventory';
 import { historyFileName, loadHistory, saveHistoryEntry } from './history';
 import { parseCollectedRun, parseReportConfig } from './schema';
 import { writeReport } from './write-report';
-import { buildTestCasesWorkbook, TEST_CASES_XLSX } from '../../scripts/generate-test-cases-xlsx';
+import { buildTestCasesWorkbook, TEST_CASES_XLSX } from '../../m1/scripts/generate-test-cases-xlsx';
 
 const EXCEL_FILE = 'test-cases.xlsx';
 
@@ -50,11 +50,11 @@ export interface GenerateOptions {
   quiet?: boolean;
   /**
    * List every test in the suite, marking those not part of this run as "Not Tested". Default: on for a real
-   * run read from the default location (npm run report / test:all); off for demo data and explicit inputs.
+   * run read from the default location (npm run report / m1:test:all); off for demo data and explicit inputs.
    */
   includeNotRun?: boolean;
   /**
-   * Also write test-cases.xlsx into the report folder (Export → Excel), built exactly like docs/test-cases.xlsx.
+   * Also write test-cases.xlsx into the report folder (Export → Excel), built exactly like m1/docs/test-cases.xlsx.
    * Default: on for npm run report and the demo report; off for explicit inputs.
    */
   excel?: boolean;
@@ -65,7 +65,7 @@ function readJson(file: string, what: string): unknown {
     throw new Error(
       `${what} not found at ${path.relative(ROOT, file)}. ` +
         (what === 'Run data'
-          ? 'Run the tests first (e.g. npm run test:smoke or npm run test:unit) — the collector writes it automatically.'
+          ? 'Run the tests first (e.g. npm run m1:test:smoke or npm run m1:test:unit) — the collector writes it automatically.'
           : ''),
     );
   }
@@ -172,7 +172,7 @@ export async function generate(
     );
     if (excel)
       console.log(
-        `  Excel     : ${rel(path.join(outDir, EXCEL_FILE))}  (same design as docs/test-cases.xlsx)`,
+        `  Excel     : ${rel(path.join(outDir, EXCEL_FILE))}  (same design as m1/docs/test-cases.xlsx)`,
       );
     console.log(
       `  History   : ${historyFile ? rel(historyFile) : demo ? 'demo history (fixtures, read-only)' : 'not written'} (${history.length} previous run(s) loaded)`,

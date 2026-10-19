@@ -4,8 +4,8 @@ Use these commands to test the Aisle PII facade endpoints. Aisle receives the re
 
 > QA notes: this is the Aisle-provided curl collection, kept for manual checks. The token is **not** stored here —
 > it lives only in `.env` / CI secrets. Use synthetic data only (no real names, emails or phone numbers). Observed
-> staging behaviour per endpoint is in [endpoint-inventory.md](endpoint-inventory.md); open questions are in
-> [backend-open-questions.md](backend-open-questions.md).
+> staging behaviour per endpoint is in [endpoint-inventory.md](./endpoint-inventory.md); open questions are in
+> [backend-open-questions.md](./backend-open-questions.md).
 
 ## Setup
 

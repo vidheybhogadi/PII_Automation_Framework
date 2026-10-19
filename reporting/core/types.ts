@@ -264,7 +264,7 @@ export interface HistoryEntry {
 
 // ---- Final report --------------------------------------------------------------------------------
 
-/** Plain-English description of a test (from tests/catalog), shown in the report and the Excel sheet. */
+/** Plain-English description of a test (from m1/tests/catalog), shown in the report and the Excel sheet. */
 export interface TestDescription {
   what: string;
   why: string;
@@ -300,7 +300,7 @@ export interface ReportData {
     generatedAt: string;
     dataSource: DataSource;
     pdfFile: string | null;
-    /** The styled test-case workbook next to the report (same design as docs/test-cases.xlsx), if built. */
+    /** The styled test-case workbook next to the report (same design as m1/docs/test-cases.xlsx), if built. */
     excelFile?: string | null;
   };
   run: RunInfo;

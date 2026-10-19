@@ -2,7 +2,7 @@
 
 This folder intentionally contains **no PII and no data files**.
 
-All test data is synthetic and generated at runtime by [`src/data/test-data-factory.ts`](../src/data/test-data-factory.ts):
+All test data is synthetic and generated at runtime by [`m1/src/data/test-data-factory.ts`](../src/data/test-data-factory.ts):
 
 | Data     | Source              | Rule                                                                                                                                          |
 | -------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -21,6 +21,6 @@ provider's documented test range, or company-owned test SIMs). Add them comma-se
 ## Traceability and cleanup
 
 Every value embeds the run ID, so automation data is identifiable. There is no delete API for PII (BQ-10 in
-[`docs/backend-open-questions.md`](../docs/backend-open-questions.md)); free-text keys are revoked after each test and
+[`m1/docs/backend-open-questions.md`](../docs/backend-open-questions.md)); free-text keys are revoked after each test and
 transient mappings expire. Each test's `cleanup-summary.json` lists what was left behind. **Never** delete or modify
 rows directly in a shared database.

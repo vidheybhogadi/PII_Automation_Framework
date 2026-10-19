@@ -1,9 +1,9 @@
-# PII service API automation.
+# Milestone 1 (m1/): Aisle PII facade automation. Milestone 2 (m2/) gets its own workflow once its tests exist.
 # - Pull requests: static checks + unit tests only (no secrets exposed to PR code from forks).
 # - Scheduled (Mon–Fri IST, see `schedule`) and manual runs: Aisle PII facade suites (QA → Aisle → PII service → DB) against a chosen
 #   environment, using GitHub Environment secrets (AISLE_TEST_TOKEN). The report is then emailed with every
 #   PDF page shown inline (scripts/send-report-mail.ts) to the REPORT_MAIL_TO list.
-name: PII API tests
+name: M1 PII API tests
 
 on:
   pull_request:
@@ -17,8 +17,9 @@ on:
       suite:
         description: npm script to run
         type: choice
-        options: [test:smoke, test:phase1, test:regression, test:security, test:db, test:api]
-        default: test:smoke
+        options:
+          [m1:test:smoke, m1:test:phase1, m1:test:regression, m1:test:security, m1:test:db, m1:test:api]
+        default: m1:test:smoke
       send_email:
         description: Email the report to REPORT_MAIL_TO
         type: boolean
@@ -26,14 +27,14 @@ on:
   schedule:
     # 02:00 IST Mon–Fri = 20:30 UTC the evening before (Sun–Thu). Set 6 h before the wanted 08:00 IST because
     # GitHub has been starting scheduled runs ~6 h late. If GitHub runs on time, the run happens at 02:00 IST.
-    # Full npm run test:all on the Aisle staging facade + email. Weekend runs are also skipped by `schedule-gate`.
+    # Full npm run m1:test:all on the Aisle staging facade + email. Weekend runs are also skipped by `schedule-gate`.
     - cron: '30 20 * * 0-4'
 
 permissions:
   contents: read
 
 concurrency:
-  group: pii-api-${{ github.ref }}-${{ inputs.environment || 'staging' }}
+  group: m1-pii-api-${{ github.ref }}-${{ inputs.environment || 'staging' }}
   cancel-in-progress: false
 
 jobs:
@@ -124,7 +125,7 @@ jobs:
       DB_NAME: ${{ vars.DB_NAME }}
       DB_USER: ${{ vars.DB_USER }}
       DB_PASSWORD: ${{ secrets.DB_READONLY_PASSWORD }}
-      DB_QUERIES_FILE: config/db-queries.json
+      DB_QUERIES_FILE: m1/config/db-queries.json
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -136,7 +137,7 @@ jobs:
         if: env.DB_ENGINE != 'none'
         env:
           DB_QUERIES_JSON: ${{ secrets.DB_QUERIES_JSON }}
-        run: printf '%s' "$DB_QUERIES_JSON" > config/db-queries.json
+        run: printf '%s' "$DB_QUERIES_JSON" > m1/config/db-queries.json
       # Before check-env so the failure email can still be built if configuration is wrong.
       - run: npx playwright install --with-deps chromium
       - name: Validate configuration
@@ -148,17 +149,17 @@ jobs:
           key: pii-history-${{ inputs.environment || 'staging' }}-${{ github.run_id }}
           restore-keys: pii-history-${{ inputs.environment || 'staging' }}-
       - name: Test → collect → analyse → dashboard → PDF
-        # test:all always generates the report, then exits with the TEST exit code.
+        # m1:test:all always generates the report, then exits with the TEST exit code.
         run: |
-          case "${{ inputs.suite || 'test:api' }}" in
-            test:smoke)      ARGS="--project=api --grep @smoke" ;;
-            test:phase1)     ARGS="--project=api --grep @phase1" ;;
-            test:security)   ARGS="--project=api --grep @security" ;;
-            test:db)         ARGS="--project=api --grep @db" ;;
-            test:regression) ARGS="--project=api --grep @regression" ;;
-            *)               ARGS="--project=api" ;;
+          case "${{ inputs.suite || 'm1:test:api' }}" in
+            m1:test:smoke)      ARGS="--project=api --grep @smoke" ;;
+            m1:test:phase1)     ARGS="--project=api --grep @phase1" ;;
+            m1:test:security)   ARGS="--project=api --grep @security" ;;
+            m1:test:db)         ARGS="--project=api --grep @db" ;;
+            m1:test:regression) ARGS="--project=api --grep @regression" ;;
+            *)                  ARGS="--project=api" ;;
           esac
-          npm run test:all -- $ARGS
+          npm run m1:test:all -- $ARGS
       - name: Save run history
         if: always()
         uses: actions/cache/save@v4

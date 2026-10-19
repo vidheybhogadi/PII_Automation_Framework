@@ -1,12 +1,12 @@
 {
   "$comment": [
-    "TEMPLATE for READ-ONLY DB validation of the Aisle → PII service integration. Copy to config/db-queries.json (git-ignored) and replace every PENDING_… placeholder with the table/column names Dev confirms (docs/backend-open-questions.md BQ-04). A query that still contains PENDING_ is treated as not configured and never runs; the DB tests show as BLOCKED until then.",
+    "TEMPLATE for READ-ONLY DB validation of the Aisle → PII service integration. Copy to m1/config/db-queries.json (git-ignored) and replace every PENDING_… placeholder with the table/column names Dev confirms (m1/docs/backend-open-questions.md BQ-04). A query that still contains PENDING_ is treated as not configured and never runs; the DB tests show as BLOCKED until then.",
     "Target ONLY the PII service's own database (design: pii_db). NEVER the Aisle app database (aisleweb): it is out of scope and holds real users' data.",
     "Nothing here is verified. The PII-service design (tech doc v3) names user_pii_field_value(user_id, field_name, ciphertext, nonce, auth_tag, key_version, lookup_token, created_at, updated_at) and pii_key_registry(key_version, status, …); it has no tenant column. Free-text key storage is undocumented (BQ-45). Confirm every name with Dev.",
     "findKeyRegistry may select ONLY the key version and status: never '*' and never the wrapped key (DEK) columns — the framework rejects such a query.",
     "The tenant is set by Aisle (observed value \"aisle\"). Tests pass the tenant_id taken from the API response, never one chosen by QA.",
-    "Rules: read-only SELECT/WITH only (DELETE/UPDATE/INSERT/DROP/TRUNCATE are rejected by the framework); one statement; $1.. placeholders for postgres; 'params' lists named parameters in placeholder order; each query MUST return the column aliases in docs/database-setup.md.",
-    "The audit trail (MongoDB audit_trails) is not read through this SQL file; see src/db/audit-repository.ts (BQ-30)."
+    "Rules: read-only SELECT/WITH only (DELETE/UPDATE/INSERT/DROP/TRUNCATE are rejected by the framework); one statement; $1.. placeholders for postgres; 'params' lists named parameters in placeholder order; each query MUST return the column aliases in m1/docs/database-setup.md.",
+    "The audit trail (MongoDB audit_trails) is not read through this SQL file; see m1/src/db/audit-repository.ts (BQ-30)."
   ],
   "engine": "postgres",
   "queries": {

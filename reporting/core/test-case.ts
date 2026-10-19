@@ -1,11 +1,11 @@
 /**
- * Test-case inventory fields shared by the report (drawer, CSV), the Excel sheet and docs/test-case-inventory.md:
+ * Test-case inventory fields shared by the report (drawer, CSV), the Excel sheet and m1/docs/test-case-inventory.md:
  * Module, Endpoint, Method, Request and Validation. Browser-safe (no Node imports).
  *
  * Catalog entries may still lack `request` / `validation` while they are being written — every helper here
  * tolerates missing values and returns '' (the views show "—").
  */
-import { ENDPOINTS } from '../../src/clients/endpoints';
+import { ENDPOINTS } from '../../m1/src/clients/endpoints';
 import { areaForId, areaInfo, CROSS_ENDPOINT, primaryEndpoint } from './catalog';
 
 /** Shown wherever a value is missing. */

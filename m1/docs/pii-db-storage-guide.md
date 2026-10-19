@@ -21,7 +21,7 @@ table each endpoint's data ends up. It also shows what QA has confirmed so far b
 > **Status (2026-10-01):** the table design below comes from the **design documents**. It has **not been checked against
 > a real PII database yet**. The database QA can access (`aisleweb`) is Aisle's main app database and contains
 > **none** of the PII-service tables (see [§7](#7-what-qa-checked-in-the-database)). This is tracked as **BQ-04** in
-> [backend-open-questions.md](backend-open-questions.md).
+> [backend-open-questions.md](./backend-open-questions.md).
 
 ---
 
@@ -254,32 +254,33 @@ current active key). It then decrypts with the same AAD and returns the value.
 
 ## 7. What QA checked in the database
 
-On 2026-10-01 QA connected with the read-only credentials in `.env` (PostgreSQL 13.15 through PgBouncer, port 6432, user
-`qa_read_only`, session forced read-only).
+On 2026-10-19 QA connected to the PII service's own database `pii` (PostgreSQL 13.15 through PgBouncer, port 6432) with
+the credentials in `.env`. Every query ran in a `BEGIN READ ONLY` transaction.
 
-| Check                                          | Result                                                                                                                                                                                                                                  |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Database configured in `.env`                  | `aisleweb`, Aisle's **main app database** (~20,000 tables; 481 visible to `qa_read_only`)                                                                                                                                               |
-| Any of the PII-service tables?                 | **No.** There is no `user_pii_field_value`, `pii_key_registry`, `pii_calling_service`, `pii_field_catalog`, `pii_service_field_access` or `idempotency_key`, and no table with `pii`, `transient`, `free_text` or `tenant` in its name. |
-| Schemas                                        | `public`, `user_procedures` only                                                                                                                                                                                                        |
-| Startup option `default_transaction_read_only` | Rejected by PgBouncer, so the read-only mode has to be set after connecting (`SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY`)                                                                                                    |
-| Other databases on the server                  | Not inspected: several have `_production` names. QA must not read those.                                                                                                                                                                |
+| Check                                          | Result                                                                                                                                                                                                 |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Database configured in `.env`                  | `pii`, the PII service's own database (earlier, 2026-10-01: `aisleweb`, Aisle's main app database, which has no PII-service tables)                                                                    |
+| PII-service tables                             | `user_pii_field_value`, `pii_key_registry`, `transient_phone`, `free_text_encryption_key`, `pii_field_catalog`, `pii_service_field_access`, `pii_calling_service`, `alembic_version` (schema `public`) |
+| Differences from the design                    | `user_pii_field_value`, `transient_phone` and `free_text_encryption_key` have a `tenant_id` and an `aad_version` column. There is no `idempotency_key` table                                           |
+| QA user's rights                               | **No SELECT on any table or column** (`42501 permission denied`); no write rights                                                                                                                      |
+| Startup option `default_transaction_read_only` | Rejected by PgBouncer, so the framework runs every query in its own `BEGIN READ ONLY` transaction instead                                                                                              |
+| Other databases on the server                  | The QA user can connect to `authentication_production`, `desiapp_production`, `aisle_rewind`, `test_write` and `postgres`. QA did not open them and must not read them                                 |
 
-This matches the design: the PII service has **its own** database (`pii_db`), separate from `aisleweb`. **QA has not been given access to it yet.**
+`m1/config/db-queries.json` (git-ignored) now uses these real table and column names. The DB tests stay **Blocked (BQ-04)**
+until the QA user can read the tables.
 
 ### What to ask Dev (BQ-04)
 
-1. Host, database name and a **read-only** user for the PII service's own PostgreSQL on staging. The user needs SELECT on the ciphertext columns (see §2.7).
-2. Confirm the real columns of `user_pii_field_value`: where `tenant_id` lives, and that `user_id` is VARCHAR(128). Confirm the field names (`NAME` vs `FIRST_NAME`/`LAST_NAME`).
-3. Which tables hold **transient phones** and **free-text keys**? Neither appears in any version of the design. For
-   free text, see BQ-45 to BQ-47.
-4. Is `idempotency_key` in use?
+1. Grant the QA user SELECT on `user_pii_field_value`, `transient_phone`, `free_text_encryption_key` (not
+   `encrypted_key`), and on `pii_key_registry` `key_version` and `status` only (never the `*_wrapped_dek` columns).
+2. Restrict the QA user to the `pii` database (no CONNECT on the `_production` databases).
+3. Confirm what `tenant_id` and `aad_version` hold, and the field names (`NAME` vs `FIRST_NAME`/`LAST_NAME`).
+4. How does QA tell whether a transient phone was consumed? `transient_phone` has no consumed flag (BQ-02).
 5. Read access to MongoDB `audit_trails` (BQ-30).
-6. Confirm the DB server behind `aisleweb` is staging (several `_production` database names are on it).
 
 ### The queries QA will run once access is granted
 
-These are written against the design schema. Adjust them to the confirmed columns. They go in `config/db-queries.json`, as described in [database-setup.md](database-setup.md).
+These are written against the design schema. Adjust them to the confirmed columns. They go in `m1/config/db-queries.json`, as described in [database-setup.md](./database-setup.md).
 
 ```sql
 -- 1. Row exists and is stored encrypted (there is no readable-value column to select)

@@ -1,6 +1,6 @@
 # Requirements Traceability Matrix
 
-<!-- GENERATED FILE — do not edit by hand. Source: reporting/core/catalog.ts · Regenerate: npm run docs:traceability -->
+<!-- GENERATED FILE — do not edit by hand. Source: reporting/core/catalog.ts · Regenerate: npm run m1:docs:traceability -->
 
 Architecture under test: **QA automation → Aisle PII facade → PII service → PII DB**. Each requirement comes
 from behaviour observed on the Aisle staging facade or from the backend team (see

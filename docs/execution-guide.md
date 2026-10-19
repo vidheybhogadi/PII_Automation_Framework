@@ -5,33 +5,33 @@ All commands run from the project root. The facade tests need `.env` with `AISLE
 
 ## Everyday commands
 
-| Command                     | What it does                                                                                      |
-| --------------------------- | ------------------------------------------------------------------------------------------------- |
-| `npm run verify`            | typecheck + lint + format check + framework self-tests (no network)                               |
-| `npm run check-env`         | validates `.env`, checks the token against the facade, shows which fields are accessible          |
-| `npm run test:poc`          | POC-001…003 — the email proof of concept (save → read → DB)                                       |
-| `npm run test:phase1`       | the 8 Phase-1 tests that prove the migration to the Aisle facade                                  |
-| `npm run test:smoke`        | the Smoke suite                                                                                   |
-| `npm run test:regression`   | the Regression suite (includes the two `@slow` expiry tests, ~5½ min, run in parallel)            |
-| `npm run test:security`     | token, tenant-spoofing and leak checks                                                            |
-| `npm run test:db`           | read-only DB validation (Blocked until DB access is given)                                        |
-| `npm run test:api`          | every facade test                                                                                 |
-| `npm run test:all`          | all facade tests → report → PDF → `docs/test-cases.xlsx` → open report (extra args are passed on) |
-| `npm run report`            | rebuild the report from the last run (`reports/latest/run-data.json`)                             |
-| `npm run report:open`       | open the report                                                                                   |
-| `npm run report:pdf`        | export the report to PDF                                                                          |
-| `npm run docs:testcases`    | rebuild `docs/test-cases.xlsx` (keeps Tester Notes)                                               |
-| `npm run docs:pending`      | rebuild `PENDING-PLACEHOLDERS.md`                                                                 |
-| `npm run docs:traceability` | rebuild `docs/requirements-traceability.md`                                                       |
+| Command                        | What it does                                                                                         |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| `npm run verify`               | typecheck + lint + format check + framework self-tests (no network)                                  |
+| `npm run check-env`            | validates `.env`, checks the token against the facade, shows which fields are accessible             |
+| `npm run m1:test:poc`          | POC-001…003 — the email proof of concept (save → read → DB)                                          |
+| `npm run m1:test:phase1`       | the 8 Phase-1 tests that prove the migration to the Aisle facade                                     |
+| `npm run m1:test:smoke`        | the Smoke suite                                                                                      |
+| `npm run m1:test:regression`   | the Regression suite (includes the two `@slow` expiry tests, ~5½ min, run in parallel)               |
+| `npm run m1:test:security`     | token, tenant-spoofing and leak checks                                                               |
+| `npm run m1:test:db`           | read-only DB validation (Blocked until DB access is given)                                           |
+| `npm run m1:test:api`          | every facade test                                                                                    |
+| `npm run m1:test:all`          | all facade tests → report → PDF → `m1/docs/test-cases.xlsx` → open report (extra args are passed on) |
+| `npm run report`               | rebuild the report from the last run (`reports/latest/run-data.json`)                                |
+| `npm run report:open`          | open the report                                                                                      |
+| `npm run report:pdf`           | export the report to PDF                                                                             |
+| `npm run m1:docs:testcases`    | rebuild `m1/docs/test-cases.xlsx` (keeps Tester Notes)                                               |
+| `npm run m1:docs:pending`      | rebuild `m1/docs/PENDING-PLACEHOLDERS.md`                                                            |
+| `npm run m1:docs:traceability` | rebuild `m1/docs/requirements-traceability.md`                                                       |
 
-Every `test:*` command except `test:unit`, `test:debug` and `test:list` runs the full pipeline: tests → report
-(`reports/qa-report/`, archived copy in `reports/archive/<timestamp>__<run-id>/`) → PDF → `docs/test-cases.xlsx`,
+Every `test:*` command except `m1:test:unit`, `m1:test:debug` and `m1:test:list` runs the full pipeline: tests → report
+(`reports/qa-report/`, archived copy in `reports/archive/<timestamp>__<run-id>/`) → PDF → `m1/docs/test-cases.xlsx`,
 then opens the dashboard in your browser. Auto-open is skipped in CI; turn it off locally with `-- --no-open` or
 `REPORT_OPEN=false`.
 
 ## Daily run and report email (GitHub Actions)
 
-[`.github/workflows/pii-api-tests.yml`](../.github/workflows/pii-api-tests.yml) runs the full `npm run test:all`
+[`.github/workflows/m1-pii-api-tests.yml`](../.github/workflows/m1-pii-api-tests.yml) runs the full `npm run m1:test:all`
 on staging **Monday to Friday** (only from `main`). The cron is `30 20 * * 0-4` (UTC), which is **02:00 IST**
 Mon–Fri. It is set 6 hours before the wanted 08:00 IST because GitHub has been starting scheduled runs about 6 hours
 late. GitHub does not guarantee the start time, so on a day it runs on time, the run happens at 02:00 IST. A first
@@ -56,9 +56,9 @@ Preview the email locally without sending: `npm run report:mail -- --dry-run` �
 
 ```bash
 npx playwright test --grep AISLE-RD-001                 # one test
-npx playwright test tests/security                      # one folder
-npm run test:debug -- --grep AISLE-WR-002               # one worker, redacted log lines on the console
-PII_TEST_RUN_ID=qa-auto-20260929t101500-ab12 npm run test:api -- -g AISLE-RD-001   # reproduce a run's IDs
+npx playwright test m1/tests/security                      # one folder
+npm run m1:test:debug -- --grep AISLE-WR-002               # one worker, redacted log lines on the console
+PII_TEST_RUN_ID=qa-auto-20260929t101500-ab12 npm run m1:test:api -- -g AISLE-RD-001   # reproduce a run's IDs
 ```
 
 Every test attaches a redacted `api-calls.log` (method, path, status, request ID, error code — never the token,

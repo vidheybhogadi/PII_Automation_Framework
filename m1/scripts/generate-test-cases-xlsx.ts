@@ -1,20 +1,20 @@
 /**
- * Builds docs/test-cases.xlsx — every Aisle PII API test case, grouped by API endpoint, on one sheet.
+ * Builds m1/docs/test-cases.xlsx — every Aisle PII API test case, grouped by API endpoint, on one sheet.
  *
- *   npm run docs:testcases          (also run automatically at the end of npm run test:all)
+ *   npm run m1:docs:testcases          (also run automatically at the end of npm run m1:test:all)
  *
  * Fully dynamic:
  *   - The test list comes from the code (`playwright test --list`), so new tests and new endpoints appear
  *     automatically, in the right endpoint section.
  *   - Descriptions (what / why / steps / expected / request / validation / type / priority / preconditions) come
- *     from tests/catalog. A test without one is flagged in the sheet, and self-test UT-DOC-002 fails until it is
+ *     from m1/tests/catalog. A test without one is flagged in the sheet, and self-test UT-DOC-002 fails until it is
  *     written. Missing request / validation values show as "—".
- *   - Module = the area label of the ID; Endpoint / Method = the test's primary endpoint (src/clients/endpoints.ts).
+ *   - Module = the area label of the ID; Endpoint / Method = the test's primary endpoint (m1/src/clients/endpoints.ts).
  *   - Status comes from the LAST run only: Pass, Fail, Security finding, Blocked, Skipped, Not Tested or Not
  *     Applicable (with the reason) — the same rule as the HTML report (testOutcome). Tests that were not part of
  *     the last run are Not Tested. Nothing is guessed.
  *   - Dependency / Blocker: the BQ id + reason from the run (Blocked, Not Applicable, Security finding); for tests
- *     not in the last run, the questions the test source can block on (same detection as docs:pending).
+ *     not in the last run, the questions the test source can block on (same detection as m1:docs:pending).
  *   - The "Tester Notes" column is carried over from the previous file, so manual notes survive regeneration.
  *
  * The same builder (buildTestCasesWorkbook) produces the Excel file in the HTML report's Export menu, so both
@@ -23,25 +23,25 @@
 import ExcelJS from 'exceljs';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { dependencyOf, OUTCOMES, testOutcome, type Outcome } from '../reporting/core/analytics';
-import { ENDPOINT_GROUP_ORDER, primaryEndpoint, suiteOf } from '../reporting/core/catalog';
-import { endpointOfTest, moduleOf, NONE, requestOf, validationOf } from '../reporting/core/test-case';
-import type { ReportTest } from '../reporting/core/types';
-import { plainEndpoint } from '../reporting/dashboard/src/plain';
-import { enrichTests, resolveEndpoints } from '../reporting/generator/build-report-data';
-import { listInventory, type InventoryTest } from '../reporting/generator/inventory';
-import { parseCollectedRun } from '../reporting/generator/schema';
+import { dependencyOf, OUTCOMES, testOutcome, type Outcome } from '../../reporting/core/analytics';
+import { ENDPOINT_GROUP_ORDER, primaryEndpoint, suiteOf } from '../../reporting/core/catalog';
+import { endpointOfTest, moduleOf, NONE, requestOf, validationOf } from '../../reporting/core/test-case';
+import type { ReportTest } from '../../reporting/core/types';
+import { plainEndpoint } from '../../reporting/dashboard/src/plain';
+import { enrichTests, resolveEndpoints } from '../../reporting/generator/build-report-data';
+import { listInventory, type InventoryTest } from '../../reporting/generator/inventory';
+import { parseCollectedRun } from '../../reporting/generator/schema';
 import { ENDPOINTS } from '../src/clients/endpoints';
 import { TEST_CASES, type TestCaseInfo } from '../tests/catalog';
 import { blockedTests, questions } from './generate-pending-doc';
 
-const ROOT = path.resolve(__dirname, '..');
+const ROOT = path.resolve(__dirname, '../..');
 // Preview options (e.g. from demo data into a scratch file): --run <run-data.json> --out <file.xlsx>
 const argValue = (flag: string) => {
   const i = process.argv.indexOf(flag);
   return i > 0 ? process.argv[i + 1] : undefined;
 };
-export const TEST_CASES_XLSX = path.join(ROOT, 'docs/test-cases.xlsx');
+export const TEST_CASES_XLSX = path.join(ROOT, 'm1/docs/test-cases.xlsx');
 const SHEET = 'Test Cases';
 
 // ---- Columns -----------------------------------------------------------------------------------------------
@@ -171,7 +171,7 @@ export interface TestResultRow {
 }
 
 /**
- * Questions each test can block on, read from the test source (the same detection as docs:pending):
+ * Questions each test can block on, read from the test source (the same detection as m1:docs:pending):
  * 'BQ-xx' literals, BLOCKERS.*, requireApprovedPhones, the `db` fixture. Empty when the sources cannot be read.
  */
 export function staticBlockers(): Map<string, string> {
@@ -505,7 +505,7 @@ export async function buildTestCasesWorkbook(
             info
               ? { text: `\n${info.what}`, font: { bold: false, color: { argb: 'FF334155' } } }
               : {
-                  text: '\n⚠ Description not written yet — add it in tests/catalog',
+                  text: '\n⚠ Description not written yet — add it in m1/tests/catalog',
                   font: { italic: true, color: { argb: C.warnInk } },
                 },
           ],

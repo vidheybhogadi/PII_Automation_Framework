@@ -1,6 +1,6 @@
 /**
  * Read-only database checks behind the Aisle facade. The `db` fixture marks these BLOCKED (BQ-04) until
- * read-only DB access and the table layout are provided. Only SELECT queries from config/db-queries.json run.
+ * read-only DB access and the table layout are provided. Only SELECT queries from m1/config/db-queries.json run.
  * "Not stored readable" is a necessary check, NOT proof of encryption (format pending BQ-04).
  * AISLE-DB-006…013 check the encrypted layout described in the PII-service design (tech doc v3) — per design,
  * to be confirmed by Dev (BQ-04, BQ-45). AISLE-DB-014/015 read the audit trail; the `audit` fixture marks them
@@ -38,8 +38,8 @@ import {
   type WritePiiData,
 } from '../../src/models/pii.models';
 import { promoteTransientPhoneDataSchema } from '../../src/models/transient.models';
-import type { CleanupRegistry } from '../../src/utils/cleanup';
-import { runInPhase } from '../../src/utils/phase';
+import type { CleanupRegistry } from '../../../core/utils/cleanup';
+import { runInPhase } from '../../../core/utils/phase';
 
 /** Tenant set by the facade itself (observed on staging). */
 const AISLE_TENANT = 'aisle';

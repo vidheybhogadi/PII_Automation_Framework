@@ -19,7 +19,7 @@ import { listInventory } from '../../generator/inventory';
 import { demoRun, INJECTED_SECRETS } from '../fixtures';
 import ExcelJS from 'exceljs';
 import { writeFileSync } from 'node:fs';
-import { buildTestCasesWorkbook } from '../../../scripts/generate-test-cases-xlsx';
+import { buildTestCasesWorkbook } from '../../../m1/scripts/generate-test-cases-xlsx';
 import { enrichTests } from '../../generator/build-report-data';
 
 test.describe('REPORT safety', () => {
@@ -150,12 +150,12 @@ test.describe('REPORT safety', () => {
     expect(unknownEndpoints).toEqual([]);
   });
 
-  test('RPT-SF-010 docs/requirements-traceability.md is generated from the catalog and up to date', async () => {
+  test('RPT-SF-010 m1/docs/requirements-traceability.md is generated from the catalog and up to date', async () => {
     const options = JSON.parse(
       readFileSync(path.resolve(__dirname, '../../../.prettierrc'), 'utf8'),
     ) as Record<string, unknown>;
     const expected = await format(renderTraceabilityDoc(), { ...options, parser: 'markdown' });
-    expect(readFileSync(TRACEABILITY_DOC, 'utf8'), 'stale doc — run: npm run docs:traceability').toBe(
+    expect(readFileSync(TRACEABILITY_DOC, 'utf8'), 'stale doc — run: npm run m1:docs:traceability').toBe(
       expected,
     );
   });

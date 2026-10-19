@@ -23,15 +23,15 @@ import { assertIntegrationConfig, isDbConfigured, loadConfig, type FrameworkConf
 import { TestDataFactory } from '../data/test-data-factory';
 import { generateRunId } from '../data/test-identifiers';
 import { AUDIT_BLOCKER, type AuditRepository } from '../db/audit-repository';
-import { createDbAdapter } from '../db/db-client';
+import { createDbAdapter } from '../../../core/db/db-client';
 import { loadQueryCatalog, PiiRepository } from '../db/pii-repository';
 import { ERROR_CODES } from '../models/common.models';
-import { CleanupRegistry } from '../utils/cleanup';
-import { ExchangeRecorder } from '../utils/exchange-recorder';
-import { Logger } from '../utils/logger';
-import { runInPhase } from '../utils/phase';
+import { CleanupRegistry } from '../../../core/utils/cleanup';
+import { ExchangeRecorder } from '../../../core/utils/exchange-recorder';
+import { Logger } from '../../../core/utils/logger';
+import { runInPhase } from '../../../core/utils/phase';
 
-/** Why DB tests are blocked while read-only DB access is missing (docs/backend-open-questions.md). */
+/** Why DB tests are blocked while read-only DB access is missing (m1/docs/backend-open-questions.md). */
 export const DB_BLOCKER = {
   id: 'BQ-04',
   reason: 'Read-only DB access and the PII table/column layout have not been provided yet',
@@ -152,7 +152,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   },
 
   // No audit source is implemented yet: QA has no read-only access to the audit trail (BQ-30). When access is
-  // granted, create the read-only implementation here (see src/db/audit-repository.ts).
+  // granted, create the read-only implementation here (see m1/src/db/audit-repository.ts).
   auditRepository: [
     async ({}, use) => {
       await use(undefined);
@@ -228,7 +228,7 @@ export function block(questionId: string, reason: string): void {
 }
 
 /**
- * Statically BLOCKED until the backend answers a question (docs/backend-open-questions.md). The test body is
+ * Statically BLOCKED until the backend answers a question (m1/docs/backend-open-questions.md). The test body is
  * not run. Use when the test cannot be written correctly without the answer.
  */
 export function blockedBy(questionId: string, reason: string): void {
@@ -256,7 +256,7 @@ export function requireApprovedPhones(config: FrameworkConfig): void {
 
 /**
  * Mark the current test NOT APPLICABLE: Dev has CONFIRMED the feature is intentionally unsupported. Use only with
- * a recorded answer in docs/backend-open-questions.md — an unconfirmed feature is Blocked, never Not Applicable.
+ * a recorded answer in m1/docs/backend-open-questions.md — an unconfirmed feature is Blocked, never Not Applicable.
  */
 export function notApplicable(questionId: string, confirmedAnswer: string): void {
   test.info().annotations.push({ type: 'not-applicable', description: `${questionId}: ${confirmedAnswer}` });

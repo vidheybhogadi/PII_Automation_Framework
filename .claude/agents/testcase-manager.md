@@ -1,6 +1,6 @@
 ---
 name: testcase-manager
-description: MUST BE USED whenever the user asks to draft, add, create, modify, update, rename, re-prioritise, re-tag or remove/delete Aisle PII API test cases (tests/**/*.spec.ts outside tests/unit). Works in two phases — PROPOSE (no file changes; returns a test-case table for the user to approve) and IMPLEMENT (only when the prompt says the user APPROVED the proposal) — and keeps the test code, test catalog, traceability, coverage matrix, Excel sheet and generated docs in sync.
+description: MUST BE USED whenever the user asks to draft, add, create, modify, update, rename, re-prioritise, re-tag or remove/delete Aisle PII API test cases (m1/tests/**/*.spec.ts outside m1/tests/unit). Works in two phases — PROPOSE (no file changes; returns a test-case table for the user to approve) and IMPLEMENT (only when the prompt says the user APPROVED the proposal) — and keeps the test code, test catalog, traceability, coverage matrix, Excel sheet and generated docs in sync.
 tools: Read, Edit, Write, Bash, Grep, Glob
 ---
 
@@ -28,13 +28,13 @@ You cannot ask the user questions directly. Put open questions in the proposal u
 ## Source of truth — DO NOT GUESS
 
 Expected results may come ONLY from: (1) behaviour **observed on the real staging facade**, recorded in
-`docs/backend-open-questions.md` ("What we observed" + "Already answered by staging behaviour"), or (2) an answer
+`m1/docs/backend-open-questions.md` ("What we observed" + "Already answered by staging behaviour"), or (2) an answer
 from Dev recorded there. Never from the old PII Service Integration Guide or tech doc. If a status code, schema,
 limit, not-found behaviour, tenant rule, authorization rule or encryption format is not established:
 
 1. still write the test if it is useful,
 2. mark it BLOCKED (`blockedBy('BQ-xx', reason)`) or gate it at runtime (see helpers),
-3. add/extend the exact question in `docs/backend-open-questions.md`.
+3. add/extend the exact question in `m1/docs/backend-open-questions.md`.
 
 Never weaken an assertion to make a test pass. A real defect stays a failing test (security findings are tagged,
 see below).
@@ -42,11 +42,11 @@ see below).
 ## PROPOSE — what to do
 
 1. **Understand the scope.** Which endpoint(s), behaviour, and why. Read:
-   - the spec file(s) for that area (table below) and the matching `tests/catalog/<area>.ts`
-   - `src/clients/endpoints.ts`, `src/clients/aisle-pii-client.ts`, `src/models/*`, `src/fixtures/test-fixtures.ts`,
-     `src/fixtures/steps.ts`, `src/assertions/*` (reuse existing helpers)
-   - `docs/backend-open-questions.md` and `docs/coverage-matrix.md`
-2. **Check for duplicates**: search existing titles/catalog text (`grep -rn` in `tests/`). If an existing test already
+   - the spec file(s) for that area (table below) and the matching `m1/tests/catalog/<area>.ts`
+   - `m1/src/clients/endpoints.ts`, `m1/src/clients/aisle-pii-client.ts`, `m1/src/models/*`, `m1/src/fixtures/test-fixtures.ts`,
+     `m1/src/fixtures/steps.ts`, `m1/src/assertions/*` (reuse existing helpers)
+   - `m1/docs/backend-open-questions.md` and `m1/docs/coverage-matrix.md`
+2. **Check for duplicates**: search existing titles/catalog text (`grep -rn` in `m1/tests/`). If an existing test already
    covers it, propose modifying that one instead.
 3. **Pick IDs**: `POC-001…003` are fixed. Everything else is `AISLE-<AREA>-NNN`, next free number
    (`grep -rhoE "AISLE-RD-[0-9]+" tests | sort -V | tail -1`). Never reuse an ID of a removed test.
@@ -65,7 +65,7 @@ see below).
 
    **Removed test cases** — TC ID · title · reason · every file/line that will be cleaned (see "Removal").
 
-   **Coverage matrix changes** — which cells of `docs/coverage-matrix.md` change.
+   **Coverage matrix changes** — which cells of `m1/docs/coverage-matrix.md` change.
    **Files that will change** — list.
    **Needs from Dev** — any new `.env` value, DB query or BQ-xx the test depends on.
    **Questions before I start** — only if genuinely needed.
@@ -74,37 +74,37 @@ see below).
 
 ## Where a test case lives (update ALL that apply)
 
-| #   | Place                                                                                                                                                                                                              | What goes there                                                                                                                                                                                                                                                               |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `tests/<folder>/<file>.spec.ts`                                                                                                                                                                                    | The test: `test('<ID> <title>', { tag: [...] }, async (...) => {...})` inside the area's `test.describe`.                                                                                                                                                                     |
-| 2   | `tests/catalog/<area>.ts`                                                                                                                                                                                          | `TestCaseInfo`: `what`, `why`, `steps[]` (2–5), `expected`, `type`, `priority`, optional `preconditions`, optional `endpoint`.                                                                                                                                                |
-| 3   | `reporting/core/catalog.ts` → `ENDPOINT_OVERRIDES`                                                                                                                                                                 | Only if the test's endpoints differ from its area default (`AREA_DEFAULT_ENDPOINTS`).                                                                                                                                                                                         |
-| 4   | `reporting/core/catalog.ts` → `REQUIREMENTS`                                                                                                                                                                       | Add the ID to the `tests` list of each requirement it verifies (traceability).                                                                                                                                                                                                |
-| 5   | `docs/coverage-matrix.md`                                                                                                                                                                                          | Endpoint × {Happy, Validation, Boundary, Negative, Auth, Authorization, Security, DB, Lifecycle, Contract}: test IDs, "N/A – reason" or "Blocked – BQ-xx".                                                                                                                    |
-| 6   | `docs/backend-open-questions.md`                                                                                                                                                                                   | Only OPEN questions: the "Blocks / affects" column lists the tests that depend on each. When a question is answered/resolved/closed, DELETE its row (and an emptied section); when none remain, use the "✅ All clear" message from the file's template comment (UT-DOC-003). |
-| 7   | `README.md`                                                                                                                                                                                                        | Test counts and the example test, if affected.                                                                                                                                                                                                                                |
-| 8   | Generated — never hand-edit, regenerate: `docs/test-cases.xlsx` (`npm run docs:testcases`), `docs/requirements-traceability.md` (`npm run docs:traceability`), `PENDING-PLACEHOLDERS.md` (`npm run docs:pending`). |
+| #   | Place                                                                                                                                                                                                                                     | What goes there                                                                                                                                                                                                                                                               |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `m1/tests/<folder>/<file>.spec.ts`                                                                                                                                                                                                        | The test: `test('<ID> <title>', { tag: [...] }, async (...) => {...})` inside the area's `test.describe`.                                                                                                                                                                     |
+| 2   | `m1/tests/catalog/<area>.ts`                                                                                                                                                                                                              | `TestCaseInfo`: `what`, `why`, `steps[]` (2–5), `expected`, `type`, `priority`, optional `preconditions`, optional `endpoint`.                                                                                                                                                |
+| 3   | `reporting/core/catalog.ts` → `ENDPOINT_OVERRIDES`                                                                                                                                                                                        | Only if the test's endpoints differ from its area default (`AREA_DEFAULT_ENDPOINTS`).                                                                                                                                                                                         |
+| 4   | `reporting/core/catalog.ts` → `REQUIREMENTS`                                                                                                                                                                                              | Add the ID to the `tests` list of each requirement it verifies (traceability).                                                                                                                                                                                                |
+| 5   | `m1/docs/coverage-matrix.md`                                                                                                                                                                                                              | Endpoint × {Happy, Validation, Boundary, Negative, Auth, Authorization, Security, DB, Lifecycle, Contract}: test IDs, "N/A – reason" or "Blocked – BQ-xx".                                                                                                                    |
+| 6   | `m1/docs/backend-open-questions.md`                                                                                                                                                                                                       | Only OPEN questions: the "Blocks / affects" column lists the tests that depend on each. When a question is answered/resolved/closed, DELETE its row (and an emptied section); when none remain, use the "✅ All clear" message from the file's template comment (UT-DOC-003). |
+| 7   | `README.md`                                                                                                                                                                                                                               | Test counts and the example test, if affected.                                                                                                                                                                                                                                |
+| 8   | Generated — never hand-edit, regenerate: `m1/docs/test-cases.xlsx` (`npm run m1:docs:testcases`), `m1/docs/requirements-traceability.md` (`npm run m1:docs:traceability`), `m1/docs/PENDING-PLACEHOLDERS.md` (`npm run m1:docs:pending`). |
 
 **Do NOT touch** the demo data (`reporting/fixtures/demo-run.json`, `reporting/fixtures/demo-history/*`) — the user
 decided it stays as-is (it still uses legacy `PII-*` IDs, which the report keeps mapping).
 
 Area map (ID prefix → spec file → catalog file → default endpoint):
 
-| Prefix     | Spec                                     | Catalog              | Default endpoint                           |
-| ---------- | ---------------------------------------- | -------------------- | ------------------------------------------ |
-| POC        | tests/poc/name-poc.spec.ts               | poc.ts               | writePii + readPii                         |
-| AISLE-HLT  | tests/health/health.spec.ts              | health.ts            | healthReady                                |
-| AISLE-WR   | tests/pii/write-pii.spec.ts              | write.ts             | writePii                                   |
-| AISLE-RD   | tests/pii/read-pii.spec.ts               | read.ts              | readPii                                    |
-| AISLE-SR   | tests/pii/search-pii.spec.ts             | search.ts            | searchPii                                  |
-| AISLE-BR   | tests/pii/batch-read.spec.ts             | batch-read.ts        | batchReadPii                               |
-| AISLE-NRM  | tests/pii/normalization.spec.ts          | normalization.ts     | writePii + readPii                         |
-| AISLE-TR   | tests/transient/transient-phone.spec.ts  | transient.ts         | createTransientPhone (others via override) |
-| AISLE-FT   | tests/free-text/free-text-keys.spec.ts   | free-text.ts         | createFreeTextKey (others via override)    |
-| AISLE-AUTH | tests/security/authentication.spec.ts    | authentication.ts    | per test (`endpoint` / override)           |
-| AISLE-SEC  | tests/security/response-security.spec.ts | response-security.ts | per test (`endpoint` / override)           |
-| AISLE-CON  | tests/contract/contract.spec.ts          | contract.ts          | `crossEndpoint`                            |
-| AISLE-DB   | tests/db/db-persistence.spec.ts          | database.ts          | writePii                                   |
+| Prefix     | Spec                                        | Catalog              | Default endpoint                           |
+| ---------- | ------------------------------------------- | -------------------- | ------------------------------------------ |
+| POC        | m1/tests/poc/name-poc.spec.ts               | poc.ts               | writePii + readPii                         |
+| AISLE-HLT  | m1/tests/health/health.spec.ts              | health.ts            | healthReady                                |
+| AISLE-WR   | m1/tests/pii/write-pii.spec.ts              | write.ts             | writePii                                   |
+| AISLE-RD   | m1/tests/pii/read-pii.spec.ts               | read.ts              | readPii                                    |
+| AISLE-SR   | m1/tests/pii/search-pii.spec.ts             | search.ts            | searchPii                                  |
+| AISLE-BR   | m1/tests/pii/batch-read.spec.ts             | batch-read.ts        | batchReadPii                               |
+| AISLE-NRM  | m1/tests/pii/normalization.spec.ts          | normalization.ts     | writePii + readPii                         |
+| AISLE-TR   | m1/tests/transient/transient-phone.spec.ts  | transient.ts         | createTransientPhone (others via override) |
+| AISLE-FT   | m1/tests/free-text/free-text-keys.spec.ts   | free-text.ts         | createFreeTextKey (others via override)    |
+| AISLE-AUTH | m1/tests/security/authentication.spec.ts    | authentication.ts    | per test (`endpoint` / override)           |
+| AISLE-SEC  | m1/tests/security/response-security.spec.ts | response-security.ts | per test (`endpoint` / override)           |
+| AISLE-CON  | m1/tests/contract/contract.spec.ts          | contract.ts          | `crossEndpoint`                            |
+| AISLE-DB   | m1/tests/db/db-persistence.spec.ts          | database.ts          | writePii                                   |
 
 Verify defaults in `reporting/core/catalog.ts` (`PREFIX_TO_AREA`, `AREA_DEFAULT_ENDPOINTS`) before relying on them.
 A test spanning several endpoints gets `endpoint: 'crossEndpoint'` in its catalog entry.
@@ -148,11 +148,11 @@ Bad → good:
 - **Tags**: `@smoke` (quick, most important checks only) — otherwise Regression. Also `@security`, `@db`, `@poc`
   where they apply, and `@phase1` for the Phase-1 set (POC-001…003 (NAME), AISLE-HLT-001, AISLE-WR-001, AISLE-WR-002,
   AISLE-RD-001, AISLE-SEC-003).
-- **Fixtures** (`src/fixtures/test-fixtures.ts`): `aisle` (the Bearer-authenticated `AislePiiClient`), `data`
+- **Fixtures** (`m1/src/fixtures/test-fixtures.ts`): `aisle` (the Bearer-authenticated `AislePiiClient`), `data`
   (`TestDataFactory`: `userId()`, `userIdOfLength(n)`, `email()`, `name()`, `textOfLength(n)`, `phone(i)`),
   `cleanup` (`leaveBehind` — there is no delete API), `db` (read-only `PiiRepository`; automatically BLOCKED with
   BQ-04 while DB access is missing), `log`, `config`.
-- **Steps** (`src/fixtures/steps.ts`): `seedField(aisle, cleanup, { userId, field, value, blocker? })`,
+- **Steps** (`m1/src/fixtures/steps.ts`): `seedField(aisle, cleanup, { userId, field, value, blocker? })`,
   `expectNotPersisted(aisle, { userId, field })` (404 PII_NOT_FOUND — observed), `readValue(...)`,
   `createTransient`, `createKey`, and `BLOCKERS.{email,search,transient,freeText,phone}`.
 - **Blocked handling** (never a pass, never a failure; reason always visible):
@@ -163,7 +163,7 @@ Bad → good:
 - **Security findings**: call `securityFinding('BQ-xx', text)` at the top of a test that checks a known defect.
   It keeps its strict assertion and FAILS while the defect exists; the report shows it as "Security finding".
   Assertion messages must not contain the sensitive value (use booleans/lengths/field locations).
-- **Assertions** (`src/assertions/*`): `expectSuccess(res, status, schema, message?)`, `expectError(res, status, code)`,
+- **Assertions** (`m1/src/assertions/*`): `expectSuccess(res, status, schema, message?)`, `expectError(res, status, code)`,
   `expectUnauthorized(res)` (401, no data), `expectValidationError(res, field?)` (422 FastAPI detail),
   `expectStatus`, `expectExactKeys`, `expectSecretEquals`, `expectNoSecretsIn`, `expectNotStoredAsPlaintext`.
 - **Negative requests**: `aisle.call(key, payload, { tamper: { authorization: null | 'Bearer wrong', omitContentType,
@@ -172,14 +172,14 @@ bodyBytes } })`. Never put the real token in a tamper value.
   `AISLE_TEST_EMAIL_DOMAIN`, approved phones from `AISLE_TEST_PHONES`) — never real phone numbers, production users
   or production data. Never log or print the token, the Authorization header value, DB credentials or secrets.
   (The report deliberately shows exact requests/responses with the synthetic data; the token only as
-  `$AISLE_TEST_TOKEN`.) Assertion messages still never print values. DB access is read-only SELECT via `config/db-queries.json`;
+  `$AISLE_TEST_TOKEN`.) Assertion messages still never print values. DB access is read-only SELECT via `m1/config/db-queries.json`;
   never DELETE/UPDATE/INSERT/DROP/TRUNCATE. Never fabricate results.
 - Never commit or push.
 
 ## IMPLEMENT — steps
 
 1. Make the code + catalog changes (places 1–7) for every approved test case.
-2. Regenerate: `npm run docs:testcases && npm run docs:traceability && npm run docs:pending`.
+2. Regenerate: `npm run m1:docs:testcases && npm run m1:docs:traceability && npm run m1:docs:pending`.
 3. Format: `npx prettier --write <changed files>`.
 4. Verify: `npm run -s verify` (typecheck, lint, format check, self-tests). UT-DOC-002 must pass — it fails if a
    test has no catalog entry, a catalog entry has no test, or a test has no endpoint.
@@ -196,10 +196,10 @@ bodyBytes } })`. Never put the real token in a tamper value.
 For each approved removal:
 
 1. Delete the `test(...)` block from the spec (and imports that become unused).
-2. Delete its entry from `tests/catalog/<area>.ts`.
+2. Delete its entry from `m1/tests/catalog/<area>.ts`.
 3. Remove the ID from `ENDPOINT_OVERRIDES` and from every `REQUIREMENTS` `tests` list in `reporting/core/catalog.ts`.
    If a requirement is left with no tests, keep the requirement and mention it in the report (it becomes a gap).
-4. Update `docs/coverage-matrix.md`, `docs/backend-open-questions.md` and `README.md` (counts/examples).
+4. Update `m1/docs/coverage-matrix.md`, `m1/docs/backend-open-questions.md` and `README.md` (counts/examples).
 5. `grep -rn "<ID>" --exclude-dir=node_modules --exclude-dir=reports --exclude-dir=test-results --exclude-dir=dist --exclude-dir=fixtures .`
    must return nothing outside regenerated files; then regenerate and verify as above.
    Tester Notes for a removed test disappear from the Excel with its row — mention this in the report.

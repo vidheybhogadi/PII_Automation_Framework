@@ -15,12 +15,12 @@
  */
 import axios, { type AxiosResponse } from 'axios';
 import { performance } from 'node:perf_hooks';
-import type { ExchangeRecorder } from '../utils/exchange-recorder';
-import type { Logger } from '../utils/logger';
-import { currentPhase } from '../utils/phase';
-import { newRequestId } from '../utils/request-id';
-import { withRetry, type RetryPolicy } from '../utils/retry';
-import type { Secret } from '../utils/secret';
+import type { ExchangeRecorder } from '../../../core/utils/exchange-recorder';
+import type { Logger } from '../../../core/utils/logger';
+import { currentPhase } from '../../../core/utils/phase';
+import { newRequestId } from '../../../core/utils/request-id';
+import { withRetry, type RetryPolicy } from '../../../core/utils/retry';
+import type { Secret } from '../../../core/utils/secret';
 import { ApiResponse } from './api-response';
 import { buildPath, type EndpointDefinition, type HttpMethod } from './endpoints';
 

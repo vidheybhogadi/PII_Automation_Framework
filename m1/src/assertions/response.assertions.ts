@@ -14,7 +14,7 @@ import {
   successEnvelope,
   type ErrorEnvelope,
 } from '../models/common.models';
-import { scrubText } from '../utils/redaction';
+import { scrubText } from '../../../core/utils/redaction';
 
 /** Turn Zod issues into "path: code" lines WITHOUT the received values. */
 export function formatZodIssues(error: z.ZodError): string {
@@ -143,7 +143,7 @@ export function expectValidationError(res: ApiResponse, field?: string): void {
 
 /**
  * For cases where it is known THAT a request must be rejected but not WHICH status (see
- * docs/backend-open-questions.md). Accepts a closed set of statuses and asserts the body is a
+ * m1/docs/backend-open-questions.md). Accepts a closed set of statuses and asserts the body is a
  * known error shape. Tighten to a single status once the backend confirms.
  */
 export function expectRejected(

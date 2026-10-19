@@ -22,7 +22,7 @@ module.exports = tseslint.config(
     rules: {
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       '@typescript-eslint/consistent-type-imports': 'error',
-      // console.* bypasses the redacting logger. Only src/utils/logger.ts and scripts/ may use it.
+      // console.* bypasses the redacting logger. Only core/utils/logger.ts and scripts/ may use it.
       'no-console': 'error',
     },
   },
@@ -33,12 +33,19 @@ module.exports = tseslint.config(
   },
   {
     // CLIs print progress to the terminal.
-    files: ['src/utils/logger.ts', 'scripts/**', 'reporting/generator/**', 'reporting/fixtures/**'],
+    files: [
+      'core/utils/logger.ts',
+      'scripts/**',
+      'm1/scripts/**',
+      'm2/scripts/**',
+      'reporting/generator/**',
+      'reporting/fixtures/**',
+    ],
     rules: { 'no-console': 'off' },
   },
   {
     // Playwright fixtures must destructure their first argument even when it is unused: `async ({}, use) => ...`
-    files: ['src/fixtures/**'],
+    files: ['m1/src/fixtures/**'],
     rules: { 'no-empty-pattern': 'off' },
   },
   {

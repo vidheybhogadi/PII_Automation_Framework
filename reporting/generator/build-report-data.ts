@@ -1,5 +1,5 @@
 /** Enrich a CollectedRun with catalog knowledge, config and history → ReportData (the dashboard's only input). */
-import { ENDPOINTS } from '../../src/clients/endpoints';
+import { ENDPOINTS } from '../../m1/src/clients/endpoints';
 import { flattenCalls } from '../core/analytics';
 import { areaForId, ENDPOINT_DESCRIPTIONS, endpointsForId, severityFor } from '../core/catalog';
 import { sanitizeText } from '../core/sanitize';
@@ -12,7 +12,7 @@ import type {
   ReportData,
   ReportTest,
 } from '../core/types';
-import { testCaseInfo } from '../../tests/catalog';
+import { testCaseInfo } from '../../m1/tests/catalog';
 import type { InventoryTest } from './inventory';
 import { knownSecrets, maskKnownSecrets } from './secrets';
 import type { ApiExchange } from '../core/types';
@@ -90,7 +90,7 @@ export function enrichTests(run: CollectedRun): ReportTest[] {
 
 /**
  * The endpoints a test belongs to. Order of precedence:
- *   1. `endpoint` in its tests/catalog entry (explicit — how a new test says where it belongs)
+ *   1. `endpoint` in its m1/tests/catalog entry (explicit — how a new test says where it belongs)
  *   2. a per-test override in reporting/core/catalog.ts
  *   3. the default for its ID prefix (PII-WR → Save PII, PII-RD → Read PII, …)
  * The first entry is the heading it is listed under; none (or several) = "Across endpoints".
@@ -102,7 +102,7 @@ export function resolveEndpoints(id: string): string[] {
   return endpointsForId(id, areaForId(id));
 }
 
-/** Attach the plain-English description from tests/catalog (sanitized like every other text field). */
+/** Attach the plain-English description from m1/tests/catalog (sanitized like every other text field). */
 function describe(id: string): Pick<ReportTest, 'info'> {
   const info = testCaseInfo(id);
   if (!info) return {};

@@ -6,10 +6,10 @@ import { expect, test } from '@playwright/test';
 import { expectUnauthorized, expectValidationError } from '../../src/assertions/response.assertions';
 import { AislePiiClient } from '../../src/clients/aisle-pii-client';
 import { ApiTransportError } from '../../src/clients/base-api-client';
-import { ExchangeRecorder } from '../../src/utils/exchange-recorder';
-import { registerSecretValue } from '../../src/utils/redaction';
-import { Logger } from '../../src/utils/logger';
-import { Secret } from '../../src/utils/secret';
+import { ExchangeRecorder } from '../../../core/utils/exchange-recorder';
+import { registerSecretValue } from '../../../core/utils/redaction';
+import { Logger } from '../../../core/utils/logger';
+import { Secret } from '../../../core/utils/secret';
 import { CaptureServer } from './helpers/capture-server';
 
 /** Synthetic token — NOT a real credential (32 hex chars, like the Aisle test token). */

@@ -167,7 +167,7 @@ export async function buildFixtures(): Promise<void> {
     quiet: true,
   });
 
-  // Only the framework's own unit tests ran (e.g. `npm run test:unit`): the service was not tested at all.
+  // Only the framework's own unit tests ran (e.g. `npm run m1:test:unit`): the service was not tested at all.
   const selfOnly: CollectedRun = {
     ...base,
     run: { ...base.run, runId: 'demo-self-only', label: 'DEMO Self-tests only' },
