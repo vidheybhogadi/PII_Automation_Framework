@@ -125,6 +125,8 @@ jobs:
       DB_NAME: ${{ vars.DB_NAME }}
       DB_USER: ${{ vars.DB_USER }}
       DB_PASSWORD: ${{ secrets.DB_READONLY_PASSWORD }}
+      # The staging PII DB (PgBouncer) does not use TLS; keep the framework default (true) when the variable is unset.
+      DB_SSL: ${{ vars.DB_SSL || 'true' }}
       DB_QUERIES_FILE: m1/config/db-queries.json
     steps:
       - uses: actions/checkout@v4

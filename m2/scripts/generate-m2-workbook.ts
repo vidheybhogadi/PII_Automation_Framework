@@ -3,6 +3,7 @@
  *   - m2/docs/aisle-pii-affected-apis.md   (Dev inventory — parsed, never edited)
  *   - m2/scripts/m2-test-cases.data.ts     (QA test design)
  *   - m2/scripts/m2-questions.ts           (M2Q-xx questions for Dev)
+ *   - m2/scripts/m2-baseline.ts            (per-API standard checks, generated for every applicable API)
  *
  *   npm run m2:docs
  *
@@ -28,7 +29,14 @@ import {
   type PiiField,
 } from './m2-inventory';
 import { QUESTIONS } from './m2-questions';
-import { CASES, type CaseType, type M2Case, type Status } from './m2-test-cases.data';
+import { buildBaseline, CHECKS, type Baseline, type Cell } from './m2-baseline';
+import { CATEGORY_ORDER, CATEGORY_TYPE, groupingOf, TYPE_ORDER, type Grouping } from './m2-grouping';
+import { CASES as SCENARIOS, type M2Case, type Status } from './m2-test-cases.data';
+
+type AnyCase = M2Case & { check?: string } & Grouping;
+/** Scenario cases + generated per-API baseline cases; set in main(). */
+let CASES: AnyCase[] = [];
+let BASE: Baseline = { cases: [], matrix: new Map() };
 
 const ROOT = path.resolve(__dirname, '../..');
 const OUT = path.join(ROOT, 'm2/docs/m2-test-cases.xlsx');
@@ -93,6 +101,15 @@ function validate(inventory: InventoryApi[]) {
     for (const ref of c.db.match(/M2-DB-\d+/g) ?? [])
       if (!CASES.some((x) => x.id === ref)) errors.push(`${c.id} points to missing ${ref}`);
   }
+  for (const [apiId, row] of BASE.matrix)
+    for (const [check, cell] of Object.entries(row))
+      if (cell.kind === 'covered')
+        for (const id of cell.by.split(', ')) {
+          const sc = SCENARIOS.find((x) => x.id === id);
+          if (!sc) errors.push(`${apiId} ${check} points to missing scenario ${id}`);
+          else if (!sc.apis.includes(apiId))
+            errors.push(`${apiId} ${check} → ${id}, but ${id} does not list ${apiId}`);
+        }
   for (const q of QUESTIONS)
     for (const a of q.apis) if (!apiIds.has(a)) errors.push(`${q.id} cites unknown ${a}`);
   for (const api of inventory)
@@ -104,6 +121,15 @@ function validate(inventory: InventoryApi[]) {
 // ---- Derived data -----------------------------------------------------------------------------------------
 const casesFor = (apiId: string) => CASES.filter((c) => c.apis.includes(apiId));
 const casesForQuestion = (qId: string) => CASES.filter((c) => c.deps.includes(qId));
+/** "M2-PIIR-001, M2-FNAME-004 + 14 per-API checks" — keeps cells readable with ~2,500 cases. */
+function caseSummary(cases: AnyCase[]) {
+  const sc = cases.filter((c) => !c.check).map((c) => c.id);
+  const per = cases.length - sc.length;
+  return (
+    [sc.join(', '), per ? `${per} per-API check${per === 1 ? '' : 's'}` : ''].filter(Boolean).join(' + ') ||
+    '—'
+  );
+}
 const count = <T>(items: T[], pred: (t: T) => boolean) => items.filter(pred).length;
 const steps = (s: string[]) => s.map((x, i) => `${i + 1}. ${x}`).join('\n');
 const fieldsText = (f: PiiField[]) => f.map((x) => FIELD_LABEL[x]).join(', ');
@@ -141,13 +167,12 @@ async function previousReview(): Promise<Map<string, Record<string, string>>> {
       const rec: Record<string, string> = {};
       for (const col of cols) {
         const v = row.getCell(header.indexOf(col)).value;
-        if (v !== null && v !== undefined && String(v).trim() && String(v) !== 'Open')
-          rec[`${sheet}|${col}`] = String(v);
+        if (v !== null && v !== undefined && String(v).trim() && String(v) !== 'Open') rec[col] = String(v);
       }
       if (Object.keys(rec).length) keep.set(id, { ...keep.get(id), ...rec });
     });
   };
-  read('M2 Test Cases', 'Test Case ID', ['Dev Decision', 'Dev Review Comments']);
+  wb.eachSheet((ws) => read(ws.name, 'Test Case ID', ['Dev Decision', 'Dev Review Comments']));
   read('Dev Review - Questions', 'Question ID', ['Dev Response', 'Status']);
   return keep;
 }
@@ -246,7 +271,7 @@ function priorityFormatting(ws: ExcelJS.Worksheet, col: number, from: number, to
 function overviewSheet(wb: ExcelJS.Workbook, inventory: InventoryApi[]) {
   const ws = wb.addWorksheet('Overview', { properties: { tabColor: { argb: C.headerBg } } });
   ws.columns = [
-    { width: 34 },
+    { width: 50 },
     { width: 16 },
     { width: 16 },
     { width: 16 },
@@ -294,34 +319,65 @@ function overviewSheet(wb: ExcelJS.Workbook, inventory: InventoryApi[]) {
     `The real Aisle app / web / CMS / payment APIs that read or write first name, email and phone via the PII integration: ${inventory.length} method/path entries from Dev’s inventory, grouped into ${GROUPS.length} test-strategy groups.`,
   );
   kv(
+    'Two layers',
+    `(1) ${SCENARIOS.length} scenario cases — lifecycle, documented gaps, cross-field / cross-API consistency, DB design. (2) ${BASE.cases.length} per-API cases — ${CHECKS.length} standard checks applied to every API where applicable; each non-applicable check is documented with its reason in "Per-API Check Matrix", and checks already covered by a scenario point to it instead of duplicating it.`,
+  );
+  kv(
     'Not duplicated',
     'The 9 facade proxy routes (API-199..207) are covered by Milestone 1. First Name UI smoke (56 cases) was executed manually — M2 API cases link to it in "Related".',
   );
   r++;
 
   section('Coverage counts');
-  const types: CaseType[] = [
-    'Positive',
-    'Negative',
-    'Validation',
-    'Database',
-    'Security',
-    'Integration',
-    'Regression',
-    'Resilience',
-  ];
+  const types = TYPE_ORDER;
   kv('Total test cases', CASES.length);
+  kv('  Scenario cases', SCENARIOS.length);
+  kv('  Per-API cases', BASE.cases.length);
   for (const t of types)
     kv(
       `  ${t}`,
       count(CASES, (c) => c.type === t),
     );
+  r++;
+  section('By category (Type → Category)');
+  for (const cat of CATEGORY_ORDER)
+    kv(
+      `${CATEGORY_TYPE[cat]} → ${cat}`,
+      count(CASES, (c) => c.category === cat),
+    );
+  r++;
+  section('By suite');
+  kv(
+    'Smoke',
+    count(CASES, (c) => c.suite === 'Smoke'),
+    'POS + AUTH for G1–G3 and the core scenario path (tag @smoke)',
+  );
+  kv(
+    'Regression',
+    count(CASES, (c) => c.suite === 'Regression'),
+  );
+  r++;
+  section('Type × group (cases)');
+  for (const g of GROUPS.filter((x) => x.key !== 'M1')) {
+    const cs = CASES.filter((c) => groupOf(c.apis[0]!).key === g.key);
+    kv(`${g.key} ${g.name}`, TYPE_ORDER.map((t) => `${t} ${count(cs, (c) => c.type === t)}`).join(' · '));
+  }
   kv(
     'Priority',
     ['Critical', 'High', 'Medium', 'Low']
       .map((p) => `${p} ${count(CASES, (c) => c.priority === p)}`)
       .join(' · '),
   );
+  r++;
+
+  section('Per-API checks (cases / covered by scenario / not applicable)');
+  for (const ch of CHECKS) {
+    const cells = [...BASE.matrix.values()].map((row) => row[ch.code]?.kind);
+    kv(
+      `${ch.code} — ${ch.title}`,
+      `${count(cells, (k) => k === 'case')} / ${count(cells, (k) => k === 'covered')} / ${count(cells, (k) => k === 'na')}`,
+    );
+  }
   r++;
 
   section('Status');
@@ -333,7 +389,7 @@ function overviewSheet(wb: ExcelJS.Workbook, inventory: InventoryApi[]) {
   kv(
     'Runnable now',
     count(CASES, (c) => c.status === 'NOT RUN'),
-    'TEST_TOKEN routes only (existing token)',
+    'no account needed: TEST_TOKEN route cases + no-credential / wrong-credential checks',
   );
   kv('Open Dev questions', QUESTIONS.length);
   r++;
@@ -356,9 +412,9 @@ function overviewSheet(wb: ExcelJS.Workbook, inventory: InventoryApi[]) {
 
   section('Recommended next steps');
   [
-    '1. Dev reviews the "M2 Test Cases" sheet (Dev Decision + comments) and answers "Dev Review - Questions".',
+    '1. Dev reviews "Scenario Cases" and the per-group sheets (G1–G10; filter by Check), fills Dev Decision + comments, and answers "Dev Review - Questions".',
     '2. Dev provides test accounts (M2Q-03), CMS admins (M2Q-04) and the read-gate state (M2Q-02) — this unblocks most cases.',
-    '3. QA automates the runnable TEST_TOKEN cases now (M2-PIIR-*), in a separate Playwright project tagged @m2.',
+    '3. QA automates the runnable cases now (status NOT RUN: TEST_TOKEN routes, AUTH and TOKEN checks) in the m2-api Playwright project.',
     '4. After answers: update expected results, re-run npm run m2:docs, then automate the approved cases via the testcase-manager agent.',
     '5. DB cases stay BLOCKED until M2Q-16 (= M1 BQ-04/BQ-30) is answered.',
   ].forEach((s) => kv('', s));
@@ -400,7 +456,6 @@ function inventorySheet(wb: ExcelJS.Workbook, inventory: InventoryApi[]) {
     const g = groupOf(a.id);
     const access = a.fields.map((f) => `${FIELD_LABEL[f]}: ${a.access[f]}`).join('\n');
     const notes = [a.notes, OBSERVED[a.id]].filter(Boolean).join('\n');
-    const tcs = casesFor(a.id).map((c) => c.id);
     return [
       i + 1,
       a.id,
@@ -416,7 +471,7 @@ function inventorySheet(wb: ExcelJS.Workbook, inventory: InventoryApi[]) {
       OBSERVED[a.id] ? 'Dev inventory + staging observation' : 'Dev inventory',
       g.key === 'M1' ? 'M1 BQ-04 (blocked)' : 'Blocked — M2Q-16',
       scopeOf(a),
-      g.key === 'M1' ? 'Milestone 1 suite (109 cases)' : tcs.join(', '),
+      g.key === 'M1' ? 'Milestone 1 suite (109 cases)' : caseSummary(casesFor(a.id)),
     ];
   });
   const end = table(ws, 4, cols, rows);
@@ -427,18 +482,20 @@ function casesSheet(
   wb: ExcelJS.Workbook,
   inventory: InventoryApi[],
   keep: Map<string, Record<string, string>>,
+  sheet: { name: string; title: string; subtitle: string; tab: string; cases: AnyCase[] },
 ) {
-  const ws = wb.addWorksheet('M2 Test Cases', { properties: { tabColor: { argb: 'FF16A34A' } } });
+  const ws = wb.addWorksheet(sheet.name, { properties: { tabColor: { argb: sheet.tab } } });
   titleBlock(
     ws,
-    'Milestone 2 test cases',
-    'One row per case. Endpoint shows the primary API; the full list is in "APIs Covered". Fill "Dev Decision" (dropdown) and "Dev Review Comments" — they are preserved when the sheet is regenerated.',
-    25,
+    sheet.title,
+    `${sheet.subtitle} Fill "Dev Decision" (dropdown) and "Dev Review Comments" — they are preserved when the workbook is regenerated.`,
+    28,
   );
   const inv = new Map(inventory.map((a) => [a.id, a]));
   const cols: Col[] = [
     { header: 'S.No.', width: 6 },
-    { header: 'Test Case ID', width: 14, mono: true },
+    { header: 'Test Case ID', width: 20, mono: true },
+    { header: 'Check', width: 11 },
     { header: 'Milestone', width: 9 },
     { header: 'Module/Feature', width: 20 },
     { header: 'API Name', width: 22 },
@@ -446,6 +503,8 @@ function casesSheet(
     { header: 'Endpoint', width: 32, mono: true },
     { header: 'Test Case Name', width: 36 },
     { header: 'Test Type', width: 11 },
+    { header: 'Category', width: 16 },
+    { header: 'Suite', width: 11 },
     { header: 'Priority', width: 9 },
     { header: 'PII Fields', width: 14 },
     { header: 'Preconditions', width: 32 },
@@ -462,15 +521,17 @@ function casesSheet(
     { header: 'Execution Mode', width: 13 },
     { header: 'APIs Covered', width: 24, mono: true },
     { header: 'Related (UI smoke / M1)', width: 18 },
+    { header: 'Planned Tags', width: 30, mono: true },
     { header: 'Dev Decision', width: 18 },
     { header: 'Dev Review Comments', width: 36 },
   ];
-  const rows = CASES.map((c, i) => {
+  const rows = sheet.cases.map((c, i) => {
     const p = primaryEndpoint(c, inv);
     const k = keep.get(c.id) ?? {};
     return [
       i + 1,
       c.id,
+      c.check ?? 'Scenario',
       'M2',
       c.module,
       p.apiName,
@@ -478,6 +539,8 @@ function casesSheet(
       p.endpoint,
       c.name,
       c.type,
+      c.category,
+      c.suite,
       c.priority,
       fieldsText(c.fields),
       c.pre,
@@ -494,14 +557,15 @@ function casesSheet(
       c.mode,
       c.apis.join(', '),
       c.related ?? '—',
-      k['M2 Test Cases|Dev Decision'] ?? '',
-      k['M2 Test Cases|Dev Review Comments'] ?? '',
+      c.tags.join(' '),
+      k['Dev Decision'] ?? '',
+      k['Dev Review Comments'] ?? '',
     ];
   });
   const end = table(ws, 4, cols, rows);
   for (let r = 5; r <= end; r++) {
     const stepsText = String(ws.getCell(r, colIndex(cols, 'Testing Steps')).value ?? '');
-    ws.getRow(r).height = Math.min(180, Math.max(60, stepsText.split('\n').length * 26));
+    ws.getRow(r).height = Math.min(180, Math.max(60, stepsText.split('\n').length * 30));
     ws.getCell(r, colIndex(cols, 'Test Case ID')).font = { name: 'Menlo', size: 9, bold: true };
     ws.getCell(r, colIndex(cols, 'Test Case Name')).font = {
       name: FONT,
@@ -524,7 +588,7 @@ function dbSheet(wb: ExcelJS.Workbook) {
   titleBlock(
     ws,
     'Database verification (read-only) — view of the master cases',
-    'Every row is linked to its master case in "M2 Test Cases" (no separate definition). All are BLOCKED until M2Q-16 (PII DB + aisleweb schema, read-only access, storage contract). QA never modifies or deletes DB data.',
+    'Every row is linked to its master case in "Scenario Cases" or its group sheet (no separate definition). All are BLOCKED until M2Q-16 (PII DB + aisleweb schema, read-only access, storage contract). QA never modifies or deletes DB data.',
     10,
   );
   const dbCases = CASES.filter((c) => c.type === 'Database');
@@ -588,7 +652,7 @@ function questionsSheet(wb: ExcelJS.Workbook, keep: Map<string, Record<string, s
   ];
   const rows = QUESTIONS.map((q) => {
     const k = keep.get(q.id) ?? {};
-    const tcs = casesForQuestion(q.id).map((c) => c.id);
+    const tcs = casesForQuestion(q.id);
     const apis = [...new Set([...q.apis, ...casesForQuestion(q.id).flatMap((c) => c.apis)])].sort();
     return [
       q.id,
@@ -599,11 +663,11 @@ function questionsSheet(wb: ExcelJS.Workbook, keep: Map<string, Record<string, s
       apis.length > 12
         ? `${apis.slice(0, 12).join(', ')} … (+${apis.length - 12})`
         : apis.join(', ') || 'All',
-      `${tcs.length} case(s): ${tcs.join(', ')}`,
+      `${tcs.length} case(s): ${caseSummary(casesForQuestion(q.id))}`,
       q.evidence,
       q.decision,
-      k['Dev Review - Questions|Dev Response'] ?? '',
-      k['Dev Review - Questions|Status'] ?? 'Open',
+      k['Dev Response'] ?? '',
+      k['Status'] ?? 'Open',
     ];
   });
   const end = table(ws, 4, cols, rows);
@@ -622,16 +686,7 @@ function coverageSheet(wb: ExcelJS.Workbook, inventory: InventoryApi[]) {
     'Top: test-strategy group × PII field × scenario type (number of cases). Bottom: every inventory API and the cases that cover it. Missing contracts are listed per group.',
     13,
   );
-  const types: CaseType[] = [
-    'Positive',
-    'Negative',
-    'Validation',
-    'Database',
-    'Security',
-    'Integration',
-    'Regression',
-    'Resilience',
-  ];
+  const types = TYPE_ORDER;
   const cols: Col[] = [
     { header: 'Group', width: 34 },
     { header: 'PII Field', width: 12 },
@@ -693,7 +748,7 @@ function coverageSheet(wb: ExcelJS.Workbook, inventory: InventoryApi[]) {
     ws.getCell(end, 3).value = fieldsText(a.fields);
     ws.getCell(end, 4).value = m1 ? 'M1' : tcs.length;
     ws.mergeCells(end, 5, end, 13);
-    ws.getCell(end, 5).value = m1 ? 'Milestone 1 suite' : tcs.join(', ');
+    ws.getCell(end, 5).value = m1 ? 'Milestone 1 suite' : caseSummary(casesFor(a.id));
     ws.getCell(end, 2).font = { name: 'Menlo', size: 9 };
     ws.getCell(end, 5).font = { name: 'Menlo', size: 9 };
     ws.getCell(end, 5).alignment = { wrapText: true };
@@ -701,9 +756,107 @@ function coverageSheet(wb: ExcelJS.Workbook, inventory: InventoryApi[]) {
   }
 }
 
+function matrixSheet(wb: ExcelJS.Workbook, inventory: InventoryApi[]) {
+  const ws = wb.addWorksheet('Per-API Check Matrix', { properties: { tabColor: { argb: 'FF0F766E' } } });
+  const span = 5 + CHECKS.length;
+  titleBlock(
+    ws,
+    'Per-API check matrix — every API × every standard check',
+    '✔ = per-API case (sheet of its group, ID M2-API-xxx-CHECK). ↗ = covered exactly by the named scenario case. N/A = not applicable, with the reason. M1 facade routes are covered by Milestone 1.',
+    span,
+  );
+  const head = [
+    'API ID',
+    'Group',
+    'Endpoint',
+    'Fields',
+    'Cases',
+    ...CHECKS.map((c) => `${c.code} — ${c.title}`),
+  ];
+  const hr = 4;
+  head.forEach((t, i) => {
+    const cell = ws.getCell(hr, i + 1);
+    cell.value = t;
+    cell.font = { name: FONT, bold: true, size: 9, color: { argb: C.white } };
+    cell.fill = fill(C.band);
+    cell.alignment = {
+      horizontal: 'center',
+      vertical: 'middle',
+      wrapText: true,
+      textRotation: i >= 5 ? 90 : 0,
+    };
+    cell.border = box;
+  });
+  ws.getRow(hr).height = 190;
+  [9, 22, 40, 14, 7, ...CHECKS.map(() => 13)].forEach((w, i) => (ws.getColumn(i + 1).width = w));
+  const STYLE: Record<Cell['kind'], { bg: string; ink: string }> = {
+    case: { bg: 'FFDCFCE7', ink: 'FF166534' },
+    covered: { bg: 'FFDBEAFE', ink: 'FF1E40AF' },
+    na: { bg: 'FFF1F5F9', ink: 'FF64748B' },
+  };
+  let r = hr + 1;
+  for (const a of inventory) {
+    const m1 = groupOf(a.id).key === 'M1';
+    const row = BASE.matrix.get(a.id);
+    const values: string[] = [a.id, groupOf(a.id).key, `${a.method} ${a.path}`, fieldsText(a.fields)];
+    values.push(m1 ? 'M1' : String(casesFor(a.id).length));
+    for (const ch of CHECKS) {
+      const cell = row?.[ch.code];
+      values.push(
+        m1 || !cell
+          ? 'M1 suite'
+          : cell.kind === 'case'
+            ? '✔'
+            : cell.kind === 'covered'
+              ? `↗ ${cell.by}`
+              : `N/A — ${cell.reason}`,
+      );
+    }
+    values.forEach((v, i) => {
+      const c = ws.getCell(r, i + 1);
+      c.value = v;
+      c.border = box;
+      c.alignment = { vertical: 'top', wrapText: true, horizontal: i >= 4 && v === '✔' ? 'center' : 'left' };
+      c.font = { name: i === 2 ? 'Menlo' : FONT, size: i >= 5 ? 8 : 9, color: { argb: C.ink } };
+      if (i >= 5) {
+        const kind = row?.[CHECKS[i - 5]!.code]?.kind;
+        if (kind) {
+          c.fill = fill(STYLE[kind].bg);
+          c.font = { name: FONT, size: 8, bold: kind === 'case', color: { argb: STYLE[kind].ink } };
+        }
+      }
+    });
+    ws.getRow(r).height = 44;
+    r++;
+  }
+  // Totals
+  ws.getCell(r, 3).value = 'Per-API cases / covered / N/A';
+  ws.getCell(r, 3).font = { name: FONT, bold: true };
+  CHECKS.forEach((ch, i) => {
+    let n = 0,
+      cov = 0,
+      na = 0;
+    for (const row of BASE.matrix.values()) {
+      const k = row[ch.code]?.kind;
+      if (k === 'case') n++;
+      else if (k === 'covered') cov++;
+      else if (k === 'na') na++;
+    }
+    const c = ws.getCell(r, 6 + i);
+    c.value = `${n} / ${cov} / ${na}`;
+    c.font = { name: FONT, bold: true, size: 8 };
+    c.alignment = { wrapText: true, horizontal: 'center' };
+  });
+  ws.views = [{ state: 'frozen', ySplit: hr, xSplit: 3 }];
+  ws.autoFilter = { from: { row: hr, column: 1 }, to: { row: r - 1, column: head.length } };
+}
+
 // ---- Markdown summary -------------------------------------------------------------------------------------
 function summaryMarkdown(inventory: InventoryApi[]) {
   const runNow = CASES.filter((c) => c.status === 'NOT RUN');
+  const runNowByCheck = CHECKS.map((ch) => ({ ch, n: count(runNow, (c) => c.check === ch.code) })).filter(
+    (x) => x.n,
+  );
   const byStatus = STATUSES.map((s) => `${s} ${count(CASES, (c) => c.status === s)}`).join(' · ');
   const blockedBy = QUESTIONS.map((q) => ({ q, n: casesForQuestion(q.id).length })).sort((a, b) => b.n - a.n);
   const lines = [
@@ -713,7 +866,16 @@ function summaryMarkdown(inventory: InventoryApi[]) {
     '',
     `Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-pii-affected-apis.md](aisle-pii-affected-apis.md) (${SOURCE_REF}).`,
     '',
-    `**${CASES.length} test cases** over **${inventory.length} inventory entries** (${GROUPS.length} groups). ${byStatus}. Nothing has been executed as an M2 test case yet.`,
+    `**${CASES.length} test cases** (${SCENARIOS.length} scenario + ${BASE.cases.length} per-API) over **${inventory.length} inventory entries** (${GROUPS.length} groups). ${byStatus}. Nothing has been executed as an M2 test case yet.`,
+    '',
+    '## By type and category (same Type values as M1)',
+    '',
+    '| Type | Category | Cases | Smoke |',
+    '| --- | --- | --- | --- |',
+    ...CATEGORY_ORDER.map(
+      (cat) =>
+        `| ${CATEGORY_TYPE[cat]} | ${cat} | ${count(CASES, (c) => c.category === cat)} | ${count(CASES, (c) => c.category === cat && c.suite === 'Smoke')} |`,
+    ),
     '',
     '## Groups',
     '',
@@ -724,9 +886,19 @@ function summaryMarkdown(inventory: InventoryApi[]) {
         `| ${g.key} ${g.name} | ${g.ids.length} | ${g.key === 'M1' ? 'M1 suite' : CASES.filter((c) => c.apis.some((a) => g.ids.includes(a))).length} | ${g.strategy} |`,
     ),
     '',
-    '## Runnable now (existing TEST_TOKEN)',
+    `## Runnable now (${runNow.length} cases, no new access needed)`,
     '',
-    ...runNow.map((c) => `- \`${c.id}\` ${c.name}`),
+    ...runNow.filter((c) => !c.check).map((c) => `- \`${c.id}\` ${c.name}`),
+    ...runNowByCheck.map(({ ch, n }) => `- ${ch.code} (${ch.title}): ${n} APIs`),
+    '',
+    '## Per-API checks',
+    '',
+    '| Check | Title | Cases | Covered by scenario | N/A |',
+    '| --- | --- | --- | --- | --- |',
+    ...CHECKS.map((ch) => {
+      const cells = [...BASE.matrix.values()].map((row) => row[ch.code]?.kind);
+      return `| ${ch.code} | ${ch.title} | ${count(cells, (k) => k === 'case')} | ${count(cells, (k) => k === 'covered')} | ${count(cells, (k) => k === 'na')} |`;
+    }),
     '',
     '## Blocking questions (cases affected)',
     '',
@@ -741,6 +913,8 @@ function summaryMarkdown(inventory: InventoryApi[]) {
 // ---- Main -------------------------------------------------------------------------------------------------
 async function main() {
   const inventory = parseInventory(ROOT);
+  BASE = buildBaseline(inventory);
+  CASES = [...SCENARIOS, ...BASE.cases].map((c) => ({ ...c, ...groupingOf(c) }));
   validate(inventory);
   const keep = await previousReview();
   const wb = new ExcelJS.Workbook();
@@ -748,14 +922,36 @@ async function main() {
   wb.created = new Date();
   overviewSheet(wb, inventory);
   inventorySheet(wb, inventory);
-  casesSheet(wb, inventory, keep);
+  casesSheet(wb, inventory, keep, {
+    name: 'Scenario Cases',
+    title: 'Milestone 2 scenario cases',
+    subtitle:
+      'Lifecycle, documented gaps, cross-field / cross-API and DB design cases. Endpoint shows the primary API; the full list is in "APIs Covered".',
+    tab: 'FF16A34A',
+    cases: CASES.filter((c) => !c.check),
+  });
+  for (const g of GROUPS) {
+    const order = (c: AnyCase) => TYPE_ORDER.indexOf(c.type) * 100 + CATEGORY_ORDER.indexOf(c.category);
+    const cases = CASES.filter((c) => c.check && groupOf(c.apis[0]!).key === g.key).sort(
+      (a, b) => a.apis[0]!.localeCompare(b.apis[0]!) || order(a) - order(b),
+    );
+    if (!cases.length) continue;
+    casesSheet(wb, inventory, keep, {
+      name: cases[0]!.module.replace(/[\\/?*[\]:]/g, '-').slice(0, 31),
+      title: `Per-API cases — ${g.key} ${g.name}`,
+      subtitle: `${cases.length} cases for ${g.ids.length} APIs. Filter "Check" to review one standard check across all APIs. ${g.strategy}`,
+      tab: 'FF4ADE80',
+      cases,
+    });
+  }
+  matrixSheet(wb, inventory);
   dbSheet(wb);
   questionsSheet(wb, keep);
   coverageSheet(wb, inventory);
   await wb.xlsx.writeFile(OUT);
   writeFileSync(SUMMARY_MD, summaryMarkdown(inventory));
   console.log(
-    `M2 workbook: ${path.relative(ROOT, OUT)} — ${CASES.length} cases, ${inventory.length} APIs, ${QUESTIONS.length} questions` +
+    `M2 workbook: ${path.relative(ROOT, OUT)} — ${CASES.length} cases (${SCENARIOS.length} scenario + ${BASE.cases.length} per-API), ${inventory.length} APIs, ${QUESTIONS.length} questions` +
       (keep.size ? ` (kept Dev review for ${keep.size} rows)` : ''),
   );
 }

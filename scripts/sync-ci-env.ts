@@ -42,6 +42,7 @@ const SETTINGS: Setting[] = [
   { name: 'DB_PORT', kind: 'variable', from: { env: 'DB_PORT' }, onlyIfFile: DB_CATALOG },
   { name: 'DB_NAME', kind: 'variable', from: { env: 'DB_NAME' }, onlyIfFile: DB_CATALOG },
   { name: 'DB_USER', kind: 'variable', from: { env: 'DB_USER' }, onlyIfFile: DB_CATALOG },
+  { name: 'DB_SSL', kind: 'variable', from: { env: 'DB_SSL' }, onlyIfFile: DB_CATALOG },
   {
     name: 'DB_READONLY_PASSWORD',
     kind: 'secret',
