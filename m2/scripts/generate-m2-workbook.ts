@@ -21,19 +21,18 @@ import {
   groupOf,
   GROUPS,
   OBSERVED,
+  PII_FIELDS,
   operationOf,
-  parseInventory,
   scopeOf,
   SOURCE_REF,
   type InventoryApi,
   type PiiField,
 } from './m2-inventory';
-import { QUESTIONS } from './m2-questions';
-import { buildBaseline, CHECKS, type Baseline, type Cell } from './m2-baseline';
-import { CATEGORY_ORDER, CATEGORY_TYPE, groupingOf, TYPE_ORDER, type Grouping } from './m2-grouping';
+import { OPEN, QUESTIONS } from './m2-questions';
+import { buildDesign, type AnyCase } from './m2-all-cases';
+import { CHECKS, type Baseline, type Cell } from './m2-baseline';
+import { CATEGORY_ORDER, CATEGORY_TYPE, TYPE_ORDER } from './m2-grouping';
 import { CASES as SCENARIOS, type M2Case, type Status } from './m2-test-cases.data';
-
-type AnyCase = M2Case & { check?: string } & Grouping;
 /** Scenario cases + generated per-API baseline cases; set in main(). */
 let CASES: AnyCase[] = [];
 let BASE: Baseline = { cases: [], matrix: new Map() };
@@ -83,7 +82,7 @@ const DEV_DECISIONS = [
 ];
 const STATUSES: Status[] = ['PASS', 'FAIL', 'BLOCKED', 'NEED DEV CLARIFICATION', 'NOT APPLICABLE', 'NOT RUN'];
 const AUTOMATION = ['NOT AUTOMATED', 'AUTOMATION IN PROGRESS', 'AUTOMATED', 'AUTOMATION BLOCKED'];
-const Q_STATUSES = ['Open', 'Answered', 'Closed'];
+const Q_STATUSES = ['Open', 'Answered', 'Deferred', 'Closed'];
 
 // ---- Validation -------------------------------------------------------------------------------------------
 function validate(inventory: InventoryApi[]) {
@@ -391,11 +390,14 @@ function overviewSheet(wb: ExcelJS.Workbook, inventory: InventoryApi[]) {
     count(CASES, (c) => c.status === 'NOT RUN'),
     'no account needed: TEST_TOKEN route cases + no-credential / wrong-credential checks',
   );
-  kv('Open Dev questions', QUESTIONS.length);
+  kv(
+    'Dev questions',
+    `${QUESTIONS.length} — open ${count(QUESTIONS, (q) => !q.answer && !q.deferred)} · deferred ${count(QUESTIONS, (q) => !!q.deferred && !q.answer)} · answered ${count(QUESTIONS, (q) => !!q.answer)}`,
+  );
   r++;
 
   section('Current blockers');
-  const blockers = QUESTIONS.filter((q) => q.kind === 'Access / environment')
+  const blockers = QUESTIONS.filter((q) => q.kind === 'Access / environment' && OPEN.has(q.id))
     .map((q) => ({ q, n: casesForQuestion(q.id).length }))
     .sort((a, b) => b.n - a.n);
   for (const { q, n } of blockers) kv(`${q.id} ${q.topic}`, `${n} case${n === 1 ? '' : 's'}`, q.decision);
@@ -666,8 +668,11 @@ function questionsSheet(wb: ExcelJS.Workbook, keep: Map<string, Record<string, s
       `${tcs.length} case(s): ${caseSummary(casesForQuestion(q.id))}`,
       q.evidence,
       q.decision,
-      k['Dev Response'] ?? '',
-      k['Status'] ?? 'Open',
+      // A recorded answer (m2-questions.ts) wins; otherwise keep what Dev typed in the sheet.
+      q.answer
+        ? `${q.answer.text} (${q.answer.by}, ${q.answer.on})`
+        : (k['Dev Response'] ?? q.deferred ?? ''),
+      q.answer ? 'Answered' : (k['Status'] ?? (q.deferred ? 'Deferred' : 'Open')),
     ];
   });
   const end = table(ws, 4, cols, rows);
@@ -697,7 +702,7 @@ function coverageSheet(wb: ExcelJS.Workbook, inventory: InventoryApi[]) {
   ];
   const rows: (string | number)[][] = [];
   for (const g of GROUPS) {
-    for (const f of ['NAME', 'EMAIL', 'PHONE'] as PiiField[]) {
+    for (const f of PII_FIELDS) {
       const apis = inventory.filter((a) => g.ids.includes(a.id) && a.fields.includes(f));
       if (!apis.length) continue;
       const cs = CASES.filter((c) => c.fields.includes(f) && c.apis.some((a) => g.ids.includes(a)));
@@ -912,9 +917,10 @@ function summaryMarkdown(inventory: InventoryApi[]) {
 
 // ---- Main -------------------------------------------------------------------------------------------------
 async function main() {
-  const inventory = parseInventory(ROOT);
-  BASE = buildBaseline(inventory);
-  CASES = [...SCENARIOS, ...BASE.cases].map((c) => ({ ...c, ...groupingOf(c) }));
+  const design = buildDesign(ROOT);
+  const inventory = design.inventory;
+  BASE = design.base;
+  CASES = design.cases;
   validate(inventory);
   const keep = await previousReview();
   const wb = new ExcelJS.Workbook();

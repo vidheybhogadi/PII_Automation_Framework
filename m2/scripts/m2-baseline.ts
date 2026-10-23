@@ -8,7 +8,7 @@
  * "same as master" for non-regression checks (needs the baseline, M2Q-24). Unknowns cite an M2Q question.
  */
 import { authLabel, FIELD_LABEL, groupOf, OBSERVED, type InventoryApi, type PiiField } from './m2-inventory';
-import { QUESTIONS } from './m2-questions';
+import { statusFromDeps } from './m2-questions';
 import type { Category } from './m2-grouping';
 import type { Automation, M2Case, Mode, Priority, Status } from './m2-test-cases.data';
 
@@ -45,7 +45,7 @@ export type Cell =
 
 // ---- API facts --------------------------------------------------------------------------------------------
 /** APIs that accept PII as input, and which fields (Dev doc request bodies + access paths). */
-const PII_INPUT: Record<string, PiiField[]> = {
+export const PII_INPUT: Record<string, PiiField[]> = {
   'API-002': ['NAME'],
   'API-057': ['NAME', 'EMAIL'],
   'API-061': ['NAME', 'EMAIL'],
@@ -61,6 +61,9 @@ const PII_INPUT: Record<string, PiiField[]> = {
   'API-154': ['NAME'],
   'API-180': ['NAME'],
   'API-209': ['NAME'],
+  // Free text (Dev free-text list, 2026-10-23)
+  'API-187': ['FREE_TEXT'],
+  'API-121': ['FREE_TEXT'],
 };
 /** Pre-login phone/OTP routes: no credential by design; identity = approved number + OTP. */
 const LOGIN = ['API-060', 'API-062'];
@@ -103,6 +106,8 @@ const COVERED_BY: Record<string, Record<string, string>> = {
     'API-057': 'M2-FNAME-007, M2-EMAIL-004',
     'API-058': 'M2-FNAME-007, M2-FNAME-008',
     'API-060': 'M2-PHONE-005',
+    'API-187': 'M2-FT-005, M2-FT-006',
+    'API-121': 'M2-FT-005, M2-FT-006',
   },
   'DB-SAVE': {
     'API-060': 'M2-DB-001',
@@ -119,6 +124,8 @@ const COVERED_BY: Record<string, Record<string, string>> = {
     'API-131': 'M2-DB-010',
     'API-196': 'M2-DB-010',
     'API-197': 'M2-DB-010',
+    'API-187': 'M2-DB-015',
+    'API-121': 'M2-DB-016',
   },
   'DB-REFUSE': {
     'API-002': 'M2-DB-006',
@@ -175,7 +182,7 @@ function accountPre(a: InventoryApi): string {
   const parts: string[] = [];
   if (a.auth.includes('USER_TOKEN'))
     parts.push(
-      'Synthetic app account with user JWT; headers device_type, app_version, unique_identifier as in the Dev cURL (M2Q-03).',
+      'Synthetic app account (+91 number starting with 10 (not 106…), OTP 1234) with user JWT; headers device_type, app_version, unique_identifier as in the Dev cURL (M2Q-03 answered).',
     );
   if (a.auth.includes('WEB_TOKEN')) parts.push('Synthetic account with web JWT (M2Q-03).');
   if (a.auth.includes('ADMIN_TOKEN'))
@@ -186,7 +193,7 @@ function accountPre(a: InventoryApi): string {
   if (a.auth.includes('INFOEDGE_PROFILE_API_TOKEN'))
     parts.push('INFOEDGE_PROFILE_API_TOKEN for QA (M2Q-19).');
   if (isLogin(a))
-    parts.push('Pre-login route: approved +91 test number and OTP (shortcut 1234 where allowed) (M2Q-03).');
+    parts.push('Pre-login route: +91 test number starting with 10 (not 106…), OTP 1234 (M2Q-03 answered).');
   if (isWebhook(a)) parts.push('Provider/Pusher callback; no user auth.');
   if (isPayment(a)) parts.push('Provider sandbox only — never a live provider (M2Q-17).');
   if (a.notes) parts.push(`Dev note: ${a.notes}`);
@@ -453,7 +460,7 @@ const RULES: Record<string, Rule> = {
     if (isWebhook(a) && a.id !== 'API-113' && a.id !== 'API-114')
       return { na: 'Covered via the profile rebuild in POS; needs genuine callbacks only.' };
     return {
-      pre: `Confirmed NOT-migrated synthetic profile involved in this request (M2Q-03); read gates ON (M2Q-02). ${accountPre(a)}`,
+      pre: `Confirmed NOT-migrated synthetic profile involved in this request (M2Q-32); read gates ON (M2Q-02). ${accountPre(a)}`,
       data: 'Profile with local values but no PII records.',
       steps: [
         `Send ${req(a)} involving the unmigrated profile.`,
@@ -465,7 +472,7 @@ const RULES: Record<string, Rule> = {
       evidence: 'Dev doc "Field behavior"; ClickUp migration comment.',
       db: API_ONLY,
       priority: ['G2', 'G3', 'G4', 'G7'].includes(g(a)) ? 'High' : 'Medium',
-      deps: ['M2Q-05', 'M2Q-02', ...accessDeps(a)],
+      deps: ['M2Q-05', 'M2Q-02', 'M2Q-32', ...accessDeps(a)],
     };
   },
 
@@ -476,7 +483,7 @@ const RULES: Record<string, Rule> = {
     if (!returnsOthers(a))
       return { na: 'Shows only the caller’s own name — owner view covered by M2-FNAME-009.' };
     return {
-      pre: `Profile A with hide-name ON (verified selfie) appears in this response (M2Q-03). ${accountPre(a)}`,
+      pre: `Profile A with hide-name ON (verified selfie, M2Q-32) appears in this response. ${accountPre(a)}`,
       data: 'A’s full first name as search string.',
       steps: [
         `As another user/admin send ${req(a)}.`,
@@ -490,7 +497,7 @@ const RULES: Record<string, Rule> = {
       evidence: 'FN-SAN-006/028; Dev doc select_first_name access paths.',
       db: API_ONLY,
       priority: isAdmin(a) ? 'Medium' : 'Critical',
-      deps: ['M2Q-13', 'M2Q-03', ...accessDeps(a)],
+      deps: ['M2Q-13', 'M2Q-32', 'M2Q-03', ...accessDeps(a)],
     };
   },
 
@@ -590,7 +597,9 @@ const RULES: Record<string, Rule> = {
   FIELD: (a) => {
     const input = PII_INPUT[a.id];
     if (!input) return { na: 'Does not accept first name, email or phone as input.' };
-    const qs = [...new Set(input.map((f) => (f === 'EMAIL' ? 'M2Q-07' : 'M2Q-06')))];
+    const qs = [
+      ...new Set(input.map((f) => (f === 'EMAIL' ? 'M2Q-07' : f === 'FREE_TEXT' ? 'M2Q-30' : 'M2Q-06'))),
+    ];
     return {
       pre: accountPre(a),
       data: [
@@ -602,6 +611,9 @@ const RULES: Record<string, Rule> = {
           : '',
         input.includes('PHONE')
           ? 'Phone: approved number with spaces/dashes/+91/leading 0, too short, too long, letters.'
+          : '',
+        input.includes('FREE_TEXT')
+          ? 'Free text: missing, null, "", "   ", 1 char, at / over the max length, emoji, Indian scripts, multi-line, HTML/script tags.'
           : '',
       ]
         .filter(Boolean)
@@ -681,13 +693,66 @@ const RULES: Record<string, Rule> = {
   },
 };
 
-// ---- Build ------------------------------------------------------------------------------------------------
-const CONTRACT_KINDS = new Set(QUESTIONS.filter((q) => q.kind !== 'Access / environment').map((q) => q.id));
-
-function statusOf(deps: string[]): Status {
-  if (deps.some((d) => CONTRACT_KINDS.has(d))) return 'NEED DEV CLARIFICATION';
-  return deps.length ? 'BLOCKED' : 'NOT RUN';
+// ---- Free text (encrypted long text) ------------------------------------------------------------------
+/**
+ * Extra expectations for APIs that carry FREE_TEXT (Dev free-text list, 2026-10-23). Known from M1: the PII service
+ * issues a free-text key and Aisle encrypts the text with it (AES-256-GCM); storage columns, key granularity and
+ * legacy plaintext are still open (BQ-46/47 → M2Q-27/28), so those parts cite the question.
+ */
+function withFreeText(code: string, a: InventoryApi, b: Built): Built {
+  const add = (deps: string[]) => [...new Set([...b.deps, ...deps])];
+  const FT = 'free text (chat text / previous_message / bio)';
+  switch (code) {
+    case 'POS':
+      return {
+        ...b,
+        validate: `${b.validate} The ${FT} comes back exactly as sent, to permitted users only.`,
+        expected: `${b.expected} Free text round-trips exactly (same characters, order and line breaks).`,
+        evidence: `${b.evidence} Dev free-text list 2026-10-23; M1 key round-trip AISLE-FT-008.`,
+      };
+    case 'EXPOSE':
+      return {
+        ...b,
+        data: `${b.data} Also: a message from a conversation B is not part of.`,
+        validate: `${b.validate} No ciphertext, key_id or key material, and no messages from other conversations.`,
+        expected: `${b.expected} Only decrypted text of conversations/profiles B may see; field allow-list per M2Q-27.`,
+        deps: add(['M2Q-27']),
+      };
+    case 'UNMIG':
+      return {
+        ...b,
+        data: `${b.data} Also: messages / bio written before encryption (legacy plaintext).`,
+        expected: `${b.expected} Legacy free text: to be confirmed (M2Q-28).`,
+        deps: add(['M2Q-28']),
+      };
+    case 'PIIDOWN':
+      return {
+        ...b,
+        expected: `${b.expected} Free text is never stored or returned as plaintext fallback; behaviour per M2Q-29.`,
+        deps: add(['M2Q-29']),
+      };
+    case 'GATE':
+      return {
+        ...b,
+        expected: `${b.expected} Free-text encryption switch (if any): to be confirmed (M2Q-27).`,
+        deps: add(['M2Q-27']),
+      };
+    case 'DB-SAVE':
+    case 'DB-ISOL':
+    case 'DB-REFUSE':
+      return {
+        ...b,
+        validate: `${b.validate} Free text: ciphertext + key_id only, no plaintext copy; new nonce per write.`,
+        db: `${b.db} Free-text columns in aisleweb per M2Q-27 (BQ-46).`,
+        deps: add(['M2Q-27']),
+      };
+    default:
+      return b;
+  }
 }
+
+// ---- Build ------------------------------------------------------------------------------------------------
+const statusOf = (deps: string[]): Status => statusFromDeps(deps);
 
 const MODULE_SHORT: Record<string, string> = {
   G1: 'PII test routes',
@@ -724,6 +789,7 @@ export function buildBaseline(inventory: InventoryApi[]): Baseline {
         row[check.code] = { kind: 'na', reason: built.na };
         continue;
       }
+      if (a.fields.includes('FREE_TEXT')) Object.assign(built, withFreeText(check.code, a, built));
       const text = `${built.pre} ${built.expected} ${built.db}`;
       const deps = [...new Set([...built.deps, ...(text.match(/M2Q-\d+/g) ?? [])])].sort();
       const status = statusOf(deps);

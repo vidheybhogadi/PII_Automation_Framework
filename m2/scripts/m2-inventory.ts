@@ -3,15 +3,26 @@
  * (branch saurabh/pii-changes @ ae838f4, prepared 16-Oct-2026). Nothing here is invented: method, path, PII fields,
  * access path, auth and notes all come from that file. This module only adds QA's grouping (which test strategy
  * applies) and staging observations, each labelled as such.
+ *
+ * Free text (encrypted long text: chat messages, bio) comes from the supplement m2/docs/free-text-apis.md
+ * (Dev list, 2026-10-23): it adds the FREE_TEXT field to existing entries and adds the facade routes it lists.
  */
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
-export type PiiField = 'NAME' | 'EMAIL' | 'PHONE';
-export const FIELD_LABEL: Record<PiiField, string> = { NAME: 'First name', EMAIL: 'Email', PHONE: 'Phone' };
+export type PiiField = 'NAME' | 'EMAIL' | 'PHONE' | 'FREE_TEXT';
+export const FIELD_LABEL: Record<PiiField, string> = {
+  NAME: 'First name',
+  EMAIL: 'Email',
+  PHONE: 'Phone',
+  FREE_TEXT: 'Free text',
+};
+export const PII_FIELDS: PiiField[] = ['NAME', 'EMAIL', 'PHONE', 'FREE_TEXT'];
 
 export const SOURCE_DOC = 'm2/docs/aisle-pii-affected-apis.md';
 export const SOURCE_REF = 'Dev inventory (saurabh/pii-changes @ ae838f4, 16-Oct-2026)';
+export const SOURCE_FT_DOC = 'm2/docs/free-text-apis.md';
+export const SOURCE_FT_REF = 'Dev free-text API list (2026-10-23)';
 
 export interface InventoryApi {
   id: string;
@@ -26,6 +37,10 @@ export interface InventoryApi {
   notes: string;
   /** Request keys in the Dev cURL example (body JSON keys and query parameters). */
   requestKeys: string[];
+  /** Dev's example request(s), verbatim (cURL code blocks). */
+  curl: string[];
+  /** Where the route lives in the app code (the Dev doc's "Source:" line), verbatim. */
+  source: string;
 }
 
 /** QA test-strategy groups. Every inventory entry belongs to exactly one (checked in assertComplete). */
@@ -140,8 +155,8 @@ export const GROUPS: ApiGroup[] = [
     key: 'M1',
     name: 'PII facade proxy (covered by Milestone 1)',
     strategy:
-      'The /V1/api/v1/pii-test/* proxy routes. Already covered by the 109 Milestone 1 cases; not duplicated in M2.',
-    ids: ids([199, 207]),
+      'The /V1/api/v1/pii-test/* proxy routes (incl. readiness and free-text keys). Already covered by the 109 Milestone 1 cases; not duplicated in M2.',
+    ids: ids([199, 207], [210, 212]),
   },
 ];
 
@@ -158,7 +173,48 @@ export const OBSERVED: Record<string, string> = {
     'Observed 2026-10-19: unknown user_ids → 200 {status, requested_user_count, returned_user_count, first_names:{}}; empty user_ids → 400.',
   'API-208':
     'Observed 2026-10-19: route IS implemented on staging (contradicts the Dev doc) — {} → 400 "Missing required parameter: user_id or ref"; unknown ref → 404 "Profile not found".',
+  'API-187': 'Observed 2026-10-23: no token → 401 {unauthorized_request}.',
+  'API-063': 'Observed 2026-10-23: no token → 401 {unauthorized_request}.',
+  'API-069': 'Observed 2026-10-23: no token → 401 {unauthorized_request}.',
+  'API-121': 'Observed 2026-10-23: no token → 401 (empty text/html body).',
+  'API-119': 'Observed 2026-10-23: no token → 401 (empty text/html body).',
 };
+
+/** Adds the free-text supplement: FREE_TEXT on mapped entries, new entries for unmapped rows. */
+function addFreeText(root: string, apis: Map<string, InventoryApi>) {
+  const lines = readFileSync(path.join(root, SOURCE_FT_DOC), 'utf8').split('\n');
+  for (const line of lines) {
+    const cells = line.split('|').map((c) => c.trim());
+    const [, id, method, url, keysCell, mapsTo, notes] = cells;
+    if (!id || !/^(API|FT)-\d+$/.test(id) || !method || !url) continue;
+    const apiPath = new URL(url.replace(/`/g, '')).pathname;
+    const keys = keysCell && !keysCell.startsWith('—') ? keysCell.split(',').map((k) => k.trim()) : [];
+    const access = keys.length
+      ? `Free-text encryption (${SOURCE_FT_REF}): encrypts ${keys.join(', ')} — ${notes}`
+      : `Free-text encryption (${SOURCE_FT_REF}): ${notes}`;
+    if (mapsTo && mapsTo !== '—') {
+      const api = apis.get(mapsTo);
+      if (!api || api.method !== method || api.path !== apiPath)
+        throw new Error(`${SOURCE_FT_DOC}: ${id} maps to ${mapsTo}, but that is not ${method} ${apiPath}`);
+      if (!api.fields.includes('FREE_TEXT')) api.fields.push('FREE_TEXT');
+      api.access.FREE_TEXT = access;
+      api.requestKeys = [...new Set([...api.requestKeys, ...keys])];
+    } else {
+      apis.set(id, {
+        id,
+        method,
+        path: apiPath,
+        fields: /free-text/.test(apiPath) ? ['FREE_TEXT'] : [],
+        access: { FREE_TEXT: access },
+        auth: ['TEST_TOKEN'],
+        notes: notes ?? '',
+        requestKeys: /keys\/read/.test(apiPath) ? ['key_id'] : [],
+        curl: [],
+        source: 'Aisle PII facade (Milestone 1) — see m1/docs/aisle-api.md',
+      });
+    }
+  }
+}
 
 export function parseInventory(root: string): InventoryApi[] {
   const lines = readFileSync(path.join(root, SOURCE_DOC), 'utf8').split('\n');
@@ -181,6 +237,8 @@ export function parseInventory(root: string): InventoryApi[] {
       auth: [],
       notes: '',
       requestKeys: [],
+      curl: [],
+      source: '',
     };
     api.fields.push(section);
     api.access[section] = access;
@@ -216,6 +274,14 @@ export function parseInventory(root: string): InventoryApi[] {
         ...[...text.matchAll(/data-urlencode "([a-zA-Z_0-9[\]]+)=/g)].map((k) => k[1]!),
       ];
       api.requestKeys = [...new Set(keys)];
+      const blocks = text.split('```').filter((_, i) => i % 2 === 1);
+      api.curl = blocks.map((b) => b.replace(/^[a-z]*\n/, '').trimEnd()).filter((b) => /curl/.test(b));
+      api.source = (buf.find((l) => l.startsWith('Source:')) ?? '')
+        .replace(/^Source:\s*/, '')
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m, text: string, href: string) =>
+          text === 'route' ? href.replace(/^(\.\.\/)+/, '') : text,
+        )
+        .replace(/\.$/, '');
     }
     buf = [];
   };
@@ -233,6 +299,7 @@ export function parseInventory(root: string): InventoryApi[] {
     if (current) buf.push(line);
   }
   flush();
+  addFreeText(root, apis);
   const list = [...apis.values()].sort((a, b) => a.id.localeCompare(b.id));
   assertComplete(list);
   return list;
@@ -265,7 +332,7 @@ export const authLabel = (api: InventoryApi) =>
 /** The controller action is the first step of every Dev access path. */
 export const actionOf = (api: InventoryApi) => {
   const first = Object.values(api.access)[0] ?? '';
-  return first.split(' → ')[0]!.trim();
+  return first.includes(' → ') ? first.split(' → ')[0]!.trim() : api.path.split('/').pop()!;
 };
 
 export function operationOf(api: InventoryApi): string {

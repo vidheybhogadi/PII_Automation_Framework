@@ -12,6 +12,10 @@ export interface M2Question {
   /** Blocks execution (BLOCKED) vs only the expected result (NEED DEV CLARIFICATION). */
   kind: 'Access / environment' | 'Contract / expected behaviour' | 'Possible defect — confirm';
   apis: string[];
+  /** Answer received (no longer blocks; kept for traceability). */
+  answer?: { text: string; by: string; on: string };
+  /** Parked by the QA lead for a later phase: still open, shown as deferred. */
+  deferred?: string;
 }
 
 export const QUESTIONS: M2Question[] = [
@@ -49,6 +53,11 @@ export const QUESTIONS: M2Question[] = [
     decision: 'Account list in the team vault (never in the repo) + the allowed test-number range.',
     kind: 'Access / environment',
     apis: ['API-060', 'API-062'],
+    answer: {
+      text: 'Use any +91 mobile number starting with 10 (10xxxxxxxx), except the 106 series (1060000000–1069999999), which is reserved; its OTP is 1234 on staging. QA creates its own synthetic accounts this way. Special account states (verified selfie, pre-integration / unmigrated, discoverable profile) moved to M2Q-32.',
+      by: 'QA lead',
+      on: '2026-10-23',
+    },
   },
   {
     id: 'M2Q-04',
@@ -200,6 +209,11 @@ export const QUESTIONS: M2Question[] = [
     decision: 'Schema, read-only credentials, and the storage contract to verify.',
     kind: 'Access / environment',
     apis: [],
+    answer: {
+      text: 'PII DB (PostgreSQL "pii", read-only via PgBouncer) is available: M1 DB tests ran against user_pii_field_value, pii_key_registry and free_text_encryption_key on 2026-10-22. Mongo (audit trail) is for the future (M2Q-34). Aisle app DB (aisleweb) columns moved to M2Q-33.',
+      by: 'QA lead',
+      on: '2026-10-23',
+    },
   },
   {
     id: 'M2Q-17',
@@ -314,4 +328,112 @@ export const QUESTIONS: M2Question[] = [
     kind: 'Access / environment',
     apis: [],
   },
+  {
+    id: 'M2Q-27',
+    topic: 'Free-text contract',
+    question:
+      'For the free-text APIs shared on 2026-10-23: (a) which request fields are encrypted — messages/send text and previous_message, web/users/about about — and any others (message_time_token / action_time_token?); (b) in which response fields is the decrypted text returned (chat_messages messages, list_connected_profiles last-message preview, profile_info bio) and to whom; (c) is the key one per user, per conversation or per message (M1 BQ-46); (d) which aisleweb tables/columns hold ciphertext + key_id, and is the old plaintext column cleared; (e) is there a switch (like the read gates) that turns free-text encryption on/off?',
+    why: 'Defines what QA asserts in responses and at storage level for every free-text API.',
+    evidence:
+      'Dev free-text list 2026-10-23 (m2/docs/free-text-apis.md); M1 AISLE-FT-008 proves the key round-trip only; BQ-46 open.',
+    decision:
+      'Encrypted fields, response fields + audience, key granularity, storage columns, on/off switch.',
+    kind: 'Contract / expected behaviour',
+    apis: ['API-187', 'API-063', 'API-069', 'API-121', 'API-119'],
+    deferred: 'Parked by QA lead on 2026-10-23 ("keep it for future").',
+  },
+  {
+    id: 'M2Q-28',
+    topic: 'Legacy free text',
+    question:
+      'Chats and bios written before encryption: are they migrated (encrypted in place) or read as legacy plaintext? Can one conversation mix legacy and encrypted messages, and how does the read path tell them apart? Is there a backfill plan and a cohort QA can test with?',
+    why: 'Mixed conversations are the most likely place for unreadable or garbled messages after release.',
+    evidence:
+      'Dev doc: "Chat content, story text and image URL encryption belong to the free-text migration".',
+    decision: 'Legacy handling + test cohort.',
+    kind: 'Contract / expected behaviour',
+    apis: ['API-069', 'API-063', 'API-119'],
+    deferred: 'Parked by QA lead on 2026-10-23 ("keep it for future").',
+  },
+  {
+    id: 'M2Q-29',
+    topic: 'Free-text failures & revoked keys',
+    question:
+      'If the PII service (key create/read) is down or slow when a message is sent or a bio saved: is the request refused, queued, or stored unencrypted? When reading, what is returned if the key cannot be fetched? After a key is revoked (crypto-shredding, M1 BQ-47), what do chat_messages / profile_info return for that text?',
+    why: 'A silent plaintext fallback would defeat the encryption; a revoked key must not break the whole conversation.',
+    evidence: 'M1: revoked key read → 404 (observed 2026-10-01); BQ-47 open.',
+    decision: 'Failure + revoked-key behaviour for write and read.',
+    kind: 'Contract / expected behaviour',
+    apis: ['API-187', 'API-121', 'API-069', 'API-119'],
+    deferred: 'Parked by QA lead on 2026-10-23 ("keep it for future").',
+  },
+  {
+    id: 'M2Q-30',
+    topic: 'Free-text limits',
+    question:
+      'Limits and validation for text, previous_message and about: max length (characters or bytes after encryption), empty / whitespace-only, emoji and non-Latin scripts, HTML. Are message_time_token / action_time_token used to de-duplicate a repeated send? Is send asynchronous (ChatMessageWorker) — how long until the message is readable?',
+    why: 'Encryption adds overhead (nonce + tag, base64), so length limits and timing may change from master.',
+    evidence: 'Dev doc API-187: "Message persistence runs on ChatMessageWorker".',
+    decision: 'Limits, de-dup rule, expected read-after-send delay.',
+    kind: 'Contract / expected behaviour',
+    apis: ['API-187', 'API-121'],
+    deferred: 'Parked by QA lead on 2026-10-23 ("keep it for future").',
+  },
+  {
+    id: 'M2Q-31',
+    topic: 'More free-text flows',
+    question:
+      'Which further APIs use free text (Dev said more are coming)? E.g. web/messages/send, CMS chat review (/admin/connections/fetch_messages), push / email previews of messages, stories, image URLs, other bio readers (app profile). Please share them with request examples when ready.',
+    why: 'Coverage is complete only for the 5 free-text APIs listed so far.',
+    evidence: 'Dev message 2026-10-23: "There are more to this, i will share them later".',
+    decision: 'Full free-text API list.',
+    kind: 'Access / environment',
+    apis: ['API-188', 'API-181'],
+  },
+  {
+    id: 'M2Q-32',
+    topic: 'Special account states',
+    question:
+      'QA can now create accounts (10-prefixed numbers, OTP 1234). Some cases need states QA cannot create alone: (a) a verified selfie (hide-name eligibility) — may QA use /admin/images/mark_selfie_verified on its own accounts, or is there a test liveness response? (b) a pre-integration account with no PII records (unmigrated); (c) an approved / curated profile that appears in discovery. How should QA get these on staging?',
+    why: 'Hide-name, unmigrated-data and discovery cases need these states.',
+    evidence:
+      'Dev doc API-031 (genuine liveness response needed), API-155 (admin selfie verification); M2Q-03 answer.',
+    decision: 'How QA obtains each account state.',
+    kind: 'Access / environment',
+    apis: ['API-031', 'API-155', 'API-032'],
+  },
+  {
+    id: 'M2Q-33',
+    topic: 'App DB (aisleweb) read access',
+    question:
+      "Some checks need the Aisle app database: the local compatibility columns (profiles.first_name, account_emails.name, sms_notification_phone_numbers.number) and the free-text ciphertext + key_id columns. May QA read these with a read-only user, restricted to its own synthetic accounts? Today's rule: QA never queries aisleweb because it holds real users' data.",
+    why: 'Without it QA can verify the PII DB, but not that plaintext copies are gone or that free text is encrypted at rest.',
+    evidence: 'm1/docs/pii-db-storage-guide.md §8 (where PII lives today); CLAUDE.md DB rule.',
+    decision: 'Approve read-only, synthetic-only aisleweb access (or a Dev-run check).',
+    kind: 'Access / environment',
+    apis: ['API-058', 'API-187', 'API-121'],
+  },
+  {
+    id: 'M2Q-34',
+    topic: 'Mongo (audit trail)',
+    question:
+      'Read-only access to MongoDB audit_trails (and any Mongo collections the app uses for PII) so QA can check one audit entry per PII read / write / search without personal values (M1 BQ-30).',
+    why: 'Accountability under DPDP; M1 audit tests are blocked on the same access.',
+    evidence: 'M1 AISLE-DB-014/015 blocked on BQ-30.',
+    decision: 'Mongo read-only access + document format.',
+    kind: 'Access / environment',
+    apis: [],
+    deferred: 'Parked by QA lead on 2026-10-23 ("for mongo keep it for future").',
+  },
 ];
+
+/** Questions that still block: no answer yet (deferred questions are still open). */
+export const OPEN = new Set(QUESTIONS.filter((q) => !q.answer).map((q) => q.id));
+const CONTRACT = new Set(QUESTIONS.filter((q) => q.kind !== 'Access / environment').map((q) => q.id));
+
+/** One status rule for every case: open contract question → NEED DEV CLARIFICATION; open access question → BLOCKED. */
+export function statusFromDeps(deps: string[]): 'NEED DEV CLARIFICATION' | 'BLOCKED' | 'NOT RUN' {
+  const open = deps.filter((d) => OPEN.has(d));
+  if (open.some((d) => CONTRACT.has(d))) return 'NEED DEV CLARIFICATION';
+  return open.length ? 'BLOCKED' : 'NOT RUN';
+}

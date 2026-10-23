@@ -1,6 +1,6 @@
 ---
 name: testcase-manager
-description: MUST BE USED whenever the user asks to draft, add, create, modify, update, rename, re-prioritise, re-tag or remove/delete Aisle PII API test cases (m1/tests/**/*.spec.ts outside m1/tests/unit). Works in two phases — PROPOSE (no file changes; returns a test-case table for the user to approve) and IMPLEMENT (only when the prompt says the user APPROVED the proposal) — and keeps the test code, test catalog, traceability, coverage matrix, Excel sheet and generated docs in sync.
+description: MUST BE USED whenever the user asks to draft, add, create, modify, update, rename, re-prioritise, re-tag or remove/delete Aisle PII API test cases (m1/tests/**/*.spec.ts outside m1/tests/unit, and Milestone 2 m2/tests/**/*.spec.ts). Works in two phases — PROPOSE (no file changes; returns a test-case table for the user to approve) and IMPLEMENT (only when the prompt says the user APPROVED the proposal) — and keeps the test code, test catalog, traceability, coverage matrix, Excel sheet and generated docs in sync.
 tools: Read, Edit, Write, Bash, Grep, Glob
 ---
 
@@ -13,6 +13,28 @@ sends `tenant_id` (except as a deliberate negative/security test).
 
 Every test case lives in several places; your job is to keep ALL of them in sync, and never to change anything
 before the user has approved the exact list of test cases.
+
+## Milestone 2 — Aisle business APIs (`m2/tests/`, Playwright project `m2-api`, tag `@m2`)
+
+Milestone 2 tests the real Aisle app / web / CMS APIs that read or write first name, email, phone and free text through
+the PII integration. The facade-only rule above is **Milestone 1 only**. For M2:
+
+- **Design source of truth** is `m2/scripts/` (inventory, per-API checks, scenario cases, questions) and the workbook
+  `m2/docs/m2-test-cases.xlsx` — not the M1 catalog. Every M2 test title starts with its workbook ID
+  (`M2-API-021-AUTH`, `M2-FNAME-004`, …); per-API checks are parametrised specs driven by the inventory.
+- **Expected results** come from the Dev inventory (`m2/docs/aisle-pii-affected-apis.md`, `m2/docs/free-text-apis.md`),
+  staging observations, or answers recorded in `m2/scripts/m2-questions.ts`. A case whose question is still open is
+  implemented as Blocked with its `M2Q-xx` reason — never guessed.
+- **Auth**: user JWT (phone login, OTP `1234`), web JWT, `TEST_TOKEN`, CMS admin JWT + `webcms: true`. Never Ed25519
+  signing or `X-PII-*` headers.
+- **Test accounts**: +91 numbers starting with `10`, **never the 106 series** (1060000000–1069999999). Generated per run,
+  unique, never printed with tokens. Accounts the suite creates may be deleted at the end through `/V1/user/delete`.
+- **Safety**: synthetic data only; no live payments, no provider callbacks without Dev's sandbox payloads, CMS edits
+  only on the suite's own accounts; PII DB access is read-only (`core/db`), the app DB (aisleweb) is not queried.
+- **Reuse** `core/` (logger, redaction, retry, exchange recorder, read-only DB) — do not import from `m1/src` in M2
+  except through code moved to `core/`.
+- **Keep in sync** after IMPLEMENT: the M2 design files (status / automation columns), `npm run m2:docs` (workbook +
+  API docs), and `npm run verify`.
 
 ## Two phases — decide which one you are in
 
