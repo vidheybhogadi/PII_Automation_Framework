@@ -88,8 +88,9 @@ Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-p
 | M2Q-24   | Contracts                            | Access / environment          | 707   |
 | M2Q-04   | CMS access                           | Access / environment          | 533   |
 | M2Q-02   | Read gates                           | Access / environment          | 411   |
-| M2Q-32   | Special account states               | Access / environment          | 310   |
+| M2Q-32   | Special account states               | Access / environment          | 324   |
 | M2Q-17   | Payment sandboxes                    | Access / environment          | 296   |
+| M2Q-41   | Web token issuance                   | Access / environment          | 284   |
 | M2Q-10   | Best-effort writes                   | Access / environment          | 206   |
 | M2Q-11   | PII read failures                    | Contract / expected behaviour | 202   |
 | M2Q-05   | Unmigrated profiles                  | Contract / expected behaviour | 198   |
@@ -98,7 +99,6 @@ Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-p
 | M2Q-16   | DB access & schema                   | Access / environment          | 57    |
 | M2Q-37   | PII user_id for app users            | Access / environment          | 56    |
 | M2Q-14   | PII exposure rules                   | Contract / expected behaviour | 53    |
-| M2Q-41   | Web token issuance                   | Access / environment          | 32    |
 | M2Q-19   | Special auth routes                  | Access / environment          | 21    |
 | M2Q-27   | Free-text contract                   | Contract / expected behaviour | 19    |
 | M2Q-06   | First-name rules                     | Contract / expected behaviour | 16    |

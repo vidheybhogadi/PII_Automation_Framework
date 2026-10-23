@@ -2,7 +2,7 @@
  * Every Milestone 2 case, ready to show: scenario cases + generated per-API cases, with the M1-style grouping and
  * one status rule (open questions only). Shared by the test-case workbook and the API guide so both always agree.
  */
-import { buildBaseline, needsProfile, type Baseline } from './m2-baseline';
+import { buildBaseline, isWebRoute, needsProfile, type Baseline } from './m2-baseline';
 import { groupingOf, type Grouping } from './m2-grouping';
 import { parseInventory, type InventoryApi } from './m2-inventory';
 import { OPEN, QUESTIONS, statusFromDeps } from './m2-questions';
@@ -43,7 +43,7 @@ export function buildDesign(root: string): M2Design {
 function withDerivedDeps(c: M2Case, byId: Map<string, InventoryApi>): M2Case {
   const deps = new Set(c.deps);
   if (c.apis.some((id) => byId.get(id) && needsProfile(byId.get(id)!))) deps.add('M2Q-36');
-  if (c.apis.some((id) => byId.get(id)?.auth.includes('WEB_TOKEN'))) deps.add('M2Q-41');
+  if (c.apis.some((id) => byId.get(id) && isWebRoute(byId.get(id)!))) deps.add('M2Q-41');
   const appUser = c.apis.some((id) => !/^API-(001|002|003|190|208)$/.test(id));
   if (c.id.startsWith('M2-DB-') && appUser) deps.add('M2Q-37');
   return deps.size === c.deps.length ? c : { ...c, deps: [...deps].sort() };

@@ -5,7 +5,7 @@
 import type { ApiResponse } from '../../../core/http/api-response';
 import type { InventoryApi } from '../../scripts/m2-inventory';
 import { groupOf } from '../../scripts/m2-inventory';
-import { NEW_USER_OK } from '../../scripts/m2-baseline';
+import { isWebRoute, NEW_USER_OK } from '../../scripts/m2-baseline';
 import type { Accounts, Profile } from '../accounts/accounts';
 import { AUTH } from '../auth/credentials';
 import type { UserSession } from '../auth/session';
@@ -90,7 +90,7 @@ export async function callerFor(
   if (api.auth.some((a) => ADMIN_AUTH.includes(a))) return fx.accounts.admin();
   if (api.auth.includes('INFOEDGE_PROFILE_API_TOKEN'))
     return blockPrereq(PREREQ.infoedge.id, PREREQ.infoedge.reason);
-  if (api.auth.includes('WEB_TOKEN')) return fx.accounts.web();
+  if (isWebRoute(api)) return fx.accounts.web(); // /web/* needs a web JWT (M2Q-41)
   if (api.auth.includes('USER_TOKEN')) {
     if (DESTRUCTIVE.includes(api.id))
       blockPrereq(
@@ -117,7 +117,8 @@ export async function callerFor(
         values: { ...valuesFor(fx.m2Config), USER_ID: fx.data.userId(role) },
       };
     const p = await fx.accounts.onboarded(role === 'A' ? 0 : 1);
-    return { label: 'TEST_TOKEN', auth, values: valuesFor(fx.m2Config, p) };
+    // The profile the request is about travels with the caller (IDOR / "unchanged" checks read it).
+    return { label: 'TEST_TOKEN', auth, session: p, values: valuesFor(fx.m2Config, p) };
   }
   if (groupOf(api.id).key === 'G9') return blockPrereq(PREREQ.provider.id, PREREQ.provider.reason);
   // Pre-login routes (no credential): a new account's number / user id.

@@ -166,6 +166,13 @@ const keys = (a: InventoryApi) =>
  */
 export const NEW_USER_OK = ['API-060', 'API-062', 'API-086', 'API-088', 'API-089'];
 
+/** Routes that need a special account state QA does not create itself (M2Q-32). */
+export const STATE_PRECONDITION = ['API-030', 'API-124'];
+
+/** /web/* routes and WEB_TOKEN routes need a web JWT, whose issuance is unknown (M2Q-41). */
+export const isWebRoute = (a: Pick<InventoryApi, 'path' | 'auth'>) =>
+  a.path.startsWith('/web/') || a.auth.includes('WEB_TOKEN');
+
 /** True when calling this API needs a finished (onboarded) profile — M2Q-36. */
 export function needsProfile(a: Pick<InventoryApi, 'id' | 'auth'>): boolean {
   if (NEW_USER_OK.includes(a.id)) return false;
@@ -188,7 +195,11 @@ function accessDeps(a: InventoryApi): string[] {
   if (isWebhook(a)) d.add('M2Q-17');
   if (a.id === 'API-113' || a.id === 'API-114') d.add('M2Q-03');
   if (needsProfile(a)) d.add('M2Q-36');
-  if (a.auth.includes('WEB_TOKEN')) d.add('M2Q-41'); // web-JWT issuance
+  // Web routes (/web/*) need a web JWT — staging answers 401 to the app user JWT (M2 run 2026-10-23) — M2Q-41.
+  if (isWebRoute(a)) d.add('M2Q-41');
+  // activate_user (app + web twin) needs a deactivated account; deactivating a profile can leave it unrecoverable
+  // ("disabled": activate 403, delete has no effect — staging 2026-10-23), so the state comes from M2Q-32.
+  if (STATE_PRECONDITION.includes(a.id)) d.add('M2Q-32');
   if (isPayment(a)) d.add('M2Q-17');
   if (a.id === 'API-012') d.add('M2Q-19');
   if (isLogin(a)) d.add('M2Q-03'); // approved test number + OTP shortcut

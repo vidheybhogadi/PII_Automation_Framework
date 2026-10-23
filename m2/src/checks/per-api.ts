@@ -107,7 +107,11 @@ export async function runIdor(c: AnyCase, fx: CheckFixtures): Promise<void> {
   const api = apiOf(c);
   const a = await callerFor(api, fx, 'A');
   const b = await callerFor(api, fx, 'B');
-  if (!a.session || !b.session) throw new Error(`${api.id}: IDOR needs two user accounts`);
+  if (!a.session || !b.session)
+    blockPrereq(
+      PREREQ.createAccounts.id,
+      `${api.id}: IDOR needs two of the suite's own synthetic accounts and only ${a.session || b.session ? 'one' : 'none'} could be provided`,
+    );
   const before = await selfView(fx, b.session);
   const other = valuesFor(fx.m2Config, b.session);
   const res = await send(api, fx, a, {
