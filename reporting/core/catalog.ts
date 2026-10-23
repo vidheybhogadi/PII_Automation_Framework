@@ -138,6 +138,14 @@ export const AREAS: AreaInfo[] = [
     db: false,
   },
   {
+    key: 'm2',
+    label: 'Milestone 2 – Aisle business APIs',
+    description: 'App / web / CMS APIs that read or write PII (m2/docs/m2-test-cases.xlsx)',
+    severity: 'high',
+    security: true,
+    db: false,
+  },
+  {
     key: 'other',
     label: 'Other',
     description: 'Tests without a recognised ID prefix',
@@ -168,6 +176,7 @@ const PREFIX_TO_AREA: [RegExp, AreaKey][] = [
   [/^(?:PII|AISLE)-DB-/, 'database'],
   [/^POC-/, 'poc'],
   [/^UT-/, 'framework'],
+  [/^M2-/, 'm2'],
 ];
 
 export function areaForId(id: string): AreaKey {

@@ -30,12 +30,15 @@ import {
 } from './m2-inventory';
 import { OPEN, QUESTIONS } from './m2-questions';
 import { buildDesign, type AnyCase } from './m2-all-cases';
+import { applyResults } from './m2-results';
 import { CHECKS, type Baseline, type Cell } from './m2-baseline';
 import { CATEGORY_ORDER, CATEGORY_TYPE, TYPE_ORDER } from './m2-grouping';
 import { CASES as SCENARIOS, type M2Case, type Status } from './m2-test-cases.data';
 /** Scenario cases + generated per-API baseline cases; set in main(). */
 let CASES: AnyCase[] = [];
 let BASE: Baseline = { cases: [], matrix: new Map() };
+/** "Last Run (observed)" per case ID, from the last M2 run (m2-results.ts); set in main(). */
+let LAST_RUN = new Map<string, string>();
 
 const ROOT = path.resolve(__dirname, '../..');
 const OUT = path.join(ROOT, 'm2/docs/m2-test-cases.xlsx');
@@ -387,8 +390,13 @@ function overviewSheet(wb: ExcelJS.Workbook, inventory: InventoryApi[]) {
     );
   kv(
     'Runnable now',
-    count(CASES, (c) => c.status === 'NOT RUN'),
-    'no account needed: TEST_TOKEN route cases + no-credential / wrong-credential checks',
+    count(CASES, (c) => ['NOT RUN', 'PASS', 'FAIL'].includes(c.status)),
+    'evidenced expected result and no open access question (incl. cases already run: PASS / FAIL)',
+  );
+  kv(
+    'Automated',
+    count(CASES, (c) => c.automation === 'AUTOMATED' || c.automation === 'AUTOMATION BLOCKED'),
+    'cases with a test in the m2-api Playwright project (npm run m2:test)',
   );
   kv(
     'Dev questions',
@@ -520,6 +528,7 @@ function casesSheet(
     { header: 'Dependencies / Dev Clarification', width: 22 },
     { header: 'Current Status', width: 16 },
     { header: 'Automation Status', width: 16 },
+    { header: 'Last Run (observed)', width: 34 },
     { header: 'Execution Mode', width: 13 },
     { header: 'APIs Covered', width: 24, mono: true },
     { header: 'Related (UI smoke / M1)', width: 18 },
@@ -556,6 +565,7 @@ function casesSheet(
       c.deps.length ? c.deps.join(', ') : '—',
       c.status,
       c.automation,
+      LAST_RUN.get(c.id) ?? '—',
       c.mode,
       c.apis.join(', '),
       c.related ?? '—',
@@ -858,7 +868,7 @@ function matrixSheet(wb: ExcelJS.Workbook, inventory: InventoryApi[]) {
 
 // ---- Markdown summary -------------------------------------------------------------------------------------
 function summaryMarkdown(inventory: InventoryApi[]) {
-  const runNow = CASES.filter((c) => c.status === 'NOT RUN');
+  const runNow = CASES.filter((c) => ['NOT RUN', 'PASS', 'FAIL'].includes(c.status));
   const runNowByCheck = CHECKS.map((ch) => ({ ch, n: count(runNow, (c) => c.check === ch.code) })).filter(
     (x) => x.n,
   );
@@ -922,6 +932,9 @@ async function main() {
   BASE = design.base;
   CASES = design.cases;
   validate(inventory);
+  const results = applyResults(ROOT, CASES);
+  CASES = results.cases;
+  LAST_RUN = results.lastRun;
   const keep = await previousReview();
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Aisle QA — PII automation framework';
@@ -958,7 +971,9 @@ async function main() {
   writeFileSync(SUMMARY_MD, summaryMarkdown(inventory));
   console.log(
     `M2 workbook: ${path.relative(ROOT, OUT)} — ${CASES.length} cases (${SCENARIOS.length} scenario + ${BASE.cases.length} per-API), ${inventory.length} APIs, ${QUESTIONS.length} questions` +
-      (keep.size ? ` (kept Dev review for ${keep.size} rows)` : ''),
+      (keep.size ? ` (kept Dev review for ${keep.size} rows)` : '') +
+      ` · ${results.automated} automated` +
+      (results.runDate ? ` · results of the ${results.runDate} M2 run applied to ${results.ran} cases` : ''),
   );
 }
 

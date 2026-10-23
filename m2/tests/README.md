@@ -1,4 +1,26 @@
 # Milestone 2 tests
 
-Playwright project `m2-api` (`npm run m2:test`). Specs for the Aisle business APIs go here, tagged `@m2`.
-Test code is added only through the testcase-manager agent (PROPOSE → approval → IMPLEMENT); see `CLAUDE.md`.
+Playwright project `m2-api` (`npm run m2:test`), tagged `@m2`. Test code is added only through the testcase-manager
+agent (PROPOSE → approval → IMPLEMENT); see `CLAUDE.md`.
+
+| Folder     | What                                                                                   |
+| ---------- | -------------------------------------------------------------------------------------- |
+| `per-api/` | Per-API checks generated from the design (`AUTH`, `TOKEN`): one test per inventory API |
+| `g1/`      | G1 scenario cases (PII integration routes, TEST_TOKEN): M2-PIIR-001/002/003/004/007    |
+| `unit/`    | Framework self-tests (project `m2-unit`, no network; part of `npm run verify`)         |
+
+- **Titles = workbook IDs** (`M2-API-013-AUTH …`, `M2-PIIR-001 …`), so results map back to `m2/docs/m2-test-cases.xlsx`.
+  Names, tags and Blocked status come from `m2/scripts` at run time — never copied into test code.
+- **Client**: `m2/src/clients/m2-client.ts` calls any API by inventory ID (method, path and headers from the Dev cURL).
+- **Gating**: every test first follows its design status (`blockIfOpen`: open M2Q questions → Blocked), then
+  runtime prerequisites (`m2/src/prereq.ts`): new accounts only with `M2_CREATE_ACCOUNTS=true`, Dev-provided
+  onboarded / connected accounts (M2Q-36), CMS admin (M2Q-04), PII DB + user_id mapping (M2Q-16 / M2Q-37),
+  approved contract baselines (M2Q-24), Dev windows (gates, PII outage, payment sandbox).
+- **Accounts**: `m2/src/accounts/accounts.ts` + `m2/src/auth/session.ts` (phone login, +91 10… never 106…, OTP
+  1234). Created accounts go to the git-ignored ledger `reports/m2/accounts/` and are deleted where staging allows.
+  Delete / reset / deactivate / report routes never run for Dev-provided accounts.
+- **Contracts**: `npm run m2:contracts:record` (explicit only) → `m2/contracts/recorded/` → `npm run m2:contracts:review`
+  (`m2/contracts/REVIEW.md`) → `npm run m2:contracts:approve -- --by "<name>" <case…|all>` → asserted from
+  `m2/contracts/approved/`.
+- **Results**: `npm run m2:test` → `reports/m2/latest/run-data.json` → `npm run m2:report` (HTML) and
+  `npm run m2:docs` (workbook "Current Status", "Automation Status", "Last Run (observed)").

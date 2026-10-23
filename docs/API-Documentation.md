@@ -638,6 +638,7 @@ _Code path — Email_
 **Good to know**
 
 - **From the developers:** Onboarding writes first name and email only when their existing values are missing. Use an onboarding user and valid field IDs and uploaded photos. The web controller also uses this shared submit flow.
+- **Observed on staging:** Observed 2026-10-23: POST /V1/user/submit_profile with {} or {data:{}} (new user) → 406 {status, message:"Please submit valid details…", your_story_form_url, is_backend_error, is_spark_enabled}. With the UI automation team’s body (option ids, 4 Aisle-CDN photos) → 200, profile_state "pending_not_verified", the submitted first_name returned; after POST /V1/account_journey/update_community_message_agreed a new verify shows application_stage "completed". ~35 s later profile_state became "image_inappropriate" with gender-mixed photo sets; with the gender-matched MALE set the profile stayed "pending_not_verified" >60 s (photos must match the declared gender; submit_profile copies each photo URL and stores a 54-byte placeholder if it cannot fetch it, still answering 200).
 
 <a id="api-058"></a>
 
@@ -815,6 +816,7 @@ _Code path — Email_
 **Good to know**
 
 - **From the developers:** Deletion uses PII names/emails in its downstream account cleanup payload. Run only for a disposable test account.
+- **Observed on staging:** Observed 2026-10-23: a NEW (onboarding-stage) user’s valid token → 401; account deletion works only after onboarding. For an onboarded account: {id:<ref>} alone → 500; {id:<ref>, reason_id:1, note} → 200, the old token is dead afterwards and a new login starts at application_stage general_information_stage_1 (no profile). A "disabled" profile cannot be recovered (activate_user 403, delete has no effect). Confirmed again for a male-set account: delete → 200 and the number is reset.
 
 <a id="api-060"></a>
 
@@ -904,6 +906,7 @@ _Code path — Phone_
 **Good to know**
 
 - **From the developers:** Obtain a fresh OTP through login_with_phone_number first. The phone PII write occurs only for a newly created User, not every returning login.
+- **Observed on staging:** Observed 2026-10-23 (3 throwaway 107… accounts): OTP request POST /V1/sessions/login_with_phone_number {mobile_number} with Accept, Content-Type, device_type, app_version, unique_identifier → 200 {status, message, phone_code:"+91", mobile_number, zendesk_url, your_story_form_url}; phone_code_id and signature_v1 are not required (defaults to +91); an empty body {} → 500 {title, message:"Something went wrong…", is_backend_error} (server error on bad input). verify_number_login_v1 {mobile_number, otp:"1234"} (no phone_code_id) → 200 with id, auth_token, first_name, profile_state:null, application_stage:"general_information_stage_1", show_update_app. auth_token is an RS256 JWT (~168 h; claims iss, sub, aud, iat, exp, uid, did, ptfrm, phone_id) bound to the device: send the same unique_identifier and device_type as at login, as Authorization: Bearer. app_version 10.0.0 and 99.99.99 both accepted (show_update_app:true does not block). Later 2026-10-23 (UI automation team flow): OTP request {mobile_number, phone_code_id:242, device_type, app_version, unique_identifier, signature_v1} and verify {phone_code_id:242, mobile_number, otp:"1234"} → auth_token, id, ref, application_stage, profile_state (top level or under data); errors "The entered OTP is invalid." / "No OTP has been generated for this user or number." — refused verifies (wrong OTP, too-short number, letters, empty number) answer HTTP 200 with the error and NO token.
 - **Known limitation:** The phone is written to the PII service only when a new user is created; returning logins do not re-sync it.
 
 <a id="api-061"></a>
@@ -1068,6 +1071,7 @@ _Code path — Email_
 
 **Good to know**
 
+- **Observed on staging:** Observed 2026-10-23: POST /V1/sessions/fetch_login_response {user_id, is_new_user:false} with NO credential → 200 with auth_token, first_name, gender, profile_state … for that user (also for another synthetic account’s id — possible defect); unknown user_id → 500.
 - **Known limitation:** Returning logins do not re-sync the phone to the PII service.
 
 <a id="api-129"></a>
@@ -1668,7 +1672,7 @@ _Code path — First name_
 
 **Good to know**
 
-- **Observed on staging:** Observed 2026-10-19: no token → 401 {unauthorized_request:true}.
+- **Observed on staging:** Observed 2026-10-19: no token → 401 {unauthorized_request:true}. Observed 2026-10-23: a NEW (onboarding-stage) user’s valid token → 401 {unauthorized_request} — a 401 here is not proof of a credential problem; an ONBOARDED user’s token → 200 {user_id, first_name, profile_state, gender, hide_first_name, …} (no email), before and >60 s after submit with the male photo set.
 
 <a id="api-016"></a>
 
@@ -1880,6 +1884,10 @@ _Code path — Phone_
 | App database | `sms_notification_phone_numbers.number (via users.phone_number_id)` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**Good to know**
+
+- **Observed on staging:** Observed 2026-10-23: for a synthetic account onboarded with the gender-matched male photo set, GET /V1/users/:ref → 200 before and >60 s after submit (old and fresh token).
+
 <a id="api-086"></a>
 
 #### `GET /V1/user/verify_user_v1` — Verify user v1
@@ -1929,6 +1937,10 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Cache | `Profile cache` | read / rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
+
+**Good to know**
+
+- **Observed on staging:** Observed 2026-10-23: GET /V1/user/verify_user_v1 with a NEW (onboarding-stage) user’s token → 200; also 200 for a freshly onboarded account (male set) before and >60 s after submit.
 
 <a id="api-087"></a>
 
@@ -2028,6 +2040,10 @@ _Code path — First name_
 | PII database | `user_pii_field_value (field_name = NAME)` | read |
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
+
+**Good to know**
+
+- **Observed on staging:** Observed 2026-10-23: GET /V1/user/verify_user with a NEW (onboarding-stage) user’s token → 200 incl. application_stage, application_stage_v2 (list of stages), selfie_compression_size.
 
 <a id="api-119"></a>
 
@@ -2272,6 +2288,10 @@ _Code path — Phone_
 | Cache | `Profile cache` | read / rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**Good to know**
+
+- **Observed on staging:** Observed 2026-10-23: GET /V1/invites/all_requests → 200 for a freshly onboarded synthetic account (male set), before and >60 s after submit.
+
 <a id="api-006"></a>
 
 #### `GET /V1/invites/list_comments_with_pagination` — List comments with pagination
@@ -2512,6 +2532,10 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Cache | `Profile cache` | read / rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
+
+**Good to know**
+
+- **Observed on staging:** Observed 2026-10-23: GET /V1/users/matches_list_v2 → 200 for a freshly onboarded synthetic account (male set), before and >60 s after submit.
 
 <a id="api-015"></a>
 
@@ -2948,7 +2972,7 @@ _Free-text encryption — Free text_
 **Good to know**
 
 - **From the developers:** Phone impact is the is_test_user? branch; phone is not added to other members' response fields.
-- **Observed on staging:** Observed 2026-10-23: no token → 401 {unauthorized_request}.
+- **Observed on staging:** Observed 2026-10-23: no token → 401 {unauthorized_request}; a freshly onboarded synthetic account (male set) → 200 before and >60 s after submit.
 
 <a id="api-068"></a>
 
@@ -6736,6 +6760,10 @@ _Code path — Email_
 | Cache | `Profile cache` | read / rebuild |
 | Kafka | `Profile sync event` | publish |
 | Audit log | `audit_trails (MongoDB)` | write |
+
+**Good to know**
+
+- **Observed on staging:** Observed 2026-10-23: POST /V1/user/app_launch {} with a NEW (onboarding-stage) user’s token → 200.
 
 <a id="api-090"></a>
 

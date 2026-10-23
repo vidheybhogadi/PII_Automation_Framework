@@ -50,8 +50,8 @@ function cap(text: string): { text: string; truncated: boolean } {
 const sq = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
 
 /**
- * Build a curl command. The Authorization header uses double quotes so `$AISLE_TEST_TOKEN` expands from the
- * caller's environment; everything else is single-quoted (no expansion).
+ * Build a curl command. A header holding a token placeholder (`$AISLE_TEST_TOKEN`, `$M2_USER_TOKEN`) uses double
+ * quotes so it expands from the caller's environment; everything else is single-quoted (no expansion).
  */
 export function toCurl(
   method: string,
@@ -62,7 +62,7 @@ export function toCurl(
   const parts = [`curl -i -X ${method} ${sq(url)}`];
   for (const [name, value] of Object.entries(headers)) {
     parts.push(
-      /\$AISLE_[A-Z_]+_TOKEN/.test(value)
+      /\$[A-Z][A-Z0-9_]*_TOKEN\b/.test(value)
         ? `-H "${name}: ${value.replace(/"/g, '\\"')}"`
         : `-H ${sq(`${name}: ${value}`)}`,
     );

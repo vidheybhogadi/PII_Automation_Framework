@@ -25,7 +25,9 @@ import {
 import type { HistoryEntry, ReportConfig, ReportData, ReportTest, TestStatus } from '../../core/types';
 import { areaForId } from '../../core/catalog';
 import { chatSummary, testsToCsv } from '../../core/exporters';
-import { endpointInventory } from '../../generator/build-report-data';
+import { endpointInventory, milestoneOf, resolveEndpoints } from '../../generator/build-report-data';
+import { m2TestInfo } from '../../generator/m2-catalog';
+import { displayIdFromTitle } from '../../collector/pii-results-reporter';
 import config from '../../config/report-config.json';
 
 const cfg = config as unknown as ReportConfig;
@@ -526,5 +528,20 @@ test.describe('REPORT analytics', () => {
     const summary = chatSummary(report, report.tests);
     expect(summary).toContain('Not Applicable: 1');
     expect(summary).toContain(`- AISLE-BR-009 ${answer}`);
+  });
+  test('RPT-AN-021 Milestone 2 tests: own area and milestone, description + category from the M2 workbook design', () => {
+    expect(displayIdFromTitle('M2-API-013-AUTH API-013 GET /V1/users/fetch_own_info — x')).toBe(
+      'M2-API-013-AUTH',
+    );
+    expect(displayIdFromTitle('AISLE-WR-001 Saving works')).toBe('AISLE-WR-001');
+    expect(areaForId('M2-API-013-AUTH')).toBe('m2');
+    expect(milestoneOf('m2-api')).toBe('M2');
+    expect(milestoneOf('api')).toBe('M1');
+    expect(resolveEndpoints('M2-PIIR-001')).toEqual([]);
+    const info = m2TestInfo('M2-API-013-AUTH');
+    expect(info?.type).toBe('Security');
+    expect(info?.category).toBe('Authentication');
+    expect(info?.steps.length).toBeGreaterThan(0);
+    expect(m2TestInfo('AISLE-WR-001')).toBeUndefined();
   });
 });

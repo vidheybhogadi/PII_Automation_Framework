@@ -50,14 +50,19 @@ const GROUP_RANK = (key: string): number => {
 };
 const RANK = Object.fromEntries(OUTCOMES.map((o, i) => [o, i])) as Record<Outcome, number>;
 
-/** How the test list is grouped: by endpoint (default), test type, suite (Smoke/Regression), or not at all. */
-export type GroupBy = 'endpoint' | 'type' | 'suite' | 'none';
+/**
+ * How the test list is grouped: by endpoint (default), test type, category (Milestone 2 workbook categories — the
+ * option is shown only when some test has one), suite (Smoke/Regression), or not at all.
+ */
+export type GroupBy = 'endpoint' | 'type' | 'category' | 'suite' | 'none';
 export const GROUP_BY_OPTIONS: { value: GroupBy; label: string }[] = [
   { value: 'endpoint', label: 'Endpoint' },
   { value: 'type', label: 'Type' },
+  { value: 'category', label: 'Category' },
   { value: 'suite', label: 'Suite' },
   { value: 'none', label: 'None' },
 ];
+const categoryOf = (t: ReportTest): string => t.info?.category ?? 'Not categorised';
 export const TYPE_ORDER = ['Positive', 'Negative', 'Security', 'Database', 'Contract'] as const;
 const typeRank = (t: ReportTest): number => {
   const i = (TYPE_ORDER as readonly string[]).indexOf(t.info?.type ?? '');
@@ -68,6 +73,7 @@ const typeRank = (t: ReportTest): number => {
 export function groupKeyOf(t: ReportTest, groupBy: GroupBy): string {
   if (groupBy === 'endpoint') return endpointOf(t);
   if (groupBy === 'type') return t.info?.type ?? 'Not categorised';
+  if (groupBy === 'category') return categoryOf(t);
   if (groupBy === 'suite') return suiteOf(t.tags);
   return '';
 }
@@ -84,7 +90,9 @@ function compareFor(groupBy: GroupBy) {
         ? GROUP_RANK(endpointOf(a)) - GROUP_RANK(endpointOf(b)) || endpointOf(a).localeCompare(endpointOf(b))
         : groupBy === 'type'
           ? typeRank(a) - typeRank(b)
-          : Number(suiteOf(a.tags) === 'Regression') - Number(suiteOf(b.tags) === 'Regression');
+          : groupBy === 'category'
+            ? typeRank(a) - typeRank(b) || categoryOf(a).localeCompare(categoryOf(b))
+            : Number(suiteOf(a.tags) === 'Regression') - Number(suiteOf(b.tags) === 'Regression');
     return group || RANK[outcomeOf(a)] - RANK[outcomeOf(b)] || byId(a, b);
   };
 }

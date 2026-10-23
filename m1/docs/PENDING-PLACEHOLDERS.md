@@ -24,11 +24,11 @@ environment), then run `npm run check-env`.
 | Setting | Placeholder | Where | From | Unblocks |
 |---|---|---|---|---|
 | `AISLE_TEST_PHONES` | `PENDING_APPROVED_TEST_PHONES` | `.env.example:35` | QA lead / Aisle backend (team-approved test numbers only) | Phone normalization and temporary-phone tests (approved numbers only) |
-| `DB_HOST` | `PENDING_DB_HOST` | `.env.example:42` | Aisle backend / DBA (BQ-04) | All @db tests and POC-003 |
-| `DB_PORT` | `PENDING_DB_PORT` | `.env.example:43` | Aisle backend / DBA (BQ-04) | All @db tests and POC-003 |
-| `DB_NAME` | `PENDING_DB_NAME` | `.env.example:44` | Aisle backend / DBA (BQ-04) | All @db tests and POC-003 |
-| `DB_USER` | `PENDING_DB_READONLY_USER` | `.env.example:46` | Aisle backend / DBA (BQ-04, read-only user) | All @db tests and POC-003 |
-| `DB_PASSWORD` | `PENDING_DB_READONLY_PASSWORD` | `.env.example:47` | Aisle backend / DBA (BQ-04, read-only user) | All @db tests and POC-003 |
+| `DB_HOST` | `PENDING_DB_HOST` | `.env.example:65` | Aisle backend / DBA (BQ-04) | All @db tests and POC-003 |
+| `DB_PORT` | `PENDING_DB_PORT` | `.env.example:66` | Aisle backend / DBA (BQ-04) | All @db tests and POC-003 |
+| `DB_NAME` | `PENDING_DB_NAME` | `.env.example:67` | Aisle backend / DBA (BQ-04) | All @db tests and POC-003 |
+| `DB_USER` | `PENDING_DB_READONLY_USER` | `.env.example:69` | Aisle backend / DBA (BQ-04, read-only user) | All @db tests and POC-003 |
+| `DB_PASSWORD` | `PENDING_DB_READONLY_PASSWORD` | `.env.example:70` | Aisle backend / DBA (BQ-04, read-only user) | All @db tests and POC-003 |
 
 ## 2. Database query template (`m1/config/db-queries.example.json`)
 

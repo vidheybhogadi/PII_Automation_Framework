@@ -515,6 +515,7 @@ function build() {
       auth: ['TEST_TOKEN'],
       notes: '',
       requestKeys: /revoke|read/.test(e.path) ? ['key_id'] : [],
+      headers: [],
       curl: [],
       source: 'PII service route (Aisle facade)',
     }));

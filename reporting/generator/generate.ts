@@ -3,6 +3,7 @@
  *
  *   npm run report                     # reports/latest/run-data.json → reports/qa-report/
  *   npm run report:demo                # synthetic DEMO data → reports/demo-report/ (clearly labelled)
+ *   npm run m2:report                  # Milestone 2: reports/m2/latest/run-data.json → reports/m2/qa-report/
  *   tsx reporting/generator/generate.ts --input <file> --out <dir> [--no-history] [--archive] [--no-bundle]
  */
 import { cpSync, existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -39,6 +40,14 @@ export const PATHS = {
   demoHistory: path.join(ROOT, 'reporting/fixtures/demo-history'),
 };
 
+/** Milestone 2 keeps its own run data, report and history (npm run m2:test writes to reports/m2/). */
+export const M2_PATHS = {
+  latestRun: path.join(ROOT, 'reports/m2/latest/run-data.json'),
+  out: path.join(ROOT, 'reports/m2/qa-report'),
+  history: path.join(ROOT, 'reports/m2/history'),
+  archive: path.join(ROOT, 'reports/m2/archive'),
+};
+
 export interface GenerateOptions {
   input?: string;
   out?: string;
@@ -58,6 +67,8 @@ export interface GenerateOptions {
    * Default: on for npm run report and the demo report; off for explicit inputs.
    */
   excel?: boolean;
+  /** 'm2' = the Milestone 2 report (project m2-api, reports/m2/…, no M1 Excel). Default 'm1'. */
+  milestone?: 'm1' | 'm2';
 }
 
 function readJson(file: string, what: string): unknown {
@@ -88,9 +99,10 @@ export async function generate(
   opts: GenerateOptions = {},
 ): Promise<{ outDir: string; files: string[]; historyFile: string | null }> {
   const demo = Boolean(opts.demo);
-  const input = opts.input ?? (demo ? PATHS.demoRun : PATHS.latestRun);
-  const outDir = path.resolve(opts.out ?? (demo ? PATHS.demoOut : PATHS.out));
-  const historyDir = opts.historyDir ?? PATHS.history;
+  const m2 = opts.milestone === 'm2' && !demo;
+  const input = opts.input ?? (demo ? PATHS.demoRun : m2 ? M2_PATHS.latestRun : PATHS.latestRun);
+  const outDir = path.resolve(opts.out ?? (demo ? PATHS.demoOut : m2 ? M2_PATHS.out : PATHS.out));
+  const historyDir = opts.historyDir ?? (m2 ? M2_PATHS.history : PATHS.history);
   const useHistory = opts.history !== false;
 
   const config = parseReportConfig(readJson(PATHS.config, 'Report config'));
@@ -111,7 +123,7 @@ export async function generate(
   let inventory: InventoryTest[] = [];
   if (includeNotRun) {
     try {
-      inventory = listInventory(['api']);
+      inventory = listInventory(m2 ? ['m2-api'] : ['api']);
     } catch {
       // Listing needs the Playwright CLI; without it the report simply shows the tests that ran.
       inventory = [];
@@ -119,7 +131,8 @@ export async function generate(
   }
   const report = buildReportData(run, config, history.slice(-config.historyLimit), new Date(), inventory);
   let excel: Buffer | null = null;
-  if (opts.excel ?? opts.input === undefined) {
+  // The Excel export is the M1 test-case sheet; M2's workbook is m2/docs/m2-test-cases.xlsx (npm run m2:docs).
+  if (!m2 && (opts.excel ?? opts.input === undefined)) {
     try {
       ({ buffer: excel } = await buildTestCasesWorkbook({
         runData: input,
@@ -144,7 +157,7 @@ export async function generate(
   }
   if (opts.archive && run.dataSource === 'REAL') {
     const dest = path.join(
-      PATHS.archive,
+      m2 ? M2_PATHS.archive : PATHS.archive,
       historyFileName(toHistoryEntry(report, report.tests)).replace(/\.json$/, ''),
     );
     cpSync(outDir, dest, { recursive: true });
@@ -193,6 +206,7 @@ function parseArgs(argv: string[]): GenerateOptions {
     else if (a === '--input') o.input = path.resolve(argv[++i] ?? '');
     else if (a === '--out') o.out = path.resolve(argv[++i] ?? '');
     else if (a === '--history-dir') o.historyDir = path.resolve(argv[++i] ?? '');
+    else if (a === '--milestone') o.milestone = argv[++i] === 'm2' ? 'm2' : 'm1';
   }
   return o;
 }

@@ -260,6 +260,11 @@ export const QUESTIONS: M2Question[] = [
     decision: 'Allowed test ids, write side effects, batch limits, route lifetime.',
     kind: 'Contract / expected behaviour',
     apis: ['API-001', 'API-002', 'API-003', 'API-190'],
+    answer: {
+      text: 'Yes — QA may write synthetic non-numeric user_ids (qa-m2-<run>-…) through POST /V1/pii_integration/first_name. The remaining contract details (write response, missing-field errors, duplicates, batch limits, side effects, route lifetime) moved to M2Q-35.',
+      by: 'QA lead',
+      on: '2026-10-23',
+    },
   },
   {
     id: 'M2Q-21',
@@ -305,6 +310,11 @@ export const QUESTIONS: M2Question[] = [
     decision: 'Authoritative contract source.',
     kind: 'Access / environment',
     apis: [],
+    answer: {
+      text: 'Approved staging recordings are the contract reference: QA records today’s staging responses only on explicit request (npm run m2:contracts:record), reviews them (m2/contracts/REVIEW.md) and asserts only against approved files (m2/contracts/approved/). Caveat: staging already runs the PII branch, so the baseline catches future changes, not differences from master.',
+      by: 'QA lead',
+      on: '2026-10-23',
+    },
   },
   {
     id: 'M2Q-25',
@@ -425,7 +435,132 @@ export const QUESTIONS: M2Question[] = [
     apis: [],
     deferred: 'Parked by QA lead on 2026-10-23 ("for mongo keep it for future").',
   },
+  {
+    id: 'M2Q-35',
+    topic: 'Test-token route contracts',
+    question:
+      'For the /V1/pii_integration/* routes: (a) what does a successful POST first_name return (status + body)? (b) what do POST first_name without user_id / without first_name return? (c) how are duplicate ids in first_names/batch handled (counts, map)? (d) what is the size limit of first_names/batch and profile_first_names, and what happens above it? (e) does the POST write only to the PII service, or also the local profile and caches? (f) will these routes stay after testing?',
+    why: 'Split from M2Q-20 (write permission answered 2026-10-23): these details are still unknown, so the tests record them instead of asserting them.',
+    evidence: 'Staging probe 2026-10-19 (read shapes, empty lists → 400); Dev doc API-001/002/003/190.',
+    decision:
+      'Write response contract, validation errors, duplicate handling, batch limits, side effects, route lifetime.',
+    kind: 'Contract / expected behaviour',
+    apis: ['API-001', 'API-002', 'API-003', 'API-190'],
+  },
+  {
+    id: 'M2Q-36',
+    topic: 'Onboarding prerequisites',
+    question:
+      'QA can create accounts (OTP login) but cannot finish onboarding: POST /V1/user/submit_profile with {} or {data:{}} → 406 "Please submit valid details…", and the Dev doc refers to "field-list APIs" and pre-uploaded photos that are not documented (guessed routes such as /V1/fields, /V1/faiths, /V1/languages, /V1/relationship_goals, /V1/images/presigned_url → 401). Please provide one of: (a) the field-list routes and contracts for faith, mother_tongue, relationship_goal and every other required submit_profile field; (b) the photo-upload / presigned-URL route, or an accepted photo URL source; (c) how a web JWT (WEB_TOKEN) is issued; or (d) pre-onboarded (and pre-connected) synthetic accounts QA may use and delete.',
+    why: 'Every user / web-JWT case on a route that needs a finished profile depends on it, and /V1/user/delete only works after onboarding (new accounts cannot be cleaned up).',
+    evidence:
+      'Staging 2026-10-23: submit_profile {} → 406; guessed field-list routes → 401; GET /V1/user/verify_user (new user) → 200 with application_stage, application_stage_v2, selfie_compression_size; fetch_own_info and /V1/user/delete → 401 for a new user.',
+    decision: 'Field-list + photo routes, web-token issuance, or pre-onboarded accounts.',
+    kind: 'Access / environment',
+    apis: ['API-057', 'API-061', 'API-059', 'API-013'],
+    answer: {
+      text: 'Login + onboarding flow from the Aisle UI automation team, verified by QA on staging (m2/docs/onboarding-flow.md): OTP request with phone_code_id 242, device fields and the app’s static signature_v1 in the body; verify with OTP 1234; POST /V1/user/submit_profile with hard-coded option ids and 4 Aisle-CDN photo URLs; POST /V1/account_journey/update_community_message_agreed; re-verify until application_stage "completed"; delete with POST /V1/user/delete {id: ref, reason_id: 1}. Photos must match the declared gender (hosted male / female sets; POST /V1/images uploads an image). Still open (not blocking): the option-list routes (unknown even to the UI team); API-onboarded profiles may be disapproved by moderation (image_inappropriate → disapproved at ~26–35 s; with the gender-matched male set QA saw pending_not_verified >60 s) — need an admin approval or a test allow-list. Tests block at runtime when a profile is flagged. Web-token issuance moved to M2Q-41.',
+      by: 'UI automation team via QA lead',
+      on: '2026-10-23',
+    },
+  },
+  {
+    id: 'M2Q-42',
+    topic: 'Login response without credential',
+    question:
+      'Observed 2026-10-23: POST /V1/sessions/fetch_login_response {user_id: <another synthetic account’s id>, is_new_user: false} with NO credential returns 200 with auth_token, first_name, gender, profile_state … for that account. Is this route meant to be callable without proof of the OTP login? As observed, anyone who knows a user id can obtain that user’s session token.',
+    why: 'Possible account takeover: a session token for any account from its user id alone.',
+    evidence:
+      'M2 staging run 2026-10-23 (M2-API-062-AUTH, synthetic accounts only; the token was never recorded).',
+    decision: 'Intended or defect; required proof (OTP session, device binding).',
+    kind: 'Possible defect — confirm',
+    apis: ['API-062'],
+  },
+  {
+    id: 'M2Q-41',
+    topic: 'Web token issuance',
+    question:
+      'How is a web JWT (WEB_TOKEN, used by the /web/* routes that do not accept the app user JWT) issued for a synthetic account on staging? The UI automation team has no web app, so QA cannot obtain one.',
+    why: 'All WEB_TOKEN cases need a web session.',
+    evidence: 'Dev doc "Request setup" (WEB_TOKEN); UI automation team 2026-10-23 (no web app).',
+    decision: 'Web login route / token issuance for test accounts.',
+    kind: 'Access / environment',
+    apis: ['API-012', 'API-119'],
+  },
+  {
+    id: 'M2Q-37',
+    topic: 'PII user_id for app users',
+    question:
+      'Which user_id does the app send to the PII service for an app user — the numeric "id" returned by verify_number_login_v1, the profile ref, or something else — and under which tenant? QA needs it to find a user’s rows in the PII DB (user_pii_field_value) read-only.',
+    why: 'All DB checks for app users (login phone write, onboarding, edits, isolation) look up rows by tenant + user_id; guessing the mapping would make a pass or fail meaningless.',
+    evidence:
+      'Dev doc API-060 ("write_pii_phone_number_for_user"); M1 DB tests use the facade user_id directly.',
+    decision: 'Mapping app user → PII user_id (+ tenant).',
+    kind: 'Access / environment',
+    apis: ['API-060', 'API-057', 'API-058'],
+  },
+  {
+    id: 'M2Q-38',
+    topic: 'Unauthenticated payment verification',
+    question:
+      'Observed 2026-10-23: POST /V1/payment/verify_razorpay_payment_v1 and POST /V1/payment/verify_paytm_payment_v1 with NO credential and an empty body {} return 200 {"status":true}. Is this intended (e.g. provider-signed payloads only), and can an unauthenticated call ever activate or change a subscription?',
+    why: 'A payment-verification route that answers success without any credential is a possible security defect.',
+    evidence: 'M2 Step 1 staging run 2026-10-23 (M2-API-070-AUTH, M2-API-072-AUTH).',
+    decision: 'Intended or defect; required credential.',
+    kind: 'Possible defect — confirm',
+    apis: ['API-070', 'API-072'],
+  },
+  {
+    id: 'M2Q-39',
+    topic: 'Invalid tokens cause server errors',
+    question:
+      'Observed 2026-10-23: on 179 app / web / CMS routes an invalid Bearer value ("Bearer invalid") or an expired, wrongly-signed JWT returns 500 {title, message:"Something went wrong…", is_backend_error} instead of 401; TEST_TOKEN sent to 131 user / web routes also returns 500. Should these be 401 {unauthorized_request:true} like the no-token case?',
+    why: 'Server errors on bad credentials hide the real reason, fill error logs and may expose stack traces.',
+    evidence: 'M2 Step 1 staging run 2026-10-23 (AUTH / TOKEN observations).',
+    decision: 'Expected status for invalid / wrong-type tokens.',
+    kind: 'Possible defect — confirm',
+    apis: ['API-013', 'API-021', 'API-136'],
+  },
+  {
+    id: 'M2Q-40',
+    topic: 'Test-route first-name write fails',
+    question:
+      'Observed 2026-10-23: POST /V1/pii_integration/first_name {user_id, first_name} with TEST_TOKEN returns 500 {title, message, is_backend_error} for synthetic non-numeric user_ids (allowed per M2Q-20); the name is then not readable (first_name:null). Is the write route broken on staging, or does it need another input?',
+    why: 'Blocks the G1 write/read round-trip cases and every case that seeds a name through the test route.',
+    evidence: 'M2 Step 1 staging run 2026-10-23 (M2-PIIR-001, -002, -007).',
+    decision: 'Fix or correct input contract.',
+    kind: 'Possible defect — confirm',
+    apis: ['API-002'],
+  },
 ];
+
+/**
+ * Known defects observed on staging, per case. These are NOT dependencies (the cases still run with their strict
+ * assertions); the tests carry the marker so reports show them as known findings for Dev.
+ */
+export const KNOWN_FINDINGS: Record<string, { question: string; security: boolean; text: string }> = {
+  'M2-API-070-AUTH': {
+    question: 'M2Q-38',
+    security: true,
+    text: 'verify_razorpay_payment_v1 answers 200 {"status":true} without any credential',
+  },
+  'M2-API-072-AUTH': {
+    question: 'M2Q-38',
+    security: true,
+    text: 'verify_paytm_payment_v1 answers 200 {"status":true} without any credential',
+  },
+  'M2-API-062-AUTH': {
+    question: 'M2Q-42',
+    security: true,
+    text: 'fetch_login_response returns a valid auth_token and profile data for another account’s user_id without any credential',
+  },
+  'M2-PIIR-001': { question: 'M2Q-40', security: false, text: 'test-route first-name write returns 500' },
+  'M2-PIIR-002': { question: 'M2Q-40', security: false, text: 'test-route first-name write returns 500' },
+  'M2-PIIR-007': { question: 'M2Q-40', security: false, text: 'test-route first-name write returns 500' },
+};
+
+/** Marker for refusals that come back as a server error (5xx) instead of 401 — observed defect pattern. */
+export const SERVER_ERROR_ON_BAD_CREDENTIAL = 'M2Q-39';
 
 /** Questions that still block: no answer yet (deferred questions are still open). */
 export const OPEN = new Set(QUESTIONS.filter((q) => !q.answer).map((q) => q.id));

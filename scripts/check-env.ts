@@ -15,6 +15,7 @@ import { createAisleClient } from '../m1/src/clients/client-factory';
 import { assertIntegrationConfig, isDbConfigured, loadConfig } from '../m1/src/config/config';
 import { pendingSettings } from '../core/config/placeholders';
 import { Logger } from '../core/utils/logger';
+import { loadM2Config } from '../m2/src/config/m2-config';
 
 dotenv.config({ path: path.resolve(process.cwd(), process.env.ENV_FILE ?? '.env'), quiet: true });
 
@@ -38,6 +39,11 @@ async function main(): Promise<void> {
   if (config.testData.phones.length === 0)
     warn('AISLE_TEST_PHONES empty — phone / temporary-phone tests will be BLOCKED (CONFIG)');
   else ok(`${config.testData.phones.length} approved test phone(s) configured`);
+  const m2 = loadM2Config();
+  ok(`M2: base URL ${m2.baseUrl}, app_version ${m2.appVersion}, device_type ${m2.deviceType}`);
+  ok(`M2 login: phone_code_id ${m2.login.phoneCodeId}`);
+  if (m2.login.signature) ok('M2_LOGIN_SIGNATURE_V1 set (value never printed)');
+  else warn('M2_LOGIN_SIGNATURE_V1 empty — the OTP request is sent without signature_v1 (optional)');
   if (isDbConfigured(config)) ok(`DB validation configured (${config.db.engine}, read-only)`);
   else warn('DB validation not configured — @db tests will be BLOCKED (BQ-04)');
 

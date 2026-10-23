@@ -53,7 +53,10 @@ function groupHeading(
     const ep = plainEndpoint(key, endpoints);
     return { name: ep.name, icon: ep.icon, method: ep.method, path: ep.path };
   }
-  const meta = (groupBy === 'type' ? TYPE_HEAD : SUITE_HEAD)[key] ?? { icon: 'box', note: '' };
+  const meta = (groupBy === 'type' ? TYPE_HEAD : groupBy === 'suite' ? SUITE_HEAD : {})[key] ?? {
+    icon: 'box',
+    note: '',
+  };
   return { name: key, icon: meta.icon, note: meta.note };
 }
 
@@ -155,7 +158,9 @@ export function TestList() {
           <div class="groupby" role="group" aria-label="Group by">
             <span class="groupby__label">Group by</span>
             <div class="seg">
-              {GROUP_BY_OPTIONS.map((o) => (
+              {GROUP_BY_OPTIONS.filter(
+                (o) => o.value !== 'category' || all.some((t) => t.info?.category),
+              ).map((o) => (
                 <button key={o.value} aria-pressed={groupBy === o.value} onClick={() => setGroupBy(o.value)}>
                   {o.label}
                 </button>

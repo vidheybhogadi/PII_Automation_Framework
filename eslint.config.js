@@ -45,7 +45,7 @@ module.exports = tseslint.config(
   },
   {
     // Playwright fixtures must destructure their first argument even when it is unused: `async ({}, use) => ...`
-    files: ['m1/src/fixtures/**'],
+    files: ['m1/src/fixtures/**', 'm2/src/fixtures/**'],
     rules: { 'no-empty-pattern': 'off' },
   },
   {

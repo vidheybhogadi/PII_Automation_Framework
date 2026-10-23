@@ -128,13 +128,5 @@ export type EndpointKey = keyof typeof ENDPOINTS;
 
 export const ENDPOINT_KEYS = Object.keys(ENDPOINTS) as EndpointKey[];
 
-/** Builds a concrete path from a template, URL-encoding path parameters. */
-export function buildPath(template: string, params: Record<string, string> = {}): string {
-  return template.replace(/\{(\w+)\}/g, (_match, name: string) => {
-    const value = params[name];
-    if (value === undefined) {
-      throw new Error(`Missing path parameter "${name}" for endpoint template ${template}`);
-    }
-    return encodeURIComponent(value);
-  });
-}
+/** Builds a concrete path from a template, URL-encoding path parameters (shared helper in core/http). */
+export { buildPath } from '../../../core/http/path';

@@ -39,7 +39,8 @@ interface Options {
   outputFile?: string;
 }
 
-const ID_PATTERN = /^[A-Z]+(?:-[A-Za-z0-9]+)+$/;
+/** Display IDs: AISLE-WR-001, POC-001, UT-ACL-001 and Milestone 2 workbook IDs (M2-API-013-AUTH, M2-PIIR-001). */
+const ID_PATTERN = /^[A-Z][A-Z0-9]*(?:-[A-Za-z0-9]+)+$/;
 
 export function displayIdFromTitle(title: string): string {
   const first = title.split(/\s+/)[0] ?? '';

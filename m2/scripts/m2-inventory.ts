@@ -37,6 +37,8 @@ export interface InventoryApi {
   notes: string;
   /** Request keys in the Dev cURL example (body JSON keys and query parameters). */
   requestKeys: string[];
+  /** Header names the Dev cURL example sends (e.g. Authorization, Accept, device_type, webcms), verbatim. */
+  headers: string[];
   /** Dev's example request(s), verbatim (cURL code blocks). */
   curl: string[];
   /** Where the route lives in the app code (the Dev doc's "Source:" line), verbatim. */
@@ -168,16 +170,55 @@ export const OBSERVED: Record<string, string> = {
     'Observed 2026-10-19: unknown synthetic user_id → 200 {status, user_id, first_name:null}; no user_id → 400 "Missing required parameter: user_id"; no token → 401 (empty HTML body).',
   'API-003':
     'Observed 2026-10-19: unknown ref → 200 {status, requested_ref_count, returned_ref_count, profiles:{<ref>:null}}; empty refs → 400.',
-  'API-013': 'Observed 2026-10-19: no token → 401 {unauthorized_request:true}.',
   'API-190':
     'Observed 2026-10-19: unknown user_ids → 200 {status, requested_user_count, returned_user_count, first_names:{}}; empty user_ids → 400.',
   'API-208':
     'Observed 2026-10-19: route IS implemented on staging (contradicts the Dev doc) — {} → 400 "Missing required parameter: user_id or ref"; unknown ref → 404 "Profile not found".',
   'API-187': 'Observed 2026-10-23: no token → 401 {unauthorized_request}.',
-  'API-063': 'Observed 2026-10-23: no token → 401 {unauthorized_request}.',
+  'API-063':
+    'Observed 2026-10-23: no token → 401 {unauthorized_request}; a freshly onboarded synthetic account (male set) → 200 before and >60 s after submit.',
   'API-069': 'Observed 2026-10-23: no token → 401 {unauthorized_request}.',
   'API-121': 'Observed 2026-10-23: no token → 401 (empty text/html body).',
   'API-119': 'Observed 2026-10-23: no token → 401 (empty text/html body).',
+  'API-060':
+    'Observed 2026-10-23 (3 throwaway 107… accounts): OTP request POST /V1/sessions/login_with_phone_number {mobile_number} with Accept, Content-Type, device_type, app_version, unique_identifier → 200 {status, message, phone_code:"+91", mobile_number, zendesk_url, your_story_form_url}; phone_code_id and signature_v1 are not required (defaults to +91); an empty body {} → 500 {title, message:"Something went wrong…", is_backend_error} (server error on bad input). verify_number_login_v1 {mobile_number, otp:"1234"} (no phone_code_id) → 200 with id, auth_token, first_name, profile_state:null, application_stage:"general_information_stage_1", show_update_app. auth_token is an RS256 JWT (~168 h; claims iss, sub, aud, iat, exp, uid, did, ptfrm, phone_id) bound to the device: send the same unique_identifier and device_type as at login, as Authorization: Bearer. app_version 10.0.0 and 99.99.99 both accepted (show_update_app:true does not block). Later 2026-10-23 (UI automation team flow): OTP request {mobile_number, phone_code_id:242, device_type, app_version, unique_identifier, signature_v1} and verify {phone_code_id:242, mobile_number, otp:"1234"} → auth_token, id, ref, application_stage, profile_state (top level or under data); errors "The entered OTP is invalid." / "No OTP has been generated for this user or number." — refused verifies (wrong OTP, too-short number, letters, empty number) answer HTTP 200 with the error and NO token.',
+  'API-013':
+    'Observed 2026-10-19: no token → 401 {unauthorized_request:true}. Observed 2026-10-23: a NEW (onboarding-stage) user’s valid token → 401 {unauthorized_request} — a 401 here is not proof of a credential problem; an ONBOARDED user’s token → 200 {user_id, first_name, profile_state, gender, hide_first_name, …} (no email), before and >60 s after submit with the male photo set.',
+  'API-059':
+    'Observed 2026-10-23: a NEW (onboarding-stage) user’s valid token → 401; account deletion works only after onboarding. For an onboarded account: {id:<ref>} alone → 500; {id:<ref>, reason_id:1, note} → 200, the old token is dead afterwards and a new login starts at application_stage general_information_stage_1 (no profile). A "disabled" profile cannot be recovered (activate_user 403, delete has no effect). Confirmed again for a male-set account: delete → 200 and the number is reset.',
+  'API-062':
+    'Observed 2026-10-23: POST /V1/sessions/fetch_login_response {user_id, is_new_user:false} with NO credential → 200 with auth_token, first_name, gender, profile_state … for that user (also for another synthetic account’s id — possible defect M2Q-42); unknown user_id → 500.',
+  'API-086':
+    'Observed 2026-10-23: GET /V1/user/verify_user_v1 with a NEW (onboarding-stage) user’s token → 200; also 200 for a freshly onboarded account (male set) before and >60 s after submit.',
+  'API-088':
+    'Observed 2026-10-23: GET /V1/user/verify_user with a NEW (onboarding-stage) user’s token → 200 incl. application_stage, application_stage_v2 (list of stages), selfie_compression_size.',
+  'API-057':
+    'Observed 2026-10-23: POST /V1/user/submit_profile with {} or {data:{}} (new user) → 406 {status, message:"Please submit valid details…", your_story_form_url, is_backend_error, is_spark_enabled}. With the UI automation team’s body (option ids, 4 Aisle-CDN photos) → 200, profile_state "pending_not_verified", the submitted first_name returned; after POST /V1/account_journey/update_community_message_agreed a new verify shows application_stage "completed". ~35 s later profile_state became "image_inappropriate" with gender-mixed photo sets; with the gender-matched MALE set the profile stayed "pending_not_verified" >60 s (photos must match the declared gender; submit_profile copies each photo URL and stores a 54-byte placeholder if it cannot fetch it, still answering 200).',
+  'API-021':
+    'Observed 2026-10-23: for a synthetic account onboarded with the gender-matched male photo set, GET /V1/users/:ref → 200 before and >60 s after submit (old and fresh token).',
+  'API-014':
+    'Observed 2026-10-23: GET /V1/users/matches_list_v2 → 200 for a freshly onboarded synthetic account (male set), before and >60 s after submit.',
+  'API-005':
+    'Observed 2026-10-23: GET /V1/invites/all_requests → 200 for a freshly onboarded synthetic account (male set), before and >60 s after submit.',
+  'API-089':
+    'Observed 2026-10-23: POST /V1/user/app_launch {} with a NEW (onboarding-stage) user’s token → 200.',
+};
+
+/**
+ * The same no-credential observations as OBSERVED, in a form tests can assert exactly (M2 AUTH checks, the
+ * "no credential" variant). Only APIs whose refusal was actually seen on staging are listed.
+ */
+export const OBSERVED_NO_CREDENTIAL: Record<
+  string,
+  { status: number; body: 'unauthorized_request' | 'empty'; on: string }
+> = {
+  'API-001': { status: 401, body: 'empty', on: '2026-10-19' },
+  'API-013': { status: 401, body: 'unauthorized_request', on: '2026-10-19' },
+  'API-063': { status: 401, body: 'unauthorized_request', on: '2026-10-23' },
+  'API-069': { status: 401, body: 'unauthorized_request', on: '2026-10-23' },
+  'API-187': { status: 401, body: 'unauthorized_request', on: '2026-10-23' },
+  'API-119': { status: 401, body: 'empty', on: '2026-10-23' },
+  'API-121': { status: 401, body: 'empty', on: '2026-10-23' },
 };
 
 /** Adds the free-text supplement: FREE_TEXT on mapped entries, new entries for unmapped rows. */
@@ -209,6 +250,7 @@ function addFreeText(root: string, apis: Map<string, InventoryApi>) {
         auth: ['TEST_TOKEN'],
         notes: notes ?? '',
         requestKeys: /keys\/read/.test(apiPath) ? ['key_id'] : [],
+        headers: [],
         curl: [],
         source: 'Aisle PII facade (Milestone 1) — see m1/docs/aisle-api.md',
       });
@@ -237,6 +279,7 @@ export function parseInventory(root: string): InventoryApi[] {
       auth: [],
       notes: '',
       requestKeys: [],
+      headers: [],
       curl: [],
       source: '',
     };
@@ -274,6 +317,7 @@ export function parseInventory(root: string): InventoryApi[] {
         ...[...text.matchAll(/data-urlencode "([a-zA-Z_0-9[\]]+)=/g)].map((k) => k[1]!),
       ];
       api.requestKeys = [...new Set(keys)];
+      api.headers = [...new Set([...text.matchAll(/--header "([A-Za-z0-9_-]+):/g)].map((h) => h[1]!))];
       const blocks = text.split('```').filter((_, i) => i % 2 === 1);
       api.curl = blocks.map((b) => b.replace(/^[a-z]*\n/, '').trimEnd()).filter((b) => /curl/.test(b));
       api.source = (buf.find((l) => l.startsWith('Source:')) ?? '')

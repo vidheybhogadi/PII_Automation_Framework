@@ -106,7 +106,7 @@ Milestone commands carry the milestone prefix; shared tooling has none.
 | ------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | M1     | `m1:test:all` · `m1:test:api` · `m1:test:smoke` · `m1:test:phase1` · `m1:test:regression` · `m1:test:security` · `m1:test:db` · `m1:test:poc` |
 |        | `m1:test:unit` · `m1:test:debug` · `m1:test:list` · `m1:docs:testcases` · `m1:docs:inventory` · `m1:docs:pending` · `m1:docs:traceability`    |
-| M2     | `m2:test` · `m2:test:list` · `m2:docs`                                                                                                        |
+| M2     | `m2:test` · `m2:test:smoke` · `m2:test:unit` · `m2:test:list` · `m2:report` · `m2:docs`                                                       |
 | Shared | `verify` · `typecheck` · `lint` · `format` · `check-env` · `ci:sync-env` · `report` · `report:*`                                              |
 
 **Created locally, never committed:** `.env` (your settings + the token) · `reports/` · `test-results/` ·

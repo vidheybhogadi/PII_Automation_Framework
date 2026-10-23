@@ -160,6 +160,22 @@ const keys = (a: InventoryApi) =>
     ? a.requestKeys.slice(0, 14).join(', ') + (a.requestKeys.length > 14 ? ', …' : '')
     : 'none';
 
+/**
+ * User-JWT routes that work for a NEW (onboarding-stage) account — observed on staging 2026-10-23 (login,
+ * GET verify_user, GET verify_user_v1, app_launch; fetch_login_response is a pre-login route). Every other user / web route needs a finished profile (M2Q-36).
+ */
+export const NEW_USER_OK = ['API-060', 'API-062', 'API-086', 'API-088', 'API-089'];
+
+/** True when calling this API needs a finished (onboarded) profile — M2Q-36. */
+export function needsProfile(a: Pick<InventoryApi, 'id' | 'auth'>): boolean {
+  if (NEW_USER_OK.includes(a.id)) return false;
+  if (a.auth.includes('WEB_TOKEN')) return true; // web routes act on a finished profile (token: M2Q-41)
+  if (a.auth.includes('USER_TOKEN')) return true;
+  // Admin routes act on a synthetic member profile; TEST_TOKEN routes outside G1 need profiles with likes/invites.
+  if (groupOf(a.id).key === 'G10') return true;
+  return a.auth.includes('TEST_TOKEN') && groupOf(a.id).key !== 'G1';
+}
+
 /** Questions that gate access for an API (credentials / environment). */
 function accessDeps(a: InventoryApi): string[] {
   const d = new Set<string>();
@@ -168,7 +184,11 @@ function accessDeps(a: InventoryApi): string[] {
     if (t === 'ADMIN_TOKEN' || t === 'ADMIN_SESSION_COOKIE' || t === 'webcms') d.add('M2Q-04');
     if (t === 'INFOEDGE_PROFILE_API_TOKEN') d.add('M2Q-19');
   }
-  if (isWebhook(a)) d.add(a.id === 'API-113' || a.id === 'API-114' ? 'M2Q-03' : 'M2Q-17');
+  // Callbacks need genuine signed provider / Pusher payloads (M2Q-17); Pusher events also need accounts.
+  if (isWebhook(a)) d.add('M2Q-17');
+  if (a.id === 'API-113' || a.id === 'API-114') d.add('M2Q-03');
+  if (needsProfile(a)) d.add('M2Q-36');
+  if (a.auth.includes('WEB_TOKEN')) d.add('M2Q-41'); // web-JWT issuance
   if (isPayment(a)) d.add('M2Q-17');
   if (a.id === 'API-012') d.add('M2Q-19');
   if (isLogin(a)) d.add('M2Q-03'); // approved test number + OTP shortcut
@@ -178,13 +198,21 @@ function accessDeps(a: InventoryApi): string[] {
   return [...d];
 }
 
+/**
+ * DB checks also need the API's own access (CMS admin M2Q-04, finished profile M2Q-36) and, for app users, the
+ * app user → PII user_id mapping (M2Q-37). G1 test routes write under QA's own synthetic user_ids.
+ */
+function dbAccessDeps(a: InventoryApi): string[] {
+  return [...accessDeps(a), ...(isTestRoute(a) ? [] : ['M2Q-37'])];
+}
+
 function accountPre(a: InventoryApi): string {
   const parts: string[] = [];
   if (a.auth.includes('USER_TOKEN'))
     parts.push(
       'Synthetic app account (+91 number starting with 10 (not 106…), OTP 1234) with user JWT; headers device_type, app_version, unique_identifier as in the Dev cURL (M2Q-03 answered).',
     );
-  if (a.auth.includes('WEB_TOKEN')) parts.push('Synthetic account with web JWT (M2Q-03).');
+  if (a.auth.includes('WEB_TOKEN')) parts.push('Synthetic account with web JWT (M2Q-41).');
   if (a.auth.includes('ADMIN_TOKEN'))
     parts.push('CMS admin JWT, webcms: true, OTP verified, permission for the action (M2Q-04).');
   if (a.auth.includes('ADMIN_SESSION_COOKIE'))
@@ -654,7 +682,7 @@ const RULES: Record<string, Rule> = {
       evidence: `Dev doc ${a.id} access path.`,
       db: 'PII DB rows by tenant + user + field; aisleweb compatibility columns. Read-only SELECT; compare hashes/counts, never print or decrypt values.',
       priority: 'High',
-      deps: DELETES.includes(a.id) ? ['M2Q-16', 'M2Q-15'] : ['M2Q-16'],
+      deps: [...(DELETES.includes(a.id) ? ['M2Q-16', 'M2Q-15'] : ['M2Q-16']), ...dbAccessDeps(a)],
       fields: PII_INPUT[a.id] ?? a.fields,
     };
   },
@@ -671,7 +699,7 @@ const RULES: Record<string, Rule> = {
       evidence: 'Integrity requirement.',
       db: 'Counts + ciphertext hashes before/after; read-only.',
       priority: 'High',
-      deps: ['M2Q-16'],
+      deps: ['M2Q-16', ...dbAccessDeps(a)],
       fields: PII_INPUT[a.id],
     };
   },
@@ -688,7 +716,7 @@ const RULES: Record<string, Rule> = {
       evidence: 'Isolation requirement.',
       db: 'PII DB rows by user + field; read-only.',
       priority: 'High',
-      deps: ['M2Q-16'],
+      deps: ['M2Q-16', ...dbAccessDeps(a)],
     };
   },
 };

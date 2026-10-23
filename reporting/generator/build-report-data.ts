@@ -14,13 +14,26 @@ import type {
 } from '../core/types';
 import { testCaseInfo } from '../../m1/tests/catalog';
 import type { InventoryTest } from './inventory';
+import { isM2Id, m2TestInfo } from './m2-catalog';
 import { knownSecrets, maskKnownSecrets } from './secrets';
 import type { ApiExchange } from '../core/types';
 
 /** Mask every known secret (the token, passwords) in a captured exchange — the last line of defence. */
+/**
+ * Aisle's generic error reply names its support mailbox ("…write to us at <address>@aisle.co.", staging 2026-10-23).
+ * It is not personal data, but the report's self-check rightly refuses any real email address, so only this exact
+ * phrase is replaced.
+ */
+const SUPPORT_ADDRESS = /write to us at [A-Za-z0-9._%+-]+@aisle\.co\b/g;
+/** Subresource-integrity hashes in HTML pages (public asset digests) look like signatures to the self-check. */
+const SRI_HASH = /integrity="sha(?:256|384|512)-[A-Za-z0-9+/=]+"/g;
+
 function maskExchange(e: ApiExchange): ApiExchange {
   const secrets = knownSecrets();
-  const m = (s: string) => maskKnownSecrets(s, secrets);
+  const m = (s: string) =>
+    maskKnownSecrets(s, secrets)
+      .replace(SUPPORT_ADDRESS, 'write to us at [Aisle support address]')
+      .replace(SRI_HASH, 'integrity="[SRI hash]"');
   return {
     ...e,
     url: m(e.url),
@@ -82,11 +95,14 @@ export function enrichTests(run: CollectedRun): ReportTest[] {
       endpoints: resolveEndpoints(t.id),
       severity: severityFor(area),
       kind: area === 'framework' || t.project === 'unit' ? 'unit' : 'integration',
-      milestone: 'M1',
+      milestone: milestoneOf(t.project),
       ...describe(t.id),
     };
   });
 }
+
+/** Milestone of a Playwright project: m2-* projects are Milestone 2, everything else Milestone 1. */
+export const milestoneOf = (project: string) => (project.startsWith('m2') ? 'M2' : 'M1');
 
 /**
  * The endpoints a test belongs to. Order of precedence:
@@ -96,6 +112,8 @@ export function enrichTests(run: CollectedRun): ReportTest[] {
  * The first entry is the heading it is listed under; none (or several) = "Across endpoints".
  */
 export function resolveEndpoints(id: string): string[] {
+  // M2 tests are listed under "Across endpoints"; group them by Type / Suite / Category instead.
+  if (isM2Id(id)) return [];
   const declared = testCaseInfo(id)?.endpoint;
   if (declared === 'crossEndpoint') return [];
   if (declared) return [declared];
@@ -104,6 +122,20 @@ export function resolveEndpoints(id: string): string[] {
 
 /** Attach the plain-English description from m1/tests/catalog (sanitized like every other text field). */
 function describe(id: string): Pick<ReportTest, 'info'> {
+  const m2 = m2TestInfo(id);
+  if (m2) {
+    return {
+      info: {
+        ...m2,
+        what: sanitizeText(m2.what, 600),
+        why: sanitizeText(m2.why, 600),
+        steps: m2.steps.map((s) => sanitizeText(s, 300)),
+        expected: sanitizeText(m2.expected, 800),
+        ...(m2.preconditions ? { preconditions: sanitizeText(m2.preconditions, 400) } : {}),
+        validation: (m2.validation ?? []).map((v) => sanitizeText(v, 300)),
+      },
+    };
+  }
   const info = testCaseInfo(id);
   if (!info) return {};
   // request / validation may still be missing while the catalog is being filled in — omit them then.
@@ -159,7 +191,7 @@ export function notRunTests(inventory: readonly InventoryTest[], ran: readonly R
         endpoints: resolveEndpoints(t.id),
         severity: severityFor(area),
         kind: area === 'framework' || t.project === 'unit' ? ('unit' as const) : ('integration' as const),
-        milestone: 'M1',
+        milestone: milestoneOf(t.project),
         notRun: true,
         ...describe(t.id),
       };

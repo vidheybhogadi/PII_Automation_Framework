@@ -167,6 +167,7 @@ export type AreaKey =
   | 'database'
   | 'poc'
   | 'framework'
+  | 'm2'
   | 'other';
 
 export type Severity = 'critical' | 'high' | 'medium' | 'low';
@@ -277,6 +278,8 @@ export interface TestDescription {
   request?: string;
   /** The individual checks the test makes, one per entry. Absent in older data. */
   validation?: string[];
+  /** Finer division inside the type (Milestone 2 workbook "Category", e.g. Authentication). M1 has none. */
+  category?: string;
 }
 
 export interface ReportTest extends CollectedTest {

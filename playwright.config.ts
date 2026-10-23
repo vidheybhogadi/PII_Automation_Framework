@@ -18,6 +18,15 @@ dotenv.config({ path: path.resolve(__dirname, process.env.ENV_FILE ?? '.env'), q
  */
 process.env.PII_TEST_RUN_ID ??= generateRunId(process.env.PII_TEST_RUN_PREFIX || 'qa-auto');
 
+/** Milestone 2 tags its synthetic data with its own run ID (qa-m2-…), shared by all workers the same way. */
+process.env.M2_TEST_RUN_ID ??= generateRunId('qa-m2');
+
+/**
+ * Where reports go. M1 keeps `reports/`; the M2 scripts set REPORTS_DIR=reports/m2 so an M2 run never overwrites
+ * M1's latest run data, HTML report or history.
+ */
+const reportsDir = process.env.REPORTS_DIR || 'reports';
+
 const isCI = Boolean(process.env.CI);
 
 export default defineConfig({
@@ -32,11 +41,11 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   reporter: [
     ['list'],
-    ['html', { outputFolder: 'reports/html', open: 'never' }],
-    ['junit', { outputFile: 'reports/junit/results.xml' }],
-    ['json', { outputFile: 'reports/json/results.json' }],
+    ['html', { outputFolder: `${reportsDir}/html`, open: 'never' }],
+    ['junit', { outputFile: `${reportsDir}/junit/results.xml` }],
+    ['json', { outputFile: `${reportsDir}/json/results.json` }],
     // PII Sentinel collector: normalized, sanitized run data consumed by the QA dashboard (npm run report).
-    ['./reporting/collector/pii-results-reporter.ts', { outputFile: 'reports/latest/run-data.json' }],
+    ['./reporting/collector/pii-results-reporter.ts', { outputFile: `${reportsDir}/latest/run-data.json` }],
   ],
   use: {
     // API tests use Axios, not the browser. Tracing is OFF on purpose: Playwright traces capture request/
@@ -62,8 +71,15 @@ export default defineConfig({
     },
     // ---- Milestone 2: Aisle business APIs (m2/) — tagged @m2, always run separately from M1 ------------------
     {
+      // Live business-API tests (npm run m2:test). Requires .env (AISLE_TEST_TOKEN; optional M2_* values).
       name: 'm2-api',
       testDir: './m2/tests',
+      testIgnore: ['unit/**'],
+    },
+    {
+      // M2 framework self-tests: no network, no .env needed (part of npm run verify).
+      name: 'm2-unit',
+      testDir: './m2/tests/unit',
     },
   ],
 });

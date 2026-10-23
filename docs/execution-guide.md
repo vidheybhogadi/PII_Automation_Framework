@@ -23,6 +23,13 @@ All commands run from the project root. The facade tests need `.env` with `AISLE
 | `npm run m1:docs:testcases`    | rebuild `m1/docs/test-cases.xlsx` (keeps Tester Notes)                                               |
 | `npm run m1:docs:pending`      | rebuild `m1/docs/PENDING-PLACEHOLDERS.md`                                                            |
 | `npm run m1:docs:traceability` | rebuild `m1/docs/requirements-traceability.md`                                                       |
+| `npm run m2:test`              | Milestone 2 business-API tests (project `m2-api`, 2 workers) → `reports/m2/latest/run-data.json`     |
+| `npm run m2:test:smoke`        | the M2 Smoke suite (`@smoke`)                                                                        |
+| `npm run m2:test:unit`         | M2 framework self-tests (no network; part of `npm run verify`)                                       |
+| `npm run m2:report`            | build the M2 report (`reports/m2/qa-report/`) from the last M2 run                                   |
+| `npm run m2:contracts:record`  | record staging contract baselines (explicit only) → `m2/contracts/recorded/` + `REVIEW.md`           |
+| `npm run m2:contracts:approve` | approve reviewed recordings: `-- --by "<name>" <case…\|all>` → `m2/contracts/approved/`              |
+| `npm run m2:docs`              | rebuild `m2/docs/m2-test-cases.xlsx` (+ results of the last M2 run) and the API docs                 |
 
 Every `test:*` command except `m1:test:unit`, `m1:test:debug` and `m1:test:list` runs the full pipeline: tests → report
 (`reports/qa-report/`, archived copy in `reports/archive/<timestamp>__<run-id>/`) → PDF → `m1/docs/test-cases.xlsx`,
