@@ -29,13 +29,60 @@ import type { ExtraRoute } from '../clients/m2-client';
 import { AUTH } from '../auth/credentials';
 import { COMMUNITY_AGREED, field, SessionError, type SessionHelper, type UserSession } from '../auth/session';
 
-/** An option object as the app sends it (note the app's own spelling "positon"). */
+/** An option object in the full shape the app sends (incl. the app's own spelling "positon", always 0). */
 export const opt = (id: number, name: string, extra: Record<string, unknown> = {}) => ({
+  answer_id: 0,
   id,
+  interest_id: 0,
+  is_default: false,
+  is_hidden: false,
+  is_mother_tongue: false,
+  is_open_to_all: false,
+  is_selected: false,
+  max_length: 0,
+  min_length: 0,
   name,
-  positon: id,
+  opposite_tag_id: 0,
+  order: 0,
+  positon: 0,
+  preference_only: false,
+  question_id: 0,
+  regions: 0,
+  show_on_profile: false,
+  tag_id: 0,
+  trait_id: 0,
+  value: 0,
   ...extra,
 });
+
+/** Top-level `data` flags exactly as the UI automation team's working body sends them. */
+export const DATA_FLAGS = {
+  about: '',
+  can_send_reply: false,
+  display_new_tag: false,
+  has_active_subscription: false,
+  has_audio_prompt: false,
+  has_filled_work_v1: false,
+  has_partial_work: false,
+  has_passed: false,
+  has_received_like: false,
+  has_sent_like: false,
+  has_sent_request: false,
+  hide_first_name: false,
+  incognito_mode_active: false,
+  is_connected: false,
+  is_recommended_profile: false,
+  is_verified: false,
+  message: '',
+  percentage_profile_complete: 0,
+  profile_complete_without_selfie: 0,
+  profile_sharing_enabled: false,
+  profile_subtext: '',
+  reply_id: 0,
+  reply_message: '',
+  show_concierge_badge: false,
+  show_incognito_mode: false,
+} as const;
 
 export interface OnboardingInput {
   firstName: string;
@@ -142,7 +189,7 @@ export function submitProfileBody(i: OnboardingInput): Record<string, unknown> {
         smoking_v2: opt(4, 'Regularly'),
         workout: opt(4, 'Regularly'),
       },
-      hide_first_name: false,
+      ...DATA_FLAGS,
       photos: (i.photos ?? []).map((photo, n) => ({
         faceDetectionTime: 330,
         isFaceDetected: true,
@@ -157,8 +204,6 @@ export function submitProfileBody(i: OnboardingInput): Record<string, unknown> {
         optional_relationship_goal_message: '',
         prefix: 'Relationship goals',
       }),
-      about: '',
-      reply_id: 0,
     },
   };
 }

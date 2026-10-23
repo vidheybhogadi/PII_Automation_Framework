@@ -241,6 +241,59 @@ test.describe('UNIT M2 client wire behaviour', () => {
     });
     const gi = (body.data as { general_information: Record<string, unknown> }).general_information;
     expect(gi.first_name).toBe('Qaxyz');
+    expect(gi.ref_id).toBe('');
+    const OPTION_KEYS = [
+      'answer_id',
+      'id',
+      'interest_id',
+      'is_default',
+      'is_hidden',
+      'is_mother_tongue',
+      'is_open_to_all',
+      'is_selected',
+      'max_length',
+      'min_length',
+      'name',
+      'opposite_tag_id',
+      'order',
+      'positon',
+      'preference_only',
+      'question_id',
+      'regions',
+      'show_on_profile',
+      'tag_id',
+      'trait_id',
+      'value',
+    ];
+    for (const key of ['diet', 'drinking_v2', 'faith', 'marital_status_v1', 'smoking_v2', 'workout']) {
+      const o = gi[key] as Record<string, unknown>;
+      expect(Object.keys(o).sort(), `${key}: full option shape`).toEqual([...OPTION_KEYS].sort());
+      expect(o.positon, `${key}: positon is 0`).toBe(0);
+    }
+    const data = body.data as Record<string, unknown>;
+    const goal = data.relationship_goal as Record<string, unknown>;
+    expect(goal).toMatchObject({
+      id: 2,
+      name: 'Settle down',
+      positon: 0,
+      is_default: true,
+      show_on_profile: true,
+      optional_relationship_goal_message: '',
+      prefix: 'Relationship goals',
+    });
+    expect(data).toMatchObject({
+      about: '',
+      can_send_reply: false,
+      hide_first_name: false,
+      incognito_mode_active: false,
+      message: '',
+      percentage_profile_complete: 0,
+      profile_subtext: '',
+      reply_id: 0,
+      reply_message: '',
+      show_incognito_mode: false,
+    });
+    expect(Object.keys(data)).toHaveLength(25 + 3); // flags + general_information, photos, relationship_goal
     expect(gi.personal_email).toBe('qa-m2-x@example.test');
     expect((body.data as { photos: unknown[] }).photos).toHaveLength(4);
     for (const p of photos) expect(p).toMatch(/^https:\/\/prodimages\.aisle\.co\/[0-9a-f]+\.png$/);
