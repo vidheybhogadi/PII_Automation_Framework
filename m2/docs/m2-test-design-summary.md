@@ -4,7 +4,7 @@
 
 Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-pii-affected-apis.md](aisle-pii-affected-apis.md) (Dev inventory (saurabh/pii-changes @ ae838f4, 16-Oct-2026)).
 
-**2473 test cases** (111 scenario + 2362 per-API) over **212 inventory entries** (11 groups). PASS 10 · FAIL 2 · BLOCKED 684 · NEED DEV CLARIFICATION 697 · NOT APPLICABLE 0 · NOT RUN 1080. Nothing has been executed as an M2 test case yet.
+**2473 test cases** (111 scenario + 2362 per-API) over **212 inventory entries** (11 groups). PASS 481 · FAIL 17 · BLOCKED 1975 · NEED DEV CLARIFICATION 0 · NOT APPLICABLE 0 · NOT RUN 0. Nothing has been executed as an M2 test case yet.
 
 ## By type and category (same Type values as M1)
 
@@ -41,7 +41,7 @@ Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-p
 | G10 CMS / admin                                          | 52   | 641      | Admin profile views, edits, search, curation, reviews, member activity, exports and the ActiveAdmin IRL page. Admin auth + permission checks; correct name/email/phone per profile.    |
 | M1 PII facade proxy (covered by Milestone 1)             | 12   | M1 suite | The /V1/api/v1/pii-test/* proxy routes (incl. readiness and free-text keys). Already covered by the 109 Milestone 1 cases; not duplicated in M2.                                       |
 
-## Runnable now (1092 cases, no new access needed)
+## Runnable now (498 cases, no new access needed)
 
 - `M2-PIIR-001` Write a first name with the test route, then read it back
 - `M2-PIIR-002` Writing a new first name replaces the old one
@@ -49,29 +49,10 @@ Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-p
 - `M2-PIIR-004` Missing required parameters are refused with a clear message
 - `M2-PIIR-007` Batch first-name read returns the right name for each user
 - `M2-PIIR-009` Profile first names by profile ref (real synthetic profiles)
-- `M2-FNAME-002` Onboarding does not overwrite an existing first name
-- `M2-FNAME-003` Web onboarding saves first name the same way as app onboarding
-- `M2-FNAME-005` Editing the first name on web gives the same result as the app
-- `M2-FNAME-006` Repeated and identical name edits stay consistent
-- `M2-FNAME-019` Chat lists and messages carry the right sender / counterpart name
-- `M2-EMAIL-002` Onboarding does not overwrite an existing email
-- `M2-EMAIL-003` Profile edit ignores personal_email
-- `M2-XFLD-005` One user’s changes never affect another user
-- `M2-SEC-006` Error responses do not echo submitted PII or internal details
-- `M2-INT-005` Web and app aliases return the same PII for the same user
-- `M2-FT-003` Updating the bio replaces the old one everywhere (and repeated identical saves)
-- `M2-FT-004` Many messages in one conversation: order, pagination and the created_at cursor still work
-- `M2-FT-007` A third user cannot read or post into another pair’s conversation
-- POS (Valid request succeeds with correct PII): 111 APIs
-- CONTRACT (Response contract unchanged): 115 APIs
+- POS (Valid request succeeds with correct PII): 47 APIs
 - AUTH (Missing / invalid credential refused): 192 APIs
 - TOKEN (Wrong credential type refused): 190 APIs
-- PARAM (Missing / invalid parameters): 91 APIs
-- BODY (Malformed body / wrong data types): 67 APIs
-- IDOR (Cannot act on / read another user): 109 APIs
-- EXPOSE (No unintended PII exposure): 53 APIs
-- STATE (Wrong account / record state): 66 APIs
-- REPEAT (Repeated / double request): 78 APIs
+- IDOR (Cannot act on / read another user): 62 APIs
 - DB-ISOL (DB: other fields and users untouched): 1 APIs
 
 ## Per-API checks
