@@ -152,9 +152,9 @@ Blocked only if staging still denies access (403) or the setting is missing — 
 | `DB_READONLY_PASSWORD` | Secret | `.github/workflows/m1-pii-api-tests.yml:129` |
 | `DB_SSL` | Variable | `.github/workflows/m1-pii-api-tests.yml:131` |
 | `DB_QUERIES_JSON` | Secret | `.github/workflows/m1-pii-api-tests.yml:143` |
-| `SMTP_HOST` | Variable | `.github/workflows/m1-pii-api-tests.yml:183` |
-| `SMTP_PORT` | Variable | `.github/workflows/m1-pii-api-tests.yml:184` |
-| `SMTP_USER` | Secret | `.github/workflows/m1-pii-api-tests.yml:185` |
-| `SMTP_PASSWORD` | Secret | `.github/workflows/m1-pii-api-tests.yml:186` |
-| `REPORT_MAIL_FROM` | Variable | `.github/workflows/m1-pii-api-tests.yml:187` |
-| `REPORT_MAIL_TO` | Variable | `.github/workflows/m1-pii-api-tests.yml:188` |
+| `SMTP_HOST` | Variable | `.github/workflows/m1-pii-api-tests.yml:186` |
+| `SMTP_PORT` | Variable | `.github/workflows/m1-pii-api-tests.yml:187` |
+| `SMTP_USER` | Secret | `.github/workflows/m1-pii-api-tests.yml:188` |
+| `SMTP_PASSWORD` | Secret | `.github/workflows/m1-pii-api-tests.yml:189` |
+| `REPORT_MAIL_FROM` | Variable | `.github/workflows/m1-pii-api-tests.yml:190` |
+| `REPORT_MAIL_TO` | Variable | `.github/workflows/m1-pii-api-tests.yml:191` |

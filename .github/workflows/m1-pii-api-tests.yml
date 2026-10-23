@@ -145,7 +145,10 @@ jobs:
       # Before check-env so the failure email can still be built if configuration is wrong.
       - run: npx playwright install --with-deps chromium
       - name: Validate configuration
-        run: npm run check-env
+        # The runner's public IP is printed so a Cloudflare / firewall block on staging can be traced and allowlisted.
+        run: |
+          echo "Runner public IP: $(curl -s --max-time 5 https://api.ipify.org || echo unknown)"
+          npm run check-env
       - name: Restore run history (trends, comparisons, flaky detection)
         uses: actions/cache/restore@v4
         with:
