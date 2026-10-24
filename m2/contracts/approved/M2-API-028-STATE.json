@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-028-STATE",
-  "recordedAt": "2026-10-24T06:18:23.865Z",
-  "runId": "qa-m2-20261024t061633-6671",
+  "recordedAt": "2026-10-24T12:55:24.194Z",
+  "runId": "qa-m2-20261024t124732-dd5f",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -11,7 +11,12 @@
       "shape": {
         "user": {
           "about": "string",
-          "audio_prompt": "null",
+          "audio_prompt": {
+            "audio_url": "string",
+            "audio_url_id": "number",
+            "question": "string",
+            "question_id": "number"
+          },
           "delete_reasons": [
             {
               "id": "number",
@@ -74,7 +79,12 @@
               "name": "string",
               "preference_only": "boolean"
             },
-            "mbti": "null",
+            "mbti": {
+              "id": "number",
+              "mbti_type": "string",
+              "name": "string",
+              "preference_only": "boolean"
+            },
             "mobile_number": "string",
             "mother_tongue": {
               "id": "number",
@@ -119,10 +129,18 @@
           "is_sms_unsubscribed": "boolean",
           "last_seen": "string",
           "own_meetup": "null",
-          "partial_work": "null",
+          "partial_work": {
+            "college": "string",
+            "education": "string",
+            "graduation_year": "string",
+            "industry": "string",
+            "work": "string",
+            "work_title": "string"
+          },
           "percentage_profile_complete": "number",
           "photos": [
             {
+              "archive_reason": "string",
               "feedback_prompt": "null",
               "feedback_prompt_v2": "null",
               "feedback_prompt_v3": "null",
@@ -134,7 +152,17 @@
               "status": "string"
             }
           ],
-          "preferences": [],
+          "preferences": [
+            {
+              "answer_id": "number",
+              "id": "number",
+              "preference_question": {
+                "first_choice": "string",
+                "second_choice": "string"
+              },
+              "value": "number"
+            }
+          ],
           "profile_complete_without_selfie": "number",
           "profile_sharing_enabled": "boolean",
           "profile_sharing_popup_text": {
@@ -300,11 +328,30 @@
             "about": "string",
             "story_id": "number"
           },
-          "user_interests": [],
+          "user_interests": [
+            {
+              "id": "number",
+              "interest_id": "number",
+              "name": "string",
+              "value": "number"
+            }
+          ],
           "user_interests_v2": [],
-          "user_traits": [],
+          "user_traits": [
+            {
+              "id": "number",
+              "name": "string",
+              "order": "number",
+              "trait_id": "number"
+            }
+          ],
           "work": "null",
-          "work_v1": "null"
+          "work_v1": {
+            "college": "string",
+            "graduation_year": "string",
+            "industry": "string",
+            "work_title": "string"
+          }
         }
       },
       "piiKeys": [
@@ -320,7 +367,12 @@
       "shape": {
         "user": {
           "about": "string",
-          "audio_prompt": "null",
+          "audio_prompt": {
+            "audio_url": "string",
+            "audio_url_id": "number",
+            "question": "string",
+            "question_id": "number"
+          },
           "delete_reasons": [
             {
               "id": "number",
@@ -383,7 +435,12 @@
               "name": "string",
               "preference_only": "boolean"
             },
-            "mbti": "null",
+            "mbti": {
+              "id": "number",
+              "mbti_type": "string",
+              "name": "string",
+              "preference_only": "boolean"
+            },
             "mobile_number": "string",
             "mother_tongue": {
               "id": "number",
@@ -428,10 +485,18 @@
           "is_sms_unsubscribed": "boolean",
           "last_seen": "string",
           "own_meetup": "null",
-          "partial_work": "null",
+          "partial_work": {
+            "college": "string",
+            "education": "string",
+            "graduation_year": "string",
+            "industry": "string",
+            "work": "string",
+            "work_title": "string"
+          },
           "percentage_profile_complete": "number",
           "photos": [
             {
+              "archive_reason": "string",
               "feedback_prompt": "null",
               "feedback_prompt_v2": "null",
               "feedback_prompt_v3": "null",
@@ -443,7 +508,17 @@
               "status": "string"
             }
           ],
-          "preferences": [],
+          "preferences": [
+            {
+              "answer_id": "number",
+              "id": "number",
+              "preference_question": {
+                "first_choice": "string",
+                "second_choice": "string"
+              },
+              "value": "number"
+            }
+          ],
           "profile_complete_without_selfie": "number",
           "profile_sharing_enabled": "boolean",
           "profile_sharing_popup_text": {
@@ -609,11 +684,30 @@
             "about": "string",
             "story_id": "number"
           },
-          "user_interests": [],
+          "user_interests": [
+            {
+              "id": "number",
+              "interest_id": "number",
+              "name": "string",
+              "value": "number"
+            }
+          ],
           "user_interests_v2": [],
-          "user_traits": [],
+          "user_traits": [
+            {
+              "id": "number",
+              "name": "string",
+              "order": "number",
+              "trait_id": "number"
+            }
+          ],
           "work": "null",
-          "work_v1": "null"
+          "work_v1": {
+            "college": "string",
+            "graduation_year": "string",
+            "industry": "string",
+            "work_title": "string"
+          }
         }
       },
       "piiKeys": [
@@ -629,7 +723,12 @@
       "shape": {
         "user": {
           "about": "string",
-          "audio_prompt": "null",
+          "audio_prompt": {
+            "audio_url": "string",
+            "audio_url_id": "number",
+            "question": "string",
+            "question_id": "number"
+          },
           "delete_reasons": [
             {
               "id": "number",
@@ -692,7 +791,12 @@
               "name": "string",
               "preference_only": "boolean"
             },
-            "mbti": "null",
+            "mbti": {
+              "id": "number",
+              "mbti_type": "string",
+              "name": "string",
+              "preference_only": "boolean"
+            },
             "mobile_number": "string",
             "mother_tongue": {
               "id": "number",
@@ -737,10 +841,18 @@
           "is_sms_unsubscribed": "boolean",
           "last_seen": "string",
           "own_meetup": "null",
-          "partial_work": "null",
+          "partial_work": {
+            "college": "string",
+            "education": "string",
+            "graduation_year": "string",
+            "industry": "string",
+            "work": "string",
+            "work_title": "string"
+          },
           "percentage_profile_complete": "number",
           "photos": [
             {
+              "archive_reason": "string",
               "feedback_prompt": "null",
               "feedback_prompt_v2": "null",
               "feedback_prompt_v3": "null",
@@ -752,7 +864,17 @@
               "status": "string"
             }
           ],
-          "preferences": [],
+          "preferences": [
+            {
+              "answer_id": "number",
+              "id": "number",
+              "preference_question": {
+                "first_choice": "string",
+                "second_choice": "string"
+              },
+              "value": "number"
+            }
+          ],
           "profile_complete_without_selfie": "number",
           "profile_sharing_enabled": "boolean",
           "profile_sharing_popup_text": {
@@ -918,11 +1040,30 @@
             "about": "string",
             "story_id": "number"
           },
-          "user_interests": [],
+          "user_interests": [
+            {
+              "id": "number",
+              "interest_id": "number",
+              "name": "string",
+              "value": "number"
+            }
+          ],
           "user_interests_v2": [],
-          "user_traits": [],
+          "user_traits": [
+            {
+              "id": "number",
+              "name": "string",
+              "order": "number",
+              "trait_id": "number"
+            }
+          ],
           "work": "null",
-          "work_v1": "null"
+          "work_v1": {
+            "college": "string",
+            "graduation_year": "string",
+            "industry": "string",
+            "work_title": "string"
+          }
         }
       },
       "piiKeys": [
@@ -934,7 +1075,21 @@
     }
   },
   "approved": {
-    "by": "QA lead",
+    "by": "Aisle codebase (develop_new 944f76a) — confirm with Dev",
     "on": "2026-10-24"
-  }
+  },
+  "approvals": [
+    {
+      "by": "QA lead",
+      "on": "2026-10-24",
+      "recordedAt": "2026-10-24T06:18:23.865Z",
+      "runId": "qa-m2-20261024t061633-6671"
+    },
+    {
+      "by": "Aisle codebase (develop_new 944f76a) — confirm with Dev",
+      "on": "2026-10-24",
+      "recordedAt": "2026-10-24T12:55:24.194Z",
+      "runId": "qa-m2-20261024t124732-dd5f"
+    }
+  ]
 }

@@ -28,7 +28,7 @@ test.describe('M2 scenarios — security', () => {
       Record<string, unknown>,
     ][] = [];
     for (const apiId of ['API-057', 'API-058']) {
-      const body = devBody(fx, apiId, asUser(fx, p));
+      const body = await devBody(fx, apiId, asUser(fx, p));
       setDeep(body, 'first_name', `${marker}${'x'.repeat(300)}`);
       setDeep(body, 'personal_email', `${marker}@`);
       cases.push([apiId, asUser(fx, p), body]);

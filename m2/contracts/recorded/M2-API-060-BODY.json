@@ -1,0 +1,117 @@
+{
+  "caseId": "M2-API-060-BODY",
+  "recordedAt": "2026-10-24T12:48:41.376Z",
+  "runId": "qa-m2-20261024t124732-dd5f",
+  "build": "unknown — deployed commit not confirmed (M2Q-01)",
+  "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
+  "variants": {
+    "invalid JSON": {
+      "status": 502,
+      "contentType": "application/json",
+      "shape": {
+        "cloudflare_error": "boolean",
+        "detail": "string",
+        "error_category": "string",
+        "error_code": "number",
+        "error_name": "string",
+        "footer": "string",
+        "instance": "string",
+        "owner_action_required": "boolean",
+        "ray_id": "string",
+        "retry_after": "number",
+        "retryable": "boolean",
+        "status": "number",
+        "timestamp": "string",
+        "title": "string",
+        "type": "string",
+        "what_you_should_do": "string",
+        "zone": "string"
+      },
+      "piiKeys": []
+    },
+    "extra keys user_id / tenant_id / first_name": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "active_algorithms": {
+          "concierge": "string",
+          "discover": "string"
+        },
+        "application_stage": "string",
+        "application_stage_v2": [
+          "string"
+        ],
+        "auth_token": "string",
+        "can_import_contact": "boolean",
+        "can_send_competitor_data": "boolean",
+        "display_watch_clip": "boolean",
+        "enable_instagram_connection": "boolean",
+        "enable_multi_comment": "boolean",
+        "first_name": "null",
+        "gender": "null",
+        "has_concierge_subscription": "boolean",
+        "has_mobile_number": "boolean",
+        "id": "number",
+        "image_upload_api": "string",
+        "is_boost_available": "boolean",
+        "is_onboarding_phase_2": "boolean",
+        "is_spark_enabled": "boolean",
+        "last_android_constant_file_update": "string",
+        "last_ios_constant_file_update": "string",
+        "meta_trigger_event_list": [],
+        "move_image_upload_to_last_page": "boolean",
+        "percentage_profile_complete": "number",
+        "personalised_comment_popup_text": "null",
+        "pre_discover_screen_text": {
+          "button_text": "string",
+          "header_text": "string",
+          "sub_text": [
+            "string"
+          ]
+        },
+        "profile_complete_without_selfie": "number",
+        "profile_state": "null",
+        "pubnub_origin_link": "string",
+        "selfie_compression_size": "number",
+        "send_integrity_token": "boolean",
+        "show_complete_profile_popup": "null",
+        "show_concierge_icon": "boolean",
+        "show_discounted_pricing": "boolean",
+        "show_personalised_comment_popup": "boolean",
+        "show_update_app": "boolean",
+        "status_v1": "boolean",
+        "store_kit_2_enabled": "boolean",
+        "success_stories": [
+          {
+            "date_text": "string",
+            "photos": [
+              "string"
+            ],
+            "top_message": "string"
+          }
+        ],
+        "use_firebase_face_recognition": "boolean",
+        "use_liveliness_check": "boolean",
+        "use_presigned_url": "boolean",
+        "verification_status": "string",
+        "video_information_urls": {
+          "aisle_concierge": "string",
+          "five_points_someone": "string",
+          "safety_tips": "string",
+          "selfie_verification": "string"
+        },
+        "your_story_form_url": "string",
+        "zendesk_url": "string"
+      },
+      "piiKeys": [
+        "first_name"
+      ]
+    }
+  },
+  "invariantFailures": [
+    "invalid JSON"
+  ],
+  "notSent": {
+    "phone_code_id with the wrong type": "unsafe: would log in / write with a number that is not a synthetic test number (M2Q-46)"
+  }
+}

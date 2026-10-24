@@ -1,0 +1,36 @@
+{
+  "caseId": "M2-API-134-STATE",
+  "recordedAt": "2026-10-24T12:56:08.253Z",
+  "runId": "qa-m2-20261024t124732-dd5f",
+  "build": "unknown — deployed commit not confirmed (M2Q-01)",
+  "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
+  "variants": {
+    "valid request": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "refresh_profile_list": "boolean",
+        "status": "boolean"
+      },
+      "piiKeys": []
+    },
+    "action already done (sent again)": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "refresh_profile_list": "boolean",
+        "status": "boolean"
+      },
+      "piiKeys": []
+    },
+    "wrong target (unknown ids)": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "refresh_profile_list": "boolean",
+        "status": "boolean"
+      },
+      "piiKeys": []
+    }
+  }
+}

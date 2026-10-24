@@ -7,30 +7,37 @@
 import { expect } from '@playwright/test';
 import type { ApiResponse } from '../../../core/http/api-response';
 import type { AnyCase } from '../../scripts/m2-all-cases';
-import { PII_INPUT } from '../../scripts/m2-baseline';
+import { PII_INPUT, returnsOthers } from '../../scripts/m2-baseline';
 import { groupOf } from '../../scripts/m2-inventory';
-import type { Profile } from '../accounts/accounts';
-import { isSuccess, PII_KEYS, scanResponse } from '../assertions/pii.assertions';
+import { onboardingValues, type Profile } from '../accounts/accounts';
+import { isSuccess, PII_KEYS, scanResponse, unlistedPii } from '../assertions/pii.assertions';
 import { AUTH } from '../auth/credentials';
 import { testPhoneNumber } from '../auth/test-phone';
 import { normalizeFirstName } from '../../scripts/m2-code-evidence';
 import type { UserSession } from '../auth/session';
 import type { PiiDb } from '../db/pii-db';
 import { snapshotSummary } from '../db/pii-db';
-import { noteEvidence } from '../fixtures/m2-fixtures';
+import { notApplicable, noteEvidence } from '../fixtures/m2-fixtures';
 import { blockPrereq, PREREQ } from '../prereq';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import path from 'node:path';
+import { requireBaseline, withBaseline, type Variant } from '../baseline/baseline';
+import { apiById } from '../design';
 import {
-  observe as observeShape,
-  requireBaseline,
-  shapeDiff,
-  withBaseline,
-  type Variant,
-} from '../baseline/baseline';
-import { apiById, ROOT } from '../design';
-import { callerFor, send, syntheticFor, valuesFor, type Caller, type CheckFixtures } from './context';
+  callerFor,
+  DESTRUCTIVE,
+  FRESH_PER_VARIANT,
+  KEPT_BLOCKED,
+  SUBMIT_PROFILE,
+  send,
+  syntheticFor,
+  valuesFor,
+  type Caller,
+  type CheckFixtures,
+} from './context';
+import { requireTestToken } from '../config/m2-config';
+import type { Synthetic } from './request-builder';
 import { buildRequest } from './request-builder';
+import { variantSafety, wrongTypeValue } from './safety';
+import { suiteStateFor } from '../../scripts/m2-code-evidence';
 import { DB_FIELD, expectUnchanged, piiUserIdFor } from './db';
 
 export const apiOf = (c: AnyCase) => apiById(c.apis[0]!);
@@ -219,6 +226,18 @@ async function unchangedAround(fx: CheckFixtures, caller: Caller, run: () => Pro
 /** Synthetic marker values a request carries (to detect echo). */
 const MARKERS = (fx: CheckFixtures) => [`FT_${fx.m2Config.runId}`, fx.m2Config.runId];
 
+/**
+ * The caller of one variant: the case's caller, or — for routes that consume their throwaway account (delete /
+ * reset) — the API's throwaway again, which is a newly onboarded one once the previous variant consumed it.
+ */
+async function variantCaller(
+  api: ReturnType<typeof apiOf>,
+  fx: CheckFixtures,
+  caller: Caller,
+): Promise<Caller> {
+  return FRESH_PER_VARIANT.includes(api.id) ? callerFor(api, fx) : caller;
+}
+
 /** Top-level-or-nested request keys of the Dev example, without duplicates. */
 const keysOf = (c: AnyCase) => [...new Set(apiOf(c).requestKeys)];
 
@@ -242,13 +261,17 @@ export async function runParam(c: AnyCase, fx: CheckFixtures): Promise<void> {
   const request = buildRequest(api, caller.values, syntheticFor(fx, caller.session));
   const variants: Variant[] = keysOf(c).map((key) => ({
     label: `without ${key}`,
+    // Safety (M2Q-46): a target / phone / login-OTP key is never removed — the variant is Blocked, not sent.
+    ...(variantSafety(api, 'without', key) ? { notSent: variantSafety(api, 'without', key)! } : {}),
     send: async () => {
-      const body = request.body === undefined ? undefined : structuredClone(request.body);
+      const who = await variantCaller(api, fx, caller);
+      const req = who === caller ? request : buildRequest(api, who.values, syntheticFor(fx, who.session));
+      const body = req.body === undefined ? undefined : structuredClone(req.body);
       if (body !== undefined) deleteKey(body, key);
-      const query = request.query
-        ? Object.fromEntries(Object.entries(request.query).filter(([k]) => k !== key))
+      const query = req.query
+        ? Object.fromEntries(Object.entries(req.query).filter(([k]) => k !== key))
         : undefined;
-      return send(api, fx, caller, {
+      return send(api, fx, who, {
         ...(body !== undefined ? { body } : {}),
         ...(query ? { query } : {}),
         retry: false,
@@ -278,36 +301,57 @@ export async function runBody(c: AnyCase, fx: CheckFixtures): Promise<void> {
   const request = buildRequest(api, caller.values, syntheticFor(fx, caller.session));
   const base = (request.body ?? {}) as Record<string, unknown>;
   const marker = `QaBody${fx.data.firstName()}`;
+  /** The variant's caller and its Dev body (rebuilt for a fresh throwaway account). */
+  const target = async () => {
+    const who = await variantCaller(api, fx, caller);
+    const body =
+      who === caller
+        ? base
+        : ((buildRequest(api, who.values, syntheticFor(fx, who.session)).body ?? {}) as Record<
+            string,
+            unknown
+          >);
+    return { who, body };
+  };
   const variants: Variant[] = [
     {
       label: 'invalid JSON',
-      send: () => send(api, fx, caller, { rawBody: Buffer.from('{"broken": ', 'utf8'), retry: false }),
+      send: async () =>
+        send(api, fx, (await target()).who, {
+          rawBody: Buffer.from('{"broken": ', 'utf8'),
+          retry: false,
+        }),
     },
     {
       label: 'extra keys user_id / tenant_id / first_name',
-      send: () =>
-        send(api, fx, caller, {
+      send: async () => {
+        const t = await target();
+        return send(api, fx, t.who, {
           body: {
-            ...base,
+            ...t.body,
             user_id: `${fx.m2Config.runId}-other`,
             tenant_id: 'qa-other-tenant',
             first_name: marker,
           },
           retry: false,
-        }),
+        });
+      },
     },
   ];
   for (const key of Object.keys(base)) {
-    const v = base[key];
-    const swapped =
-      typeof v === 'string'
-        ? 12345
-        : typeof v === 'number' || typeof v === 'boolean'
-          ? 'qa-not-a-number'
-          : null;
+    // Safety (2026-10-24): an id never becomes another record's id; a false flag never becomes truthy; a phone or
+    // OTP never becomes a number; a target key other than ref is never swapped (safety.ts, M2Q-46).
+    const unsafe = variantSafety(api, 'wrong type', key);
     variants.push({
       label: `${key} with the wrong type`,
-      send: () => send(api, fx, caller, { body: { ...base, [key]: swapped }, retry: false }),
+      ...(unsafe ? { notSent: unsafe } : {}),
+      send: async () => {
+        const t = await target();
+        return send(api, fx, t.who, {
+          body: { ...t.body, [key]: wrongTypeValue(key, t.body[key]) },
+          retry: false,
+        });
+      },
     });
   }
   await unchangedAround(
@@ -347,6 +391,7 @@ export async function runState(c: AnyCase, fx: CheckFixtures): Promise<void> {
   noteEvidence('Deactivated / pending / banned account states need special accounts (M2Q-32) — not sent.');
   const others = fx.accounts.numbersExcept(caller.session);
   await withBaseline(c.id, ctxOf(fx), variants, (l, r) => {
+    noServerError(l, r);
     if (isSuccess(r.status)) return;
     const leaks = scanResponse(r, { known: others }).filter((f) => f.kind === 'known test value');
     expect(leaks, `${l}: no PII in the error (locations only)`).toEqual([]);
@@ -369,12 +414,14 @@ export async function runRepeat(c: AnyCase, fx: CheckFixtures): Promise<void> {
     },
     { label: 'same request again', send: () => send(api, fx, caller, { retry: false }) },
   ];
-  await withBaseline(c.id, ctxOf(fx), variants);
+  // A repeated request is still a valid request: a server error is never recorded or accepted as the contract.
+  await withBaseline(c.id, ctxOf(fx), variants, noServerError);
   const parallel = await Promise.all([
     send(api, fx, caller, { retry: false }),
     send(api, fx, caller, { retry: false }),
   ]);
   parallel.forEach((r, i) => fx.observe(`${api.id} parallel #${i + 1}`, r));
+  parallel.forEach((r, i) => noServerError(`parallel #${i + 1}`, r));
   if (caller.session)
     expect(
       (await selfView(fx, caller.session)) === afterFirst,
@@ -391,24 +438,14 @@ function deleteKey(body: unknown, key: string): void {
   }
 }
 
-// ---- UNMIG — unmigrated profile with the read gate on --------------------------------------------------------
-export async function runUnmig(c: AnyCase, fx: CheckFixtures): Promise<void> {
-  const api = apiOf(c);
-  if (fx.m2Config.windows.gate !== 'on')
-    blockPrereq(PREREQ.gateWindow.id, `${PREREQ.gateWindow.reason} — this case needs the gates ON`);
-  const unmigrated = await fx.accounts.special('UNMIGRATED');
-  const caller = await callerFor(api, fx);
-  const res = await send(api, fx, caller, {
-    values: {
-      OTHER_REF: unmigrated.ref,
-      OTHER_USER_ID: unmigrated.userId,
-      ...(caller.session ? {} : { REF: unmigrated.ref }),
-    },
-  });
-  fx.observe(`${api.id} involving the unmigrated profile`, res);
-  noServerError(api.id, res);
-  expectNoForeignPii(res, fx, caller.session, api.id);
-  noteEvidence(`PII keys in the reply: ${piiKeysIn(res).join(', ') || 'none'} (field value rule: M2Q-05).`);
+// ---- UNMIG — unmigrated profile with the read gate on ---------------------------------------------------------
+/**
+ * NOT APPLICABLE on staging: every staging profile is migrated and new QA accounts write to PII at creation
+ * (M2Q-05, QA lead 2026-10-24). The design marks every UNMIG case NOT APPLICABLE, so blockIfOpen skips it before
+ * this runs; the runner only repeats that reason if a case ever reaches it.
+ */
+export async function runUnmig(c: AnyCase): Promise<void> {
+  notApplicable(c.na?.question ?? 'M2Q-05', c.na?.reason ?? 'Unmigrated profiles cannot occur on staging');
 }
 
 // ---- HIDDEN — hidden first name respected -------------------------------------------------------------------
@@ -595,32 +632,307 @@ function setKey(body: unknown, key: string, value: unknown): void {
   }
 }
 
-// ---- GATE — read gate off vs on (Dev-assisted) ------------------------------------------------------------
-/** Value-free record of one gate phase: reports/m2/gate/<case>.<off|on>.json. */
-const gateFile = (caseId: string, phase: string) =>
-  path.join(ROOT, 'reports/m2/gate', `${caseId}.${phase}.json`);
+// ---- GATE — read gate OFF: same value read back (gate-ON half waits for Dev, M2Q-43) ------------------------
+/**
+ * Read gates are OFF on testa2 (M2Q-02, QA lead 2026-10-24): writes go to the PII service, reads come from the app
+ * database. Each GATE case uses one dedicated suite account (index GATE_ACCOUNT, untouched by the other checks),
+ * writes a new fake value where the route writes (otherwise uses the account's current values), and checks:
+ *   no 5xx · the value read back equals the value written / onboarded · no other test account's data · no
+ *   personal-data field the Dev inventory does not list for the API (unlistedPii, paths only).
+ * The gate-ON half ("gate on → PII value") is recorded as waiting (M2Q-43) by blockIfOpen.
+ */
+export const GATE_ACCOUNT = 3;
+/** Routes that flip a setting of the caller's own profile — sent twice so the account is left as it was. */
+const TOGGLES = ['API-032', 'API-033', 'API-034', 'API-035'];
+
+interface OwnValues {
+  firstName: unknown;
+  email: unknown;
+  phone: unknown;
+}
+
+/** The account's own first name (fetch_own_info) and email / phone (own GET /V1/users/:ref). */
+async function ownValues(fx: CheckFixtures, p: Profile): Promise<OwnValues> {
+  const caller = { auth: AUTH.user(p.token), device: p.device };
+  const own = await fx.m2.call('API-013', caller);
+  fx.observe('API-013 own profile', own);
+  expect(own.status, `own profile: ${own.summary()}`).toBe(200);
+  const byRef = await send(
+    apiById('API-021'),
+    fx,
+    { label: 'owner', ...caller, session: p, values: valuesFor(fx.m2Config, p) },
+    {
+      values: { REF: p.ref },
+    },
+  );
+  fx.observe('API-021 own profile by ref', byRef);
+  expect(byRef.status, `own profile by ref: ${byRef.summary()}`).toBe(200);
+  const body = byRef.json();
+  return {
+    firstName: deepValue(own.json(), 'first_name'),
+    email: deepValue(body, 'email') ?? deepValue(body, 'personal_email'),
+    phone: deepValue(body, 'phone_number') ?? deepValue(body, 'mobile_number'),
+  };
+}
+
+function deepValue(body: unknown, key: string): unknown {
+  if (Array.isArray(body)) {
+    for (const b of body) {
+      const v = deepValue(b, key);
+      if (v !== undefined) return v;
+    }
+  } else if (body && typeof body === 'object') {
+    const o = body as Record<string, unknown>;
+    if (key in o) return o[key];
+    for (const v of Object.values(o)) {
+      const found = deepValue(v, key);
+      if (found !== undefined) return found;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * First value under `key` OUTSIDE any list (the caller's own object). Lists of other members (matches, likes, …)
+ * are compared only through the account's own entries (ownItems) — M2-API-045-GATE fix, 2026-10-24.
+ */
+function valueOutsideLists(body: unknown, key: string): unknown {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return undefined;
+  const o = body as Record<string, unknown>;
+  if (key in o) return o[key];
+  for (const v of Object.values(o)) {
+    const found = valueOutsideLists(v, key);
+    if (found !== undefined) return found;
+  }
+  return undefined;
+}
+
+/** Value checks of a GATE reply: the caller's own object, and its own entries inside lists (value-free messages). */
+function expectReplyValues(
+  api: ReturnType<typeof apiOf>,
+  res: ApiResponse,
+  p: Profile,
+  want: { firstName: unknown; email?: unknown },
+): void {
+  const body = res.json();
+  if (returnsOthers(api) && api.id !== 'API-021') {
+    // Replies about other members: compare only entries of a suite account whose values are known.
+    const mine = ownItems(body, p);
+    for (const item of mine.filter((i) => typeof i.first_name === 'string'))
+      expect(item.first_name === want.firstName, `${api.id}: the account’s own entry shows its name`).toBe(
+        true,
+      );
+    if (!mine.length)
+      noteEvidence(
+        `${api.id}: value part not checkable — no suite account appears in this reply (needs connected / discoverable accounts, M2Q-32); generic checks and the own-profile read-back ran.`,
+      );
+    return;
+  }
+  const shown = valueOutsideLists(body, 'first_name');
+  if (typeof shown === 'string')
+    expect(shown === want.firstName, `${api.id}: the reply shows the account’s name`).toBe(true);
+  const email = valueOutsideLists(body, 'email') ?? valueOutsideLists(body, 'personal_email');
+  if (typeof email === 'string' && want.email !== undefined)
+    expect(email === want.email, `${api.id}: the reply shows the account’s email`).toBe(true);
+  for (const item of ownItems(body, p).filter((i) => typeof i.first_name === 'string'))
+    expect(item.first_name === want.firstName, `${api.id}: the account’s own list entry shows its name`).toBe(
+      true,
+    );
+}
+
+/** Every string under a key containing "first_name" (incl. maps such as first_names: {id: name}). */
+function firstNamesIn(body: unknown, under = false, out: string[] = []): string[] {
+  if (typeof body === 'string' && under) out.push(body);
+  else if (Array.isArray(body)) body.forEach((b) => firstNamesIn(b, under, out));
+  else if (body && typeof body === 'object')
+    for (const [k, v] of Object.entries(body as Record<string, unknown>))
+      firstNamesIn(v, under || k.toLowerCase().includes('first_name'), out);
+  return out;
+}
+
+/** Items of a reply that belong to the account (by ref or user id). */
+function ownItems(body: unknown, p: Profile, out: Record<string, unknown>[] = []): Record<string, unknown>[] {
+  if (Array.isArray(body)) body.forEach((b) => ownItems(b, p, out));
+  else if (body && typeof body === 'object') {
+    const o = body as Record<string, unknown>;
+    if ((p.ref && String(o.ref) === p.ref) || (p.userId && String(o.user_id) === p.userId)) out.push(o);
+    Object.values(o).forEach((v) => ownItems(v, p, out));
+  }
+  return out;
+}
+
+/** PII service first name of a user (G1 read route, TEST_TOKEN). */
+async function piiName(fx: CheckFixtures, userId: string): Promise<unknown> {
+  const res = await fx.m2.call('API-001', {
+    auth: AUTH.testToken(requireTestToken(fx.m2Config)),
+    query: { user_id: userId },
+  });
+  fx.observe('API-001 PII first name', res);
+  expect(res.status, `PII first-name read: ${res.summary()}`).toBe(200);
+  return (res.json() as { first_name?: unknown } | undefined)?.first_name ?? null;
+}
+
+/** The value checks shared by every GATE case (value-free messages). */
+async function expectOwnValues(
+  fx: CheckFixtures,
+  p: Profile,
+  want: { firstName: unknown; email?: unknown },
+  label: string,
+): Promise<void> {
+  const now = await ownValues(fx, p);
+  expect(now.firstName === want.firstName, `${label}: own profile returns the expected first name`).toBe(
+    true,
+  );
+  if (want.email !== undefined)
+    expect(now.email === want.email, `${label}: own profile returns the expected email`).toBe(true);
+  expect(
+    phoneForms(p.mobileNumber).includes(String(now.phone)),
+    `${label}: own profile shows the login number (accepted forms)`,
+  ).toBe(true);
+}
+
+function expectReplyHygiene(api: ReturnType<typeof apiOf>, fx: CheckFixtures, res: ApiResponse, p: Profile) {
+  noServerError(api.id, res);
+  expectNoForeignPii(res, fx, p, api.id);
+  if (res.isJson)
+    expect(
+      unlistedPii(res.json(), api.fields),
+      `${api.id}: no personal-data field the Dev inventory does not list for this API (paths only)`,
+    ).toEqual([]);
+}
 
 export async function runGate(c: AnyCase, fx: CheckFixtures): Promise<void> {
-  const phase = fx.m2Config.windows.gate;
-  if (!phase) blockPrereq(PREREQ.gateWindow.id, PREREQ.gateWindow.reason);
   const api = apiOf(c);
-  const caller = await callerFor(api, fx);
-  const res = await send(api, fx, caller);
-  fx.observe(`${api.id} gate ${phase}`, res);
-  noServerError(api.id, res);
-  expectNoForeignPii(res, fx, caller.session, api.id);
-  const obs = observeShape(res);
-  mkdirSync(path.dirname(gateFile(c.id, phase)), { recursive: true });
-  writeFileSync(gateFile(c.id, phase), JSON.stringify(obs, null, 2));
-  const other = phase === 'on' ? 'off' : 'on';
-  if (existsSync(gateFile(c.id, other))) {
-    const prev = JSON.parse(readFileSync(gateFile(c.id, other), 'utf8')) as ReturnType<typeof observeShape>;
-    expect(res.status, 'same status with the gate off and on').toBe(prev.status);
-    expect(shapeDiff(prev.shape, obs.shape), 'otherwise identical response (keys and types)').toEqual([]);
-    noteEvidence(
-      'Gate off → local value, gate on → PII value: values compared in the Dev window review (M2Q-02).',
+  const group = groupOf(api.id).key;
+
+  // Write routes that create the account: login (PHONE) and onboarding submit_profile (NAME + EMAIL).
+  if (api.id === 'API-060' || api.id === 'API-057') {
+    const domain = (process.env.AISLE_TEST_EMAIL_DOMAIN || 'example.test').toLowerCase();
+    const want = {
+      firstName: fx.data.firstName(),
+      email: `${fx.data.userId('gate').replace(/[^a-z0-9-]/g, '')}@${domain}`,
+    };
+    const p = await fx.accounts.onboardFresh(want);
+    await expectOwnValues(fx, p, want, `${api.id} (new account)`);
+    expect((await piiName(fx, p.userId!)) === want.firstName, 'PII first name = the onboarding name').toBe(
+      true,
     );
-  } else noteEvidence(`Gate ${phase} recorded; run again in the ${other} window to compare.`);
+    return;
+  }
+
+  // Routes this case cannot call with a user / test token block exactly like their other checks.
+  if (!api.auth.includes('USER_TOKEN') && !api.auth.includes('TEST_TOKEN') && api.id !== 'API-062')
+    await callerFor(api, fx);
+  if (KEPT_BLOCKED.includes(api.id)) await callerFor(api, fx);
+  const state = suiteStateFor(api.id);
+  if (state === 'image_inappropriate') await callerFor(api, fx);
+  // Destructive, deactivated-state and profile-submit routes run on their throwaway account, never the gate account.
+  if (DESTRUCTIVE.includes(api.id) || state === 'deactivated' || SUBMIT_PROFILE.includes(api.id))
+    return runGateThrowaway(api, fx);
+
+  const pooled = await fx.accounts.onboarded(GATE_ACCOUNT);
+  const p = state === 'approved' ? await fx.accounts.waitApproved(pooled, 'gate account') : pooled;
+  const before = await ownValues(fx, p);
+  // Anchor (gate off, M2Q-02): writes go to both stores, so the app's own name equals the PII name.
+  expect(before.firstName === (await piiName(fx, p.userId!)), 'own first name = PII first name').toBe(true);
+  if (fx.accounts.isOwnOnboarded(GATE_ACCOUNT))
+    expect(
+      before.email === onboardingValues(fx.m2Config.runId, GATE_ACCOUNT).email,
+      'own email = the fake onboarding email',
+    ).toBe(true);
+  const want: { firstName: unknown; email: unknown } = { firstName: before.firstName, email: before.email };
+
+  if (group === 'G1') {
+    const auth = AUTH.testToken(requireTestToken(fx.m2Config));
+    const values = { ...valuesFor(fx.m2Config, p, p), USER_ID: p.userId, REF: p.ref };
+    const caller: Caller = { label: 'TEST_TOKEN', auth, session: p, values };
+    let res: ApiResponse;
+    if (api.id === 'API-002') {
+      want.firstName = fx.data.firstName();
+      res = await send(api, fx, caller, {
+        body: { user_id: p.userId, first_name: want.firstName },
+        retry: false,
+      });
+    } else if (api.id === 'API-208') res = await send(api, fx, caller, { body: { user_id: p.userId } });
+    else res = await send(api, fx, caller);
+    fx.observe(`${api.id} gate off`, res);
+    expect(isSuccess(res.status), `${api.id}: ${res.summary()} — a valid request must succeed`).toBe(true);
+    expectReplyHygiene(api, fx, res, p);
+    const names = firstNamesIn(res.json());
+    expect(names.length > 0, `${api.id}: the reply carries the account’s first name`).toBe(true);
+    expect(
+      names.every((n) => n === want.firstName),
+      `${api.id}: every first name in the reply is the account’s current name`,
+    ).toBe(true);
+    if (api.id === 'API-002')
+      expect((await piiName(fx, p.userId!)) === want.firstName, 'PII first name = the written name').toBe(
+        true,
+      );
+    await expectOwnValues(fx, p, want, `${api.id} afterwards`);
+    return;
+  }
+
+  const caller: Caller = {
+    label: api.id === 'API-062' ? 'no credential (pre-login)' : 'user (gate account)',
+    auth: api.id === 'API-062' ? AUTH.none : AUTH.user(p.token),
+    device: p.device,
+    session: p,
+    values: valuesFor(fx.m2Config, p),
+  };
+  const input = PII_INPUT[api.id] ?? [];
+  const synthetic: Partial<Synthetic> = {};
+  if (input.includes('NAME')) synthetic.firstName = want.firstName = fx.data.firstName();
+  const res = await send(api, fx, caller, { synthetic, retry: input.length === 0 });
+  fx.observe(`${api.id} gate off`, res);
+  try {
+    expectReplyHygiene(api, fx, res, p);
+    if (input.length)
+      expect(isSuccess(res.status), `${api.id}: ${res.summary()} — the write must succeed`).toBe(true);
+    expectReplyValues(api, res, p, want);
+  } finally {
+    if (TOGGLES.includes(api.id)) fx.observe(`${api.id} restore`, await send(api, fx, caller));
+  }
+  await expectOwnValues(fx, p, want, `${api.id} afterwards`);
+  if (input.includes('NAME'))
+    expect((await piiName(fx, p.userId!)) === want.firstName, 'PII first name = the written name').toBe(true);
+}
+
+/**
+ * GATE on a throwaway account (destructive, deactivated-state and profile-submit routes): the route may delete,
+ * reset or deactivate the account, so the values are compared with what the suite onboarded it with (known fake
+ * name / email), in the reply and — when the own profile is still readable afterwards — in the read-back.
+ */
+async function runGateThrowaway(api: ReturnType<typeof apiOf>, fx: CheckFixtures): Promise<void> {
+  const caller = await callerFor(api, fx);
+  const p = caller.session as Profile;
+  const want: { firstName: unknown; email: unknown } = {
+    firstName: p.known?.firstName,
+    email: p.known?.email,
+  };
+  const input = PII_INPUT[api.id] ?? [];
+  const synthetic: Partial<Synthetic> = {};
+  if (input.includes('NAME')) synthetic.firstName = want.firstName = fx.data.firstName();
+  if (input.includes('EMAIL')) want.email = undefined; // a new fake email is written; compared via the read-back
+  const res = await send(api, fx, caller, { synthetic, retry: false });
+  fx.observe(`${api.id} gate off (throwaway account)`, res);
+  expectReplyHygiene(api, fx, res, p);
+  if (input.length)
+    expect(isSuccess(res.status), `${api.id}: ${res.summary()} — the write must succeed`).toBe(true);
+  expectReplyValues(api, res, p, want);
+  const own = await fx.m2.call('API-013', { auth: AUTH.user(p.token), device: p.device });
+  fx.observe('API-013 own profile afterwards', own);
+  if (own.status !== 200) {
+    noteEvidence(
+      `${api.id}: own profile not readable afterwards (HTTP ${own.status}) — the route deleted / reset / deactivated the throwaway account, so the read-back does not apply.`,
+    );
+    return;
+  }
+  expect(
+    deepValue(own.json(), 'first_name') === want.firstName,
+    `${api.id}: own profile afterwards shows the expected first name`,
+  ).toBe(true);
+  if (input.includes('NAME'))
+    expect((await piiName(fx, p.userId!)) === want.firstName, 'PII first name = the written name').toBe(true);
 }
 
 // ---- PIIDOWN — PII service down / slow (Dev-assisted) ------------------------------------------------------

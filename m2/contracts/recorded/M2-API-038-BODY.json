@@ -1,0 +1,774 @@
+{
+  "caseId": "M2-API-038-BODY",
+  "recordedAt": "2026-10-24T12:48:09.483Z",
+  "runId": "qa-m2-20261024t124732-dd5f",
+  "build": "unknown — deployed commit not confirmed (M2Q-01)",
+  "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
+  "variants": {
+    "invalid JSON": {
+      "status": 502,
+      "contentType": "application/json",
+      "shape": {
+        "cloudflare_error": "boolean",
+        "detail": "string",
+        "error_category": "string",
+        "error_code": "number",
+        "error_name": "string",
+        "footer": "string",
+        "instance": "string",
+        "owner_action_required": "boolean",
+        "ray_id": "string",
+        "retry_after": "number",
+        "retryable": "boolean",
+        "status": "number",
+        "timestamp": "string",
+        "title": "string",
+        "type": "string",
+        "what_you_should_do": "string",
+        "zone": "string"
+      },
+      "piiKeys": []
+    },
+    "extra keys user_id / tenant_id / first_name": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "status": "boolean",
+        "user": {
+          "about": "string",
+          "approved_time": "number",
+          "audio_prompt": "null",
+          "delete_reasons": [
+            {
+              "id": "number",
+              "name": "string",
+              "show_reset_button": "boolean"
+            }
+          ],
+          "diet_id": "number",
+          "disapproved_time": "number",
+          "discover_profile_order": [
+            "string"
+          ],
+          "display_new_tag": "boolean",
+          "drinking_v2_id": "number",
+          "faith_id": "number",
+          "general_information": {
+            "age": "number",
+            "can_update_mobile_number": "boolean",
+            "cast": "null",
+            "date_of_birth": "string",
+            "date_of_birth_v1": "string",
+            "diet": {
+              "id": "number",
+              "name": "string",
+              "preference_only": "boolean"
+            },
+            "diet_id": "number",
+            "drinking_id": "number",
+            "drinking_v1": {
+              "id": "number",
+              "name": "string",
+              "name_alias": "string"
+            },
+            "drinking_v2": {
+              "id": "number",
+              "name": "string",
+              "preference_only": "boolean"
+            },
+            "faith": {
+              "id": "number",
+              "name": "string"
+            },
+            "faith_id": "number",
+            "first_name": "string",
+            "gender": "string",
+            "height": "number",
+            "home_town": "null",
+            "kid": "null",
+            "languages": [
+              {
+                "id": "number",
+                "is_mother_tongue": "boolean",
+                "name": "string"
+              }
+            ],
+            "last_name": "string",
+            "location": {
+              "full": "string",
+              "summary": "string"
+            },
+            "marital_status_id": "number",
+            "marital_status_v1": {
+              "id": "number",
+              "name": "string",
+              "preference_only": "boolean"
+            },
+            "mbti": "null",
+            "mobile_number": "string",
+            "mother_tongue": {
+              "id": "number",
+              "name": "string"
+            },
+            "mother_tongue_id": "number",
+            "personal_email": "string",
+            "pet": "null",
+            "phone_code": "string",
+            "politics": "null",
+            "ref_id": "string",
+            "settle": "null",
+            "smoking_id": "number",
+            "smoking_v1": {
+              "id": "number",
+              "name": "string",
+              "name_alias": "string"
+            },
+            "smoking_v2": {
+              "id": "number",
+              "name": "string",
+              "preference_only": "boolean"
+            },
+            "sun_sign_v1": {
+              "id": "number",
+              "name": "string"
+            },
+            "workout": "null"
+          },
+          "has_active_subscription": "boolean",
+          "has_audio_prompt": "boolean",
+          "has_concierge_subscription": "boolean",
+          "has_filled_work_v1": "boolean",
+          "has_partial_work": "boolean",
+          "has_voted": "boolean",
+          "hide_first_name": "boolean",
+          "icebreakers": "null",
+          "incognito_mode_active": "boolean",
+          "incognito_mode_popup_text": {
+            "button_text_1": "string",
+            "description_text": "string",
+            "header_text": "string"
+          },
+          "introduction": "null",
+          "is_email_unsubscribed": "boolean",
+          "is_facebook_data_fetched": "boolean",
+          "is_sms_unsubscribed": "boolean",
+          "last_seen": "string",
+          "last_seen_window": "string",
+          "marital_status_id": "number",
+          "meetup": "null",
+          "mother_tongue_id": "number",
+          "online_code": "number",
+          "own_meetup": "null",
+          "partial_work": "null",
+          "percentage_profile_complete": "number",
+          "photos": [
+            {
+              "feedback_prompt": "null",
+              "feedback_prompt_v2": "null",
+              "feedback_prompt_v3": "null",
+              "photo": "string",
+              "photo_id": "number",
+              "prompt": "null",
+              "prompt_id": "null",
+              "selected": "boolean",
+              "status": "string"
+            }
+          ],
+          "preferences": [
+            {
+              "answer_id": "number",
+              "id": "number",
+              "preference_question": {
+                "first_choice": "string",
+                "second_choice": "string"
+              },
+              "value": "number"
+            }
+          ],
+          "profile_complete_without_selfie": "number",
+          "profile_data_list": [
+            {
+              "answer": "string",
+              "answer_id": "number",
+              "invitation_type": "string",
+              "question": "string",
+              "preferences": [
+                {
+                  "answer": "string",
+                  "answer_id": "number",
+                  "first_choice": "string",
+                  "second_choice": "string"
+                }
+              ]
+            }
+          ],
+          "profile_sharing_enabled": "boolean",
+          "profile_sharing_popup_text": {
+            "button_text_1": "string",
+            "button_text_2": "string",
+            "description_text": "string",
+            "header_text": "string",
+            "learn_more_link": "string",
+            "learn_more_text": "string"
+          },
+          "relationship_goal": {
+            "id": "number",
+            "is_default": "boolean",
+            "is_hidden": "boolean",
+            "name": "string",
+            "optional_relationship_goal_message": "string",
+            "prefix": "string",
+            "show_on_profile": "boolean"
+          },
+          "settings": {
+            "delete_reasons": [
+              {
+                "id": "number",
+                "name": "string",
+                "show_reset_button": "boolean"
+              }
+            ],
+            "distance_limit": "number",
+            "dpp_position": "number",
+            "faq_link": "string",
+            "hide_first_name": "boolean",
+            "interested_in": {
+              "age_from": "number",
+              "age_to": "number",
+              "allow_extended_age_range": "boolean",
+              "diet_list": [
+                {
+                  "id": "number",
+                  "is_open_to_all": "boolean",
+                  "is_selected": "boolean",
+                  "name": "string",
+                  "preference_only": "boolean"
+                }
+              ],
+              "drinking_v1": [
+                {
+                  "id": "number",
+                  "is_open_to_all": "boolean",
+                  "is_selected": "boolean",
+                  "name": "string",
+                  "name_alias": "string",
+                  "preference_only": "boolean"
+                }
+              ],
+              "drinking_v2": [
+                {
+                  "id": "number",
+                  "is_open_to_all": "boolean",
+                  "is_selected": "boolean",
+                  "name": "string",
+                  "preference_only": "boolean"
+                }
+              ],
+              "faiths": [
+                {
+                  "id": "number",
+                  "is_open_to_all": "boolean",
+                  "is_selected": "boolean",
+                  "name": "string"
+                }
+              ],
+              "marital_statuses_v1": [
+                {
+                  "id": "number",
+                  "is_open_to_all": "boolean",
+                  "is_selected": "boolean",
+                  "name": "string",
+                  "preference_only": "boolean"
+                }
+              ],
+              "max_height": "number",
+              "mbti_list": [
+                {
+                  "id": "number",
+                  "is_open_to_all": "boolean",
+                  "is_selected": "boolean",
+                  "mbti_type": "string",
+                  "name": "string",
+                  "preference_only": "boolean"
+                }
+              ],
+              "min_height": "number",
+              "mother_tongues": [
+                {
+                  "id": "number",
+                  "is_open_to_all": "boolean",
+                  "is_selected": "boolean",
+                  "name": "string"
+                }
+              ],
+              "smoking_v1": [
+                {
+                  "id": "number",
+                  "is_open_to_all": "boolean",
+                  "is_selected": "boolean",
+                  "name": "string",
+                  "name_alias": "string",
+                  "preference_only": "boolean"
+                }
+              ],
+              "smoking_v2": [
+                {
+                  "id": "number",
+                  "is_open_to_all": "boolean",
+                  "is_selected": "boolean",
+                  "name": "string",
+                  "preference_only": "boolean"
+                }
+              ],
+              "work_experience_v1": [
+                {
+                  "id": "number",
+                  "is_open_to_all": "boolean",
+                  "is_selected": "boolean",
+                  "name": "string",
+                  "name_alias": "string",
+                  "preference_only": "boolean"
+                }
+              ],
+              "work_industry_v1": [
+                {
+                  "id": "number",
+                  "is_open_to_all": "boolean",
+                  "is_selected": "boolean",
+                  "name": "string",
+                  "preference_only": "boolean"
+                }
+              ],
+              "work_qualification_v1": [
+                {
+                  "id": "number",
+                  "is_open_to_all": "boolean",
+                  "is_selected": "boolean",
+                  "name": "string",
+                  "preference_only": "boolean"
+                }
+              ]
+            },
+            "is_email_unsubscribed": "boolean",
+            "is_profile_public": "boolean",
+            "is_sms_unsubscribed": "boolean",
+            "lock_faith_preference": "boolean",
+            "lock_mother_tongue_preference": "boolean",
+            "paid_preference_unlocked": "boolean",
+            "profile_link": "string",
+            "user_name": "string"
+          },
+          "show_concierge_badge": "boolean",
+          "show_incognito_mode": "boolean",
+          "show_mandatory_complete_profile_popup": "boolean",
+          "show_weekly": "boolean",
+          "smoking_v2_id": "number",
+          "story": {
+            "about": "string",
+            "story_id": "number"
+          },
+          "user_id": "number",
+          "user_interests": [
+            {
+              "id": "number",
+              "interest_id": "number",
+              "name": "string",
+              "value": "number"
+            }
+          ],
+          "user_interests_v2": [
+            {
+              "common_interest": "string",
+              "id": "number",
+              "interest_id": "number",
+              "name": "string",
+              "order": "number"
+            }
+          ],
+          "user_traits": [],
+          "verification_status": "string",
+          "work": "null",
+          "work_v1": "null"
+        }
+      },
+      "piiKeys": [
+        "first_name",
+        "last_name",
+        "mobile_number",
+        "name"
+      ]
+    },
+    "preferences with the wrong type": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "status": "boolean",
+        "user": {
+          "about": "string",
+          "approved_time": "number",
+          "audio_prompt": "null",
+          "delete_reasons": [
+            {
+              "id": "number",
+              "name": "string",
+              "show_reset_button": "boolean"
+            }
+          ],
+          "diet_id": "number",
+          "disapproved_time": "number",
+          "discover_profile_order": [
+            "string"
+          ],
+          "display_new_tag": "boolean",
+          "drinking_v2_id": "number",
+          "faith_id": "number",
+          "general_information": {
+            "age": "number",
+            "can_update_mobile_number": "boolean",
+            "cast": "null",
+            "date_of_birth": "string",
+            "date_of_birth_v1": "string",
+            "diet": {
+              "id": "number",
+              "name": "string",
+              "preference_only": "boolean"
+            },
+            "diet_id": "number",
+            "drinking_id": "number",
+            "drinking_v1": {
+              "id": "number",
+              "name": "string",
+              "name_alias": "string"
+            },
+            "drinking_v2": {
+              "id": "number",
+              "name": "string",
+              "preference_only": "boolean"
+            },
+            "faith": {
+              "id": "number",
+              "name": "string"
+            },
+            "faith_id": "number",
+            "first_name": "string",
+            "gender": "string",
+            "height": "number",
+            "home_town": "null",
+            "kid": "null",
+            "languages": [
+              {
+                "id": "number",
+                "is_mother_tongue": "boolean",
+                "name": "string"
+              }
+            ],
+            "last_name": "string",
+            "location": {
+              "full": "string",
+              "summary": "string"
+            },
+            "marital_status_id": "number",
+            "marital_status_v1": {
+              "id": "number",
+              "name": "string",
+              "preference_only": "boolean"
+            },
+            "mbti": "null",
+            "mobile_number": "string",
+            "mother_tongue": {
+              "id": "number",
+              "name": "string"
+            },
+            "mother_tongue_id": "number",
+            "personal_email": "string",
+            "pet": "null",
+            "phone_code": "string",
+            "politics": "null",
+            "ref_id": "string",
+            "settle": "null",
+            "smoking_id": "number",
+            "smoking_v1": {
+              "id": "number",
+              "name": "string",
+              "name_alias": "string"
+            },
+            "smoking_v2": {
+              "id": "number",
+              "name": "string",
+              "preference_only": "boolean"
+            },
+            "sun_sign_v1": {
+              "id": "number",
+              "name": "string"
+            },
+            "workout": "null"
+          },
+          "has_active_subscription": "boolean",
+          "has_audio_prompt": "boolean",
+          "has_concierge_subscription": "boolean",
+          "has_filled_work_v1": "boolean",
+          "has_partial_work": "boolean",
+          "has_voted": "boolean",
+          "hide_first_name": "boolean",
+          "icebreakers": "null",
+          "incognito_mode_active": "boolean",
+          "incognito_mode_popup_text": {
+            "button_text_1": "string",
+            "description_text": "string",
+            "header_text": "string"
+          },
+          "introduction": "null",
+          "is_email_unsubscribed": "boolean",
+          "is_facebook_data_fetched": "boolean",
+          "is_sms_unsubscribed": "boolean",
+          "last_seen": "string",
+          "last_seen_window": "string",
+          "marital_status_id": "number",
+          "meetup": "null",
+          "mother_tongue_id": "number",
+          "online_code": "number",
+          "own_meetup": "null",
+          "partial_work": "null",
+          "percentage_profile_complete": "number",
+          "photos": [
+            {
+              "feedback_prompt": "null",
+              "feedback_prompt_v2": "null",
+              "feedback_prompt_v3": "null",
+              "photo": "string",
+              "photo_id": "number",
+              "prompt": "null",
+              "prompt_id": "null",
+              "selected": "boolean",
+              "status": "string"
+            }
+          ],
+          "preferences": [
+            {
+              "answer_id": "number",
+              "id": "number",
+              "preference_question": {
+                "first_choice": "string",
+                "second_choice": "string"
+              },
+              "value": "number"
+            }
+          ],
+          "profile_complete_without_selfie": "number",
+          "profile_data_list": [
+            {
+              "answer": "string",
+              "answer_id": "number",
+              "invitation_type": "string",
+              "question": "string",
+              "preferences": [
+                {
+                  "answer": "string",
+                  "answer_id": "number",
+                  "first_choice": "string",
+                  "second_choice": "string"
+                }
+              ]
+            }
+          ],
+          "profile_sharing_enabled": "boolean",
+          "profile_sharing_popup_text": {
+            "button_text_1": "string",
+            "button_text_2": "string",
+            "description_text": "string",
+            "header_text": "string",
+            "learn_more_link": "string",
+            "learn_more_text": "string"
+          },
+          "relationship_goal": {
+            "id": "number",
+            "is_default": "boolean",
+            "is_hidden": "boolean",
+            "name": "string",
+            "optional_relationship_goal_message": "string",
+            "prefix": "string",
+            "show_on_profile": "boolean"
+          },
+          "settings": {
+            "delete_reasons": [
+              {
+                "id": "number",
+                "name": "string",
+                "show_reset_button": "boolean"
+              }
+            ],
+            "distance_limit": "number",
+            "dpp_position": "number",
+            "faq_link": "string",
+            "hide_first_name": "boolean",
+            "interested_in": {
+              "age_from": "number",
+              "age_to": "number",
+              "allow_extended_age_range": "boolean",
+              "diet_list": [
+                {
+                  "id": "number",
+                  "is_open_to_all": "boolean",
+                  "is_selected": "boolean",
+                  "name": "string",
+                  "preference_only": "boolean"
+                }
+              ],
+              "drinking_v1": [
+                {
+                  "id": "number",
+                  "is_open_to_all": "boolean",
+                  "is_selected": "boolean",
+                  "name": "string",
+                  "name_alias": "string",
+                  "preference_only": "boolean"
+                }
+              ],
+              "drinking_v2": [
+                {
+                  "id": "number",
+                  "is_open_to_all": "boolean",
+                  "is_selected": "boolean",
+                  "name": "string",
+                  "preference_only": "boolean"
+                }
+              ],
+              "faiths": [
+                {
+                  "id": "number",
+                  "is_open_to_all": "boolean",
+                  "is_selected": "boolean",
+                  "name": "string"
+                }
+              ],
+              "marital_statuses_v1": [
+                {
+                  "id": "number",
+                  "is_open_to_all": "boolean",
+                  "is_selected": "boolean",
+                  "name": "string",
+                  "preference_only": "boolean"
+                }
+              ],
+              "max_height": "number",
+              "mbti_list": [
+                {
+                  "id": "number",
+                  "is_open_to_all": "boolean",
+                  "is_selected": "boolean",
+                  "mbti_type": "string",
+                  "name": "string",
+                  "preference_only": "boolean"
+                }
+              ],
+              "min_height": "number",
+              "mother_tongues": [
+                {
+                  "id": "number",
+                  "is_open_to_all": "boolean",
+                  "is_selected": "boolean",
+                  "name": "string"
+                }
+              ],
+              "smoking_v1": [
+                {
+                  "id": "number",
+                  "is_open_to_all": "boolean",
+                  "is_selected": "boolean",
+                  "name": "string",
+                  "name_alias": "string",
+                  "preference_only": "boolean"
+                }
+              ],
+              "smoking_v2": [
+                {
+                  "id": "number",
+                  "is_open_to_all": "boolean",
+                  "is_selected": "boolean",
+                  "name": "string",
+                  "preference_only": "boolean"
+                }
+              ],
+              "work_experience_v1": [
+                {
+                  "id": "number",
+                  "is_open_to_all": "boolean",
+                  "is_selected": "boolean",
+                  "name": "string",
+                  "name_alias": "string",
+                  "preference_only": "boolean"
+                }
+              ],
+              "work_industry_v1": [
+                {
+                  "id": "number",
+                  "is_open_to_all": "boolean",
+                  "is_selected": "boolean",
+                  "name": "string",
+                  "preference_only": "boolean"
+                }
+              ],
+              "work_qualification_v1": [
+                {
+                  "id": "number",
+                  "is_open_to_all": "boolean",
+                  "is_selected": "boolean",
+                  "name": "string",
+                  "preference_only": "boolean"
+                }
+              ]
+            },
+            "is_email_unsubscribed": "boolean",
+            "is_profile_public": "boolean",
+            "is_sms_unsubscribed": "boolean",
+            "lock_faith_preference": "boolean",
+            "lock_mother_tongue_preference": "boolean",
+            "paid_preference_unlocked": "boolean",
+            "profile_link": "string",
+            "user_name": "string"
+          },
+          "show_concierge_badge": "boolean",
+          "show_incognito_mode": "boolean",
+          "show_mandatory_complete_profile_popup": "boolean",
+          "show_weekly": "boolean",
+          "smoking_v2_id": "number",
+          "story": {
+            "about": "string",
+            "story_id": "number"
+          },
+          "user_id": "number",
+          "user_interests": [
+            {
+              "id": "number",
+              "interest_id": "number",
+              "name": "string",
+              "value": "number"
+            }
+          ],
+          "user_interests_v2": [
+            {
+              "common_interest": "string",
+              "id": "number",
+              "interest_id": "number",
+              "name": "string",
+              "order": "number"
+            }
+          ],
+          "user_traits": [],
+          "verification_status": "string",
+          "work": "null",
+          "work_v1": "null"
+        }
+      },
+      "piiKeys": [
+        "first_name",
+        "last_name",
+        "mobile_number",
+        "name"
+      ]
+    }
+  },
+  "invariantFailures": [
+    "invalid JSON"
+  ]
+}

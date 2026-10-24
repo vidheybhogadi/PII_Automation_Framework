@@ -15,7 +15,11 @@ agent (PROPOSE → approval → IMPLEMENT); see `CLAUDE.md`.
 - **Gating**: every test first follows its design status (`blockIfOpen`: open M2Q questions → Blocked), then
   runtime prerequisites (`m2/src/prereq.ts`): new accounts only with `M2_CREATE_ACCOUNTS=true`, Dev-provided
   onboarded / connected accounts (M2Q-36), CMS admin (M2Q-04), PII DB + user_id mapping (M2Q-16 / M2Q-37),
-  approved contract baselines (M2Q-24), Dev windows (gates, PII outage, payment sandbox).
+  approved contract baselines (M2Q-24), Dev windows (PII outage, payment sandbox).
+- **Read gates / special statuses** (QA lead, 2026-10-24): read gates are OFF on testa2 and QA cannot switch them
+  (M2Q-02), so tests check gate-OFF behaviour; a gate-ON part is recorded as a `waiting` annotation, and a case that
+  is gate-ON only is **WAITING** (M2Q-43, skipped with the reason). Unmigrated-profile cases are **NOT APPLICABLE**
+  on staging (M2Q-05; `not-applicable` annotation → report "Not Applicable"). All DB cases are **on hold** (M2Q-44).
 - **Accounts**: `m2/src/accounts/accounts.ts` + `m2/src/auth/session.ts` (phone login, +91 10… never 106…, OTP
   1234). Created accounts go to the git-ignored ledger `reports/m2/accounts/` and are deleted where staging allows.
   Delete / reset / deactivate / report routes never run for Dev-provided accounts.

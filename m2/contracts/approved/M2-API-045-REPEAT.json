@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-045-REPEAT",
-  "recordedAt": "2026-10-24T06:18:19.568Z",
-  "runId": "qa-m2-20261024t061633-6671",
+  "recordedAt": "2026-10-24T12:53:50.386Z",
+  "runId": "qa-m2-20261024t124732-dd5f",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -35,6 +35,7 @@
               "display_new_tag": "boolean",
               "distance": "string",
               "drinking_id": "number",
+              "drinking_v2_id": "number",
               "faith_id": "number",
               "general_information": {
                 "age": "number",
@@ -167,17 +168,17 @@
               "mother_tongue_id": "number",
               "online_code": "number",
               "partial_work": {
+                "college": "string",
                 "education": "string",
+                "graduation_year": "string",
+                "industry": "string",
                 "new_qualification": {
                   "id": "number",
                   "name": "string",
                   "preference_only": "boolean"
                 },
                 "work": "string",
-                "industry": "string",
-                "work_title": "string",
-                "college": "string",
-                "graduation_year": "string"
+                "work_title": "string"
               },
               "photos": [
                 {
@@ -230,6 +231,7 @@
               "reply_message": "null",
               "show_concierge_badge": "boolean",
               "smoking_id": "number",
+              "smoking_v2_id": "number",
               "spark_id": "null",
               "story": {
                 "about": "string",
@@ -283,9 +285,7 @@
                 "graduation_year": "string",
                 "industry": "string",
                 "work_title": "string"
-              },
-              "drinking_v2_id": "number",
-              "smoking_v2_id": "number"
+              }
             }
           ]
         },
@@ -344,6 +344,7 @@
           ],
           "image_list": [
             {
+              "archive_reason": "string",
               "feedback_prompt": "null",
               "feedback_prompt_v2": "null",
               "feedback_prompt_v3": "null",
@@ -634,6 +635,7 @@
               "display_new_tag": "boolean",
               "distance": "string",
               "drinking_id": "number",
+              "drinking_v2_id": "number",
               "faith_id": "number",
               "general_information": {
                 "age": "number",
@@ -766,17 +768,17 @@
               "mother_tongue_id": "number",
               "online_code": "number",
               "partial_work": {
+                "college": "string",
                 "education": "string",
+                "graduation_year": "string",
+                "industry": "string",
                 "new_qualification": {
                   "id": "number",
                   "name": "string",
                   "preference_only": "boolean"
                 },
                 "work": "string",
-                "industry": "string",
-                "work_title": "string",
-                "college": "string",
-                "graduation_year": "string"
+                "work_title": "string"
               },
               "photos": [
                 {
@@ -829,6 +831,7 @@
               "reply_message": "null",
               "show_concierge_badge": "boolean",
               "smoking_id": "number",
+              "smoking_v2_id": "number",
               "spark_id": "null",
               "story": {
                 "about": "string",
@@ -882,9 +885,7 @@
                 "graduation_year": "string",
                 "industry": "string",
                 "work_title": "string"
-              },
-              "drinking_v2_id": "number",
-              "smoking_v2_id": "number"
+              }
             }
           ]
         },
@@ -943,6 +944,7 @@
           ],
           "image_list": [
             {
+              "archive_reason": "string",
               "feedback_prompt": "null",
               "feedback_prompt_v2": "null",
               "feedback_prompt_v3": "null",
@@ -1205,7 +1207,21 @@
     }
   },
   "approved": {
-    "by": "QA lead",
+    "by": "Aisle codebase (develop_new 944f76a) — confirm with Dev",
     "on": "2026-10-24"
-  }
+  },
+  "approvals": [
+    {
+      "by": "QA lead",
+      "on": "2026-10-24",
+      "recordedAt": "2026-10-24T06:18:19.568Z",
+      "runId": "qa-m2-20261024t061633-6671"
+    },
+    {
+      "by": "Aisle codebase (develop_new 944f76a) — confirm with Dev",
+      "on": "2026-10-24",
+      "recordedAt": "2026-10-24T12:53:50.386Z",
+      "runId": "qa-m2-20261024t124732-dd5f"
+    }
+  ]
 }

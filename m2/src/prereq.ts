@@ -31,7 +31,27 @@ export const PREREQ = {
   connected: {
     id: 'M2Q-32',
     reason:
-      'Two connected (matched) synthetic accounts are needed — matching needs approved, discoverable profiles; set M2_CONNECTED_ACCOUNTS=<numberA>,<numberB>',
+      'Two connected (matched) synthetic accounts are needed — set M2_CONNECTED_ACCOUNTS=<numberA>,<numberB>, or M2_CREATE_ACCOUNTS=true so the suite connects its own accounts by a mutual like',
+  },
+  approval: {
+    id: 'M2Q-32',
+    reason:
+      'Needs an APPROVED synthetic profile — staging did not auto-approve the suite account in time (male accounts were auto-approved within ~1–2 min on 2026-10-24; wait: M2_APPROVAL_WAIT_MS, default 3 min)',
+  },
+  devOnly: {
+    id: 'M2Q-45',
+    reason:
+      'Kept Blocked by the QA lead (2026-10-24): selfie verification and moderation reports are not run from QA accounts until Dev agrees',
+  },
+  paused: {
+    id: 'M2Q-46',
+    reason:
+      'Paused by the QA lead (2026-10-24) until Dev confirms M2Q-46 — delete_older_account / delete_current_account act on the profile named by ref, and a missing ref fell back to an arbitrary staging member',
+  },
+  unsafeVariants: {
+    id: 'M2Q-46',
+    reason:
+      'Every variant of this case would remove or blank a target / phone key — not sent (unsafe: would act on an unknown member)',
   },
   web: {
     id: 'M2Q-17',
@@ -58,11 +78,7 @@ export const PREREQ = {
   states: {
     id: 'M2Q-32',
     reason:
-      'Needs a special account state QA cannot create (verified selfie / unmigrated / deactivated profile)',
-  },
-  gateWindow: {
-    id: 'M2Q-02',
-    reason: 'Needs a Dev window that switches the PII read gates (set M2_GATE_WINDOW=off|on)',
+      'Needs a special account state QA cannot create yet (e.g. verified selfie, image-inappropriate profile)',
   },
   outage: {
     id: 'M2Q-10',

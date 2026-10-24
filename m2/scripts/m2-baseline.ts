@@ -8,8 +8,8 @@
  * "same as master" for non-regression checks (needs the baseline, M2Q-24). Unknowns cite an M2Q question.
  */
 import { authLabel, FIELD_LABEL, groupOf, OBSERVED, type InventoryApi, type PiiField } from './m2-inventory';
-import { ROUTE_STATE } from './m2-code-evidence';
-import { statusFromDeps } from './m2-questions';
+import { ROUTE_STATE, suiteStateFor } from './m2-code-evidence';
+import { DB_ON_HOLD, READ_GATES_ON, statusFromDeps } from './m2-questions';
 import type { Category } from './m2-grouping';
 import type { Automation, M2Case, Mode, Priority, Status } from './m2-test-cases.data';
 
@@ -30,7 +30,11 @@ export const CHECKS: Check[] = [
   { code: 'EXPOSE', title: 'No unintended PII exposure', category: 'PII exposure' },
   { code: 'UNMIG', title: 'Unmigrated profile with read gate on', category: 'Unmigrated data' },
   { code: 'HIDDEN', title: 'Hidden first name respected', category: 'Hidden name' },
-  { code: 'GATE', title: 'Read gate off vs on', category: 'Integration & consistency' },
+  {
+    code: 'GATE',
+    title: 'Read gate off: same value read back (gate on: waiting)',
+    category: 'Integration & consistency',
+  },
   { code: 'PIIDOWN', title: 'PII service down / slow', category: 'Resilience' },
   { code: 'CACHE', title: 'PII change reflected in later reads', category: 'Integration & consistency' },
   { code: 'STATE', title: 'Wrong account / record state', category: 'State & idempotency' },
@@ -147,7 +151,7 @@ const isWebhook = (a: InventoryApi) => g(a) === 'G9';
 const isAdmin = (a: InventoryApi) => g(a) === 'G10';
 const isPayment = (a: InventoryApi) => ['G7', 'G8'].includes(g(a));
 const isRead = (a: InventoryApi) => ['G3', 'G4'].includes(g(a)) || (isAdmin(a) && a.method === 'GET');
-const returnsOthers = (a: InventoryApi) =>
+export const returnsOthers = (a: InventoryApi) =>
   ['G4', 'G5', 'G10'].includes(g(a)) ||
   OTHERS_EXTRA.includes(a.id) ||
   a.id === 'API-113' ||
@@ -180,6 +184,25 @@ export function needsProfile(a: Pick<InventoryApi, 'id' | 'auth'>): boolean {
   return a.auth.includes('TEST_TOKEN') && groupOf(a.id).key !== 'G1';
 }
 
+/**
+ * APIs whose valid request needs something only Dev can provide or decide (M2Q-45): EVENT_ID (101, 103),
+ * POLL_OPTION_ID (105), ROOM_ID (109–112), RESTAURANT_ID / MEAL_TYPE_ID (023); and actions kept Blocked by the QA lead
+ * on 2026-10-24: selfie verification (031, external face check) and moderation reports (098, 135).
+ */
+export const DEV_ONLY = [
+  'API-023',
+  'API-031',
+  'API-098',
+  'API-101',
+  'API-103',
+  'API-105',
+  'API-109',
+  'API-110',
+  'API-111',
+  'API-112',
+  'API-135',
+];
+
 /** Questions that gate access for an API (credentials / environment). */
 function accessDeps(a: InventoryApi): string[] {
   const d = new Set<string>();
@@ -193,9 +216,13 @@ function accessDeps(a: InventoryApi): string[] {
   if (a.id === 'API-113' || a.id === 'API-114') d.add('M2Q-03');
   if (needsProfile(a)) d.add('M2Q-36');
   // Routes whose controller requires an approved / deactivated / image-inappropriate profile (from code,
-  // m2-code-evidence.ts ROUTE_STATE) need a special account state QA cannot create — M2Q-32. /web/* routes take the
-  // normal app user JWT (M2Q-41, answered from code).
-  if (ROUTE_STATE[a.id]) d.add('M2Q-32');
+  // m2-code-evidence.ts ROUTE_STATE). The suite makes approved (auto-approval, waited for at run time) and deactivated
+  // (throwaway account) profiles itself; only image_inappropriate still needs M2Q-32. /web/* routes take the normal
+  // app user JWT (M2Q-41, answered from code).
+  if (ROUTE_STATE[a.id] && suiteStateFor(a.id) === 'image_inappropriate') d.add('M2Q-32');
+  // Ids only Dev can provide (event, poll, room, restaurant) and actions QA does not take on its own (selfie
+  // verification, moderation reports) — M2Q-45.
+  if (DEV_ONLY.includes(a.id)) d.add('M2Q-45');
   if (isPayment(a)) d.add('M2Q-17');
   if (a.id === 'API-012') d.add('M2Q-19');
   if (isLogin(a)) d.add('M2Q-03'); // approved test number + OTP shortcut
@@ -235,13 +262,27 @@ function accountPre(a: InventoryApi): string {
   return parts.join(' ');
 }
 
+/** Read gates are OFF on staging (QA lead, M2Q-02); the gate-ON half waits for Dev (M2Q-43). */
+const GATE_OFF_PRE =
+  'Read gates are OFF on staging (M2Q-02 answered): writes go to the PII service, reads come from the app database. Gate-ON part waiting for Dev (M2Q-43).';
+const UNMIG_NA_REASON =
+  'All staging profiles are migrated and new QA accounts write to PII at creation, so an unmigrated profile cannot occur on staging (QA lead, 2026-10-24).';
+
 const ACCESS_PATH = (a: InventoryApi) => a.fields.map((f) => `${FIELD_LABEL[f]}: ${a.access[f]}`).join(' | ');
 
 // ---- Applicability + content per check --------------------------------------------------------------------
 type Built = Pick<
   M2Case,
   'pre' | 'data' | 'steps' | 'validate' | 'why' | 'expected' | 'evidence' | 'db' | 'priority'
-> & { deps: string[]; mode?: Mode; fields?: PiiField[] };
+> & {
+  deps: string[];
+  mode?: Mode;
+  fields?: PiiField[];
+  /** Parts waiting for a Dev environment change (not dependencies) — see M2Case.waiting. */
+  waiting?: string[];
+  /** Cannot occur on staging → status NOT APPLICABLE (see M2Case.na; unlike `{ na }`, the case is still listed). */
+  naOnStaging?: { question: string; reason: string };
+};
 type Rule = (a: InventoryApi) => Built | { na: string };
 
 const critical = (a: InventoryApi): Priority => (['G1', 'G2', 'G3'].includes(g(a)) ? 'Critical' : 'High');
@@ -495,7 +536,7 @@ const RULES: Record<string, Rule> = {
     if (isWebhook(a) && a.id !== 'API-113' && a.id !== 'API-114')
       return { na: 'Covered via the profile rebuild in POS; needs genuine callbacks only.' };
     return {
-      pre: `Confirmed NOT-migrated synthetic profile involved in this request (M2Q-32); read gates ON (M2Q-02). ${accountPre(a)}`,
+      pre: `Confirmed NOT-migrated synthetic profile involved in this request, read gates ON — cannot occur on staging (M2Q-05). ${accountPre(a)}`,
       data: 'Profile with local values but no PII records.',
       steps: [
         `Send ${req(a)} involving the unmigrated profile.`,
@@ -504,11 +545,12 @@ const RULES: Record<string, Rule> = {
       validate: 'No 5xx; no other user’s value; field value per the agreed rule.',
       why: 'Dev doc: enabled reads do not fall back to local values — unmigrated profiles may show blank PII here.',
       expected:
-        'No 5xx, no wrong-user value. Field value: open (M2Q-05) — code returns null for single reads (no local fallback) and keeps the cached name in lists.',
-      evidence: 'Dev doc "Field behavior"; ClickUp migration comment.',
+        'NOT APPLICABLE on staging: all profiles are migrated and new QA accounts write to PII at creation, so an unmigrated profile cannot occur (M2Q-05, QA lead 2026-10-24). For reference, code returns null for single reads (no local fallback) and keeps the cached name in lists.',
+      evidence: 'Dev doc "Field behavior"; ClickUp migration comment; QA lead answer M2Q-05.',
       db: API_ONLY,
       priority: ['G2', 'G3', 'G4', 'G7'].includes(g(a)) ? 'High' : 'Medium',
-      deps: ['M2Q-05', 'M2Q-02', 'M2Q-32', ...accessDeps(a)],
+      deps: ['M2Q-05'],
+      naOnStaging: { question: 'M2Q-05', reason: UNMIG_NA_REASON },
     };
   },
 
@@ -537,19 +579,35 @@ const RULES: Record<string, Rule> = {
     };
   },
 
-  GATE: (a) => ({
-    pre: `Window where Dev switches the read gates for ${fields(a.fields)} (M2Q-02). ${accountPre(a)}`,
-    data: 'Profile whose PII and local values are known (and differ in one variant, set via the test route).',
-    steps: ['Gate off: send the request.', 'Gate on: send it again.', 'Compare.'],
-    validate: 'Gate off → local value; gate on → PII value; otherwise identical response.',
-    why: 'The gate must be the only switch between sources for this API.',
-    expected: `Gate off → local attribute; gate on → PII value (Dev doc "Field behavior"${a.fields.includes('EMAIL') ? '; email also needs a local email_id' : ''}).`,
-    evidence: 'Dev doc "Field behavior".',
-    db: API_ONLY,
-    priority: ['G2', 'G3', 'G4'].includes(g(a)) ? 'High' : 'Medium',
-    deps: ['M2Q-02', ...accessDeps(a)],
-    mode: 'Dev-assisted',
-  }),
+  GATE: (a) => {
+    const input = PII_INPUT[a.id]?.filter((f) => f !== 'FREE_TEXT') ?? [];
+    const writes = input.length > 0 || a.id === 'API-060';
+    return {
+      pre: `${GATE_OFF_PRE} ${accountPre(a)}`,
+      data: writes
+        ? `A new fake ${fields(a.id === 'API-060' ? ['PHONE'] : input)} written through this API; otherwise the fake values the account was onboarded with.`
+        : 'The fake first name, email and phone the suite’s own account was onboarded with (letters-only name, lower-case email on the test domain, +91 10xxxxxxxx number).',
+      steps: [
+        'Log in as a fake test account the suite created (+91 10xxxxxxxx, never 106…; OTP 1234).',
+        writes
+          ? `Send ${req(a)} with a new fake value (this is the write).`
+          : `Send ${req(a)} with fake data.`,
+        returnsOthers(a) && a.id !== 'API-021'
+          ? 'Read the account’s own profile straight after; compare any suite account found in the reply with its known values.'
+          : 'Read the value back (in this reply when it carries the account’s own profile, otherwise in the own profile read straight after).',
+        'Check the reply for server errors, other people’s data and personal-data fields this API should not carry.',
+      ],
+      validate:
+        'Gate off (today): the value read back equals the value written / onboarded; no 5xx; no other test account’s data; no unlisted personal-data field. Gate on → PII value: waiting (M2Q-43).',
+      why: 'Read gates (switches that make the app read personal data from the PII service instead of its own database) are OFF on staging today. Writes must still land correctly and nothing else may leak, otherwise users would see wrong or other people’s data.',
+      expected: `Gate OFF (staging today, M2Q-02): no server error (5xx); the value read back is exactly the fake value written or onboarded (first name exact — fake names are letters only; email exact — plain lower-case fake email; phone shown to the owner = the login number in an accepted form); no other test account’s name, email or phone; no personal-data field with a real-looking value that the Dev inventory does not list for this API (${fields(a.fields)}). Gate ON → PII value: waiting for Dev to enable the read gates (M2Q-43).${a.fields.includes('EMAIL') ? ' Email reads also need a local email_id (Dev doc).' : ''}`,
+      evidence: `QA lead answer M2Q-02 (2026-10-24); Dev doc "Field behavior"${isTestRoute(a) ? '; M2Q-35 answer (test-route write updates PII and the app profile — from code, confirm with Dev)' : ''}.`,
+      db: 'API-level only. Storage checks are separate DB cases (currently on hold).',
+      priority: ['G2', 'G3', 'G4'].includes(g(a)) ? 'High' : 'Medium',
+      deps: ['M2Q-02', ...accessDeps(a)],
+      waiting: [READ_GATES_ON],
+    };
+  },
 
   PIIDOWN: (a) => ({
     pre: `Approved way to make the PII service fail / time out (M2Q-10). ${accountPre(a)}`,
@@ -693,7 +751,7 @@ const RULES: Record<string, Rule> = {
       evidence: `Dev doc ${a.id} access path.`,
       db: 'PII DB rows by tenant + user + field; aisleweb compatibility columns. Read-only SELECT; compare hashes/counts, never print or decrypt values.',
       priority: 'High',
-      deps: [...(DELETES.includes(a.id) ? ['M2Q-16', 'M2Q-15'] : ['M2Q-16']), ...dbAccessDeps(a)],
+      deps: [...(DELETES.includes(a.id) ? ['M2Q-16', 'M2Q-15'] : ['M2Q-16']), DB_ON_HOLD, ...dbAccessDeps(a)],
       fields: PII_INPUT[a.id] ?? a.fields,
     };
   },
@@ -710,7 +768,7 @@ const RULES: Record<string, Rule> = {
       evidence: 'Integrity requirement.',
       db: 'Counts + ciphertext hashes before/after; read-only.',
       priority: 'High',
-      deps: ['M2Q-16', ...dbAccessDeps(a)],
+      deps: ['M2Q-16', DB_ON_HOLD, ...dbAccessDeps(a)],
       fields: PII_INPUT[a.id],
     };
   },
@@ -727,7 +785,7 @@ const RULES: Record<string, Rule> = {
       evidence: 'Isolation requirement.',
       db: 'PII DB rows by user + field; read-only.',
       priority: 'High',
-      deps: ['M2Q-16', ...dbAccessDeps(a)],
+      deps: ['M2Q-16', DB_ON_HOLD, ...dbAccessDeps(a)],
     };
   },
 };
@@ -773,7 +831,7 @@ function withFreeText(code: string, a: InventoryApi, b: Built): Built {
     case 'GATE':
       return {
         ...b,
-        expected: `${b.expected} Free-text encryption switch (if any): to be confirmed (M2Q-27).`,
+        expected: `${b.expected} Free-text encryption switches PII_FREE_TEXT_* default OFF (M2Q-27, from code); free text is recorded, not compared.`,
         deps: add(['M2Q-27']),
       };
     case 'DB-SAVE':
@@ -830,8 +888,11 @@ export function buildBaseline(inventory: InventoryApi[]): Baseline {
       }
       if (a.fields.includes('FREE_TEXT')) Object.assign(built, withFreeText(check.code, a, built));
       const text = `${built.pre} ${built.expected} ${built.db}`;
-      const deps = [...new Set([...built.deps, ...(text.match(/M2Q-\d+/g) ?? [])])].sort();
-      const status = statusOf(deps);
+      const waiting = built.waiting ?? [];
+      const deps = [...new Set([...built.deps, ...(text.match(/M2Q-\d+/g) ?? [])])]
+        .filter((d) => !waiting.includes(d) && (!built.naOnStaging || d === built.naOnStaging.question))
+        .sort();
+      const status: Status = built.naOnStaging ? 'NOT APPLICABLE' : statusOf(deps);
       const mode = built.mode ?? 'API automation';
       const automation: Automation =
         mode === 'Manual' ? 'NOT AUTOMATED' : status === 'BLOCKED' ? 'AUTOMATION BLOCKED' : 'NOT AUTOMATED';
@@ -857,6 +918,8 @@ export function buildBaseline(inventory: InventoryApi[]): Baseline {
         automation,
         mode,
         evidence: built.evidence,
+        ...(waiting.length ? { waiting } : {}),
+        ...(built.naOnStaging ? { na: built.naOnStaging } : {}),
       });
       row[check.code] = { kind: 'case', id };
     }

@@ -100,6 +100,46 @@ export function scanResponse(res: ApiResponse, o: ScanOptions = {}): PiiFinding[
   return out;
 }
 
+/**
+ * Personal-data fields a reply carries although the Dev inventory does not list that field for the API (GATE "no
+ * extra PII"). A key counts only when its value LOOKS like that field — an email address under an email key, a
+ * phone number under a phone key, a non-empty text under a name key — so flags such as `email: true` or option
+ * names (`name`) are not findings. Returns JSON paths only, never values.
+ */
+const FIELD_KEYS: Record<'NAME' | 'EMAIL' | 'PHONE', { keys: string[]; looksLike: (v: unknown) => boolean }> =
+  {
+    NAME: {
+      keys: ['first_name', 'last_name', 'full_name'],
+      looksLike: (v) => typeof v === 'string' && v.trim() !== '',
+    },
+    EMAIL: {
+      keys: ['email', 'email_id', 'personal_email'],
+      looksLike: (v) => typeof v === 'string' && EMAIL.test(v),
+    },
+    PHONE: {
+      keys: ['mobile_number', 'mobile', 'phone', 'phone_number', 'contact_number', 'fetch_only_number'],
+      looksLike: (v) => (typeof v === 'string' || typeof v === 'number') && PHONE.test(String(v)),
+    },
+  };
+
+export function unlistedPii(
+  value: unknown,
+  listed: readonly string[],
+  where = '$',
+  out: string[] = [],
+): string[] {
+  if (Array.isArray(value)) value.forEach((v, i) => unlistedPii(v, listed, `${where}[${i}]`, out));
+  else if (value && typeof value === 'object')
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      const path = `${where}.${k}`;
+      for (const [field, rule] of Object.entries(FIELD_KEYS))
+        if (!listed.includes(field) && rule.keys.includes(k.toLowerCase()) && rule.looksLike(v))
+          out.push(`${path} (${field.toLowerCase()})`);
+      unlistedPii(v, listed, path, out);
+    }
+  return out;
+}
+
 export const isSuccess = (status: number) => status >= 200 && status < 300;
 
 /**

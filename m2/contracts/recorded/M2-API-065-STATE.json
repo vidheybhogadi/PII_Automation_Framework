@@ -1,0 +1,39 @@
+{
+  "caseId": "M2-API-065-STATE",
+  "recordedAt": "2026-10-24T12:55:47.402Z",
+  "runId": "qa-m2-20261024t124732-dd5f",
+  "build": "unknown — deployed commit not confirmed (M2Q-01)",
+  "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
+  "variants": {
+    "valid request": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "agora_token": "string",
+        "app_id": "string",
+        "channel_name": "string",
+        "duration": "number",
+        "uid": "number"
+      },
+      "piiKeys": []
+    },
+    "action already done (sent again)": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "agora_token": "string",
+        "app_id": "string",
+        "channel_name": "string",
+        "duration": "number",
+        "uid": "number"
+      },
+      "piiKeys": []
+    },
+    "wrong target (unknown ids)": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": "null",
+      "piiKeys": []
+    }
+  }
+}

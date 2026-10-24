@@ -6,7 +6,8 @@
  *   - Expected results cite their evidence: the Dev doc, staging observation, or the executed UI smoke (FN-SAN-xxx).
  *     Anything else is "To be confirmed" with an M2Q-xx question and status NEED DEV CLARIFICATION.
  *   - Status: NOT RUN = expectation known and runnable; BLOCKED = expectation known, access/data missing;
- *     NEED DEV CLARIFICATION = expected behaviour not confirmed. Nothing has been executed as a test case yet.
+ *     NEED DEV CLARIFICATION = expected behaviour not confirmed; WAITING = only waits for an environment change Dev
+ *     controls (e.g. read gates ON, M2Q-43); NOT APPLICABLE = cannot occur on staging (cited answer).
  *   - Shared-serializer endpoints are covered by representative deep cases + parametrised regression cases
  *     (see the group strategy), so the suite does not repeat the same check 200 times.
  */
@@ -15,7 +16,8 @@ import type { PiiField } from './m2-inventory';
 
 export type { CaseType } from './m2-grouping';
 export type Priority = 'Critical' | 'High' | 'Medium' | 'Low';
-export type Status = 'PASS' | 'FAIL' | 'BLOCKED' | 'NEED DEV CLARIFICATION' | 'NOT APPLICABLE' | 'NOT RUN';
+export type Status =
+  'PASS' | 'FAIL' | 'BLOCKED' | 'NEED DEV CLARIFICATION' | 'WAITING' | 'NOT APPLICABLE' | 'NOT RUN';
 export type Automation = 'NOT AUTOMATED' | 'AUTOMATION IN PROGRESS' | 'AUTOMATED' | 'AUTOMATION BLOCKED';
 export type Mode = 'API automation' | 'Manual' | 'Dev-assisted';
 
@@ -42,13 +44,27 @@ export interface M2Case {
   mode: Mode;
   evidence: string;
   related?: string;
+  /**
+   * Parts of a runnable case that wait for an environment change Dev controls (e.g. M2Q-43, read gates ON). Not a
+   * dependency: the case runs its other parts now and records the waiting part.
+   */
+  waiting?: string[];
+  /** The case cannot occur on this environment (confirmed by the cited answer) → NOT APPLICABLE, skipped with reason. */
+  na?: { question: string; reason: string };
 }
 
 // ---- Shared wording ---------------------------------------------------------------------------------------
 const ACC = 'Synthetic app account(s): +91 number starting with 10 (not 106…), OTP 1234 (M2Q-03 answered).';
 const ACC2 =
   'Two synthetic accounts A and B: +91 numbers starting with 10 (not 106…), OTP 1234 (M2Q-03 answered).';
-const GATE_ON = 'Read gate for the field is ON on staging (M2Q-02).';
+const GATE_OFF =
+  'Read gates are OFF on staging (M2Q-02 answered): writes go to the PII service, reads come from the app database.';
+const GATE_ON_WAIT = 'Gate-ON part: waiting for Dev to enable the read gates (M2Q-43).';
+const UNMIG_NA = {
+  question: 'M2Q-05',
+  reason:
+    'All staging profiles are migrated and new QA accounts write to PII at creation, so an unmigrated profile cannot occur on staging (QA lead, 2026-10-24).',
+};
 const CMS = 'CMS admin JWT with webcms + OTP and the required permission (M2Q-04).';
 const NAME_A = 'Unique synthetic first name per run, e.g. "Qa" + run suffix (letters only).';
 const API_ONLY = 'API-level only.';
@@ -308,7 +324,7 @@ export const CASES: M2Case[] = [
     name: 'New user’s first name from onboarding is saved to PII and shown on own profile',
     category: 'Functional',
     priority: 'Critical',
-    pre: `New synthetic account via OTP login (M2Q-03). ${GATE_ON}`,
+    pre: `New fake account created by the suite (OTP login, M2Q-03) and onboarded through the verified onboarding flow (M2Q-36). ${GATE_OFF}`,
     data: `${NAME_A} Valid field ids and uploaded photos for submit_profile.`,
     steps: [
       'Log in with an approved test number (verify_number_login_v1) to create a new user.',
@@ -319,11 +335,12 @@ export const CASES: M2Case[] = [
     validate: 'Name in submit response, own-profile responses and the PII service all match the input.',
     why: 'Onboarding is the main source of new first names after the integration.',
     expected:
-      'All reads return the submitted name (Dev doc: onboarding writes first name when missing; assign_first_name writes PII + local field).',
+      'Gate OFF: the fake name given at onboarding is returned by fetch_own_info, own GET /V1/users/:ref and the PII test route (API-001) (Dev doc: assign_first_name writes PII + local field; M2Q-02). Gate ON → PII value: waiting for Dev to enable the read gates (M2Q-43).',
     db: 'See M2-DB-002.',
     deps: ['M2Q-02', 'M2Q-03'],
-    status: 'BLOCKED',
-    automation: 'AUTOMATION BLOCKED',
+    waiting: ['M2Q-43'],
+    status: 'NOT RUN',
+    automation: 'NOT AUTOMATED',
     mode: 'API automation',
     evidence: `${DOC} API-057 note + "Field behavior"; FN-SAN-001 (UI: passing).`,
     related: 'FN-SAN-001',
@@ -389,7 +406,7 @@ export const CASES: M2Case[] = [
     name: 'Editing the first name updates PII and every own-profile read',
     category: 'Functional',
     priority: 'Critical',
-    pre: `${ACC} ${GATE_ON} Current complete editable payload captured (edit clears omitted sections).`,
+    pre: `${ACC} ${GATE_OFF} Current complete editable payload captured (edit clears omitted sections).`,
     data: 'Existing name N1 → new name N2.',
     steps: [
       'GET own profile; build the full edit payload from it.',
@@ -399,11 +416,12 @@ export const CASES: M2Case[] = [
     validate: 'N2 everywhere; edit response returns N2 and the existing email/phone.',
     why: 'The primary user-driven first-name change after integration.',
     expected:
-      'All reads return N2 (Dev doc API-058: "this edit path changes the name and returns the existing email and phone").',
+      'Gate OFF: all reads (fetch_own_info, own /V1/users/:ref, PII route API-001) return N2 (Dev doc API-058: "this edit path changes the name and returns the existing email and phone"; M2Q-02). Gate ON → PII value: waiting for Dev (M2Q-43).',
     db: 'See M2-DB-003.',
     deps: ['M2Q-02', 'M2Q-03'],
-    status: 'BLOCKED',
-    automation: 'AUTOMATION BLOCKED',
+    waiting: ['M2Q-43'],
+    status: 'NOT RUN',
+    automation: 'NOT AUTOMATED',
     mode: 'API automation',
     evidence: `${DOC} API-058.`,
     related: 'FN-SAN-053',
@@ -582,16 +600,16 @@ export const CASES: M2Case[] = [
     name: 'Migrated profile: single-profile reads return the PII first name (gate on)',
     category: 'Functional',
     priority: 'Critical',
-    pre: `Migrated-cohort synthetic profile (M2Q-03). ${GATE_ON}`,
+    pre: `Migrated fake profile (M2Q-03). Needs the first-name read gate ON — waiting for Dev (M2Q-43); gates are OFF today (M2Q-02).`,
     data: 'Known PII first name for the profile.',
     steps: ['Call each listed read as the owner and as another user.', 'Compare with API-001 PII read.'],
     validate: 'Every read returns the PII value.',
     why: 'Confirms reads are actually served by the PII service once the gate is on.',
     expected: 'All reads equal the PII value (Dev doc: get_first_name reads PII when enabled).',
     db: API_ONLY,
-    deps: ['M2Q-02', 'M2Q-03'],
-    status: 'BLOCKED',
-    automation: 'AUTOMATION BLOCKED',
+    deps: ['M2Q-02', 'M2Q-03', 'M2Q-43'],
+    status: 'WAITING',
+    automation: 'NOT AUTOMATED',
     mode: 'API automation',
     evidence: `${DOC} "Field behavior"; FN-SAN-002/003.`,
     related: 'FN-SAN-002, FN-SAN-003',
@@ -604,7 +622,7 @@ export const CASES: M2Case[] = [
     name: 'Unmigrated profile with the gate on: what the app shows',
     category: 'Unmigrated data',
     priority: 'Critical',
-    pre: `Confirmed NOT-migrated synthetic profile (M2Q-32). ${GATE_ON}`,
+    pre: 'Confirmed NOT-migrated profile with the read gate on — cannot occur on staging (M2Q-05).',
     data: 'Local name exists; no PII record.',
     steps: [
       'Read the profile via single reads and via a list where it appears.',
@@ -613,10 +631,11 @@ export const CASES: M2Case[] = [
     validate: 'Response status (no 500); name value in each; consistency between single and batch.',
     why: 'Doc says enabled reads do not fall back, but batch hydration keeps the cached name — users may see a name in lists and a blank on the profile.',
     expected:
-      'No 5xx; no other user’s name. Code shows single reads return null for the unmigrated name and lists keep the cached profile name (M2Q-12); whether that is the intended value is open (M2Q-05).',
+      'NOT APPLICABLE on staging: no unmigrated profile exists (M2Q-05, QA lead 2026-10-24). For reference, code shows single reads return null for an unmigrated name and lists keep the cached name (M2Q-12).',
     db: API_ONLY,
     deps: ['M2Q-05', 'M2Q-12', 'M2Q-02', 'M2Q-03', 'M2Q-32'],
-    status: 'NEED DEV CLARIFICATION',
+    na: UNMIG_NA,
+    status: 'NOT APPLICABLE',
     automation: 'NOT AUTOMATED',
     mode: 'API automation',
     evidence: `${DOC}: "do not automatically fall back"; "hydration leaves its existing cached name unchanged when the fetched name is nil"; FN-SAN-012/055.`,
@@ -630,17 +649,23 @@ export const CASES: M2Case[] = [
     name: 'Same profile with the first-name gate off and on',
     category: 'Integration & consistency',
     priority: 'High',
-    pre: 'A window where Dev switches ALLOW_PII_FIRST_NAME_READ (M2Q-02). Migrated profile whose PII and local values are known.',
+    pre: `${ACC} ${GATE_OFF} Own onboarded fake profile whose onboarding name is known.`,
     data: 'Profile where PII and local values are equal; and one where they differ (set via the test route).',
-    steps: ['Gate off: read.', 'Gate on: read.', 'Compare.'],
+    steps: [
+      'Gate off (today): read fetch_own_info, own /V1/users/:ref and matches_list_v2.',
+      'Gate on: read again — waiting for Dev (M2Q-43).',
+      'Compare.',
+    ],
     validate: 'Gate off → local value; gate on → PII value.',
     why: 'Proves the gate is the only switch and nothing reads the wrong source.',
-    expected: 'Gate off → local attribute; gate on → PII value (Dev doc "Field behavior").',
+    expected:
+      'Gate off (staging today, M2Q-02): fetch_own_info and own /V1/users/:ref return the local (onboarding) name; the list reply is recorded. Gate on → PII value: waiting for Dev to enable the read gates (M2Q-43).',
     db: API_ONLY,
     deps: ['M2Q-02', 'M2Q-03'],
-    status: 'BLOCKED',
-    automation: 'AUTOMATION BLOCKED',
-    mode: 'Dev-assisted',
+    waiting: ['M2Q-43'],
+    status: 'NOT RUN',
+    automation: 'NOT AUTOMATED',
+    mode: 'API automation',
     evidence: `${DOC} "Field behavior"; recommended step 1.`,
   },
   {
@@ -651,8 +676,8 @@ export const CASES: M2Case[] = [
     name: 'Lists show the right first name for each profile (mixed states)',
     category: 'Functional',
     priority: 'Critical',
-    pre: 'B’s lists contain migrated, unmigrated, hidden-name and same-name profiles (M2Q-03).',
-    data: 'Two profiles with the same first name; one hidden; one unmigrated.',
+    pre: 'B’s lists contain migrated, hidden-name and same-name profiles (M2Q-03; all staging profiles are migrated — M2Q-05).',
+    data: 'Two profiles with the same first name; one hidden.',
     steps: [
       'As B call each list API.',
       'Map every card’s ref → first_name and compare with each profile’s own read.',
@@ -660,8 +685,7 @@ export const CASES: M2Case[] = [
     validate:
       'Every ref has its own name; no shifted/misattributed names; same-name profiles stay distinct by ref.',
     why: 'Batch hydration maps many ids at once; an ordering bug shows the wrong person’s name.',
-    expected:
-      'Each ref shows its own (or masked) name. Unmigrated rows: code keeps the cached name; intended value open (M2Q-05).',
+    expected: 'Each ref shows its own (or masked) name.',
     db: API_ONLY,
     deps: ['M2Q-03', 'M2Q-05', 'M2Q-32'],
     status: 'BLOCKED',
@@ -794,7 +818,7 @@ export const CASES: M2Case[] = [
     name: 'reset_profile: the new user’s name, email and phone after reset',
     category: 'Negative & edge case',
     priority: 'High',
-    pre: `${ACC} ${GATE_ON} Disposable account.`,
+    pre: `${ACC} ${GATE_OFF} ${GATE_ON_WAIT} Disposable account.`,
     data: 'Known name/email/phone before reset.',
     steps: ['POST /V1/user/reset_profile.', 'Read own profile and PII for the new user id.'],
     validate: 'Whether PII records exist for the new user; what the app shows.',
@@ -803,6 +827,7 @@ export const CASES: M2Case[] = [
       'Code shows reset writes no PII rows for the new user id, so with gates on the new user’s name / email / phone are blank; the expected result is open (M2Q-09).',
     db: 'See M2-DB-009.',
     deps: ['M2Q-02', 'M2Q-09', 'M2Q-03'],
+    waiting: ['M2Q-43'],
     status: 'NEED DEV CLARIFICATION',
     automation: 'NOT AUTOMATED',
     mode: 'API automation',
@@ -870,7 +895,7 @@ export const CASES: M2Case[] = [
     name: 'PII service slow or down: profile and list reads',
     category: 'Resilience',
     priority: 'High',
-    pre: `${GATE_ON} Approved way to make PII reads fail or time out (M2Q-10).`,
+    pre: `Needs the read gates ON (M2Q-43, waiting for Dev; OFF today per M2Q-02) and an approved way to make PII reads fail or time out (M2Q-10).`,
     data: '—',
     steps: ['Make PII reads fail.', 'Call single reads and lists.', 'Measure response time and content.'],
     validate: 'Status code, latency, name value; no stack traces or internal details.',
@@ -878,7 +903,7 @@ export const CASES: M2Case[] = [
     expected:
       'From code (M2Q-11): no fallback — reads fail while the PII service is down (up to 3 attempts of 5 s).',
     db: API_ONLY,
-    deps: ['M2Q-02', 'M2Q-11', 'M2Q-10'],
+    deps: ['M2Q-02', 'M2Q-11', 'M2Q-10', 'M2Q-43'],
     status: 'NEED DEV CLARIFICATION',
     automation: 'NOT AUTOMATED',
     mode: 'Dev-assisted',
@@ -896,7 +921,7 @@ export const CASES: M2Case[] = [
     name: 'Onboarding email is saved to PII and returned on the owner’s profile',
     category: 'Functional',
     priority: 'Critical',
-    pre: `New synthetic user (M2Q-03). ${GATE_ON}`,
+    pre: `New fake account created and onboarded by the suite (M2Q-03, M2Q-36). ${GATE_OFF}`,
     data: 'personal_email on the approved test domain (AISLE_TEST_EMAIL_DOMAIN).',
     steps: [
       'POST /V1/user/submit_profile with personal_email.',
@@ -907,11 +932,12 @@ export const CASES: M2Case[] = [
       'Owner response email = submitted (after agreed normalisation); PII EMAIL record exists for this user.',
     why: 'Onboarding is the only documented email write path in the app.',
     expected:
-      'Email saved and returned to the owner (Dev doc: add_email with user_id; own_general_information → fetch_email).',
+      'Gate OFF: the owner’s own /V1/users/:ref returns exactly the fake onboarding email (Dev doc: add_email with user_id; own_general_information → fetch_email; M2Q-02). The PII-side email is recorded only (no PII email read route for app users). Gate ON → PII value: waiting for Dev (M2Q-43).',
     db: 'See M2-DB-002.',
     deps: ['M2Q-03', 'M2Q-02'],
-    status: 'BLOCKED',
-    automation: 'AUTOMATION BLOCKED',
+    waiting: ['M2Q-43'],
+    status: 'NOT RUN',
+    automation: 'NOT AUTOMATED',
     mode: 'API automation',
     evidence: `${DOC} API-057 + "Field behavior" (Email).`,
   },
@@ -1011,17 +1037,17 @@ export const CASES: M2Case[] = [
     name: 'Email needs a local email_id: profile with PII email but no local email id',
     category: 'Unmigrated data',
     priority: 'Medium',
-    pre: `${GATE_ON} Profile whose PII EMAIL exists but local email_id is absent (Dev to arrange) (M2Q-03).`,
+    pre: `Needs the email read gate ON (M2Q-43, waiting for Dev; OFF today per M2Q-02). Profile whose PII EMAIL exists but local email_id is absent (Dev to arrange, M2Q-32).`,
     data: '—',
     steps: ['Read owner profile responses.'],
     validate: 'Email value returned.',
     why: 'Doc: fetch_email requires a local email_id first — migrated data without it would show no email.',
     expected:
-      'Doc-predicted and code: email null (no local fallback with the gate on); whether intended is open (M2Q-05).',
+      'Doc-predicted and code (confirm with Dev): email null with the gate on (no local fallback). Waiting for the gate (M2Q-43) and the Dev-arranged state (M2Q-32).',
     db: API_ONLY,
-    deps: ['M2Q-02', 'M2Q-05', 'M2Q-03', 'M2Q-32'],
-    status: 'NEED DEV CLARIFICATION',
-    automation: 'NOT AUTOMATED',
+    deps: ['M2Q-02', 'M2Q-03', 'M2Q-32', 'M2Q-43'],
+    status: 'BLOCKED',
+    automation: 'AUTOMATION BLOCKED',
     mode: 'Dev-assisted',
     evidence: `${DOC}: "fetch_email requires a local email_id, then reads PII when enabled".`,
   },
@@ -1030,21 +1056,25 @@ export const CASES: M2Case[] = [
     module: 'Email — read gates',
     apis: ['API-021', 'API-022'],
     fields: ['EMAIL'],
-    name: 'Email with the gate off/on, and for an unmigrated profile',
+    name: 'Email with the gate off (gate on: waiting)',
     category: 'Integration & consistency',
     priority: 'High',
-    pre: 'Gate-switch window (M2Q-02); migrated and unmigrated synthetic profiles (M2Q-03).',
+    pre: `${ACC} ${GATE_OFF} Own onboarded fake profile whose onboarding email is known.`,
     data: '—',
-    steps: ['Gate off: read owner profile.', 'Gate on: read again for both profiles.'],
-    validate: 'Source of the value; unmigrated result.',
+    steps: [
+      'Gate off (today): read the owner profile (/V1/users/:ref, /V1/users/about).',
+      'Gate on: read again — waiting for Dev (M2Q-43).',
+    ],
+    validate: 'Gate off: the owner email equals the onboarding email.',
     why: 'Same gate logic as first name, separate flag.',
     expected:
-      'Gate off → local; gate on → PII. Unmigrated + gate on: code returns null; intended value open (M2Q-05).',
+      'Gate off (staging today, M2Q-02): the owner’s email in /V1/users/:ref and /V1/users/about equals the fake onboarding email. Gate on → PII value: waiting for Dev (M2Q-43). Unmigrated variant: not applicable on staging (M2Q-05).',
     db: API_ONLY,
     deps: ['M2Q-02', 'M2Q-05', 'M2Q-03'],
-    status: 'NEED DEV CLARIFICATION',
+    waiting: ['M2Q-43'],
+    status: 'NOT RUN',
     automation: 'NOT AUTOMATED',
-    mode: 'Dev-assisted',
+    mode: 'API automation',
     evidence: `${DOC} "Field behavior" (Email).`,
   },
   {
@@ -1055,15 +1085,15 @@ export const CASES: M2Case[] = [
     name: 'Login, app launch and image upload still pass the scammer check that uses the email domain',
     category: 'Regression',
     priority: 'Medium',
-    pre: `${ACC} Gates on and off.`,
+    pre: `${ACC} ${GATE_OFF}`,
     data: 'Accounts with a normal test-domain email and with no email.',
     steps: ['Log in, fetch_login_response, app_launch, upload_images_v2 (image-inappropriate profile).'],
     validate: 'Flows succeed as before; no moderation false positive caused by a missing domain.',
     why: 'fetch_email_domain feeds check_for_scammer_before_moderation!; a nil domain could flag or block users.',
     expected:
-      'Same result as before the integration for a normal account. With no email the domain check gets nil (code); intended behaviour open (M2Q-05).',
+      'Same result as before the integration for a normal account (all staging profiles have migrated PII — M2Q-05). With no email the domain check gets nil (code, for reference).',
     db: API_ONLY,
-    deps: ['M2Q-03', 'M2Q-05'],
+    deps: ['M2Q-02', 'M2Q-03', 'M2Q-05', 'M2Q-32'],
     status: 'BLOCKED',
     automation: 'AUTOMATION BLOCKED',
     mode: 'API automation',
@@ -1106,21 +1136,23 @@ export const CASES: M2Case[] = [
     name: 'New user’s phone login writes the national number to PII',
     category: 'Functional',
     priority: 'Critical',
-    pre: `Approved test number never used before; OTP shortcut (M2Q-03). ${GATE_ON}`,
+    pre: `Fake +91 10xxxxxxxx number never used before (not 106…); OTP 1234 (M2Q-03); the account is onboarded so its own profile can be read (M2Q-36). ${GATE_OFF}`,
     data: 'Approved +91 test number (AISLE_TEST_PHONES).',
     steps: [
       'POST /V1/sessions/login_with_phone_number (request OTP).',
-      'POST /V1/sessions/verify_number_login_v1 {phone_code_id, mobile_number, otp}.',
-      'Read owner profile; read PHONE via the M1 facade.',
+      'POST /V1/sessions/verify_number_login_v1 {phone_code_id, mobile_number, otp} — creates the user and writes PHONE.',
+      'Onboard the account, then read the owner profile (/V1/users/:ref).',
     ],
-    validate: 'PII PHONE = national number; owner full number = local country code + PII number.',
+    validate:
+      'The phone shown to the owner is the login number (accepted forms: national / with country code).',
     why: 'This is the only app path that writes PHONE PII.',
     expected:
-      'PHONE written for the new user (Dev doc: "New-user phone login writes the national number to PII. Full-number reads prepend the locally stored country code").',
+      'Gate OFF: the owner profile shows the login number (Dev doc: "New-user phone login writes the national number to PII. Full-number reads prepend the locally stored country code"; M2Q-02). PII-side phone is recorded only. Gate ON → PII value: waiting for Dev (M2Q-43).',
     db: 'See M2-DB-001.',
     deps: ['M2Q-03', 'M2Q-02'],
-    status: 'BLOCKED',
-    automation: 'AUTOMATION BLOCKED',
+    waiting: ['M2Q-43'],
+    status: 'NOT RUN',
+    automation: 'NOT AUTOMATED',
     mode: 'API automation',
     evidence: `${DOC} API-060 + "Field behavior" (Phone).`,
   },
@@ -1139,7 +1171,7 @@ export const CASES: M2Case[] = [
     why: 'Confirms the documented "new user only" write.',
     expected: 'No PHONE write on returning login (Dev doc API-060).',
     db: 'See M2-DB-001.',
-    deps: ['M2Q-03', 'M2Q-37'],
+    deps: ['M2Q-03', 'M2Q-37', 'M2Q-44'],
     status: 'BLOCKED',
     automation: 'AUTOMATION BLOCKED',
     mode: 'API automation',
@@ -1153,16 +1185,17 @@ export const CASES: M2Case[] = [
     name: 'Existing user with no PII phone logs in — phone with the gate on',
     category: 'Unmigrated data',
     priority: 'Critical',
-    pre: `Pre-integration synthetic account with no PII PHONE record (M2Q-32). ${GATE_ON}`,
+    pre: 'Pre-integration account with no PII PHONE record and the read gate on — cannot occur on staging (M2Q-05).',
     data: '—',
     steps: ['Log in.', 'Read owner profile phone.'],
     validate: 'Phone shown to the owner; whether login resynced it.',
     why: 'Doc: existing-user login does not resync — these users would show no phone once the gate is on.',
     expected:
-      'Code shows no PHONE resync on returning login, so the phone is empty with the gate on; expected result open (M2Q-08, M2Q-05).',
+      'NOT APPLICABLE on staging: no pre-integration (unmigrated) account exists (M2Q-05, QA lead 2026-10-24). For reference, code shows no PHONE resync on returning login (M2Q-08).',
     db: 'See M2-DB-011.',
     deps: ['M2Q-02', 'M2Q-08', 'M2Q-05', 'M2Q-03', 'M2Q-32'],
-    status: 'NEED DEV CLARIFICATION',
+    na: UNMIG_NA,
+    status: 'NOT APPLICABLE',
     automation: 'NOT AUTOMATED',
     mode: 'API automation',
     evidence: `${DOC} "Existing-user login and admin phone edits do not resynchronize the PII value".`,
@@ -1175,7 +1208,7 @@ export const CASES: M2Case[] = [
     name: 'Admin phone edit is not written to PII (stale phone with the gate on)',
     category: 'Negative & edge case',
     priority: 'Critical',
-    pre: `${CMS} Synthetic profile. ${GATE_ON}`,
+    pre: `${CMS} Synthetic profile. ${GATE_OFF} ${GATE_ON_WAIT}`,
     data: 'Phone P1 → P2 (both approved test numbers).',
     steps: [
       'POST /admin/update_profile (and approve_and_edit) with phone_code_id + fetch_only_number = P2.',
@@ -1187,6 +1220,7 @@ export const CASES: M2Case[] = [
       'Code shows the admin edit changes only the local number: PII stays P1 and P1 is displayed with the gate on; expected result open (M2Q-08).',
     db: 'See M2-DB-008.',
     deps: ['M2Q-02', 'M2Q-08', 'M2Q-04'],
+    waiting: ['M2Q-43'],
     status: 'NEED DEV CLARIFICATION',
     automation: 'NOT AUTOMATED',
     mode: 'API automation',
@@ -1318,7 +1352,7 @@ export const CASES: M2Case[] = [
     name: 'Changing the first name leaves email and phone unchanged',
     category: 'Functional',
     priority: 'Critical',
-    pre: `${ACC} Email and phone set. ${GATE_ON}`,
+    pre: `${ACC} Email and phone set. ${GATE_OFF}`,
     data: 'N1 → N2.',
     steps: ['Record email/phone (owner profile + PII).', 'Edit first name.', 'Re-read.'],
     validate: 'Email and phone identical in app and PII.',
@@ -1326,8 +1360,9 @@ export const CASES: M2Case[] = [
     expected: 'Email and phone unchanged (Dev doc API-058).',
     db: 'See M2-DB-005.',
     deps: ['M2Q-02', 'M2Q-03'],
-    status: 'BLOCKED',
-    automation: 'AUTOMATION BLOCKED',
+    waiting: ['M2Q-43'],
+    status: 'NOT RUN',
+    automation: 'NOT AUTOMATED',
     mode: 'API automation',
     evidence: `${DOC} API-058.`,
   },
@@ -1360,16 +1395,18 @@ export const CASES: M2Case[] = [
     name: 'Owner’s profile returns all three fields matching PII',
     category: 'Functional',
     priority: 'High',
-    pre: `Migrated synthetic profile with all three fields (M2Q-03). All three gates on.`,
+    pre: `Fake profile onboarded by the suite with all three fields (M2Q-03, M2Q-36). ${GATE_OFF}`,
     data: '—',
     steps: ['GET own /V1/users/:ref; POST /V1/users/about.', 'Compare with PII reads.'],
     validate: 'first_name, email, phone (national + full) equal PII (+ local country code).',
     why: 'own_general_information combines all three — one place to catch a wrong mapping.',
-    expected: 'All equal (Dev doc own_general_information access paths).',
+    expected:
+      'Gate OFF: own first name = PII first name (API-001) = onboarding name; own email = onboarding email; own phone = login number (Dev doc own_general_information access paths; assign_first_name writes PII + local; M2Q-02). Gate ON → PII value: waiting for Dev (M2Q-43).',
     db: API_ONLY,
     deps: ['M2Q-02', 'M2Q-03'],
-    status: 'BLOCKED',
-    automation: 'AUTOMATION BLOCKED',
+    waiting: ['M2Q-43'],
+    status: 'NOT RUN',
+    automation: 'NOT AUTOMATED',
     mode: 'API automation',
     evidence: `${DOC} Email/Phone lists for API-021/022.`,
   },
@@ -1381,14 +1418,14 @@ export const CASES: M2Case[] = [
     name: 'Gates are independent (name on, email/phone off and other mixes)',
     category: 'Integration & consistency',
     priority: 'Medium',
-    pre: 'Gate-switch window (M2Q-02).',
+    pre: 'Gate combinations need the read gates switchable — waiting for Dev (M2Q-43); all gates OFF today (M2Q-02).',
     data: 'Profile whose PII and local values differ per field.',
     steps: ['Set each gate combination.', 'Read the owner profile.'],
     validate: 'Each field from its own source.',
     why: 'Gates will be enabled one by one in production.',
     expected: 'Each field follows its own gate (Dev doc "Field behavior").',
     db: API_ONLY,
-    deps: ['M2Q-02', 'M2Q-25'],
+    deps: ['M2Q-02', 'M2Q-25', 'M2Q-43'],
     status: 'BLOCKED',
     automation: 'AUTOMATION BLOCKED',
     mode: 'Dev-assisted',
@@ -1571,7 +1608,7 @@ export const CASES: M2Case[] = [
     name: 'Admin first-name edit saves to PII, trims spaces and shows in the app',
     category: 'Functional',
     priority: 'Critical',
-    pre: `Non-associate admin (M2Q-04). ${GATE_ON}`,
+    pre: `Non-associate admin (M2Q-04). ${GATE_OFF}`,
     data: '"  QaAdmin  " (with spaces).',
     steps: [
       'POST /admin/update_profile and /admin/approve_and_edit with the name.',
@@ -1765,15 +1802,16 @@ export const CASES: M2Case[] = [
     name: 'Payment request for a profile with blank PII (unmigrated, gate on)',
     category: 'Unmigrated data',
     priority: 'High',
-    pre: `Unmigrated synthetic profile; ${GATE_ON} Sandbox.`,
+    pre: 'Unmigrated profile with the read gate on — cannot occur on staging (M2Q-05). Sandbox.',
     data: '—',
     steps: ['Create Cashfree / PayU / PhonePe requests.'],
     validate: 'Response; provider payload; user-facing error.',
     why: 'Gateways may reject blank customer details, blocking purchases for unmigrated users.',
-    expected: 'To be confirmed (M2Q-17, M2Q-05).',
+    expected: 'NOT APPLICABLE on staging: no unmigrated profile exists (M2Q-05, QA lead 2026-10-24).',
     db: API_ONLY,
     deps: ['M2Q-02', 'M2Q-17', 'M2Q-05', 'M2Q-32'],
-    status: 'NEED DEV CLARIFICATION',
+    na: UNMIG_NA,
+    status: 'NOT APPLICABLE',
     automation: 'NOT AUTOMATED',
     mode: 'Dev-assisted',
     evidence: 'FN-SAN-048 (invoice null-name risk).',
@@ -1792,7 +1830,7 @@ export const CASES: M2Case[] = [
     name: 'List latency with name hydration from the PII service',
     category: 'Regression',
     priority: 'Low',
-    pre: 'Gate on/off windows (M2Q-02); latency budget (M2Q-23).',
+    pre: 'Gates OFF today (M2Q-02); gate-ON comparison waiting for Dev (M2Q-43); latency budget (M2Q-23).',
     data: 'Accounts with full lists.',
     steps: ['Measure p50/p95 for each list, gate off vs on, cold and warm cache.'],
     validate: 'Within budget.',
@@ -1800,6 +1838,7 @@ export const CASES: M2Case[] = [
     expected: 'To be confirmed (M2Q-23).',
     db: API_ONLY,
     deps: ['M2Q-23', 'M2Q-02'],
+    waiting: ['M2Q-43'],
     status: 'NEED DEV CLARIFICATION',
     automation: 'NOT AUTOMATED',
     mode: 'API automation',
@@ -1828,7 +1867,7 @@ export const CASES: M2Case[] = [
     name: 'Full user lifecycle: sign up, onboard, edit, hide, connect, chat, delete',
     category: 'Integration & consistency',
     priority: 'Critical',
-    pre: `Two disposable synthetic accounts (M2Q-03, M2Q-22). ${GATE_ON}`,
+    pre: `Two disposable synthetic accounts (M2Q-03, M2Q-22). ${GATE_OFF} ${GATE_ON_WAIT}`,
     data: 'Unique name/email per run; approved numbers.',
     steps: [
       'A and B sign up by phone (PHONE written).',
@@ -1844,6 +1883,7 @@ export const CASES: M2Case[] = [
       'Each step as in its single-case expectation; delete end state per M2Q-15 (code shows the PII records remain).',
     db: 'See M2-DB-001/002/003/010.',
     deps: ['M2Q-02', 'M2Q-03', 'M2Q-15', 'M2Q-22'],
+    waiting: ['M2Q-43'],
     status: 'BLOCKED',
     automation: 'AUTOMATION BLOCKED',
     mode: 'API automation',
@@ -1879,20 +1919,24 @@ export const CASES: M2Case[] = [
     name: 'A name written through the M1 facade does not refresh app caches',
     category: 'Integration & consistency',
     priority: 'Medium',
-    pre: `${ACC} ${GATE_ON}`,
+    pre: `${ACC} ${GATE_OFF}`,
     data: 'N1 in app; write N2 via POST /V1/api/v1/pii-test (field NAME).',
     steps: [
-      'Warm the app cache (read own profile).',
-      'Write N2 via the facade.',
-      'Read app (API-013) and PII route (API-001).',
+      'Read own profile (N1) and the PII route API-001 (fills the first-name cache with N1).',
+      'Write N2 via the facade (API-199).',
+      'Read the PII route (API-001), the facade read (API-200) and the own profile (API-013).',
+      'Restore N1 through POST /V1/pii_integration/first_name (API-002).',
     ],
-    validate: 'App may still show N1 until cache expiry; PII shows N2.',
+    validate:
+      'API-001 still returns the cached N1; the facade read (PII service, no cache) returns N2; the app value is recorded.',
     why: 'Doc: proxy writes bypass model and cache updates — QA must not seed app data through the facade.',
-    expected: 'PII = N2; app shows N1 until cache refresh (Dev doc API-199). Expiry: M2Q-12.',
+    expected:
+      'Gate OFF (from code — confirm with Dev, M2Q-12): API-001 returns the OLD cached name N1, because Pii::FieldStore.get_first_name reads the Redis FieldCache first (field_store.rb:63-71, 30-day TTL) and the facade write does not update it; the facade read API-200 returns N2; the app own-profile value is recorded, not asserted. Cache-expiry with the gate on: waiting for Dev (M2Q-43).',
     db: API_ONLY,
     deps: ['M2Q-02', 'M2Q-12', 'M2Q-03'],
-    status: 'BLOCKED',
-    automation: 'AUTOMATION BLOCKED',
+    waiting: ['M2Q-43'],
+    status: 'NOT RUN',
+    automation: 'NOT AUTOMATED',
     mode: 'API automation',
     evidence: `${DOC} API-199..207: "bypass Rails model updates and FieldStore cache invalidation".`,
   },
@@ -2630,5 +2674,6 @@ function dbCases(): M2Case[] {
       evidence: 'M1 DB check for revoked keys (PII-DB-006).',
     },
   ];
-  return rows.map((r) => ({ ...base, ...r }));
+  // All DB verification is on hold (QA lead decision 2026-10-24, M2Q-44).
+  return rows.map((r) => ({ ...base, ...r, deps: [...new Set([...r.deps, 'M2Q-44'])] }));
 }

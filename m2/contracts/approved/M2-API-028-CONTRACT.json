@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-028-CONTRACT",
-  "recordedAt": "2026-10-24T06:17:09.882Z",
-  "runId": "qa-m2-20261024t061633-6671",
+  "recordedAt": "2026-10-24T12:49:57.477Z",
+  "runId": "qa-m2-20261024t124732-dd5f",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -10,8 +10,13 @@
       "contentType": "application/json",
       "shape": {
         "user": {
-          "about": "null",
-          "audio_prompt": "null",
+          "about": "string",
+          "audio_prompt": {
+            "audio_url": "string",
+            "audio_url_id": "number",
+            "question": "string",
+            "question_id": "number"
+          },
           "delete_reasons": [
             {
               "id": "number",
@@ -107,19 +112,40 @@
           "has_concierge_subscription": "boolean",
           "has_voted": "boolean",
           "hide_first_name": "boolean",
-          "icebreakers": "null",
+          "icebreakers": [
+            {
+              "answer": "string",
+              "answer_id": "number",
+              "hint": "string",
+              "question": "string",
+              "question_id": "number"
+            }
+          ],
           "incognito_mode_active": "boolean",
           "incognito_mode_popup_text": {
             "button_text_1": "string",
             "description_text": "string",
             "header_text": "string"
           },
-          "introduction": "null",
+          "introduction": {
+            "answer": "string",
+            "answer_id": "number",
+            "hint": "string",
+            "question": "string",
+            "question_id": "number"
+          },
           "is_email_unsubscribed": "boolean",
           "is_sms_unsubscribed": "boolean",
           "last_seen": "string",
           "own_meetup": "null",
-          "partial_work": "null",
+          "partial_work": {
+            "college": "string",
+            "education": "string",
+            "graduation_year": "string",
+            "industry": "string",
+            "work": "string",
+            "work_title": "string"
+          },
           "percentage_profile_complete": "number",
           "photos": [
             {
@@ -296,12 +322,34 @@
           "show_incognito_mode": "boolean",
           "show_mandatory_complete_profile_popup": "boolean",
           "show_weekly": "boolean",
-          "story": "null",
-          "user_interests": [],
+          "story": {
+            "about": "string",
+            "story_id": "number"
+          },
+          "user_interests": [
+            {
+              "id": "number",
+              "interest_id": "number",
+              "name": "string",
+              "value": "number"
+            }
+          ],
           "user_interests_v2": [],
-          "user_traits": [],
+          "user_traits": [
+            {
+              "id": "number",
+              "name": "string",
+              "order": "number",
+              "trait_id": "number"
+            }
+          ],
           "work": "null",
-          "work_v1": "null"
+          "work_v1": {
+            "college": "string",
+            "graduation_year": "string",
+            "industry": "string",
+            "work_title": "string"
+          }
         }
       },
       "piiKeys": [
@@ -313,7 +361,21 @@
     }
   },
   "approved": {
-    "by": "QA lead",
+    "by": "Aisle codebase (develop_new 944f76a) — confirm with Dev",
     "on": "2026-10-24"
-  }
+  },
+  "approvals": [
+    {
+      "by": "Aisle codebase (develop_new 944f76a) — confirm with Dev",
+      "on": "2026-10-24",
+      "recordedAt": "2026-10-24T11:12:01.585Z",
+      "runId": "qa-m2-20261024t111102-0f0a"
+    },
+    {
+      "by": "Aisle codebase (develop_new 944f76a) — confirm with Dev",
+      "on": "2026-10-24",
+      "recordedAt": "2026-10-24T12:49:57.477Z",
+      "runId": "qa-m2-20261024t124732-dd5f"
+    }
+  ]
 }

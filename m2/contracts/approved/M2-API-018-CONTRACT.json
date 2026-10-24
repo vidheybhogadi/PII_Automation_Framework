@@ -1,0 +1,30 @@
+{
+  "caseId": "M2-API-018-CONTRACT",
+  "recordedAt": "2026-10-24T12:49:54.785Z",
+  "runId": "qa-m2-20261024t124732-dd5f",
+  "build": "unknown — deployed commit not confirmed (M2Q-01)",
+  "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
+  "variants": {
+    "valid request": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "link": "string",
+        "preview_text": "string"
+      },
+      "piiKeys": []
+    }
+  },
+  "approved": {
+    "by": "Aisle codebase (develop_new 944f76a) — confirm with Dev",
+    "on": "2026-10-24"
+  },
+  "approvals": [
+    {
+      "by": "Aisle codebase (develop_new 944f76a) — confirm with Dev",
+      "on": "2026-10-24",
+      "recordedAt": "2026-10-24T12:49:54.785Z",
+      "runId": "qa-m2-20261024t124732-dd5f"
+    }
+  ]
+}

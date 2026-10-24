@@ -1,0 +1,37 @@
+{
+  "caseId": "M2-API-039-REPEAT",
+  "recordedAt": "2026-10-24T12:53:43.745Z",
+  "runId": "qa-m2-20261024t124732-dd5f",
+  "build": "unknown — deployed commit not confirmed (M2Q-01)",
+  "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
+  "variants": {
+    "first request": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "status": "boolean"
+      },
+      "piiKeys": []
+    },
+    "same request again": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "status": "boolean"
+      },
+      "piiKeys": []
+    }
+  },
+  "approved": {
+    "by": "Aisle codebase (develop_new 944f76a) — confirm with Dev",
+    "on": "2026-10-24"
+  },
+  "approvals": [
+    {
+      "by": "Aisle codebase (develop_new 944f76a) — confirm with Dev",
+      "on": "2026-10-24",
+      "recordedAt": "2026-10-24T12:53:43.745Z",
+      "runId": "qa-m2-20261024t124732-dd5f"
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-106-PARAM",
-  "recordedAt": "2026-10-24T06:17:56.315Z",
-  "runId": "qa-m2-20261024t061633-6671",
+  "recordedAt": "2026-10-24T12:52:49.115Z",
+  "runId": "qa-m2-20261024t124732-dd5f",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -64,6 +64,7 @@
           ],
           "image_list": [
             {
+              "archive_reason": "string",
               "feedback_prompt": "null",
               "feedback_prompt_v2": "null",
               "feedback_prompt_v3": "null",
@@ -72,7 +73,7 @@
               "prompt": "null",
               "prompt_id": "null",
               "selected": "boolean",
-              "status": "string"
+              "status": "null"
             }
           ],
           "image_prompts": [
@@ -244,6 +245,7 @@
           ],
           "image_list": [
             {
+              "archive_reason": "string",
               "feedback_prompt": "null",
               "feedback_prompt_v2": "null",
               "feedback_prompt_v3": "null",
@@ -252,7 +254,7 @@
               "prompt": "null",
               "prompt_id": "null",
               "selected": "boolean",
-              "status": "string"
+              "status": "null"
             }
           ],
           "image_prompts": [

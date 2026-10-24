@@ -9,8 +9,15 @@ export interface M2Question {
   why: string;
   evidence: string;
   decision: string;
-  /** Blocks execution (BLOCKED) vs only the expected result (NEED DEV CLARIFICATION). */
-  kind: 'Access / environment' | 'Contract / expected behaviour' | 'Possible defect — confirm';
+  /**
+   * Blocks execution (BLOCKED) vs only the expected result (NEED DEV CLARIFICATION). "Waiting for Dev" = nothing to
+   * answer, QA waits for an environment change Dev controls (open → WAITING, not BLOCKED).
+   */
+  kind:
+    | 'Access / environment'
+    | 'Contract / expected behaviour'
+    | 'Possible defect — confirm'
+    | 'Waiting for Dev (environment change)';
   apis: string[];
   /** Answer received (no longer blocks; kept for traceability). */
   answer?: { text: string; by: string; on: string };
@@ -46,6 +53,11 @@ export const QUESTIONS: M2Question[] = [
     decision: 'Current values, a schedule for gate-on runs, and who toggles them.',
     kind: 'Access / environment',
     apis: [],
+    answer: {
+      text: 'On testa2 today ALL PII read gates are OFF: writes go to the PII service, reads come from the local app DB (aisleweb). Gate flipping is not available to QA now. Gate-OFF expectations are tested now; gate-ON expectations wait until Dev enables reads (M2Q-43).',
+      by: 'QA lead (2026-10-24)',
+      on: '2026-10-24',
+    },
   },
   {
     id: 'M2Q-03',
@@ -87,6 +99,11 @@ export const QUESTIONS: M2Question[] = [
     decision: 'Expected response for unmigrated profiles per field, gate on vs off.',
     kind: 'Contract / expected behaviour',
     apis: ['API-013', 'API-021'],
+    answer: {
+      text: 'ALL profiles on staging are migrated; no unmigrated profile exists, and new QA accounts write to PII at creation. Unmigrated-profile cases cannot occur on staging, so they are NOT APPLICABLE there. What production should show for an unmigrated profile with a gate on stays a Dev / Product decision (out of scope for staging QA).',
+      by: 'QA lead (2026-10-24)',
+      on: '2026-10-24',
+    },
   },
   {
     id: 'M2Q-06',
@@ -179,7 +196,7 @@ export const QUESTIONS: M2Question[] = [
       'Dev doc: "First-name cache hydration leaves its existing cached name unchanged when the fetched name is nil"; "Proxy writes bypass model/cache updates".',
     decision: 'TTL / propagation SLA; intended behaviour for nil hydration; QA cache-reset method.',
     kind: 'Contract / expected behaviour',
-    apis: ['API-014', 'API-020', 'API-199'],
+    apis: ['API-014', 'API-020', 'API-199', 'API-001'],
     answer: {
       text: "From code — confirm with Dev: decrypted PII values are cached in Redis per user and field (key pii:v1:user:<user_id>:<field>) for 30 days (PII_DECRYPTED_CACHE_TTL default 2,592,000 s). App writes (assign_first_name, add_email, phone write) update that cache immediately; facade (pii-test) writes do not. List hydration keeps the existing cached name when the batch read returns nil, single reads return nil (intended asymmetry not stated in code). QA can refresh a user's app caches with POST /V1/pii_integration/first_name (writes PII + local name and calls clear_cache!). Profile-cache (fill_cache!) propagation to other users' lists has no TTL in this code path.",
       by: 'Aisle codebase (develop_new 944f76a, app/services/pii/config.rb:5; app/services/pii/field_cache.rb:29-55; app/controllers/v1/pii_integration_controller.rb:36-58)',
@@ -455,10 +472,10 @@ export const QUESTIONS: M2Question[] = [
     id: 'M2Q-32',
     topic: 'Special account states',
     question:
-      'QA can now create accounts (10-prefixed numbers, OTP 1234). Some cases need states QA cannot create alone: (a) a verified selfie (hide-name eligibility) — may QA use /admin/images/mark_selfie_verified on its own accounts, or is there a test liveness response? (b) a pre-integration account with no PII records (unmigrated); (c) an approved / curated profile that appears in discovery. How should QA get these on staging?',
+      'QA can now create accounts (10-prefixed numbers, OTP 1234). Some cases need states QA cannot create alone: (a) a verified selfie (hide-name eligibility) — may QA use /admin/images/mark_selfie_verified on its own accounts, or is there a test liveness response? (b) a pre-integration account with no PII records (unmigrated) — answered by the QA lead 2026-10-24: no unmigrated profile exists on staging (see M2Q-05), so (b) is not needed; (c) an approved / curated profile that appears in discovery. How should QA get (a) and (c) on staging?',
     why: 'Hide-name, unmigrated-data and discovery cases need these states.',
     evidence:
-      'Dev doc API-031 (genuine liveness response needed), API-155 (admin selfie verification); M2Q-03 answer.',
+      'Dev doc API-031 (genuine liveness response needed), API-155 (admin selfie verification); M2Q-03 answer. Staging 2026-10-24: onboarded MALE synthetic accounts went pending_not_verified → approved within ~1–2 min in two runs (daily_requests_left 0 → 5–6); female approval not observed. Since 2026-10-24 the suite waits up to 3 min for this auto-approval (approved-state routes) and deactivates throwaway accounts itself (deactivated-state routes, users_controller.rb:3); it blocks with this question only when approval does not happen. Still open: (a) verified selfie; (c) a guaranteed way to get an approved / discoverable profile.',
     decision: 'How QA obtains each account state.',
     kind: 'Access / environment',
     apis: ['API-031', 'API-155', 'API-032'],
@@ -473,6 +490,11 @@ export const QUESTIONS: M2Question[] = [
     decision: 'Approve read-only, synthetic-only aisleweb access (or a Dev-run check).',
     kind: 'Access / environment',
     apis: ['API-058', 'API-187', 'API-121'],
+    answer: {
+      text: 'The aisleweb DB uses the same server and credentials as the configured PII DB (.env DB_*), with a different database name. QA may read it read-only, restricted to its own synthetic accounts. All DB cases stay ON HOLD for now (user decision, M2Q-44).',
+      by: 'QA lead (2026-10-24)',
+      on: '2026-10-24',
+    },
   },
   {
     id: 'M2Q-34',
@@ -515,7 +537,7 @@ export const QUESTIONS: M2Question[] = [
     kind: 'Access / environment',
     apis: ['API-057', 'API-061', 'API-059', 'API-013'],
     answer: {
-      text: 'Login + onboarding flow from the Aisle UI automation team, verified by QA on staging (m2/docs/onboarding-flow.md): OTP request with phone_code_id 242, device fields and the app’s static signature_v1 in the body; verify with OTP 1234; POST /V1/user/submit_profile with hard-coded option ids and 4 Aisle-CDN photo URLs; POST /V1/account_journey/update_community_message_agreed; re-verify until application_stage "completed"; delete with POST /V1/user/delete {id: ref, reason_id: 1}. Photos must match the declared gender (hosted male / female sets; POST /V1/images uploads an image). From code 2026-10-24 (develop_new 944f76a — confirm with Dev): option lists come from GET /V1/fields/list_all (Bearer; Fields.fetch_app_constant_list), GET /V1/fields/settle_down_option_list, GET /fields/faiths and GET /fields/languages (config/routes.rb:44-50, 455-456; app/controllers/v1/fields_controller.rb:74-77); photos via GET /V1/images/fetch_presigned_url and POST /V1/images/upload (routes.rb:329-331); automatic photo moderation is the Hive curator, which rejects photos whose detected gender does not match the profile (app/models/hive/curator.rb:1674-1810) — no test-account allow-list exists in code. Still open (not blocking): an admin approval or a test allow-list for API-onboarded profiles; tests block at runtime when a profile is flagged. Web-token issuance moved to M2Q-41.',
+      text: 'Login + onboarding flow from the Aisle UI automation team, verified by QA on staging (m2/docs/onboarding-flow.md): OTP request with phone_code_id 242, device fields and the app’s static signature_v1 in the body; verify with OTP 1234; POST /V1/user/submit_profile with hard-coded option ids and 4 Aisle-CDN photo URLs; POST /V1/account_journey/update_community_message_agreed; re-verify until application_stage "completed"; delete with POST /V1/user/delete {id: ref, reason_id: 1}. Photos must match the declared gender (hosted male / female sets; POST /V1/images uploads an image). From code 2026-10-24 (develop_new 944f76a — confirm with Dev): option lists come from GET /V1/fields/list_all (Bearer; Fields.fetch_app_constant_list), GET /V1/fields/settle_down_option_list, GET /fields/faiths and GET /fields/languages (config/routes.rb:44-50, 455-456; app/controllers/v1/fields_controller.rb:74-77); photos via GET /V1/images/fetch_presigned_url and POST /V1/images/upload (routes.rb:329-331); automatic photo moderation is the Hive curator, which rejects photos whose detected gender does not match the profile (app/models/hive/curator.rb:1674-1810) — no test-account allow-list exists in code. Still open (not blocking): an admin approval or a test allow-list for API-onboarded profiles; tests block at runtime when a profile is flagged. Web-token issuance moved to M2Q-41. Request placeholders (2026-10-24, from code and our own staging accounts — confirm with Dev): FAITH_ID 6, LANGUAGE_ID 1, RELATIONSHIP_GOAL_ID 2 (onboarding body), PHONE_CODE_ID 242, INTEREST_ID 1, INTEREST_V2_ID 31, TRAIT_ID 121, PREFERENCE_ID 14, SETTLE_ID 3, MBTI_ID 8, QUESTION_ID 156, AUDIO_QUESTION_ID 165, DELETE_REASON_ID 1 are defaults in m2/src/config/m2-config.ts, checked against GET /V1/fields/{interests,interests_v2,traits,settle_down_option_list,mbti_option_list,phonecodes} and GET /V1/introduction at run time; PUBLIC_USER_NAME and the chat time tokens are generated per run; PHOTO_URL / PHOTO_ID come from the caller’s own image_list (edit routes) or the hosted set of the caller’s gender (submit routes); OTHER_REF is a second suite account (female); CONVERSATION_ID comes from a mutual like between two suite accounts; AUDIO_URL from POST /V1/users/upload_audio_url with a generated silent MP3; REQUEST_ID from an invite between two suite accounts. Event, poll, room and restaurant ids: M2Q-45.',
       by: 'UI automation team via QA lead',
       on: '2026-10-23',
     },
@@ -527,7 +549,7 @@ export const QUESTIONS: M2Question[] = [
       'Observed 2026-10-23: POST /V1/sessions/fetch_login_response {user_id: <another synthetic account’s id>, is_new_user: false} with NO credential returns 200 with auth_token, first_name, gender, profile_state … for that account. Is this route meant to be callable without proof of the OTP login? As observed, anyone who knows a user id can obtain that user’s session token.',
     why: 'Possible account takeover: a session token for any account from its user id alone.',
     evidence:
-      'M2 staging run 2026-10-23 (M2-API-062-AUTH, synthetic accounts only; the token was never recorded).',
+      'M2 staging run 2026-10-23 (M2-API-062-AUTH, synthetic accounts only; the token was never recorded). Incident 2026-10-24 (record run qa-m2-20261024t111102-0f0a): the BODY wrong-type variant sent user_id 12345 — NOT a suite account — and is_new_user "qa-not-a-number"; the route answered 200 (a session token was minted for user 12345, never recorded) and, is_new_user being truthy, real "joined" attribution events may have been sent to Appsflyer / Adjust. The variant generator was fixed the same day (ids are never sent as other users’ values; is_new_user is never truthy) and the recording was discarded.',
     decision: 'Intended or defect; required proof (OTP session, device binding).',
     kind: 'Possible defect — confirm',
     apis: ['API-062'],
@@ -614,6 +636,104 @@ export const QUESTIONS: M2Question[] = [
       on: '2026-10-24',
     },
   },
+  {
+    id: 'M2Q-43',
+    topic: 'Read gates ON',
+    question:
+      'Please tell QA when ALLOW_PII_FIRST_NAME_READ, ALLOW_PII_EMAIL_READ and ALLOW_PII_PHONE_NUMBER_READ are enabled on testa2, and for which fields, so the gate-ON expectations (reads return the PII value) can be run.',
+    why: 'M2Q-02: all read gates are OFF on testa2 today and QA cannot switch them, so every gate-ON expectation waits for Dev.',
+    evidence: 'QA lead answer to M2Q-02 (2026-10-24).',
+    decision: 'Date / fields for which the read gates are enabled on testa2.',
+    kind: 'Waiting for Dev (environment change)',
+    apis: [],
+    deferred: 'Waiting for the read gates to be enabled by Dev (QA lead, 2026-10-24).',
+  },
+  {
+    id: 'M2Q-44',
+    topic: 'DB verification on hold',
+    question:
+      'All M2 DB verification (PII DB rows, aisleweb local columns, free-text storage) is on hold by QA lead decision. When may QA run the read-only DB cases on its own synthetic accounts?',
+    why: 'DB access exists (M2Q-16, M2Q-33 answered) but the QA lead put every DB case on hold for now.',
+    evidence: 'User / QA lead decision 2026-10-24 ("keep db cases on hold").',
+    decision: 'Lift the hold (date / scope).',
+    kind: 'Access / environment',
+    apis: [],
+    deferred: 'On hold by QA lead 2026-10-24 — all DB cases wait until the hold is lifted.',
+  },
+  {
+    id: 'M2Q-45',
+    topic: 'Dev-only ids and actions',
+    question:
+      '(a) Some requests need ids QA cannot create with its own synthetic accounts: EVENT_ID (speed-dating event, API-101 / API-103), POLL_OPTION_ID (advertisement poll, API-105), ROOM_ID (live-audio room, API-109–112) and RESTAURANT_ID / MEAL_TYPE_ID (meetup, API-023). Which staging ids may QA use (or how can QA create them)? (b) May QA call selfie verification (API-031, sends an image to the face / liveness check) and file moderation reports (API-098 / API-135, a human moderation queue) against its own synthetic accounts?',
+    why: 'Without a value the valid request cannot be built; (b) is kept Blocked by the QA lead until Dev agrees.',
+    evidence:
+      'Record run 2026-10-24: "no value for EVENT_ID / POLL_OPTION_ID / ROOM_ID / RESTAURANT_ID"; QA lead decision 2026-10-24 (keep API-031, API-098, API-135 Blocked).',
+    decision:
+      'Ids (or creation steps) for events, polls, rooms, restaurants; permission for selfie verification and reports.',
+    kind: 'Access / environment',
+    apis: [
+      'API-023',
+      'API-031',
+      'API-098',
+      'API-101',
+      'API-103',
+      'API-105',
+      'API-109',
+      'API-110',
+      'API-111',
+      'API-112',
+      'API-135',
+    ],
+  },
+  {
+    id: 'M2Q-46',
+    topic: 'Missing ref acts on an arbitrary member',
+    question:
+      'From code (origin/develop_new — confirm with Dev): Profile.by_ref is `where("profiles.ref = ?", ref.upcase) if ref.present?` (app/models/profile.rb:128), so a missing or blank ref matches EVERY profile and Profile.get_profile_by_ref(nil) returns Profile.not_deleted.first (profile.rb:855-856). Our contract recording of 2026-10-24 sent requests WITHOUT ref and staging answered 200 on: like / pass / like_back / like_sent / like_accept / like_passed / like_without_deduction (API-046, 050–053, 055, 056, 125, 127, 128), send_request_to_profile (API-004), connect_linked_users (API-064, API-132), generate_agora_token (API-065), messages/send (API-187, API-188), submit_profile_web without receiver_profile (API-061), and the profile reads API-011 / API-119 (which returned another member’s profile). Most serious: POST /V1/users/delete_older_account without ref (API-196, 200) runs delete_all_account_info on that first profile’s account (user.rb:696-705), and POST /V1/users/delete_current_account without ref (API-197, 200, reply with auth_token) deletes the caller and returns the login response of that first profile’s user (user.rb:708-723). Also: verify_number_login_v1 without phone_code_id (API-060) answered 200 with an auth_token. (a) Please check on testa2 which account(s) the API-196 / API-197 requests of the 2026-10-24 recording runs deleted or logged into, and restore them if needed. (b) Is the nil-ref fallback intended anywhere? It looks like a defect: every route should refuse a missing / blank ref (and phone_code_id) with 4xx. (c) May QA resume API-196 / API-197 (own ref only) once fixed?',
+    why: 'A request without ref acts on an arbitrary — possibly real — member: likes, passes and messages are sent to them, their profile is returned, and API-196 may have deleted their account; API-197 returns their session token.',
+    evidence:
+      'M2 contract recording 2026-10-24 (m2/contracts/recorded/*-PARAM.json "without ref" = 200; the variants are now never sent and were removed from the recordings). Code: app/models/profile.rb:128, 855-856; app/models/user.rb:696-723; app/controllers/v1/users_controller.rb:298-306.',
+    decision:
+      'Defect or intended; which accounts were affected on testa2; when API-196 / API-197 may run again. Until then API-196 / API-197 are paused and no variant ever removes or blanks a target, phone or login-OTP key.',
+    kind: 'Possible defect — confirm',
+    apis: [
+      'API-004',
+      'API-011',
+      'API-046',
+      'API-050',
+      'API-051',
+      'API-052',
+      'API-053',
+      'API-055',
+      'API-056',
+      'API-060',
+      'API-061',
+      'API-064',
+      'API-065',
+      'API-119',
+      'API-125',
+      'API-127',
+      'API-128',
+      'API-132',
+      'API-187',
+      'API-188',
+      'API-196',
+      'API-197',
+    ],
+  },
+  {
+    id: 'M2Q-47',
+    topic: 'Deleting accounts stuck before onboarding',
+    question:
+      'Some synthetic accounts the suite created stopped at the first onboarding step because POST /V1/user/submit_profile answered HTTP 500. POST /V1/user/delete answers 401 for such a new-user token (observed 2026-10-23); deletion works only after onboarding, so the clean-up onboards them first — which fails again while submit_profile returns 500. (a) Why does submit_profile return 500 for these synthetic accounts? (b) Is there a route (or a Dev-side clean-up) that deletes an account still at the first onboarding step? From code, delete_current_account needs another profile’s ref, so it is not usable. Until then the clean-up reports these accounts as "left behind (real)" with the reason.',
+    why: 'Synthetic accounts the suite cannot delete stay on staging.',
+    evidence:
+      'Ledger reports/m2/accounts/*.json (2026-10-24): 10 entries "onboarding failed: submit_profile refused: HTTP 500"; Dev inventory note on API-059 (new-user token → 401).',
+    decision:
+      'Cause of the submit_profile 500; a deletion path for not-onboarded accounts (or Dev deletes them).',
+    kind: 'Access / environment',
+    apis: ['API-057', 'API-059'],
+  },
 ];
 
 /**
@@ -643,11 +763,25 @@ export const SERVER_ERROR_ON_BAD_CREDENTIAL = 'M2Q-39';
 
 /** Questions that still block: no answer yet (deferred questions are still open). */
 export const OPEN = new Set(QUESTIONS.filter((q) => !q.answer).map((q) => q.id));
-const CONTRACT = new Set(QUESTIONS.filter((q) => q.kind !== 'Access / environment').map((q) => q.id));
+const WAITING_KIND = 'Waiting for Dev (environment change)';
+/** Open questions that only wait for an environment change Dev controls (→ WAITING, not BLOCKED). */
+export const WAITING_QUESTIONS = new Set(QUESTIONS.filter((q) => q.kind === WAITING_KIND).map((q) => q.id));
+const CONTRACT = new Set(
+  QUESTIONS.filter((q) => q.kind !== 'Access / environment' && q.kind !== WAITING_KIND).map((q) => q.id),
+);
 
-/** One status rule for every case: open contract question → NEED DEV CLARIFICATION; open access question → BLOCKED. */
-export function statusFromDeps(deps: string[]): 'NEED DEV CLARIFICATION' | 'BLOCKED' | 'NOT RUN' {
+/** Read gates ON (M2Q-43): the gate-ON half of a case waits for Dev to enable the read gates on testa2. */
+export const READ_GATES_ON = 'M2Q-43';
+/** All DB verification is on hold (QA lead decision 2026-10-24). */
+export const DB_ON_HOLD = 'M2Q-44';
+
+/**
+ * One status rule for every case: open contract question → NEED DEV CLARIFICATION; open access question → BLOCKED;
+ * only open "waiting for Dev" questions → WAITING; nothing open → NOT RUN.
+ */
+export function statusFromDeps(deps: string[]): 'NEED DEV CLARIFICATION' | 'BLOCKED' | 'WAITING' | 'NOT RUN' {
   const open = deps.filter((d) => OPEN.has(d));
   if (open.some((d) => CONTRACT.has(d))) return 'NEED DEV CLARIFICATION';
-  return open.length ? 'BLOCKED' : 'NOT RUN';
+  if (open.some((d) => !WAITING_QUESTIONS.has(d))) return 'BLOCKED';
+  return open.length ? 'WAITING' : 'NOT RUN';
 }

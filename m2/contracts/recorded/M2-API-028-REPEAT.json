@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-028-REPEAT",
-  "recordedAt": "2026-10-24T06:18:01.071Z",
-  "runId": "qa-m2-20261024t061633-6671",
+  "recordedAt": "2026-10-24T12:53:33.516Z",
+  "runId": "qa-m2-20261024t124732-dd5f",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -10,7 +10,7 @@
       "contentType": "application/json",
       "shape": {
         "user": {
-          "about": "string",
+          "about": "null",
           "audio_prompt": "null",
           "delete_reasons": [
             {
@@ -119,10 +119,18 @@
           "is_sms_unsubscribed": "boolean",
           "last_seen": "string",
           "own_meetup": "null",
-          "partial_work": "null",
+          "partial_work": {
+            "college": "string",
+            "education": "string",
+            "graduation_year": "string",
+            "industry": "string",
+            "work": "string",
+            "work_title": "string"
+          },
           "percentage_profile_complete": "number",
           "photos": [
             {
+              "archive_reason": "string",
               "feedback_prompt": "null",
               "feedback_prompt_v2": "null",
               "feedback_prompt_v3": "null",
@@ -131,10 +139,20 @@
               "prompt": "null",
               "prompt_id": "null",
               "selected": "boolean",
-              "status": "string"
+              "status": "null"
             }
           ],
-          "preferences": [],
+          "preferences": [
+            {
+              "answer_id": "number",
+              "id": "number",
+              "preference_question": {
+                "first_choice": "string",
+                "second_choice": "string"
+              },
+              "value": "number"
+            }
+          ],
           "profile_complete_without_selfie": "number",
           "profile_sharing_enabled": "boolean",
           "profile_sharing_popup_text": {
@@ -296,15 +314,39 @@
           "show_incognito_mode": "boolean",
           "show_mandatory_complete_profile_popup": "boolean",
           "show_weekly": "boolean",
-          "story": {
-            "about": "string",
-            "story_id": "number"
-          },
-          "user_interests": [],
-          "user_interests_v2": [],
-          "user_traits": [],
+          "story": "null",
+          "user_interests": [
+            {
+              "id": "number",
+              "interest_id": "number",
+              "name": "string",
+              "value": "number"
+            }
+          ],
+          "user_interests_v2": [
+            {
+              "common_interest": "string",
+              "id": "number",
+              "interest_id": "number",
+              "name": "string",
+              "order": "number"
+            }
+          ],
+          "user_traits": [
+            {
+              "id": "number",
+              "name": "string",
+              "order": "number",
+              "trait_id": "number"
+            }
+          ],
           "work": "null",
-          "work_v1": "null"
+          "work_v1": {
+            "college": "string",
+            "graduation_year": "string",
+            "industry": "string",
+            "work_title": "string"
+          }
         }
       },
       "piiKeys": [
@@ -319,7 +361,7 @@
       "contentType": "application/json",
       "shape": {
         "user": {
-          "about": "string",
+          "about": "null",
           "audio_prompt": "null",
           "delete_reasons": [
             {
@@ -428,10 +470,18 @@
           "is_sms_unsubscribed": "boolean",
           "last_seen": "string",
           "own_meetup": "null",
-          "partial_work": "null",
+          "partial_work": {
+            "college": "string",
+            "education": "string",
+            "graduation_year": "string",
+            "industry": "string",
+            "work": "string",
+            "work_title": "string"
+          },
           "percentage_profile_complete": "number",
           "photos": [
             {
+              "archive_reason": "string",
               "feedback_prompt": "null",
               "feedback_prompt_v2": "null",
               "feedback_prompt_v3": "null",
@@ -440,10 +490,20 @@
               "prompt": "null",
               "prompt_id": "null",
               "selected": "boolean",
-              "status": "string"
+              "status": "null"
             }
           ],
-          "preferences": [],
+          "preferences": [
+            {
+              "answer_id": "number",
+              "id": "number",
+              "preference_question": {
+                "first_choice": "string",
+                "second_choice": "string"
+              },
+              "value": "number"
+            }
+          ],
           "profile_complete_without_selfie": "number",
           "profile_sharing_enabled": "boolean",
           "profile_sharing_popup_text": {
@@ -605,15 +665,39 @@
           "show_incognito_mode": "boolean",
           "show_mandatory_complete_profile_popup": "boolean",
           "show_weekly": "boolean",
-          "story": {
-            "about": "string",
-            "story_id": "number"
-          },
-          "user_interests": [],
-          "user_interests_v2": [],
-          "user_traits": [],
+          "story": "null",
+          "user_interests": [
+            {
+              "id": "number",
+              "interest_id": "number",
+              "name": "string",
+              "value": "number"
+            }
+          ],
+          "user_interests_v2": [
+            {
+              "common_interest": "string",
+              "id": "number",
+              "interest_id": "number",
+              "name": "string",
+              "order": "number"
+            }
+          ],
+          "user_traits": [
+            {
+              "id": "number",
+              "name": "string",
+              "order": "number",
+              "trait_id": "number"
+            }
+          ],
           "work": "null",
-          "work_v1": "null"
+          "work_v1": {
+            "college": "string",
+            "graduation_year": "string",
+            "industry": "string",
+            "work_title": "string"
+          }
         }
       },
       "piiKeys": [

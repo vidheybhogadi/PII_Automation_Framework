@@ -32,12 +32,18 @@ test.describe('M2 per-API checks — login credential (number + OTP) refused whe
     accounts.requireCreate();
     const device = sessions.device(`${m2Config.runId}-login-auth`);
     const fresh = testPhoneNumber(m2Config.runId, 9000);
-    accounts.track(fresh, device.uniqueIdentifier, 'wrong-OTP check — must not create an account');
+    const entry = accounts.track(
+      fresh,
+      device.uniqueIdentifier,
+      'wrong-OTP check — must not create an account',
+    );
 
     const otp = await sessions.requestOtp(fresh, device);
     observe('request OTP for a fresh test number', otp);
     const wrong = await sessions.verify(fresh, '0000', device);
     observe('verify with a wrong OTP', wrong);
+    // No token issued → no account to clean up (never logged into again; counted as "never created").
+    if (noToken(wrong)) accounts.markNeverCreated(entry, 'wrong OTP refused — no token issued');
     expect(noToken(wrong), 'wrong OTP: no auth_token issued').toBe(true);
     expectNoPii(wrong, 'wrong OTP');
     expect(

@@ -5,9 +5,9 @@
  */
 
 /**
- * Routes whose controller filters require a profile STATE that QA cannot create (an approved, deactivated or
- * image-inappropriate profile). The filter answers 401 (web) or 403 (V1) for any other state, so these cases depend
- * on M2Q-32 (special account states). Derived from the before_action filters of each route's controller action.
+ * Routes whose controller filters require a profile STATE (approved, deactivated or image-inappropriate). The filter
+ * answers 401 (web) or 403 (V1) for any other state. Derived from the before_action filters of each route's controller
+ * action. How the suite gets each state: suiteStateFor() below (only image_inappropriate still depends on M2Q-32).
  */
 export const ROUTE_STATE: Record<string, { state: string; ref: string }> = {
   'API-030': { state: 'deactivated', ref: 'app/controllers/v1/users_controller.rb:7 (activate_user)' },
@@ -39,6 +39,7 @@ export const ROUTE_STATE: Record<string, { state: string; ref: string }> = {
   },
   'API-123': { state: 'approved', ref: 'app/controllers/web/users_controller.rb:5 (deactivate_user)' },
   'API-124': { state: 'deactivated', ref: 'app/controllers/web/users_controller.rb:7 (activate_user)' },
+  'API-125': { state: 'approved', ref: 'app/controllers/web/like_controller.rb:4 (create)' },
   'API-126': {
     state: 'approved or deactivated',
     ref: 'app/controllers/web/like_controller.rb:5 (list_likes_received)',
@@ -72,6 +73,24 @@ export const ROUTE_STATE: Record<string, { state: string; ref: string }> = {
     ref: 'app/controllers/web/messages_controller.rb:3 (create)',
   },
 };
+
+/**
+ * How the suite obtains the state a ROUTE_STATE route needs (user decision 2026-10-24, from code — confirm with Dev):
+ * - 'approved' (incl. "approved or deactivated"): a suite account that staging approved by itself — male synthetic
+ *   accounts were auto-approved within ~1–2 min on 2026-10-24; the suite waits up to 3 min, otherwise Blocked M2Q-32.
+ * - 'deactivated': a throwaway suite account deactivated with POST /V1/users/deactivate_user, which is allowed for
+ *   pending profiles (app/controllers/v1/users_controller.rb:3); re-activated before the clean-up delete.
+ * - 'image_inappropriate': cannot be created safely → stays Blocked (M2Q-32).
+ */
+export type SuiteState = 'approved' | 'deactivated' | 'image_inappropriate';
+
+export function suiteStateFor(apiId: string): SuiteState | undefined {
+  const s = ROUTE_STATE[apiId]?.state;
+  if (!s) return undefined;
+  if (s.startsWith('approved')) return 'approved';
+  if (s === 'deactivated') return 'deactivated';
+  return 'image_inappropriate';
+}
 
 /**
  * First-name normalisation applied by Profile#assign_first_name (app/models/profile.rb:3137-3144, 6536-6540):

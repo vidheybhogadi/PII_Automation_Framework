@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-015-BODY",
-  "recordedAt": "2026-10-24T07:19:45.459Z",
-  "runId": "qa-m2-20261024t071927-db86",
+  "recordedAt": "2026-10-24T12:48:00.243Z",
+  "runId": "qa-m2-20261024t124732-dd5f",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {

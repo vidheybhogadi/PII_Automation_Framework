@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-016-CONTRACT",
-  "recordedAt": "2026-10-24T06:17:06.276Z",
-  "runId": "qa-m2-20261024t061633-6671",
+  "recordedAt": "2026-10-24T12:49:54.098Z",
+  "runId": "qa-m2-20261024t124732-dd5f",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -157,18 +157,18 @@
               "mother_tongue_id": "number",
               "online_code": "number",
               "partial_work": {
+                "college": "string",
                 "education": "string",
+                "graduation_year": "string",
                 "industry": "string",
+                "new_income": "null",
                 "new_qualification": {
                   "id": "number",
                   "name": "string",
                   "preference_only": "boolean"
                 },
                 "work": "string",
-                "work_title": "string",
-                "college": "string",
-                "graduation_year": "string",
-                "new_income": "null"
+                "work_title": "string"
               },
               "photos": [
                 {
@@ -198,8 +198,6 @@
                   "answer": "string",
                   "answer_id": "number",
                   "invitation_type": "string",
-                  "question": "string",
-                  "question_id": "number",
                   "preferences": [
                     {
                       "answer": "string",
@@ -207,7 +205,9 @@
                       "first_choice": "string",
                       "second_choice": "string"
                     }
-                  ]
+                  ],
+                  "question": "string",
+                  "question_id": "number"
                 }
               ],
               "profile_sharing_enabled": "boolean",
@@ -615,7 +615,21 @@
     }
   },
   "approved": {
-    "by": "QA lead",
+    "by": "Aisle codebase (develop_new 944f76a) — confirm with Dev",
     "on": "2026-10-24"
-  }
+  },
+  "approvals": [
+    {
+      "by": "QA lead",
+      "on": "2026-10-24",
+      "recordedAt": "2026-10-24T06:17:06.276Z",
+      "runId": "qa-m2-20261024t061633-6671"
+    },
+    {
+      "by": "Aisle codebase (develop_new 944f76a) — confirm with Dev",
+      "on": "2026-10-24",
+      "recordedAt": "2026-10-24T12:49:54.098Z",
+      "runId": "qa-m2-20261024t124732-dd5f"
+    }
+  ]
 }

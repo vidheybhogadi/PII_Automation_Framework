@@ -16,7 +16,7 @@ import type { ApiResponse } from '../../../core/http/api-response';
 import { ExchangeRecorder } from '../../../core/utils/exchange-recorder';
 import { Logger } from '../../../core/utils/logger';
 import type { AnyCase } from '../../scripts/m2-all-cases';
-import { KNOWN_FINDINGS, SERVER_ERROR_ON_BAD_CREDENTIAL } from '../../scripts/m2-questions';
+import { KNOWN_FINDINGS, READ_GATES_ON, SERVER_ERROR_ON_BAD_CREDENTIAL } from '../../scripts/m2-questions';
 import { Accounts } from '../accounts/accounts';
 import { shapeOf } from '../assertions/pii.assertions';
 import type { SessionHelper } from '../auth/session';
@@ -125,19 +125,57 @@ export { expect };
 
 /**
  * Mark a case BLOCKED when its design status says it cannot run yet (BLOCKED / NEED DEV CLARIFICATION because of an
- * open question in m2/scripts/m2-questions.ts). The reason (question IDs + topics) is shown in the report and the
+ * open question in m2/scripts/m2-questions.ts); WAITING cases are skipped with a "WAITING" reason and NOT APPLICABLE
+ * cases with a `not-applicable` annotation. Runnable cases with a waiting part record it and run. The reason (question IDs + topics) is shown in the report and the
  * test body does not run — never a pass, never a failure. A case the design marks NOT RUN always runs; any open
  * question it cites covers only details the test records instead of asserting.
  * Known findings (KNOWN_FINDINGS) are attached as markers: the strict assertion stays and still fails.
  */
 export function blockIfOpen(c: AnyCase): void {
   markFinding(c.id);
-  if (c.status === 'NOT RUN') return;
+  if (c.na) notApplicable(c.na.question, c.na.reason);
+  if (c.status === 'NOT RUN') {
+    for (const q of c.waiting ?? []) waitingPart(q);
+    return;
+  }
   const open = openDeps(c);
+  if (c.status === 'WAITING') {
+    // Only an environment change Dev controls is missing (e.g. read gates ON): skipped, shown with the reason.
+    const why = open.map((q) => `${q.id} (${q.topic})`).join(', ');
+    test.info().annotations.push({
+      type: 'blocked',
+      description: `${open[0]?.id ?? 'M2'}: WAITING — ${WAITING_TEXT[open[0]?.id ?? ''] ?? why}`,
+    });
+    test.skip(true, `WAITING (${open.map((q) => q.id).join(', ')}): ${why}`);
+  }
   const reason = open.length ? open.map((q) => `${q.id} (${q.topic})`).join(', ') : c.status;
   const first = open[0]?.id ?? 'M2';
   test.info().annotations.push({ type: 'blocked', description: `${first}: waiting for ${reason}` });
   test.fixme(true, `BLOCKED (${open.map((q) => q.id).join(', ') || c.status}): waiting for ${reason}`);
+}
+
+/** Plain reasons for "waiting" questions, so reports read the same everywhere. */
+const WAITING_TEXT: Record<string, string> = {
+  [READ_GATES_ON]: 'read gates are OFF on testa2 (M2Q-02); this runs when Dev enables reads',
+};
+
+/**
+ * The case cannot occur on this environment (confirmed answer, e.g. M2Q-05: all staging profiles are migrated).
+ * Annotation `not-applicable` → report status "Not Applicable" (left out of the pass rate); never a pass, failure or
+ * blocked.
+ */
+export function notApplicable(questionId: string, reason: string): never {
+  test.info().annotations.push({ type: 'not-applicable', description: `${questionId}: ${reason}` });
+  test.skip(true, `NOT APPLICABLE (${questionId}): ${reason}`);
+  throw new Error('unreachable'); // test.skip throws; keeps the type `never`
+}
+
+/** Record that part of a runnable case waits for Dev (informational; the rest of the case runs and decides). */
+export function waitingPart(questionId: string): void {
+  test.info().annotations.push({
+    type: 'waiting',
+    description: `${questionId}: gate-ON part not run — ${WAITING_TEXT[questionId] ?? 'waiting for Dev'}`,
+  });
 }
 
 /** Attach the known-finding marker of a case (security finding or known defect), if it has one. */

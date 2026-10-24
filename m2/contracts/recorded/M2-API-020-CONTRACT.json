@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-020-CONTRACT",
-  "recordedAt": "2026-10-24T06:17:07.815Z",
-  "runId": "qa-m2-20261024t061633-6671",
+  "recordedAt": "2026-10-24T12:49:55.337Z",
+  "runId": "qa-m2-20261024t124732-dd5f",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -30,7 +30,7 @@
             ],
             "display_message": "null",
             "display_new_tag": "boolean",
-            "distance": "string",
+            "distance": "null",
             "drinking_v2_id": "number",
             "faith_id": "number",
             "general_information": {
@@ -69,10 +69,7 @@
               "gender": "string",
               "height": "number",
               "home_town": "string",
-              "kid": {
-                "id": "number",
-                "name": "string"
-              },
+              "kid": "null",
               "languages": [
                 {
                   "id": "number",
@@ -162,14 +159,15 @@
               "college": "string",
               "education": "string",
               "graduation_year": "string",
-              "industry": "string",
-              "work": "string",
-              "work_title": "string",
+              "new_income": "null",
               "new_qualification": {
                 "id": "number",
                 "name": "string",
                 "preference_only": "boolean"
-              }
+              },
+              "work": "string",
+              "work_title": "string",
+              "industry": "string"
             },
             "photos": [
               {
@@ -177,14 +175,40 @@
                 "feedback": "null",
                 "photo": "string",
                 "photo_id": "number",
-                "prompt": "null",
-                "prompt_id": "null",
+                "prompt": "string",
+                "prompt_id": "number",
                 "selected": "boolean",
                 "status": "string"
               }
             ],
-            "preferences": [],
-            "profile_data_list": [],
+            "preferences": [
+              {
+                "answer_id": "number",
+                "id": "number",
+                "preference_question": {
+                  "first_choice": "string",
+                  "second_choice": "string"
+                },
+                "value": "number"
+              }
+            ],
+            "profile_data_list": [
+              {
+                "answer": "string",
+                "answer_id": "number",
+                "invitation_type": "string",
+                "question": "string",
+                "question_id": "number",
+                "preferences": [
+                  {
+                    "answer": "string",
+                    "answer_id": "number",
+                    "first_choice": "string",
+                    "second_choice": "string"
+                  }
+                ]
+              }
+            ],
             "profile_sharing_enabled": "boolean",
             "relationship_goal": {
               "id": "number",
@@ -205,8 +229,23 @@
             },
             "user_id": "number",
             "user_interests": [],
-            "user_interests_v2": [],
-            "user_traits": [],
+            "user_interests_v2": [
+              {
+                "common_interest": "string",
+                "id": "number",
+                "interest_id": "number",
+                "name": "string",
+                "order": "number"
+              }
+            ],
+            "user_traits": [
+              {
+                "id": "number",
+                "name": "string",
+                "order": "number",
+                "trait_id": "number"
+              }
+            ],
             "verification_status": "string",
             "work": {
               "experience_v1": {

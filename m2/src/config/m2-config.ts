@@ -40,10 +40,20 @@ export interface M2Config {
   readonly piiTenant: string;
   /** Read-only PII DB (same DB_* settings as M1) and the M2 SELECT catalog. */
   readonly db: DbSettings & { queriesFile: string };
-  /** Dev test windows (Dev-assisted cases). */
-  readonly windows: { gate: 'off' | 'on' | undefined; piiOutage: boolean };
-  /** Values for Dev cURL placeholders (M2_VALUE_<NAME>), e.g. M2_VALUE_FAITH_ID once Dev answers M2Q-36. */
+  /**
+   * Dev test windows (Dev-assisted cases). Read gates are OFF on testa2 and QA cannot switch them (M2Q-02, QA lead
+   * 2026-10-24) — gate-ON parts wait for Dev (M2Q-43), so there is no gate window setting.
+   */
+  readonly windows: { piiOutage: boolean };
+  /**
+   * Values for Dev cURL placeholders set in the environment (M2_VALUE_<NAME>). They win over the defaults below.
+   * Identity placeholders (IDENTITY_PLACEHOLDERS) are never taken from here — they always come from suite accounts.
+   */
   readonly values: Readonly<Record<string, string>>;
+  /** Default catalogue values for Dev cURL placeholders (DEFAULT_VALUES + PHONE_CODE_ID), checked live at run time. */
+  readonly defaultValues: Readonly<Record<string, string>>;
+  /** How long to wait for staging's auto-approval of a suite account (M2_APPROVAL_WAIT_MS, default 3 min). */
+  readonly approvalWaitMs: number;
   /** Contract recording mode (npm run m2:contracts:record only). */
   readonly recordContracts: boolean;
   /**
@@ -86,6 +96,43 @@ export const ONBOARDING_PHOTOS: Readonly<Record<'Male' | 'Female', readonly stri
     'e64b0a6f9c69f8ffe04d48d9c2fd18e9198492257154',
   ].map(cdn),
 };
+
+/**
+ * Default catalogue ids for Dev cURL placeholders (user decision 2026-10-24: config defaults, not .env; an
+ * M2_VALUE_<NAME> setting overrides them). Sources — "from code / our own staging accounts, confirm with Dev":
+ * FAITH_ID, LANGUAGE_ID, RELATIONSHIP_GOAL_ID: the verified onboarding body (m2/src/accounts/onboarding.ts);
+ * DELETE_REASON_ID: the verified delete call (M2Q-36 answer); the others: option ids seen on staging for the suite's
+ * own accounts. At run time m2/src/checks/catalogue.ts checks each against the live option list where one exists.
+ */
+export const DEFAULT_VALUES: Readonly<Record<string, string>> = {
+  FAITH_ID: '6',
+  LANGUAGE_ID: '1',
+  RELATIONSHIP_GOAL_ID: '2',
+  INTEREST_ID: '1',
+  INTEREST_V2_ID: '31',
+  TRAIT_ID: '121',
+  PREFERENCE_ID: '14',
+  SETTLE_ID: '3',
+  MBTI_ID: '8',
+  QUESTION_ID: '156',
+  AUDIO_QUESTION_ID: '165',
+  DELETE_REASON_ID: '1',
+};
+
+/**
+ * Placeholders that name an account or something owned by one. They are filled only from the suite's own synthetic
+ * accounts — never from M2_VALUE_<NAME> — so a request can never point at another (real) user.
+ */
+export const IDENTITY_PLACEHOLDERS = [
+  'REF',
+  'OTHER_REF',
+  'USER_ID',
+  'OTHER_USER_ID',
+  'CONVERSATION_ID',
+  'REQUEST_ID',
+  'PHOTO_ID_1',
+  'PHOTO_ID_2',
+];
 
 export class M2ConfigError extends Error {
   constructor(message: string) {
@@ -132,7 +179,9 @@ export function loadM2Config(env: NodeJS.ProcessEnv = process.env): M2Config {
   const signature = e.M2_LOGIN_SIGNATURE_V1 || undefined;
   if (signature) registerSecretValue(signature, '$M2_LOGIN_SIGNATURE_V1');
   const values: Record<string, string> = {};
-  for (const [k, v] of Object.entries(e)) if (k.startsWith('M2_VALUE_') && v) values[k.slice(9)] = v;
+  for (const [k, v] of Object.entries(e))
+    if (k.startsWith('M2_VALUE_') && v && !IDENTITY_PLACEHOLDERS.includes(k.slice(9))) values[k.slice(9)] = v;
+  const phoneCodeId = int(e.M2_PHONE_CODE_ID, 242);
   const token = e.AISLE_TEST_TOKEN?.trim() || undefined;
   if (token) registerSecretValue(token, '$AISLE_TEST_TOKEN');
   const level = (e.LOG_LEVEL ?? 'info') as LogLevel;
@@ -169,13 +218,14 @@ export function loadM2Config(env: NodeJS.ProcessEnv = process.env): M2Config {
       queriesFile: e.M2_DB_QUERIES_FILE?.trim() || 'm2/config/db-queries.json',
     },
     windows: {
-      gate: e.M2_GATE_WINDOW === 'on' || e.M2_GATE_WINDOW === 'off' ? e.M2_GATE_WINDOW : undefined,
       piiOutage: e.M2_PII_OUTAGE_WINDOW === 'true',
     },
     values,
+    defaultValues: { ...DEFAULT_VALUES, PHONE_CODE_ID: String(phoneCodeId) },
+    approvalWaitMs: int(e.M2_APPROVAL_WAIT_MS, 180_000),
     recordContracts: e.M2_CONTRACTS_RECORD === 'true',
     login: {
-      phoneCodeId: int(e.M2_PHONE_CODE_ID, 242),
+      phoneCodeId,
       deviceType: e.M2_LOGIN_DEVICE_TYPE?.trim() || 'ios',
       appVersion: e.M2_LOGIN_APP_VERSION?.trim() || '7.9.15',
       signature: signature ? new Secret(signature) : undefined,

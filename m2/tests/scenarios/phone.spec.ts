@@ -9,18 +9,25 @@ import { scanResponse } from '../../src/assertions/pii.assertions';
 import { testPhoneNumber } from '../../src/auth/test-phone';
 import { snapshotSummary } from '../../src/db/pii-db';
 import { blockPrereq, PREREQ } from '../../src/prereq';
-import { expect, noteEvidence, test } from '../../src/fixtures/m2-fixtures';
-import { asUser, call, ownProfile, phoneOf } from '../../src/scenarios/helpers';
+import { expect, notApplicable, noteEvidence, test } from '../../src/fixtures/m2-fixtures';
+import { asUser, call, phoneOf, profileByRef, testEmail } from '../../src/scenarios/helpers';
 
 test.describe('M2 scenarios — phone', () => {
+  // Gate OFF (M2Q-02): the login wrote PHONE at creation; the owner sees the login number. Gate ON waits (M2Q-43).
   scenario('M2-PHONE-001', async (fx) => {
-    const s = await fx.accounts.freshUser();
-    const phone = phoneOf(await ownProfile(fx, s));
+    // New login (the PHONE write) + onboarding, so the owner's profile can be read (a new user gets 401).
+    const s = await fx.accounts.onboardFresh({
+      firstName: fx.data.firstName(),
+      email: testEmail(fx, 'phone001'),
+    });
+    const phone = phoneOf(await profileByRef(fx, s, s));
     expect(
       phone !== undefined && phoneForms(s.mobileNumber).includes(String(phone)),
       'owner profile shows the login number',
     ).toBe(true);
-    noteEvidence('PHONE in the PII service (facade read) needs the app user → PII user_id mapping (M2Q-37).');
+    noteEvidence(
+      'PHONE in the PII service is recorded only: there is no PII phone read route for app users.',
+    );
   });
 
   dbScenario('M2-PHONE-002', async (fx, db) => {
@@ -39,9 +46,8 @@ test.describe('M2 scenarios — phone', () => {
     expectUnchanged(before, after, ['PHONE'], 'returning login');
   });
 
-  scenario('M2-PHONE-003', async () => {
-    blockPrereq(PREREQ.states.id, `${PREREQ.states.reason} — an existing user with no PII phone`);
-  });
+  // NOT APPLICABLE on staging: no pre-integration (unmigrated) account exists (M2Q-05).
+  scenario('M2-PHONE-003', async (_fx, c) => notApplicable(c.na!.question, c.na!.reason));
 
   scenario('M2-PHONE-004', async (fx) => {
     fx.accounts.admin();

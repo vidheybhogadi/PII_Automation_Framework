@@ -10,7 +10,15 @@ import { isSuccess } from '../assertions/pii.assertions';
 import { AUTH } from '../auth/credentials';
 import type { UserSession } from '../auth/session';
 import { requireTestToken } from '../config/m2-config';
-import { callerFor, send, syntheticFor, valuesFor, type Caller, type CheckFixtures } from '../checks/context';
+import {
+  callerFor,
+  completeValues,
+  send,
+  syntheticFor,
+  valuesFor,
+  type Caller,
+  type CheckFixtures,
+} from '../checks/context';
 import { buildRequest } from '../checks/request-builder';
 import { blockPrereq, PREREQ } from '../prereq';
 import type { Synthetic, Values } from '../checks/request-builder';
@@ -135,14 +143,19 @@ export const phoneOf = (res: ApiResponse) =>
 export const testEmail = (fx: Fx, label: string) =>
   `${fx.data.userId(label).replace(/[^a-z0-9-]/g, '')}@${(process.env.AISLE_TEST_EMAIL_DOMAIN || 'example.test').toLowerCase()}`;
 
-/** Dev's request body for an API as `caller`, ready to mutate (blocks when a placeholder has no value). */
-export function devBody(
+/**
+ * Dev's request body for an API as `caller`, ready to mutate. Placeholders are filled like every other request
+ * (completeValues: catalogue values, the caller's own photos / audio, suite-made ids); blocks when one has no value.
+ */
+export async function devBody(
   fx: Fx,
   apiId: string,
   caller: Caller,
   synthetic: Partial<Synthetic> = {},
-): Record<string, unknown> {
-  const req = buildRequest(apiById(apiId), caller.values, {
+): Promise<Record<string, unknown>> {
+  const api = apiById(apiId);
+  const values = await completeValues(api, fx, caller.session, caller.values);
+  const req = buildRequest(api, values, {
     ...syntheticFor(fx, caller.session),
     ...synthetic,
   });

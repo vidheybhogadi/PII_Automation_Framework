@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-014-PARAM",
-  "recordedAt": "2026-10-24T06:17:37.154Z",
-  "runId": "qa-m2-20261024t061633-6671",
+  "recordedAt": "2026-10-24T12:51:41.917Z",
+  "runId": "qa-m2-20261024t124732-dd5f",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -32,6 +32,7 @@
             ],
             "display_new_tag": "boolean",
             "distance": "string",
+            "drinking_id": "number",
             "drinking_v2_id": "number",
             "faith_id": "number",
             "general_information": {
@@ -165,18 +166,17 @@
             "mother_tongue_id": "number",
             "online_code": "number",
             "partial_work": {
+              "college": "string",
               "education": "string",
-              "work": "string",
-              "work_title": "string",
+              "graduation_year": "string",
+              "industry": "string",
               "new_qualification": {
                 "id": "number",
                 "name": "string",
                 "preference_only": "boolean"
               },
-              "college": "string",
-              "graduation_year": "string",
-              "industry": "string",
-              "new_income": "null"
+              "work": "string",
+              "work_title": "string"
             },
             "photos": [
               {
@@ -203,11 +203,7 @@
             ],
             "profile_data_list": [
               {
-                "answer": "string",
-                "answer_id": "number",
                 "invitation_type": "string",
-                "question": "string",
-                "question_id": "number",
                 "preferences": [
                   {
                     "answer": "string",
@@ -215,7 +211,8 @@
                     "first_choice": "string",
                     "second_choice": "string"
                   }
-                ]
+                ],
+                "question": "string"
               }
             ],
             "profile_sharing_enabled": "boolean",
@@ -231,6 +228,7 @@
             "reply_id": "null",
             "reply_message": "null",
             "show_concierge_badge": "boolean",
+            "smoking_id": "number",
             "smoking_v2_id": "number",
             "spark_id": "null",
             "story": {
@@ -239,14 +237,7 @@
             },
             "tab_name": "null",
             "user_id": "number",
-            "user_interests": [
-              {
-                "id": "number",
-                "interest_id": "number",
-                "name": "string",
-                "value": "number"
-              }
-            ],
+            "user_interests": [],
             "user_interests_v2": [
               {
                 "common_interest": "string",
@@ -256,7 +247,14 @@
                 "order": "number"
               }
             ],
-            "user_traits": [],
+            "user_traits": [
+              {
+                "id": "number",
+                "name": "string",
+                "order": "number",
+                "trait_id": "number"
+              }
+            ],
             "verification_status": "string",
             "work": {
               "experience_v1": {
@@ -321,6 +319,7 @@
             ],
             "display_new_tag": "boolean",
             "distance": "string",
+            "drinking_id": "number",
             "drinking_v2_id": "number",
             "faith_id": "number",
             "general_information": {
@@ -454,18 +453,17 @@
             "mother_tongue_id": "number",
             "online_code": "number",
             "partial_work": {
+              "college": "string",
               "education": "string",
-              "work": "string",
-              "work_title": "string",
+              "graduation_year": "string",
+              "industry": "string",
               "new_qualification": {
                 "id": "number",
                 "name": "string",
                 "preference_only": "boolean"
               },
-              "college": "string",
-              "graduation_year": "string",
-              "industry": "string",
-              "new_income": "null"
+              "work": "string",
+              "work_title": "string"
             },
             "photos": [
               {
@@ -492,11 +490,7 @@
             ],
             "profile_data_list": [
               {
-                "answer": "string",
-                "answer_id": "number",
                 "invitation_type": "string",
-                "question": "string",
-                "question_id": "number",
                 "preferences": [
                   {
                     "answer": "string",
@@ -504,7 +498,8 @@
                     "first_choice": "string",
                     "second_choice": "string"
                   }
-                ]
+                ],
+                "question": "string"
               }
             ],
             "profile_sharing_enabled": "boolean",
@@ -520,6 +515,7 @@
             "reply_id": "null",
             "reply_message": "null",
             "show_concierge_badge": "boolean",
+            "smoking_id": "number",
             "smoking_v2_id": "number",
             "spark_id": "null",
             "story": {
@@ -528,14 +524,7 @@
             },
             "tab_name": "null",
             "user_id": "number",
-            "user_interests": [
-              {
-                "id": "number",
-                "interest_id": "number",
-                "name": "string",
-                "value": "number"
-              }
-            ],
+            "user_interests": [],
             "user_interests_v2": [
               {
                 "common_interest": "string",
@@ -545,7 +534,14 @@
                 "order": "number"
               }
             ],
-            "user_traits": [],
+            "user_traits": [
+              {
+                "id": "number",
+                "name": "string",
+                "order": "number",
+                "trait_id": "number"
+              }
+            ],
             "verification_status": "string",
             "work": {
               "experience_v1": {
@@ -585,7 +581,21 @@
     }
   },
   "approved": {
-    "by": "QA lead",
+    "by": "Aisle codebase (develop_new 944f76a) — confirm with Dev",
     "on": "2026-10-24"
-  }
+  },
+  "approvals": [
+    {
+      "by": "Aisle codebase (develop_new 944f76a) — confirm with Dev",
+      "on": "2026-10-24",
+      "recordedAt": "2026-10-24T11:12:30.320Z",
+      "runId": "qa-m2-20261024t111102-0f0a"
+    },
+    {
+      "by": "Aisle codebase (develop_new 944f76a) — confirm with Dev",
+      "on": "2026-10-24",
+      "recordedAt": "2026-10-24T12:51:41.917Z",
+      "runId": "qa-m2-20261024t124732-dd5f"
+    }
+  ]
 }

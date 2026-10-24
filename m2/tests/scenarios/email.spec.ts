@@ -20,13 +20,16 @@ import {
 } from '../../src/scenarios/helpers';
 
 test.describe('M2 scenarios — email', () => {
+  // Gate OFF (M2Q-02): the onboarding email is returned to the owner; the gate-ON half waits for Dev (M2Q-43).
   scenario('M2-EMAIL-001', async (fx) => {
-    const p = await fx.accounts.freshUser();
     const email = testEmail(fx, 'email001');
-    expectOk(await submitProfile(fx, p, { firstName: fx.data.firstName(), email }), 'submit_profile');
-    const own = await ownProfile(fx, p);
+    // A new account onboarded through the verified onboarding flow (submit_profile is the write under test).
+    const p = await fx.accounts.onboardFresh({ firstName: fx.data.firstName(), email });
+    const own = await profileByRef(fx, p, p);
     expect(emailOf(own) === email, 'the owner’s profile returns the onboarding email').toBe(true);
-    noteEvidence('EMAIL in the PII service (facade read) needs the app user → PII user_id mapping (M2Q-37).');
+    noteEvidence(
+      'EMAIL in the PII service is recorded only: there is no PII email read route for app users.',
+    );
   });
 
   scenario('M2-EMAIL-002', async (fx) => {
@@ -40,7 +43,7 @@ test.describe('M2 scenarios — email', () => {
     const p = await fx.accounts.onboarded(0);
     const e1 = emailOf(await profileByRef(fx, p, p));
     for (const apiId of ['API-058', 'API-130']) {
-      const body = devBody(fx, apiId, asUser(fx, p));
+      const body = await devBody(fx, apiId, asUser(fx, p));
       setDeep(body, 'personal_email', testEmail(fx, 'email003'));
       await call(fx, apiId, asUser(fx, p), { body });
       expect(
@@ -61,7 +64,7 @@ test.describe('M2 scenarios — email', () => {
       ['255+ characters', `${'q'.repeat(250)}@example.test`],
     ] as const) {
       const p = await fx.accounts.freshUser();
-      const body = devBody(fx, 'API-057', asUser(fx, p));
+      const body = await devBody(fx, 'API-057', asUser(fx, p));
       setDeep(body, 'personal_email', value);
       const res = await call(fx, 'API-057', asUser(fx, p), { body });
       expect(res.status < 500, `${label}: no server error`).toBe(true);
@@ -90,12 +93,19 @@ test.describe('M2 scenarios — email', () => {
     );
   });
 
+  // Gate-OFF half (M2Q-02); gate-ON half waits for Dev (M2Q-43); the unmigrated variant is N/A on staging (M2Q-05).
   scenario('M2-EMAIL-007', async (fx) => {
-    if (!fx.m2Config.windows.gate) blockPrereq(PREREQ.gateWindow.id, PREREQ.gateWindow.reason);
-    const p = await fx.accounts.onboarded(0);
-    await call(fx, 'API-021', asUser(fx, p), { values: { REF: p.ref } });
-    await call(fx, 'API-022', asUser(fx, p));
-    noteEvidence(`Gate ${fx.m2Config.windows.gate}: owner email recorded for comparison.`);
+    const email = testEmail(fx, 'email007');
+    const p = await fx.accounts.onboardFresh({ firstName: fx.data.firstName(), email });
+    const byRef = await call(fx, 'API-021', asUser(fx, p), { values: { REF: p.ref } });
+    expectOk(byRef, 'own /V1/users/:ref');
+    expect(emailOf(byRef) === email, '/V1/users/:ref returns the onboarding email').toBe(true);
+    const about = await call(fx, 'API-022', asUser(fx, p));
+    expectOk(about, '/V1/users/about');
+    const shown = emailOf(about);
+    if (shown !== undefined)
+      expect(shown === email, '/V1/users/about returns the onboarding email').toBe(true);
+    else noteEvidence('/V1/users/about carries no email key (recorded).');
   });
 
   scenario('M2-EMAIL-008', async (fx) => {

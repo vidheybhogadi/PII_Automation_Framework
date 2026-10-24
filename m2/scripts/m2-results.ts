@@ -1,7 +1,7 @@
 /**
  * Brings Milestone 2 automation results into the workbook (npm run m2:docs):
  *   - Automation Status: AUTOMATED for every case that has a test in the m2-api project
- *     (AUTOMATION BLOCKED when the design still blocks it);
+ *     (AUTOMATION BLOCKED when the design still blocks it; NOT APPLICABLE / WAITING tests skip by design → AUTOMATED);
  *   - Current Status: PASS / FAIL / BLOCKED from the last M2 run (reports/m2/latest/run-data.json), if there is one;
  *   - Last Run (observed): run date, result and the value-free reply shapes the tests recorded ("observed").
  * Without a run file the design status stays as it is. Results are never invented.
@@ -44,9 +44,17 @@ export function applyResults(root: string, cases: AnyCase[]): WithResults {
   let ran = 0;
   const out = cases.map((c) => {
     if (!automated.has(c.id)) return c;
-    const automation = c.status === 'NOT RUN' ? 'AUTOMATED' : 'AUTOMATION BLOCKED';
+    // NOT APPLICABLE / WAITING cases have their test (it skips with the reason by design), so they count as AUTOMATED.
+    const automation = ['NOT RUN', 'NOT APPLICABLE', 'WAITING'].includes(c.status)
+      ? 'AUTOMATED'
+      : 'AUTOMATION BLOCKED';
     const t = byId.get(c.id);
     let status: Status = c.status;
+    // A design NOT APPLICABLE / WAITING status is not overwritten by an older run that still showed it Blocked.
+    if (c.status === 'NOT APPLICABLE' || c.status === 'WAITING') {
+      if (t && t.status !== 'SKIPPED' && t.status !== 'UNKNOWN') ran++;
+      return { ...c, status, automation } as AnyCase;
+    }
     if (t?.status === 'PASS') status = 'PASS';
     else if (t?.status === 'FAIL') status = 'FAIL';
     else if (t?.status === 'BLOCKED' || t?.status === 'FIXME') status = 'BLOCKED';

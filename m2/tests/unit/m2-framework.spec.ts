@@ -16,13 +16,39 @@ import {
   scanForPii,
   scanResponse,
   shapeOf,
+  unlistedPii,
 } from '../../src/assertions/pii.assertions';
+import { statusFromDeps } from '../../scripts/m2-questions';
 import { M2Client } from '../../src/clients/m2-client';
 import { loadM2Config } from '../../src/config/m2-config';
 import { caseById, design, titleOf } from '../../src/design';
 import { tryBuildRequest, questionFor } from '../../src/checks/request-builder';
-import { shapeDiff, shapeOf as bodyShape } from '../../src/baseline/baseline';
-import { DESTRUCTIVE } from '../../src/checks/context';
+import {
+  approvableVariants,
+  piiKeyDiff,
+  shapeDiff,
+  shapeOf as bodyShape,
+  unionShapes,
+  type BaselineFile,
+} from '../../src/baseline/baseline';
+import { DESTRUCTIVE, PAUSED, publicUserName, timeToken } from '../../src/checks/context';
+import {
+  missingProtectedIn,
+  UNSAFE_REASON,
+  unsafeIdsIn,
+  unsafeVariantLabel,
+  variantSafety,
+  wrongTypeValue,
+} from '../../src/checks/safety';
+import { idsIn } from '../../src/checks/catalogue';
+import {
+  extendTestTimeout,
+  ledgerDisposition,
+  silentMp3,
+  type LedgerEntry,
+} from '../../src/accounts/accounts';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { submitProfileBody } from '../../src/accounts/onboarding';
 import { SessionHelper } from '../../src/auth/session';
 import { CaptureServer } from './helpers/capture-server';
@@ -84,6 +110,37 @@ test.describe('UNIT M2 framework', () => {
     expectRefusedWithoutPii(res(401, '{"unauthorized_request":true}'), 'refusal');
     expect(() => expectRefusedWithoutPii(res(200, '{}'), 'accepted')).toThrow();
     expect(() => expectRefusedWithoutPii(res(401, '{"email":"qa@example.test"}'), 'leak')).toThrow();
+  });
+
+  test('UT-M2-014 Status rule: read gates ON → WAITING, DB hold → BLOCKED, unmigrated cases NOT APPLICABLE', () => {
+    expect(statusFromDeps(['M2Q-02', 'M2Q-03'])).toBe('NOT RUN'); // M2Q-02 answered: gates OFF
+    expect(statusFromDeps(['M2Q-43'])).toBe('WAITING');
+    expect(statusFromDeps(['M2Q-43', 'M2Q-04'])).toBe('BLOCKED');
+    expect(statusFromDeps(['M2Q-43', 'M2Q-25'])).toBe('NEED DEV CLARIFICATION');
+    expect(statusFromDeps(['M2Q-16', 'M2Q-44'])).toBe('BLOCKED');
+    const cases = design().cases;
+    const unmig = cases.filter((c) => c.check === 'UNMIG');
+    expect(unmig.length).toBeGreaterThan(0);
+    expect(unmig.every((c) => c.status === 'NOT APPLICABLE' && c.na?.question === 'M2Q-05')).toBe(true);
+    const gate = cases.filter((c) => c.check === 'GATE');
+    expect(gate.every((c) => c.waiting?.includes('M2Q-43') && c.mode === 'API automation')).toBe(true);
+    expect(gate.some((c) => c.status === 'NOT RUN')).toBe(true);
+    const db = cases.filter((c) => c.id.startsWith('M2-DB-') || (c.check ?? '').startsWith('DB-'));
+    expect(db.every((c) => c.deps.includes('M2Q-44') && c.status !== 'NOT RUN')).toBe(true);
+    expect(caseById('M2-FNAME-013').status).toBe('WAITING');
+    expect(caseById('M2-FNAME-001').status).toBe('NOT RUN');
+  });
+
+  test('UT-M2-015 "No extra PII" flags only real-looking values of unlisted fields, by path', () => {
+    const body = {
+      user: { first_name: 'Qaxyz', email: 'qa@example.test', mobile_number: '1012345678' },
+      settings: { email: true, phone: false },
+      interests: [{ name: 'Music' }],
+    };
+    expect(unlistedPii(body, ['NAME', 'EMAIL', 'PHONE'])).toEqual([]);
+    expect(unlistedPii(body, ['NAME'])).toEqual(['$.user.email (email)', '$.user.mobile_number (phone)']);
+    expect(unlistedPii(body, ['EMAIL', 'PHONE'])).toEqual(['$.user.first_name (name)']);
+    expect(JSON.stringify(unlistedPii(body, []))).not.toContain('qa@example.test');
   });
 
   test('UT-M2-004 The expired-format JWT is well-formed, expired and never a real credential', () => {
@@ -159,6 +216,258 @@ test.describe('UNIT M2 baselines and safety', () => {
       )
       .map((x) => x.id);
     for (const id of risky) expect(DESTRUCTIVE, `${id} is guarded`).toContain(id);
+  });
+});
+
+test.describe('UNIT M2 request safety and placeholder values', () => {
+  test('UT-M2-016 Wrong-type variants never turn an id into another record’s id, and never make a false flag truthy', () => {
+    for (const key of [
+      'user_id',
+      'ref',
+      'id',
+      'receiver_profile',
+      'conversation_id',
+      'faith_id',
+      'user_ids',
+    ]) {
+      const v = wrongTypeValue(key, 'qa-m2-unit-1');
+      expect(typeof v === 'number' || /^\d/.test(String(v)), `${key}: never a number`).toBe(false);
+      expect(wrongTypeValue(key, 7)).toBe('qa-not-a-number');
+    }
+    expect(wrongTypeValue('is_new_user', false)).toBeNull();
+    expect(wrongTypeValue('can_save', true)).toBe('qa-not-a-number');
+    expect(wrongTypeValue('about', 'text')).toBe(12345);
+    expect(wrongTypeValue('page', 1)).toBe('qa-not-a-number');
+  });
+
+  test('UT-M2-017 The safety guard refuses ids that are not the suite’s own, before anything is sent', () => {
+    const suite = new Set(['501', 'refA']);
+    const catalogue = new Set(['6', '121']);
+    const ok = (body: unknown, query?: Record<string, string>) =>
+      unsafeIdsIn({ apiId: 'API-X', body, query }, suite, catalogue);
+    expect(ok({ user_id: '501', ref: 'refA', faith: { id: 'qa-x' }, trait_id: '121' })).toEqual([]);
+    expect(ok({ user_id: 'qa-m2-run-other', tenant_id: 'qa-other-tenant', id: null })).toEqual([]);
+    expect(ok({ user_id: { qa: 'wrong-type' } })).toEqual([]);
+    expect(ok({ user_id: 12345 })).toEqual(['$body.user_id: not a suite account’s id']);
+    expect(ok({ user_id: '6' }), 'a catalogue value is never accepted as a user id').toHaveLength(1);
+    expect(ok({ ref: 'someRealRef' })).toHaveLength(1);
+    expect(ok({ user_ids: ['501', '502'] })).toEqual(['$body.user_ids[1]: not a suite account’s id']);
+    expect(ok({ conversation_id: true })).toHaveLength(1);
+    expect(ok({ data: { faith: { id: '6' } }, answer_id: 0 }), 'nested option id = catalogue value').toEqual(
+      [],
+    );
+    expect(ok({ id: '6' }), 'a top-level id names a record: catalogue values are not enough').toHaveLength(1);
+    expect(ok({}, { user_id: '999' })).toHaveLength(1);
+    expect(
+      unsafeIdsIn(
+        { apiId: 'API-062', body: { user_id: '501', is_new_user: 'qa-not-a-number' } },
+        suite,
+        catalogue,
+      ),
+    ).toEqual(['$body.is_new_user: must never be truthy']);
+    expect(
+      unsafeIdsIn({ apiId: 'API-062', body: { user_id: '501', is_new_user: null } }, suite, catalogue),
+    ).toEqual([]);
+  });
+
+  test('UT-M2-018 Placeholder values: config defaults, no identity from the environment, generated values, gender', () => {
+    const c = loadM2Config({ M2_VALUE_TRAIT_ID: '7', M2_VALUE_OTHER_REF: 'x', M2_VALUE_USER_ID: '12345' });
+    expect(c.values.TRAIT_ID).toBe('7');
+    expect(c.values.OTHER_REF, 'identity values never come from the environment').toBeUndefined();
+    expect(c.values.USER_ID).toBeUndefined();
+    expect(c.defaultValues).toMatchObject({
+      FAITH_ID: '6',
+      PHONE_CODE_ID: '242',
+      MBTI_ID: '8',
+      DELETE_REASON_ID: '1',
+    });
+    expect(c.approvalWaitMs).toBe(180_000);
+    expect(timeToken(1_790_000_000_000)).toBe('17900000000000000');
+    expect(timeToken()).toMatch(/^\d{17}$/);
+    expect(publicUserName()).toMatch(/^qa_m2_[0-9a-f]{6}$/);
+    expect(publicUserName()).toMatch(/^[a-zA-Z0-9._-]{3,20}$/);
+    const api = design().inventory.find((a) => a.id === 'API-057')!;
+    const values = {
+      FAITH_ID: '6',
+      LANGUAGE_ID: '1',
+      RELATIONSHIP_GOAL_ID: '2',
+      PHOTO_URL_1: 'u1',
+      PHOTO_URL_2: 'u2',
+    };
+    const male = tryBuildRequest(api, values, {
+      firstName: 'Qa',
+      email: 'e@example.test',
+      freeText: 't',
+      gender: 'Male',
+    });
+    expect(male.missing).toEqual([]);
+    expect(JSON.stringify(male.request.body)).toContain('"gender":"Male"');
+    const unknown = tryBuildRequest(api, values, { firstName: 'Qa', email: 'e@example.test', freeText: 't' });
+    expect(JSON.stringify(unknown.request.body), 'unknown gender keeps Dev’s value').toContain(
+      '"gender":"Female"',
+    );
+    expect(questionFor('ROOM_ID')).toBe('M2Q-45');
+    expect(idsIn({ data: [{ id: 3 }, { id: '4' }], meta: { id: 9 } }, ['id'])).toEqual({
+      all: new Set(['3', '4', '9']),
+      first: '3',
+    });
+    const mp3 = silentMp3();
+    expect(mp3.length).toBe(417 * 40);
+    expect([...mp3.subarray(0, 4)]).toEqual([0xff, 0xfb, 0x90, 0x64]);
+  });
+
+  test('UT-M2-019 Contract lists: nested item data is compared by kind only; a new PII key always fails', () => {
+    const approved = bodyShape({
+      top: { first_name: 'Qa' },
+      items: [{ id: 1, work: { title: 'x', level: 2 }, photos: [{ url: 'u' }], first_name: 'A' }],
+    });
+    const live = bodyShape({
+      top: { first_name: 'Qa' },
+      items: [{ id: 2, work: { other: true }, photos: [], drinking_id: 3 }],
+    });
+    expect(shapeDiff(approved, live)).toEqual([]);
+    expect(
+      shapeDiff(approved, bodyShape({ top: { first_name: 'Qa' }, items: [{ id: 2, work: [1] }] })),
+    ).toEqual(['$.items[].work: type changed']);
+    expect(shapeDiff(approved, bodyShape({ top: { first_name: 'Qa' }, items: [{ id: 'x' }] }))).toEqual([
+      '$.items[].id: number → string',
+    ]);
+    const want = { piiKeys: ['first_name'], shape: bodyShape({ items: [{ first_name: 'A' }] }) };
+    expect(piiKeyDiff(want, { piiKeys: [] }).failures, 'missing only inside lists = note').toEqual([]);
+    expect(piiKeyDiff(want, { piiKeys: [] }).notes).toHaveLength(1);
+    expect(piiKeyDiff(want, { piiKeys: ['first_name', 'email'] }).failures).toEqual(['NEW PII key email']);
+    const ownTop = { piiKeys: ['first_name'], shape: bodyShape({ user: { first_name: 'Qa' } }) };
+    expect(piiKeyDiff(ownTop, { piiKeys: [] }).failures).toEqual(['missing PII key first_name']);
+    expect(unionShapes(bodyShape({ a: 1, n: null }), bodyShape({ b: 'x', n: { k: 1 } }))).toEqual({
+      a: 'number',
+      b: 'string',
+      n: { k: 'number' },
+    });
+  });
+});
+
+test.describe('UNIT M2 unsafe variants, approvals and account clean-up', () => {
+  const api = (id: string) => design().inventory.find((a) => a.id === id)!;
+
+  test('UT-M2-020 A variant that removes or blanks a target key is never sent; API-196 / API-197 are paused (M2Q-46)', () => {
+    expect(variantSafety(api('API-046'), 'without', 'ref')).toBe(UNSAFE_REASON);
+    expect(variantSafety(api('API-061'), 'without', 'receiver_profile')).toBe(UNSAFE_REASON);
+    expect(variantSafety(api('API-119'), 'without', 'ref'), 'GET reads too').toBe(UNSAFE_REASON);
+    expect(variantSafety(api('API-062'), 'without', 'user_id')).toBe(UNSAFE_REASON);
+    expect(variantSafety(api('API-062'), 'wrong type', 'user_id')).toBe(UNSAFE_REASON);
+    expect(
+      variantSafety(api('API-046'), 'wrong type', 'ref'),
+      'ref → object: by_ref cannot use it',
+    ).toBeUndefined();
+    expect(variantSafety(api('API-059'), 'without', 'reason_id')).toBeUndefined();
+    expect(unsafeVariantLabel(api('API-046'), 'without ref')).toBe(UNSAFE_REASON);
+    expect(unsafeVariantLabel(api('API-046'), 'unknown path id')).toBeUndefined();
+    // Send-time guard: a missing / null / blank target is refused; a run-prefixed unknown value is allowed.
+    const like = (body: unknown) => missingProtectedIn(api('API-046'), { apiId: 'API-046', body });
+    expect(like({ ref: 'qa-m2-unit-none' })).toEqual([]);
+    expect(like({})).toHaveLength(1);
+    expect(like({ ref: null })).toHaveLength(1);
+    expect(like({ ref: '  ' })).toHaveLength(1);
+    expect(like({})[0]).toContain('$body.ref');
+    expect(missingProtectedIn(api('API-011'), { apiId: 'API-011', query: {} })[0]).toContain('$query.ref');
+    expect(missingProtectedIn(api('API-046'), { apiId: 'API-046', rawBody: true }), 'raw body').toEqual([]);
+    expect(PAUSED).toEqual(['API-196', 'API-197']);
+    const paused = design().cases.filter((c) => c.apis[0] === 'API-196' || c.apis[0] === 'API-197');
+    expect(paused.length).toBeGreaterThan(0);
+    for (const c of paused) {
+      expect(c.deps, `${c.id} waits for M2Q-46`).toContain('M2Q-46');
+      expect(c.status, `${c.id} does not run`).not.toBe('NOT RUN');
+    }
+  });
+
+  test('UT-M2-021 Phone, country code and login OTP are never removed, and never become a non-synthetic number', () => {
+    expect(wrongTypeValue('mobile_number', '1071234567')).toBe('qa-not-a-phone');
+    expect(wrongTypeValue('phone_number', 1071234567)).toBe('qa-not-a-phone');
+    expect(wrongTypeValue('otp', '1234')).toBe('qa-not-an-otp');
+    const login = api('API-060');
+    expect(variantSafety(login, 'without', 'mobile_number')).toBeDefined();
+    expect(variantSafety(login, 'without', 'phone_code_id')).toBeDefined();
+    expect(variantSafety(login, 'without', 'otp')).toBeDefined();
+    expect(variantSafety(login, 'wrong type', 'phone_code_id')).toBeDefined();
+    expect(variantSafety(login, 'wrong type', 'mobile_number')).toBeUndefined();
+    expect(variantSafety(login, 'wrong type', 'otp')).toBeUndefined();
+    const check = (body: unknown) =>
+      unsafeIdsIn({ apiId: 'API-060', body, phoneCodeId: '242' }, new Set(), new Set(['242', '1']));
+    expect(check({ phone_code_id: '242', mobile_number: '1071234567', otp: '1234' })).toEqual([]);
+    expect(check({ phone_code_id: '242', mobile_number: '+911071234567' })).toEqual([]);
+    expect(check({ phone_code_id: '242', mobile_number: 'qa-not-a-phone' })).toEqual([]);
+    expect(check({ phone_code_id: '242', mobile_number: 12345 })).toEqual([
+      '$body.mobile_number: not a synthetic test number',
+    ]);
+    expect(check({ phone_code_id: '242', mobile_number: '1061234567' }), 'reserved 106 series').toHaveLength(
+      1,
+    );
+    expect(
+      check({ phone_code_id: '242', mobile_number: '9876543210' }),
+      'a real-looking number',
+    ).toHaveLength(1);
+    expect(check({ phone_code_id: '1', mobile_number: '1071234567' }), 'another country').toHaveLength(1);
+    expect(check({ phone_code_id: null, mobile_number: '1071234567' })).toHaveLength(1);
+    expect(check({ phone_code_id: { qa: 'wrong-type' }, mobile_number: '1071234567' })).toHaveLength(1);
+    expect(
+      missingProtectedIn(login, {
+        apiId: 'API-060',
+        body: { phone_code_id: '242', mobile_number: '1071234567' },
+      }),
+    ).toEqual(['$body.otp: missing or blank — would log in / write with no synthetic number']);
+  });
+
+  test('UT-M2-022 A server error or a never-sent variant is never approved; REPEAT and STATE check for server errors', () => {
+    const obs = (status: number) => ({ status, contentType: 'application/json', shape: {}, piiKeys: [] });
+    const rec: BaselineFile = {
+      caseId: 'M2-API-046-PARAM',
+      recordedAt: '',
+      runId: '',
+      build: '',
+      note: '',
+      variants: { 'without ref': obs(200), 'without page': obs(422), 'first request': obs(500) },
+      notSent: { 'without receiver': UNSAFE_REASON },
+    };
+    const r = approvableVariants(rec, (l) => unsafeVariantLabel(api('API-046'), l));
+    expect(Object.keys(r.approve)).toEqual(['without page']);
+    expect(r.refused.map((x) => x.label).sort()).toEqual(['first request', 'without ref']);
+    // The REPEAT and STATE runners pass the no-server-error invariant to the baseline (structural check).
+    const src = readFileSync(path.join(__dirname, '../../src/checks/per-api.ts'), 'utf8');
+    const body = (fn: string) =>
+      src.slice(src.indexOf(`export async function ${fn}(`)).split('\nexport ')[0]!;
+    expect(body('runRepeat')).toContain('withBaseline(c.id, ctxOf(fx), variants, noServerError)');
+    expect(body('runRepeat')).toContain('noServerError(`parallel #');
+    expect(body('runState')).toContain('noServerError(l, r)');
+  });
+
+  test('UT-M2-023 Clean-up: never-created and deleted entries are not logged into; onboarding-failed accounts are deleted', () => {
+    const e = (x: Partial<LedgerEntry>): LedgerEntry => ({
+      mobileNumber: '1071234567',
+      deviceId: 'd',
+      createdAt: '',
+      deleted: null,
+      deleteStatus: null,
+      ...x,
+    });
+    const none = new Set<string>();
+    expect(ledgerDisposition(e({ deleted: true }), none)).toBe('alreadyDeleted');
+    expect(ledgerDisposition(e({}), new Set(['1071234567']))).toBe('alreadyDeleted');
+    expect(ledgerDisposition(e({ note: 'wrong-OTP check — must not create an account' }), none)).toBe(
+      'neverCreated',
+    );
+    expect(ledgerDisposition(e({ neverCreated: true }), none)).toBe('neverCreated');
+    expect(
+      ledgerDisposition(
+        e({ userId: '9', note: 'onboarding failed: submit_profile refused: HTTP 500' }),
+        none,
+      ),
+      'an account that exists is deleted, even when its note says "refused"',
+    ).toBe('delete');
+    expect(ledgerDisposition(e({ unusable: true }), none)).toBe('unusable');
+    expect(ledgerDisposition(e({ mobileNumber: '1061234567' }), none)).toBe('notAllowed');
+    const before = test.info().timeout;
+    extendTestTimeout(5_000);
+    expect(test.info().timeout, 'approval / throwaway waits extend the test timeout').toBe(before + 5_000);
   });
 });
 

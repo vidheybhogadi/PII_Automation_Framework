@@ -1,0 +1,161 @@
+{
+  "caseId": "M2-API-061-PARAM",
+  "recordedAt": "2026-10-24T12:52:39.413Z",
+  "runId": "qa-m2-20261024t124732-dd5f",
+  "build": "unknown — deployed commit not confirmed (M2Q-01)",
+  "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
+  "variants": {
+    "without data": {
+      "status": 406,
+      "contentType": "application/json",
+      "shape": {
+        "message": "string",
+        "status": "boolean"
+      },
+      "piiKeys": []
+    },
+    "without general_information": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "is_invite_available": "boolean",
+        "message": "null",
+        "status": "boolean"
+      },
+      "piiKeys": []
+    },
+    "without first_name": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "is_invite_available": "boolean",
+        "message": "null",
+        "status": "boolean"
+      },
+      "piiKeys": []
+    },
+    "without personal_email": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "is_invite_available": "boolean",
+        "message": "null",
+        "status": "boolean"
+      },
+      "piiKeys": []
+    },
+    "without gender": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "is_invite_available": "boolean",
+        "message": "null",
+        "status": "boolean"
+      },
+      "piiKeys": []
+    },
+    "without date_of_birth_v1": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "is_invite_available": "boolean",
+        "message": "null",
+        "status": "boolean"
+      },
+      "piiKeys": []
+    },
+    "without faith": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "is_invite_available": "boolean",
+        "message": "null",
+        "status": "boolean"
+      },
+      "piiKeys": []
+    },
+    "without id": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "is_invite_available": "boolean",
+        "message": "null",
+        "status": "boolean"
+      },
+      "piiKeys": []
+    },
+    "without mother_tongue": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "is_invite_available": "boolean",
+        "message": "null",
+        "status": "boolean"
+      },
+      "piiKeys": []
+    },
+    "without height": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "is_invite_available": "boolean",
+        "message": "null",
+        "status": "boolean"
+      },
+      "piiKeys": []
+    },
+    "without relationship_goal": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "is_invite_available": "boolean",
+        "message": "null",
+        "status": "boolean"
+      },
+      "piiKeys": []
+    },
+    "without photos": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "is_invite_available": "boolean",
+        "message": "null",
+        "status": "boolean"
+      },
+      "piiKeys": []
+    },
+    "without preferences": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "is_invite_available": "boolean",
+        "message": "null",
+        "status": "boolean"
+      },
+      "piiKeys": []
+    },
+    "without latitude": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "is_invite_available": "boolean",
+        "message": "null",
+        "status": "boolean"
+      },
+      "piiKeys": []
+    },
+    "without longitude": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "is_invite_available": "boolean",
+        "message": "null",
+        "status": "boolean"
+      },
+      "piiKeys": []
+    }
+  },
+  "notSent": {
+    "without receiver_profile": "unsafe: would act on an unknown member (M2Q-46)"
+  }
+}

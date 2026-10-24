@@ -76,7 +76,7 @@ test.describe('M2 scenarios — database', () => {
     const p = await fx.accounts.onboarded(0);
     const userIdG1 = fx.data.userId('db006');
     const [beforeApp, beforeG1] = [await snap(fx, db, p), await db.snapshot(userIdG1)];
-    const body = devBody(fx, 'API-058', asUser(fx, p));
+    const body = await devBody(fx, 'API-058', asUser(fx, p));
     setDeep(body, 'first_name', { not: 'a string' });
     await call(fx, 'API-058', asUser(fx, p), { body, retry: false });
     await call(fx, 'API-057', { ...asUser(fx, p), auth: { kind: 'none' } }, { retry: false });

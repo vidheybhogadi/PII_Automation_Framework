@@ -1,13 +1,20 @@
 /**
  * Builds m2/contracts/REVIEW.md: every staging recording (m2/contracts/recorded) compared with its approved
- * baseline (m2/contracts/approved) — new cases, changed status, changed keys/types, new or missing PII keys.
+ * baseline (m2/contracts/approved) — new cases, changed status, changed keys/types, new or missing PII keys — with
+ * the same rules the tests use (baseline.ts: list-item data differences ignored, a NEW PII key always reported).
  * Value-free: recordings hold only statuses, shapes and PII key NAMES.
  *
  *   npm run m2:contracts:review
  */
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { approvedFile, CONTRACTS_DIR, shapeDiff, type BaselineFile } from '../src/baseline/baseline';
+import {
+  approvedFile,
+  CONTRACTS_DIR,
+  piiKeyDiff,
+  shapeDiff,
+  type BaselineFile,
+} from '../src/baseline/baseline';
 
 const recordedDir = path.join(CONTRACTS_DIR, 'recorded');
 const files = existsSync(recordedDir) ? readdirSync(recordedDir).filter((f) => f.endsWith('.json')) : [];
@@ -20,21 +27,27 @@ for (const f of files.sort()) {
     : undefined;
   for (const [label, obs] of Object.entries(rec.variants)) {
     const want = app?.variants[label];
+    const pii = want ? piiKeyDiff(want, obs) : { failures: [], notes: [] };
     const notes = !want
       ? ['new — not approved yet']
       : [
           ...(want.status !== obs.status ? [`status ${want.status} → ${obs.status}`] : []),
           ...shapeDiff(want.shape, obs.shape),
-          ...obs.piiKeys.filter((k) => !want.piiKeys.includes(k)).map((k) => `NEW PII key ${k}`),
-          ...want.piiKeys.filter((k) => !obs.piiKeys.includes(k)).map((k) => `missing PII key ${k}`),
+          ...pii.failures,
         ];
-    if (rec.invariantFailures?.includes(label))
-      notes.unshift('BROKE AN INVARIANT while recording (see the test failure)');
+    if (rec.invariantFailures?.includes(label) || obs.status >= 500)
+      notes.unshift('BROKE AN INVARIANT while recording (see the test failure) — never approved');
     if (notes.length) changed++;
+    const ok = pii.notes.length
+      ? `matches approved (list-item data differences ignored; ${pii.notes.join('; ')})`
+      : 'matches approved (list-item data differences ignored)';
     rows.push(
-      `| ${rec.caseId} | ${label} | ${obs.status} | ${obs.piiKeys.join(', ') || '—'} | ${notes.join('; ') || 'matches approved'} |`,
+      `| ${rec.caseId} | ${label} | ${obs.status} | ${obs.piiKeys.join(', ') || '—'} | ${notes.join('; ') || ok} |`,
     );
   }
+  // Variants deliberately not sent (safety rule, M2Q-46): listed so the review sees them, never approved.
+  for (const [label, reason] of Object.entries(rec.notSent ?? {}))
+    rows.push(`| ${rec.caseId} | ${label} | — | — | NOT SENT — ${reason}; never approved |`);
 }
 const md = [
   '# M2 contract recordings — review',

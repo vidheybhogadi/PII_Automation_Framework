@@ -6,7 +6,7 @@
 import { isSuccess } from '../../src/assertions/pii.assertions';
 import { scenario } from '../../src/checks/define';
 import { blockPrereq, PREREQ } from '../../src/prereq';
-import { expect, noteEvidence, test } from '../../src/fixtures/m2-fixtures';
+import { expect, notApplicable, noteEvidence, test } from '../../src/fixtures/m2-fixtures';
 import {
   asUser,
   call,
@@ -68,13 +68,11 @@ function itemsWithRef(body: unknown, out: Record<string, unknown>[] = []): Recor
 }
 
 test.describe('M2 scenarios — first name', () => {
+  // Gate OFF (M2Q-02): the onboarding write lands in PII and the app; the gate-ON half waits for Dev (M2Q-43).
   scenario('M2-FNAME-001', async (fx) => {
-    const p = await fx.accounts.freshUser();
     const name = fx.data.firstName();
-    expectOk(
-      await submitProfile(fx, p, { firstName: name, email: testEmail(fx, 'fname001') }),
-      'submit_profile',
-    );
+    // A new account onboarded through the verified onboarding flow (submit_profile is the write under test).
+    const p = await fx.accounts.onboardFresh({ firstName: name, email: testEmail(fx, 'fname001') });
     expect(nameOf(await ownProfile(fx, p)) === name, 'fetch_own_info returns the submitted name').toBe(true);
     const ref = await refOf(fx, p);
     const byRef = await call(fx, 'API-021', asUser(fx, p), { values: { REF: ref } });
@@ -145,7 +143,7 @@ test.describe('M2 scenarios — first name', () => {
       ['emoji only', '😀😀'],
     ] as const) {
       const before = await names(fx, p);
-      const body = devBody(fx, 'API-058', asUser(fx, p));
+      const body = await devBody(fx, 'API-058', asUser(fx, p));
       if (value === undefined) deleteDeep(body, 'first_name');
       else setDeep(body, 'first_name', value);
       const res = await call(fx, 'API-058', asUser(fx, p), { body });
@@ -245,16 +243,22 @@ test.describe('M2 scenarios — first name', () => {
     ).toBe(true);
   });
 
-  scenario('M2-FNAME-014', async () => {
-    blockPrereq(PREREQ.states.id, `${PREREQ.states.reason} — an unmigrated profile with the gate on`);
-  });
+  // NOT APPLICABLE on staging: no unmigrated profile exists (M2Q-05).
+  scenario('M2-FNAME-014', async (_fx, c) => notApplicable(c.na!.question, c.na!.reason));
 
+  // Gate-OFF half (M2Q-02): own reads return the local (onboarding) name; gate-ON half waits for Dev (M2Q-43).
   scenario('M2-FNAME-015', async (fx) => {
-    if (!fx.m2Config.windows.gate) blockPrereq(PREREQ.gateWindow.id, PREREQ.gateWindow.reason);
-    const [a] = await fx.accounts.connectedPair();
-    for (const apiId of ['API-013', 'API-021', 'API-014'])
-      await call(fx, apiId, asUser(fx, a, a), { values: { REF: a.ref } });
-    noteEvidence(`Gate ${fx.m2Config.windows.gate}: replies recorded; compare off vs on in the review.`);
+    const name = fx.data.firstName();
+    const p = await fx.accounts.onboardFresh({ firstName: name, email: testEmail(fx, 'fname015') });
+    expect(nameOf(await ownProfile(fx, p)) === name, 'fetch_own_info returns the onboarding name').toBe(true);
+    expect(
+      nameOf(await profileByRef(fx, p, p)) === name,
+      'own /V1/users/:ref returns the onboarding name',
+    ).toBe(true);
+    const list = await call(fx, 'API-014', asUser(fx, p, p));
+    noteEvidence(
+      `matches_list_v2 with the gate off: HTTP ${list.status} (recorded; list contents not compared).`,
+    );
   });
 
   scenario('M2-FNAME-016', async (fx) => {
@@ -308,7 +312,9 @@ test.describe('M2 scenarios — first name', () => {
         ).toBe(true);
       await call(fx, 'API-068', asUser(fx, viewer, other));
     }
-    noteEvidence('chat_messages needs the conversation_id of the pair (M2_VALUE_CONVERSATION_ID).');
+    noteEvidence(
+      'chat_messages uses the conversation_id of the pair (filled from the suite’s own connected accounts).',
+    );
     await call(fx, 'API-069', asUser(fx, a, b));
   });
 

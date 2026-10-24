@@ -38,7 +38,11 @@ export interface BaselineFile {
   variants: Record<string, Observation>;
   /** Variants that broke the case's own invariants while recording (e.g. a 5xx) — highlighted in the review. */
   invariantFailures?: string[];
+  /** Variants deliberately NOT sent (safety rule, e.g. M2Q-46): label → Blocked reason. Never approved. */
+  notSent?: Record<string, string>;
   approved?: { by: string; on: string };
+  /** Every approval that changed the file (approve merges new recordings into the approved shape). */
+  approvals?: { by: string; on: string; recordedAt: string; runId: string }[];
 }
 
 export const CONTRACTS_DIR = path.join(ROOT, 'm2/contracts');
@@ -92,32 +96,113 @@ export function observe(res: ApiResponse): Observation {
   };
 }
 
+const kindOf = (s: Shape) =>
+  s === 'null' ? 'null' : Array.isArray(s) ? 'array' : typeof s === 'object' ? 'object' : 'scalar';
+
 /**
  * Differences between an approved shape and a live one, as value-free paths ("$.profile.first_name: missing").
- * "null" matches any type (nullable fields); empty arrays are not compared element-wise.
+ * - "null" matches any type (nullable fields); empty arrays are not compared element-wise.
+ * - Outside lists every key counts (missing / new keys and type changes fail).
+ * - Inside list items the data decides which records come back (other members' optional fields, nullable
+ *   sub-objects, stale cache keys), so (2026-10-24): only keys present in both are compared, scalar top-level keys of
+ *   an item keep their type check, and nested objects / lists inside an item are compared by kind only (object vs
+ *   list vs value), not by their keys. New PII keys anywhere are still caught by the separate PII-key comparison.
+ * `itemDepth`: -1 outside lists, 0 = a list item, 1 = a value of an item's top-level key.
  */
-export function shapeDiff(expected: Shape, actual: Shape, at = '$', inList = false): string[] {
+export function shapeDiff(expected: Shape, actual: Shape, at = '$', itemDepth = -1): string[] {
   if (expected === 'null' || actual === 'null') return [];
+  const ek = kindOf(expected);
+  const ak = kindOf(actual);
+  if (itemDepth >= 1 && (ek !== 'scalar' || ak !== 'scalar')) return ek === ak ? [] : [`${at}: type changed`];
   if (Array.isArray(expected) || Array.isArray(actual)) {
     if (!Array.isArray(expected) || !Array.isArray(actual)) return [`${at}: type changed`];
     if (!expected.length || !actual.length) return [];
-    return shapeDiff(expected[0]!, actual[0]!, `${at}[]`, true);
+    return shapeDiff(expected[0]!, actual[0]!, `${at}[]`, 0);
   }
   if (typeof expected === 'object' || typeof actual === 'object') {
     if (typeof expected !== 'object' || typeof actual !== 'object') return [`${at}: type changed`];
+    const inList = itemDepth >= 0;
+    const next = inList ? itemDepth + 1 : -1;
     const out: string[] = [];
-    // Inside list items the key SET depends on which records the list returns (other members' optional fields), so
-    // only keys present in both shapes are compared there (type changes still fail). Outside lists every key counts.
-    // New PII keys anywhere are still caught by the separate PII-key comparison.
     for (const k of Object.keys(expected)) {
       if (!(k in actual)) {
         if (!inList) out.push(`${at}.${k}: missing`);
-      } else out.push(...shapeDiff(expected[k]!, actual[k]!, `${at}.${k}`, inList));
+      } else out.push(...shapeDiff(expected[k]!, actual[k]!, `${at}.${k}`, next));
     }
     if (!inList) for (const k of Object.keys(actual)) if (!(k in expected)) out.push(`${at}.${k}: new key`);
     return out;
   }
   return expected === actual ? [] : [`${at}: ${expected} → ${actual}`];
+}
+
+/** PII key names that a shape carries OUTSIDE lists (the caller's own objects), names only. */
+export function piiKeysOutsideLists(shape: Shape, out = new Set<string>()): string[] {
+  if (shape && typeof shape === 'object' && !Array.isArray(shape))
+    for (const [k, v] of Object.entries(shape)) {
+      if (PII_KEYS.includes(k.toLowerCase())) out.add(k);
+      piiKeysOutsideLists(v, out);
+    }
+  return [...out].sort();
+}
+
+/**
+ * PII-key comparison (2026-10-24): a NEW PII key anywhere fails; a missing PII key fails only when the approved
+ * shape carries it outside lists — a key that lived only inside list items depends on the records returned (note).
+ */
+export function piiKeyDiff(
+  want: Pick<Observation, 'piiKeys' | 'shape'>,
+  seen: Pick<Observation, 'piiKeys'>,
+): { failures: string[]; notes: string[] } {
+  const top = piiKeysOutsideLists(want.shape);
+  const failures = seen.piiKeys.filter((k) => !want.piiKeys.includes(k)).map((k) => `NEW PII key ${k}`);
+  const notes: string[] = [];
+  for (const k of want.piiKeys.filter((x) => !seen.piiKeys.includes(x)))
+    if (top.includes(k)) failures.push(`missing PII key ${k}`);
+    else notes.push(`PII key ${k} (only inside list items) not in this reply — data-dependent`);
+  return { failures, notes };
+}
+
+/** Union of two shapes (approving a new recording on top of an approved one); conflicting types → the newer one. */
+export function unionShapes(a: Shape, b: Shape): Shape {
+  if (a === 'null') return b;
+  if (b === 'null') return a;
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (!a.length) return b;
+    if (!b.length) return a;
+    return [unionShapes(a[0]!, b[0]!)];
+  }
+  if (typeof a === 'object' && typeof b === 'object' && !Array.isArray(a) && !Array.isArray(b)) {
+    const out: Record<string, Shape> = { ...a };
+    for (const [k, v] of Object.entries(b)) out[k] = k in out ? unionShapes(out[k]!, v) : v;
+    return Object.fromEntries(
+      Object.keys(out)
+        .sort()
+        .map((k) => [k, out[k]!]),
+    );
+  }
+  return b;
+}
+
+/**
+ * The recorded variants that may be approved. Never approved: a variant that broke an invariant while recording, a
+ * recorded server error (status ≥ 500 — also in recordings made before REPEAT / STATE had that invariant), and a
+ * variant that must never be sent (`notSent`, or `unsafe(label)` for older recordings; safety rule M2Q-46).
+ */
+export function approvableVariants(
+  rec: BaselineFile,
+  unsafe: (label: string) => string | undefined = () => undefined,
+): { approve: Record<string, Observation>; refused: { label: string; why: string }[] } {
+  const approve: Record<string, Observation> = {};
+  const refused: { label: string; why: string }[] = [];
+  const broken = new Set(rec.invariantFailures ?? []);
+  for (const [label, obs] of Object.entries(rec.variants)) {
+    const never = rec.notSent?.[label] ?? unsafe(label);
+    if (broken.has(label) || obs.status >= 500)
+      refused.push({ label, why: 'broke an invariant while recording — not approved (stays a finding)' });
+    else if (never) refused.push({ label, why: `is never sent (${never}) — not approved` });
+    else approve[label] = obs;
+  }
+  return { approve, refused };
 }
 
 /** Block early (before any account or request) when a normal run has no approved baseline for the case. */
@@ -132,6 +217,8 @@ export function requireBaseline(caseId: string, ctx: { record: boolean }): void 
 export interface Variant {
   label: string;
   send: () => Promise<ApiResponse>;
+  /** Set when the variant must not be sent (safety.ts rule 3): it is recorded as Blocked with this reason. */
+  notSent?: string;
 }
 
 /**
@@ -153,7 +240,16 @@ export async function withBaseline(
   // Record mode: every variant is recorded even when one breaks an invariant (e.g. a 5xx); the failure is raised
   // AFTER the recording is written, so the review sees the full picture and the test still fails.
   const broken: { label: string; error: unknown }[] = [];
-  for (const v of variants) {
+  const notSent: Record<string, string> = {};
+  for (const v of variants.filter((x) => x.notSent)) {
+    notSent[v.label] = v.notSent!;
+    test
+      .info()
+      .annotations.push({ type: 'blocked-variant', description: `${v.label}: NOT SENT — ${v.notSent}` });
+  }
+  const toSend = variants.filter((x) => !x.notSent);
+  if (!toSend.length) blockPrereq(PREREQ.unsafeVariants.id, PREREQ.unsafeVariants.reason);
+  for (const v of toSend) {
     const res = await test.step(v.label, v.send);
     seen[v.label] = observe(res);
     if (ctx.record) {
@@ -171,10 +267,10 @@ export async function withBaseline(
         shapeDiff(want!.shape, seen[v.label]!.shape),
         `${v.label}: same keys and types as the baseline`,
       ).toEqual([]);
-      expect(
-        seen[v.label]!.piiKeys,
-        `${v.label}: same PII keys as the baseline (no new, none missing)`,
-      ).toEqual(want!.piiKeys);
+      const pii = piiKeyDiff(want!, seen[v.label]!);
+      for (const n of pii.notes)
+        test.info().annotations.push({ type: 'assumption', description: `${v.label}: ${n}` });
+      expect(pii.failures, `${v.label}: no new PII key, none missing outside lists (names only)`).toEqual([]);
     }
   }
   if (ctx.record) {
@@ -186,6 +282,7 @@ export async function withBaseline(
       note: 'Staging recording for review. Approve with npm run m2:contracts:approve.',
       variants: seen,
       ...(broken.length ? { invariantFailures: broken.map((b) => b.label) } : {}),
+      ...(Object.keys(notSent).length ? { notSent } : {}),
     };
     mkdirSync(path.dirname(recordedFile(caseId)), { recursive: true });
     writeFileSync(recordedFile(caseId), `${JSON.stringify(file, null, 2)}\n`);

@@ -23,18 +23,34 @@ export function buildDesign(root: string): M2Design {
   const base = buildBaseline(inventory);
   const byId = new Map(inventory.map((a) => [a.id, a]));
   const scenarios = SCENARIOS.map((c) => withDerivedDeps(c, byId));
-  const cases = [...scenarios, ...base.cases].map((c) => {
+  const cases = [...scenarios, ...base.cases.map(withPause)].map((c) => {
     // A scenario explicitly judged runnable stays NOT RUN unless an open ACCESS question now gates it (e.g. M2Q-36:
     // the account state cannot be created); everything else follows the open questions.
     const accessOpen = c.deps.some(
       (d) => OPEN.has(d) && QUESTIONS.find((q) => q.id === d)?.kind === 'Access / environment',
     );
-    const status = c.status === 'NOT RUN' && !accessOpen ? 'NOT RUN' : statusFromDeps(c.deps);
+    // A case that cannot occur on staging (c.na, cited answer) is NOT APPLICABLE whatever else is open.
+    const status = c.na
+      ? 'NOT APPLICABLE'
+      : c.status === 'NOT RUN' && !accessOpen
+        ? 'NOT RUN'
+        : statusFromDeps(c.deps);
     const automation =
       c.mode === 'Manual' ? 'NOT AUTOMATED' : status === 'BLOCKED' ? 'AUTOMATION BLOCKED' : 'NOT AUTOMATED';
     return { ...c, status, automation, ...groupingOf(c) } as AnyCase;
   });
   return { inventory, base, scenarios, cases };
+}
+
+/**
+ * Paused by the QA lead (2026-10-24) until Dev confirms M2Q-46: EVERY per-API case of delete_older_account (API-196)
+ * and delete_current_account (API-197) — they act on the profile named by ref, and a missing ref fell back to an
+ * arbitrary staging member (from code: user.rb:696-723, profile.rb:128, 855-856).
+ */
+export const PAUSED_APIS = ['API-196', 'API-197'];
+function withPause(c: M2Case): M2Case {
+  if (!PAUSED_APIS.includes(c.apis[0] ?? '') || c.deps.includes('M2Q-46')) return c;
+  return { ...c, deps: [...c.deps, 'M2Q-46'].sort(), status: 'NEED DEV CLARIFICATION' };
 }
 
 /**
@@ -48,5 +64,7 @@ function withDerivedDeps(c: M2Case, byId: Map<string, InventoryApi>): M2Case {
   if (c.apis.some((id) => ROUTE_STATE[id])) deps.add('M2Q-32');
   const appUser = c.apis.some((id) => !/^API-(001|002|003|190|208)$/.test(id));
   if (c.id.startsWith('M2-DB-') && appUser) deps.add('M2Q-37');
+  // A not-applicable case keeps only the answer that makes it so (its other dependencies no longer apply).
+  if (c.na) return { ...c, deps: [c.na.question] };
   return deps.size === c.deps.length ? c : { ...c, deps: [...deps].sort() };
 }

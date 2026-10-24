@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-045-CONTRACT",
-  "recordedAt": "2026-10-24T06:17:16.967Z",
-  "runId": "qa-m2-20261024t061633-6671",
+  "recordedAt": "2026-10-24T12:50:22.849Z",
+  "runId": "qa-m2-20261024t124732-dd5f",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -18,7 +18,12 @@
             {
               "already_passed": "boolean",
               "approved_time": "number",
-              "audio_prompt": "null",
+              "audio_prompt": {
+                "audio_url": "string",
+                "audio_url_id": "number",
+                "question": "string",
+                "question_id": "number"
+              },
               "audio_url": "null",
               "can_send_reply_v1": "boolean",
               "compatibility_check": [],
@@ -28,12 +33,17 @@
                 "string"
               ],
               "display_new_tag": "boolean",
-              "distance": "string",
+              "distance": "null",
               "drinking_v2_id": "number",
               "faith_id": "number",
               "general_information": {
                 "age": "number",
-                "cast": "null",
+                "cast": {
+                  "faith_id": "number",
+                  "id": "number",
+                  "name": "string",
+                  "position": "number"
+                },
                 "date_of_birth": "string",
                 "date_of_birth_v1": "string",
                 "diet": {
@@ -63,13 +73,7 @@
                 "height": "number",
                 "home_town": "string",
                 "kid": "null",
-                "languages": [
-                  {
-                    "id": "number",
-                    "is_mother_tongue": "boolean",
-                    "name": "string"
-                  }
-                ],
+                "languages": [],
                 "location": {
                   "full": "string",
                   "summary": "string"
@@ -91,10 +95,18 @@
                   "name": "string"
                 },
                 "mother_tongue_id": "number",
-                "pet": "null",
+                "pet": {
+                  "id": "number",
+                  "name": "string"
+                },
                 "politics": "null",
                 "ref_id": "string",
-                "settle": "null",
+                "settle": {
+                  "id": "number",
+                  "name": "string",
+                  "name_alias": "string",
+                  "prefix": "string"
+                },
                 "smoking_id": "number",
                 "smoking_v1": {
                   "id": "number",
@@ -150,10 +162,9 @@
                   "preference_only": "boolean"
                 },
                 "work": "string",
-                "work_title": "string",
                 "college": "string",
-                "graduation_year": "string",
-                "industry": "string"
+                "industry": "string",
+                "work_title": "string"
               },
               "photos": [
                 {
@@ -167,31 +178,8 @@
                   "status": "string"
                 }
               ],
-              "preferences": [
-                {
-                  "answer_id": "number",
-                  "id": "number",
-                  "preference_question": {
-                    "first_choice": "string",
-                    "second_choice": "string"
-                  },
-                  "value": "number"
-                }
-              ],
-              "profile_data_list": [
-                {
-                  "invitation_type": "string",
-                  "preferences": [
-                    {
-                      "answer": "string",
-                      "answer_id": "number",
-                      "first_choice": "string",
-                      "second_choice": "string"
-                    }
-                  ],
-                  "question": "string"
-                }
-              ],
+              "preferences": [],
+              "profile_data_list": [],
               "profile_sharing_enabled": "boolean",
               "relationship_goal": {
                 "id": "number",
@@ -214,31 +202,32 @@
               "tab_name": "null",
               "user_id": "number",
               "user_interests": [],
-              "user_interests_v2": [
-                {
-                  "common_interest": "string",
-                  "id": "number",
-                  "interest_id": "number",
-                  "name": "string",
-                  "order": "number"
-                }
-              ],
-              "user_traits": [
-                {
-                  "id": "number",
-                  "name": "string",
-                  "order": "number",
-                  "trait_id": "number"
-                }
-              ],
+              "user_interests_v2": [],
+              "user_traits": [],
               "verification_status": "string",
-              "work": "null",
-              "work_v1": {
-                "college": "string",
-                "graduation_year": "string",
-                "industry": "string",
-                "work_title": "string"
-              }
+              "work": {
+                "experience_v1": {
+                  "id": "number",
+                  "name": "string",
+                  "name_alias": "string"
+                },
+                "field_of_study_v1": {
+                  "id": "number",
+                  "name": "string"
+                },
+                "highest_qualification_v1": {
+                  "id": "number",
+                  "name": "string",
+                  "preference_only": "boolean"
+                },
+                "industry_v1": {
+                  "id": "number",
+                  "name": "string",
+                  "preference_only": "boolean"
+                },
+                "monthly_income_v1": "null"
+              },
+              "work_v1": "null"
             }
           ]
         },

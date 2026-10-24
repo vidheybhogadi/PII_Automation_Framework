@@ -70,7 +70,7 @@ test.describe('M2 scenarios — free text', () => {
     for (const t of texts) expectOk(await sendMessage(fx, a, b, t), 'send');
     let all = '';
     for (let page = 1; page <= 5; page++) {
-      const body = devBody(fx, 'API-069', asUser(fx, b, a));
+      const body = await devBody(fx, 'API-069', asUser(fx, b, a));
       setDeep(body, 'page', page);
       all += (await call(fx, 'API-069', asUser(fx, b, a), { body })).rawText();
     }

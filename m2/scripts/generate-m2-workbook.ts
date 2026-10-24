@@ -62,6 +62,7 @@ const STATUS_STYLE: Record<Status, { bg: string; ink: string }> = {
   FAIL: { bg: 'FFFFC7CE', ink: 'FF9C0006' },
   BLOCKED: { bg: 'FFFFEB9C', ink: 'FF9C5700' },
   'NEED DEV CLARIFICATION': { bg: 'FFEBD5F5', ink: 'FF6B1D5E' },
+  WAITING: { bg: 'FFDBEAFE', ink: 'FF1E40AF' },
   'NOT APPLICABLE': { bg: 'FFD5EEEC', ink: 'FF285E61' },
   'NOT RUN': { bg: 'FFE5E7EB', ink: 'FF4B5563' },
 };
@@ -83,7 +84,15 @@ const DEV_DECISIONS = [
   'Not applicable',
   'Needs discussion',
 ];
-const STATUSES: Status[] = ['PASS', 'FAIL', 'BLOCKED', 'NEED DEV CLARIFICATION', 'NOT APPLICABLE', 'NOT RUN'];
+const STATUSES: Status[] = [
+  'PASS',
+  'FAIL',
+  'BLOCKED',
+  'NEED DEV CLARIFICATION',
+  'WAITING',
+  'NOT APPLICABLE',
+  'NOT RUN',
+];
 const AUTOMATION = ['NOT AUTOMATED', 'AUTOMATION IN PROGRESS', 'AUTOMATED', 'AUTOMATION BLOCKED'];
 const Q_STATUSES = ['Open', 'Answered', 'Deferred', 'Closed'];
 
@@ -98,8 +107,12 @@ function validate(inventory: InventoryApi[]) {
     seen.add(c.id);
     for (const a of c.apis) if (!apiIds.has(a)) errors.push(`${c.id} cites unknown ${a}`);
     for (const d of c.deps) if (!qIds.has(d)) errors.push(`${c.id} cites unknown ${d}`);
-    for (const ref of `${c.expected} ${c.pre} ${c.db}`.match(/M2Q-\d+/g) ?? [])
-      if (!c.deps.includes(ref)) errors.push(`${c.id} mentions ${ref} but does not list it in deps`);
+    // Not-applicable cases may mention other questions "for reference"; waiting parts are listed in c.waiting.
+    if (!c.na)
+      for (const ref of `${c.expected} ${c.pre} ${c.db}`.match(/M2Q-\d+/g) ?? [])
+        if (!c.deps.includes(ref) && !c.waiting?.includes(ref))
+          errors.push(`${c.id} mentions ${ref} but does not list it in deps`);
+    for (const d of c.waiting ?? []) if (!qIds.has(d)) errors.push(`${c.id} waits for unknown ${d}`);
     for (const ref of c.db.match(/M2-DB-\d+/g) ?? [])
       if (!CASES.some((x) => x.id === ref)) errors.push(`${c.id} points to missing ${ref}`);
   }
@@ -122,7 +135,15 @@ function validate(inventory: InventoryApi[]) {
 
 // ---- Derived data -----------------------------------------------------------------------------------------
 const casesFor = (apiId: string) => CASES.filter((c) => c.apis.includes(apiId));
-const casesForQuestion = (qId: string) => CASES.filter((c) => c.deps.includes(qId));
+const casesForQuestion = (qId: string) =>
+  CASES.filter((c) => c.deps.includes(qId) || c.waiting?.includes(qId));
+/** Dependencies cell: open/answered questions, plus the parts that wait for Dev (not dependencies). */
+const depsText = (c: AnyCase) =>
+  [
+    c.deps.length ? c.deps.join(', ') : '—',
+    ...(c.waiting?.length ? [`waiting: ${c.waiting.join(', ')} (gate-ON part)`] : []),
+    ...(c.na ? [`not applicable: ${c.na.question}`] : []),
+  ].join(' · ');
 /** "M2-PIIR-001, M2-FNAME-004 + 14 per-API checks" — keeps cells readable with ~2,500 cases. */
 function caseSummary(cases: AnyCase[]) {
   const sc = cases.filter((c) => !c.check).map((c) => c.id);
@@ -426,7 +447,7 @@ function overviewSheet(wb: ExcelJS.Workbook, inventory: InventoryApi[]) {
     '2. Dev provides test accounts (M2Q-03), CMS admins (M2Q-04) and the read-gate state (M2Q-02) — this unblocks most cases.',
     '3. QA automates the runnable cases now (status NOT RUN: TEST_TOKEN routes, AUTH and TOKEN checks) in the m2-api Playwright project.',
     '4. After answers: update expected results, re-run npm run m2:docs, then automate the approved cases via the testcase-manager agent.',
-    '5. DB cases stay BLOCKED until M2Q-16 (= M1 BQ-04/BQ-30) is answered.',
+    '5. DB cases stay BLOCKED: all DB verification is on hold by QA lead decision (M2Q-44).',
   ].forEach((s) => kv('', s));
   r++;
 
@@ -434,7 +455,15 @@ function overviewSheet(wb: ExcelJS.Workbook, inventory: InventoryApi[]) {
   kv('NOT RUN', 'Expected behaviour is evidenced; can run when executed.');
   kv('BLOCKED', 'Expected behaviour is evidenced, but access / data / environment is missing.');
   kv('NEED DEV CLARIFICATION', 'Expected behaviour is not confirmed — see the cited M2Q.');
-  kv('PASS / FAIL / NOT APPLICABLE', 'Only after execution, or when Dev confirms out of scope.');
+  kv(
+    'WAITING',
+    'Nothing to answer — the whole case waits for an environment change Dev controls (M2Q-43: read gates ON). Runnable cases may also have a waiting part (Dependencies column "waiting: …").',
+  );
+  kv(
+    'NOT APPLICABLE',
+    'The case cannot occur on this environment, confirmed by the cited answer (e.g. M2Q-05: all staging profiles are migrated). Skipped with the reason; neither pass nor fail.',
+  );
+  kv('PASS / FAIL', 'Only after execution.');
 }
 
 function inventorySheet(wb: ExcelJS.Workbook, inventory: InventoryApi[]) {
@@ -562,7 +591,7 @@ function casesSheet(
       c.expected,
       c.evidence,
       c.db,
-      c.deps.length ? c.deps.join(', ') : '—',
+      depsText(c),
       c.status,
       c.automation,
       LAST_RUN.get(c.id) ?? '—',

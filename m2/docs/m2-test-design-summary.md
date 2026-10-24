@@ -4,7 +4,7 @@
 
 Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-pii-affected-apis.md](aisle-pii-affected-apis.md) (Dev inventory (saurabh/pii-changes @ ae838f4, 16-Oct-2026)).
 
-**2473 test cases** (111 scenario + 2362 per-API) over **212 inventory entries** (11 groups). PASS 571 · FAIL 4 · BLOCKED 1898 · NEED DEV CLARIFICATION 0 · NOT APPLICABLE 0 · NOT RUN 0. Nothing has been executed as an M2 test case yet.
+**2473 test cases** (111 scenario + 2362 per-API) over **212 inventory entries** (11 groups). PASS 869 · FAIL 79 · BLOCKED 1331 · NEED DEV CLARIFICATION 0 · WAITING 1 · NOT APPLICABLE 193 · NOT RUN 0. Nothing has been executed as an M2 test case yet.
 
 ## By type and category (same Type values as M1)
 
@@ -41,8 +41,9 @@ Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-p
 | G10 CMS / admin                                          | 52   | 641      | Admin profile views, edits, search, curation, reviews, member activity, exports and the ActiveAdmin IRL page. Admin auth + permission checks; correct name/email/phone per profile.    |
 | M1 PII facade proxy (covered by Milestone 1)             | 12   | M1 suite | The /V1/api/v1/pii-test/* proxy routes (incl. readiness and free-text keys). Already covered by the 109 Milestone 1 cases; not duplicated in M2.                                       |
 
-## Runnable now (575 cases, no new access needed)
+## Runnable now (948 cases, no new access needed)
 
+- `M2-PIIR-001` Write a first name with the test route, then read it back
 - `M2-PIIR-002` Writing a new first name replaces the old one
 - `M2-PIIR-003` Read a first name for a user that has none
 - `M2-PIIR-004` Missing required parameters are refused with a clear message
@@ -50,86 +51,116 @@ Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-p
 - `M2-PIIR-006` First-name normalisation: spaces, repeated spaces, case, Unicode
 - `M2-PIIR-007` Batch first-name read returns the right name for each user
 - `M2-PIIR-008` Batch reads: size limit and malformed lists
+- `M2-PIIR-009` Profile first names by profile ref (real synthetic profiles)
 - `M2-PIIR-010` First-name source diagnostic for a profile
+- `M2-FNAME-001` New user’s first name from onboarding is saved to PII and shown on own profile
+- `M2-FNAME-002` Onboarding does not overwrite an existing first name
+- `M2-FNAME-003` Web onboarding saves first name the same way as app onboarding
+- `M2-FNAME-004` Editing the first name updates PII and every own-profile read
+- `M2-FNAME-006` Repeated and identical name edits stay consistent
+- `M2-FNAME-007` Edit / onboarding with missing, null, empty or whitespace first name
+- `M2-FNAME-008` App edit normalises the first name the same way in PII and the local field
 - `M2-FNAME-011` Hide-name toggle on an ineligible profile (no verified selfie)
+- `M2-FNAME-015` Same profile with the first-name gate off and on
+- `M2-FNAME-017` A name change reaches other users’ lists (cache propagation)
+- `M2-EMAIL-001` Onboarding email is saved to PII and returned on the owner’s profile
+- `M2-EMAIL-002` Onboarding does not overwrite an existing email
+- `M2-EMAIL-007` Email with the gate off (gate on: waiting)
+- `M2-PHONE-001` New user’s phone login writes the national number to PII
 - `M2-PHONE-005` Phone login with formatted, short, long or invalid numbers
-- POS (Valid request succeeds with correct PII): 40 APIs
-- CONTRACT (Response contract unchanged): 41 APIs
-- AUTH (Missing / invalid credential refused): 192 APIs
-- TOKEN (Wrong credential type refused): 190 APIs
-- PARAM (Missing / invalid parameters): 22 APIs
-- IDOR (Cannot act on / read another user): 50 APIs
+- `M2-XFLD-001` Changing the first name leaves email and phone unchanged
+- `M2-XFLD-003` Owner’s profile returns all three fields matching PII
+- `M2-XFLD-005` One user’s changes never affect another user
+- `M2-SEC-006` Error responses do not echo submitted PII or internal details
+- `M2-INT-003` A name written through the M1 facade does not refresh app caches
+- `M2-FT-001` A sent chat message (text + quoted previous message) is readable by the other person exactly as sent
+- `M2-FT-004` Many messages in one conversation: order, pagination and the created_at cursor still work
+- POS (Valid request succeeds with correct PII): 90 APIs
+- CONTRACT (Response contract unchanged): 87 APIs
+- AUTH (Missing / invalid credential refused): 190 APIs
+- TOKEN (Wrong credential type refused): 188 APIs
+- PARAM (Missing / invalid parameters): 64 APIs
+- BODY (Malformed body / wrong data types): 35 APIs
+- IDOR (Cannot act on / read another user): 75 APIs
+- EXPOSE (No unintended PII exposure): 3 APIs
+- GATE (Read gate off: same value read back (gate on: waiting)): 78 APIs
 - CACHE (PII change reflected in later reads): 2 APIs
-- STATE (Wrong account / record state): 13 APIs
-- REPEAT (Repeated / double request): 15 APIs
+- STATE (Wrong account / record state): 47 APIs
+- REPEAT (Repeated / double request): 56 APIs
+- FIELD (PII input validation & normalisation): 1 APIs
 
 ## Per-API checks
 
-| Check     | Title                                   | Cases | Covered by scenario | N/A |
-| --------- | --------------------------------------- | ----- | ------------------- | --- |
-| POS       | Valid request succeeds with correct PII | 195   | 5                   | 0   |
-| CONTRACT  | Response contract unchanged             | 200   | 0                   | 0   |
-| AUTH      | Missing / invalid credential refused    | 200   | 0                   | 0   |
-| TOKEN     | Wrong credential type refused           | 190   | 0                   | 10  |
-| PARAM     | Missing / invalid parameters            | 174   | 5                   | 21  |
-| BODY      | Malformed body / wrong data types       | 122   | 3                   | 75  |
-| IDOR      | Cannot act on / read another user       | 134   | 0                   | 66  |
-| EXPOSE    | No unintended PII exposure              | 124   | 0                   | 76  |
-| UNMIG     | Unmigrated profile with read gate on    | 190   | 0                   | 10  |
-| HIDDEN    | Hidden first name respected             | 112   | 0                   | 88  |
-| GATE      | Read gate off vs on                     | 200   | 0                   | 0   |
-| PIIDOWN   | PII service down / slow                 | 200   | 0                   | 0   |
-| CACHE     | PII change reflected in later reads     | 62    | 1                   | 137 |
-| STATE     | Wrong account / record state            | 77    | 0                   | 123 |
-| REPEAT    | Repeated / double request               | 133   | 1                   | 66  |
-| FIELD     | PII input validation & normalisation    | 11    | 6                   | 183 |
-| DB-SAVE   | DB: persisted correctly, no duplicates  | 6     | 16                  | 178 |
-| DB-REFUSE | DB: refused request writes nothing      | 12    | 5                   | 183 |
-| DB-ISOL   | DB: other fields and users untouched    | 20    | 2                   | 178 |
+| Check     | Title                                                  | Cases | Covered by scenario | N/A |
+| --------- | ------------------------------------------------------ | ----- | ------------------- | --- |
+| POS       | Valid request succeeds with correct PII                | 195   | 5                   | 0   |
+| CONTRACT  | Response contract unchanged                            | 200   | 0                   | 0   |
+| AUTH      | Missing / invalid credential refused                   | 200   | 0                   | 0   |
+| TOKEN     | Wrong credential type refused                          | 190   | 0                   | 10  |
+| PARAM     | Missing / invalid parameters                           | 174   | 5                   | 21  |
+| BODY      | Malformed body / wrong data types                      | 122   | 3                   | 75  |
+| IDOR      | Cannot act on / read another user                      | 134   | 0                   | 66  |
+| EXPOSE    | No unintended PII exposure                             | 124   | 0                   | 76  |
+| UNMIG     | Unmigrated profile with read gate on                   | 190   | 0                   | 10  |
+| HIDDEN    | Hidden first name respected                            | 112   | 0                   | 88  |
+| GATE      | Read gate off: same value read back (gate on: waiting) | 200   | 0                   | 0   |
+| PIIDOWN   | PII service down / slow                                | 200   | 0                   | 0   |
+| CACHE     | PII change reflected in later reads                    | 62    | 1                   | 137 |
+| STATE     | Wrong account / record state                           | 77    | 0                   | 123 |
+| REPEAT    | Repeated / double request                              | 133   | 1                   | 66  |
+| FIELD     | PII input validation & normalisation                   | 11    | 6                   | 183 |
+| DB-SAVE   | DB: persisted correctly, no duplicates                 | 6     | 16                  | 178 |
+| DB-REFUSE | DB: refused request writes nothing                     | 12    | 5                   | 183 |
+| DB-ISOL   | DB: other fields and users untouched                   | 20    | 2                   | 178 |
 
 ## Blocking questions (cases affected)
 
-| Question | Topic                                | Type                          | Cases |
-| -------- | ------------------------------------ | ----------------------------- | ----- |
-| M2Q-03   | Test accounts                        | Access / environment          | 2035  |
-| M2Q-36   | Onboarding prerequisites             | Access / environment          | 1881  |
-| M2Q-24   | Contracts                            | Access / environment          | 707   |
-| M2Q-04   | CMS access                           | Access / environment          | 533   |
-| M2Q-32   | Special account states               | Access / environment          | 500   |
-| M2Q-02   | Read gates                           | Access / environment          | 411   |
-| M2Q-17   | Payment sandboxes                    | Access / environment          | 296   |
-| M2Q-10   | Best-effort writes                   | Access / environment          | 206   |
-| M2Q-11   | PII read failures                    | Contract / expected behaviour | 202   |
-| M2Q-05   | Unmigrated profiles                  | Contract / expected behaviour | 198   |
-| M2Q-13   | Hide name                            | Contract / expected behaviour | 114   |
-| M2Q-12   | Caching                              | Contract / expected behaviour | 66    |
-| M2Q-16   | DB access & schema                   | Access / environment          | 57    |
-| M2Q-37   | PII user_id for app users            | Access / environment          | 57    |
-| M2Q-14   | PII exposure rules                   | Contract / expected behaviour | 53    |
-| M2Q-41   | Web token issuance                   | Access / environment          | 29    |
-| M2Q-19   | Special auth routes                  | Access / environment          | 21    |
-| M2Q-27   | Free-text contract                   | Contract / expected behaviour | 19    |
-| M2Q-06   | First-name rules                     | Contract / expected behaviour | 17    |
-| M2Q-29   | Free-text failures & revoked keys    | Contract / expected behaviour | 8     |
-| M2Q-33   | App DB (aisleweb) read access        | Access / environment          | 8     |
-| M2Q-28   | Legacy free text                     | Contract / expected behaviour | 7     |
-| M2Q-35   | Test-token route contracts           | Contract / expected behaviour | 6     |
-| M2Q-07   | Email rules                          | Contract / expected behaviour | 5     |
-| M2Q-15   | Account deletion (DPDP erasure)      | Contract / expected behaviour | 5     |
-| M2Q-18   | Notifications, email & SMS           | Access / environment          | 5     |
-| M2Q-01   | Build under test                     | Contract / expected behaviour | 4     |
-| M2Q-30   | Free-text limits                     | Contract / expected behaviour | 4     |
-| M2Q-08   | Phone resync gaps                    | Possible defect — confirm     | 3     |
-| M2Q-21   | Admin search                         | Contract / expected behaviour | 3     |
-| M2Q-22   | Test-data cleanup                    | Access / environment          | 3     |
-| M2Q-25   | Release scope                        | Contract / expected behaviour | 3     |
-| M2Q-40   | Test-route first-name write fails    | Possible defect — confirm     | 3     |
-| M2Q-09   | reset_profile                        | Possible defect — confirm     | 2     |
-| M2Q-20   | Test-token routes                    | Contract / expected behaviour | 1     |
-| M2Q-23   | Performance                          | Contract / expected behaviour | 1     |
-| M2Q-26   | Logs                                 | Access / environment          | 1     |
-| M2Q-31   | More free-text flows                 | Access / environment          | 1     |
-| M2Q-34   | Mongo (audit trail)                  | Access / environment          | 1     |
-| M2Q-42   | Login response without credential    | Possible defect — confirm     | 1     |
-| M2Q-38   | Unauthenticated payment verification | Possible defect — confirm     | 0     |
-| M2Q-39   | Invalid tokens cause server errors   | Possible defect — confirm     | 0     |
+| Question | Topic                                     | Type                                 | Cases |
+| -------- | ----------------------------------------- | ------------------------------------ | ----- |
+| M2Q-03   | Test accounts                             | Access / environment                 | 1845  |
+| M2Q-36   | Onboarding prerequisites                  | Access / environment                 | 1697  |
+| M2Q-24   | Contracts                                 | Access / environment                 | 707   |
+| M2Q-04   | CMS access                                | Access / environment                 | 481   |
+| M2Q-17   | Payment sandboxes                         | Access / environment                 | 270   |
+| M2Q-02   | Read gates                                | Access / environment                 | 219   |
+| M2Q-43   | Read gates ON                             | Waiting for Dev (environment change) | 217   |
+| M2Q-10   | Best-effort writes                        | Access / environment                 | 206   |
+| M2Q-11   | PII read failures                         | Contract / expected behaviour        | 202   |
+| M2Q-05   | Unmigrated profiles                       | Contract / expected behaviour        | 197   |
+| M2Q-32   | Special account states                    | Access / environment                 | 145   |
+| M2Q-13   | Hide name                                 | Contract / expected behaviour        | 114   |
+| M2Q-45   | Dev-only ids and actions                  | Access / environment                 | 113   |
+| M2Q-12   | Caching                                   | Contract / expected behaviour        | 65    |
+| M2Q-16   | DB access & schema                        | Access / environment                 | 57    |
+| M2Q-37   | PII user_id for app users                 | Access / environment                 | 57    |
+| M2Q-44   | DB verification on hold                   | Access / environment                 | 57    |
+| M2Q-14   | PII exposure rules                        | Contract / expected behaviour        | 53    |
+| M2Q-41   | Web token issuance                        | Access / environment                 | 26    |
+| M2Q-46   | Missing ref acts on an arbitrary member   | Possible defect — confirm            | 24    |
+| M2Q-19   | Special auth routes                       | Access / environment                 | 19    |
+| M2Q-27   | Free-text contract                        | Contract / expected behaviour        | 19    |
+| M2Q-06   | First-name rules                          | Contract / expected behaviour        | 17    |
+| M2Q-29   | Free-text failures & revoked keys         | Contract / expected behaviour        | 8     |
+| M2Q-33   | App DB (aisleweb) read access             | Access / environment                 | 8     |
+| M2Q-35   | Test-token route contracts                | Contract / expected behaviour        | 6     |
+| M2Q-07   | Email rules                               | Contract / expected behaviour        | 5     |
+| M2Q-15   | Account deletion (DPDP erasure)           | Contract / expected behaviour        | 5     |
+| M2Q-18   | Notifications, email & SMS                | Access / environment                 | 5     |
+| M2Q-01   | Build under test                          | Contract / expected behaviour        | 4     |
+| M2Q-30   | Free-text limits                          | Contract / expected behaviour        | 4     |
+| M2Q-21   | Admin search                              | Contract / expected behaviour        | 3     |
+| M2Q-22   | Test-data cleanup                         | Access / environment                 | 3     |
+| M2Q-25   | Release scope                             | Contract / expected behaviour        | 3     |
+| M2Q-40   | Test-route first-name write fails         | Possible defect — confirm            | 3     |
+| M2Q-08   | Phone resync gaps                         | Possible defect — confirm            | 2     |
+| M2Q-09   | reset_profile                             | Possible defect — confirm            | 2     |
+| M2Q-28   | Legacy free text                          | Contract / expected behaviour        | 2     |
+| M2Q-20   | Test-token routes                         | Contract / expected behaviour        | 1     |
+| M2Q-23   | Performance                               | Contract / expected behaviour        | 1     |
+| M2Q-26   | Logs                                      | Access / environment                 | 1     |
+| M2Q-31   | More free-text flows                      | Access / environment                 | 1     |
+| M2Q-34   | Mongo (audit trail)                       | Access / environment                 | 1     |
+| M2Q-42   | Login response without credential         | Possible defect — confirm            | 1     |
+| M2Q-38   | Unauthenticated payment verification      | Possible defect — confirm            | 0     |
+| M2Q-39   | Invalid tokens cause server errors        | Possible defect — confirm            | 0     |
+| M2Q-47   | Deleting accounts stuck before onboarding | Access / environment                 | 0     |

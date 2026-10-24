@@ -1,0 +1,13 @@
+{
+  "caseId": "M2-API-060-PARAM",
+  "recordedAt": "2026-10-24T12:52:30.867Z",
+  "runId": "qa-m2-20261024t124732-dd5f",
+  "build": "unknown — deployed commit not confirmed (M2Q-01)",
+  "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
+  "variants": {},
+  "notSent": {
+    "without phone_code_id": "unsafe: would log in / write with a number that is not a synthetic test number (M2Q-46)",
+    "without mobile_number": "unsafe: would log in / write with a number that is not a synthetic test number (M2Q-46)",
+    "without otp": "unsafe: would log in / write with a number that is not a synthetic test number (M2Q-46)"
+  }
+}

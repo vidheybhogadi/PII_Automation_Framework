@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-022-PARAM",
-  "recordedAt": "2026-10-24T06:17:44.467Z",
-  "runId": "qa-m2-20261024t061633-6671",
+  "recordedAt": "2026-10-24T12:51:47.617Z",
+  "runId": "qa-m2-20261024t124732-dd5f",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -12,7 +12,12 @@
         "ref": "string",
         "user": {
           "about": "null",
-          "audio_prompt": "null",
+          "audio_prompt": {
+            "audio_url": "string",
+            "audio_url_id": "number",
+            "question": "string",
+            "question_id": "number"
+          },
           "delete_reasons": [
             {
               "id": "number",
@@ -75,7 +80,12 @@
               "name": "string",
               "preference_only": "boolean"
             },
-            "mbti": "null",
+            "mbti": {
+              "id": "number",
+              "mbti_type": "string",
+              "name": "string",
+              "preference_only": "boolean"
+            },
             "mobile_number": "string",
             "mother_tongue": {
               "id": "number",
@@ -108,22 +118,44 @@
           "has_concierge_subscription": "boolean",
           "has_voted": "boolean",
           "hide_first_name": "boolean",
-          "icebreakers": "null",
+          "icebreakers": [
+            {
+              "answer": "string",
+              "answer_id": "number",
+              "hint": "string",
+              "question": "string",
+              "question_id": "number"
+            }
+          ],
           "incognito_mode_active": "boolean",
           "incognito_mode_popup_text": {
             "button_text_1": "string",
             "description_text": "string",
             "header_text": "string"
           },
-          "introduction": "null",
+          "introduction": {
+            "answer": "string",
+            "answer_id": "number",
+            "hint": "string",
+            "question": "string",
+            "question_id": "number"
+          },
           "is_email_unsubscribed": "boolean",
           "is_sms_unsubscribed": "boolean",
           "last_seen": "string",
           "own_meetup": "null",
-          "partial_work": "null",
+          "partial_work": {
+            "college": "string",
+            "education": "string",
+            "graduation_year": "string",
+            "industry": "string",
+            "work": "string",
+            "work_title": "string"
+          },
           "percentage_profile_complete": "number",
           "photos": [
             {
+              "archive_reason": "string",
               "feedback_prompt": "null",
               "feedback_prompt_v2": "null",
               "feedback_prompt_v3": "null",
@@ -135,7 +167,17 @@
               "status": "string"
             }
           ],
-          "preferences": [],
+          "preferences": [
+            {
+              "answer_id": "number",
+              "id": "number",
+              "preference_question": {
+                "first_choice": "string",
+                "second_choice": "string"
+              },
+              "value": "number"
+            }
+          ],
           "profile_complete_without_selfie": "number",
           "profile_sharing_enabled": "boolean",
           "profile_sharing_popup_text": {
@@ -298,11 +340,38 @@
           "show_mandatory_complete_profile_popup": "boolean",
           "show_weekly": "boolean",
           "story": "null",
-          "user_interests": [],
-          "user_interests_v2": [],
-          "user_traits": [],
+          "user_interests": [
+            {
+              "id": "number",
+              "interest_id": "number",
+              "name": "string",
+              "value": "number"
+            }
+          ],
+          "user_interests_v2": [
+            {
+              "common_interest": "string",
+              "id": "number",
+              "interest_id": "number",
+              "name": "string",
+              "order": "number"
+            }
+          ],
+          "user_traits": [
+            {
+              "id": "number",
+              "name": "string",
+              "order": "number",
+              "trait_id": "number"
+            }
+          ],
           "work": "null",
-          "work_v1": "null"
+          "work_v1": {
+            "college": "string",
+            "graduation_year": "string",
+            "industry": "string",
+            "work_title": "string"
+          }
         }
       },
       "piiKeys": [
@@ -314,7 +383,21 @@
     }
   },
   "approved": {
-    "by": "QA lead",
+    "by": "Aisle codebase (develop_new 944f76a) — confirm with Dev",
     "on": "2026-10-24"
-  }
+  },
+  "approvals": [
+    {
+      "by": "QA lead",
+      "on": "2026-10-24",
+      "recordedAt": "2026-10-24T06:17:44.467Z",
+      "runId": "qa-m2-20261024t061633-6671"
+    },
+    {
+      "by": "Aisle codebase (develop_new 944f76a) — confirm with Dev",
+      "on": "2026-10-24",
+      "recordedAt": "2026-10-24T12:51:47.617Z",
+      "runId": "qa-m2-20261024t124732-dd5f"
+    }
+  ]
 }

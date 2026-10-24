@@ -1,0 +1,44 @@
+{
+  "caseId": "M2-API-099-PARAM",
+  "recordedAt": "2026-10-24T12:52:47.095Z",
+  "runId": "qa-m2-20261024t124732-dd5f",
+  "build": "unknown — deployed commit not confirmed (M2Q-01)",
+  "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
+  "variants": {
+    "without icebreakers": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "icebreakers": "null",
+        "percentage_profile_complete": "number",
+        "profile_complete_without_selfie": "number",
+        "status": "boolean"
+      },
+      "piiKeys": []
+    },
+    "without question_id": {
+      "status": 500,
+      "contentType": "application/json",
+      "shape": {
+        "is_backend_error": "boolean",
+        "message": "string",
+        "title": "string"
+      },
+      "piiKeys": []
+    },
+    "without answer": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "icebreakers": "null",
+        "percentage_profile_complete": "number",
+        "profile_complete_without_selfie": "number",
+        "status": "boolean"
+      },
+      "piiKeys": []
+    }
+  },
+  "invariantFailures": [
+    "without question_id"
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "caseId": "M2-API-041-STATE",
+  "recordedAt": "2026-10-24T12:55:33.763Z",
+  "runId": "qa-m2-20261024t124732-dd5f",
+  "build": "unknown — deployed commit not confirmed (M2Q-01)",
+  "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
+  "variants": {
+    "valid request": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "has_interests": "boolean",
+        "has_philosophy": "boolean",
+        "has_settle": "boolean",
+        "has_traits": "boolean",
+        "percentage_profile_complete": "number",
+        "profile_complete_without_selfie": "number",
+        "status": "boolean"
+      },
+      "piiKeys": []
+    },
+    "action already done (sent again)": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "has_interests": "boolean",
+        "has_philosophy": "boolean",
+        "has_settle": "boolean",
+        "has_traits": "boolean",
+        "percentage_profile_complete": "number",
+        "profile_complete_without_selfie": "number",
+        "status": "boolean"
+      },
+      "piiKeys": []
+    },
+    "wrong target (unknown ids)": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "has_interests": "boolean",
+        "has_philosophy": "boolean",
+        "has_settle": "boolean",
+        "has_traits": "boolean",
+        "percentage_profile_complete": "number",
+        "profile_complete_without_selfie": "number",
+        "status": "boolean"
+      },
+      "piiKeys": []
+    }
+  },
+  "approved": {
+    "by": "Aisle codebase (develop_new 944f76a) — confirm with Dev",
+    "on": "2026-10-24"
+  },
+  "approvals": [
+    {
+      "by": "Aisle codebase (develop_new 944f76a) — confirm with Dev",
+      "on": "2026-10-24",
+      "recordedAt": "2026-10-24T12:55:33.763Z",
+      "runId": "qa-m2-20261024t124732-dd5f"
+    }
+  ]
+}

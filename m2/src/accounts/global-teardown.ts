@@ -16,6 +16,6 @@ export default async function globalTeardown(): Promise<void> {
   if (r.deleted + r.leftBehind > 0)
     // eslint-disable-next-line no-console
     console.log(
-      `M2 accounts of this run: ${r.deleted} deleted, ${r.leftBehind} left behind (see reports/m2/accounts/).`,
+      `M2 accounts of this run: ${r.deleted} deleted, ${r.leftBehind} left behind (real), ${r.neverCreated} never created, ${r.alreadyDeleted} already deleted (see reports/m2/accounts/).`,
     );
 }

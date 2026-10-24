@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-014-CONTRACT",
-  "recordedAt": "2026-10-24T06:17:03.760Z",
-  "runId": "qa-m2-20261024t061633-6671",
+  "recordedAt": "2026-10-24T12:49:53.488Z",
+  "runId": "qa-m2-20261024t124732-dd5f",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -165,18 +165,18 @@
             "mother_tongue_id": "number",
             "online_code": "number",
             "partial_work": {
+              "college": "string",
               "education": "string",
-              "work": "string",
-              "work_title": "string",
+              "graduation_year": "string",
+              "industry": "string",
+              "new_income": "null",
               "new_qualification": {
                 "id": "number",
                 "name": "string",
                 "preference_only": "boolean"
               },
-              "college": "string",
-              "graduation_year": "string",
-              "industry": "string",
-              "new_income": "null"
+              "work": "string",
+              "work_title": "string"
             },
             "photos": [
               {
@@ -296,7 +296,21 @@
     }
   },
   "approved": {
-    "by": "QA lead",
+    "by": "Aisle codebase (develop_new 944f76a) — confirm with Dev",
     "on": "2026-10-24"
-  }
+  },
+  "approvals": [
+    {
+      "by": "QA lead",
+      "on": "2026-10-24",
+      "recordedAt": "2026-10-24T06:17:03.760Z",
+      "runId": "qa-m2-20261024t061633-6671"
+    },
+    {
+      "by": "Aisle codebase (develop_new 944f76a) — confirm with Dev",
+      "on": "2026-10-24",
+      "recordedAt": "2026-10-24T12:49:53.488Z",
+      "runId": "qa-m2-20261024t124732-dd5f"
+    }
+  ]
 }

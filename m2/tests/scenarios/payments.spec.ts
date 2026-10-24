@@ -6,7 +6,7 @@
 import { scanResponse } from '../../src/assertions/pii.assertions';
 import { scenario } from '../../src/checks/define';
 import { blockPrereq, PREREQ } from '../../src/prereq';
-import { expect, noteEvidence, test } from '../../src/fixtures/m2-fixtures';
+import { expect, notApplicable, noteEvidence, test } from '../../src/fixtures/m2-fixtures';
 import { asUser, call, editFirstName, expectOk, type Fx } from '../../src/scenarios/helpers';
 
 function requireSandbox(): void {
@@ -45,8 +45,6 @@ test.describe('M2 scenarios — payments (sandbox only)', () => {
     await requests(fx, ['API-073', 'API-076']);
   });
 
-  scenario('M2-PAY-004', async () => {
-    requireSandbox();
-    blockPrereq(PREREQ.states.id, `${PREREQ.states.reason} — an unmigrated profile with blank PII`);
-  });
+  // NOT APPLICABLE on staging: no unmigrated profile exists (M2Q-05).
+  scenario('M2-PAY-004', async (_fx, c) => notApplicable(c.na!.question, c.na!.reason));
 });

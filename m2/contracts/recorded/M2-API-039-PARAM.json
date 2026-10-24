@@ -1,0 +1,17 @@
+{
+  "caseId": "M2-API-039-PARAM",
+  "recordedAt": "2026-10-24T12:51:53.803Z",
+  "runId": "qa-m2-20261024t124732-dd5f",
+  "build": "unknown — deployed commit not confirmed (M2Q-01)",
+  "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
+  "variants": {
+    "without mbti_id": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "status": "boolean"
+      },
+      "piiKeys": []
+    }
+  }
+}
