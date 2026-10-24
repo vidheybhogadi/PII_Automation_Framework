@@ -1,0 +1,43 @@
+{
+  "caseId": "M2-API-007-CONTRACT",
+  "recordedAt": "2026-10-24T06:16:59.847Z",
+  "runId": "qa-m2-20261024t061633-6671",
+  "build": "unknown — deployed commit not confirmed (M2Q-01)",
+  "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
+  "variants": {
+    "valid request": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "can_see_profile": "boolean",
+        "comment_next_cursor": "null",
+        "complete_profile_check": "boolean",
+        "invites": [],
+        "is_default_payment_concierge": "boolean",
+        "nextCursor": "null",
+        "no_likes_message": "string",
+        "no_of_tiles_to_display": "number",
+        "popup": "null",
+        "previously_recevied_spark": "boolean",
+        "report_options": [
+          {
+            "id": "number",
+            "name": "string",
+            "show_on_connection": "boolean"
+          }
+        ],
+        "show_my_type_button": "boolean",
+        "show_popup": "boolean",
+        "sparks": {
+          "nextCursor": "null",
+          "users": []
+        },
+        "subscribed_likes_display_text": "string",
+        "users": []
+      },
+      "piiKeys": [
+        "name"
+      ]
+    }
+  }
+}

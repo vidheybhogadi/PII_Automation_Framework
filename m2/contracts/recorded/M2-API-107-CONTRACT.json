@@ -1,0 +1,20 @@
+{
+  "caseId": "M2-API-107-CONTRACT",
+  "recordedAt": "2026-10-24T06:17:24.041Z",
+  "runId": "qa-m2-20261024t061633-6671",
+  "build": "unknown — deployed commit not confirmed (M2Q-01)",
+  "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
+  "variants": {
+    "valid request": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "agora_data": "null",
+        "live_list": [],
+        "live_list_v1": [],
+        "room_settings": "null"
+      },
+      "piiKeys": []
+    }
+  }
+}

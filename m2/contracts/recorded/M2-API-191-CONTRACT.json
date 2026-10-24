@@ -1,0 +1,155 @@
+{
+  "caseId": "M2-API-191-CONTRACT",
+  "recordedAt": "2026-10-24T06:17:26.586Z",
+  "runId": "qa-m2-20261024t061633-6671",
+  "build": "unknown — deployed commit not confirmed (M2Q-01)",
+  "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
+  "variants": {
+    "valid request": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "invites": {
+          "pending_invitations_count": "number",
+          "profiles": [
+            {
+              "approved_time": "number",
+              "disapproved_time": "number",
+              "general_information": {
+                "age": "number",
+                "cast": "null",
+                "date_of_birth": "string",
+                "date_of_birth_v1": "string",
+                "diet": "null",
+                "drinking_v1": {
+                  "id": "number",
+                  "name": "string",
+                  "name_alias": "string"
+                },
+                "faith": {
+                  "id": "number",
+                  "name": "string"
+                },
+                "first_name": "string",
+                "gender": "string",
+                "height": "number",
+                "kid": "null",
+                "location": {
+                  "full": "string",
+                  "summary": "string"
+                },
+                "marital_status_v1": {
+                  "id": "number",
+                  "name": "string",
+                  "preference_only": "boolean"
+                },
+                "mbti": "null",
+                "mother_tongue": {
+                  "id": "number",
+                  "name": "string"
+                },
+                "pet": "null",
+                "politics": "null",
+                "ref_id": "string",
+                "settle": "null",
+                "smoking_v1": {
+                  "id": "number",
+                  "name": "string",
+                  "name_alias": "string"
+                },
+                "sun_sign_v1": {
+                  "id": "number",
+                  "name": "string"
+                }
+              },
+              "has_active_subscription": "boolean",
+              "icebreakers": "null",
+              "instagram_images": "null",
+              "is_facebook_data_fetched": "boolean",
+              "last_seen": "null",
+              "last_seen_window": "string",
+              "lat": "number",
+              "lng": "number",
+              "meetup": "null",
+              "online_code": "number",
+              "photos": [
+                {
+                  "photo": "string",
+                  "photo_id": "number",
+                  "selected": "boolean",
+                  "status": "string"
+                }
+              ],
+              "preferences": [
+                {
+                  "answer_id": "number",
+                  "id": "number",
+                  "preference_question": {
+                    "first_choice": "string",
+                    "second_choice": "string"
+                  },
+                  "value": "number"
+                }
+              ],
+              "profile_data_list": [
+                {
+                  "invitation_type": "string",
+                  "preferences": [
+                    {
+                      "answer": "string",
+                      "answer_id": "number",
+                      "first_choice": "string",
+                      "second_choice": "string"
+                    }
+                  ],
+                  "question": "string"
+                }
+              ],
+              "show_concierge_badge": "boolean",
+              "story": "null",
+              "user_interests": [],
+              "verification_status": "string",
+              "work": {
+                "experience_v1": {
+                  "id": "number",
+                  "name": "string",
+                  "name_alias": "string"
+                },
+                "field_of_study_v1": {
+                  "id": "number",
+                  "name": "string"
+                },
+                "highest_qualification_v1": {
+                  "id": "number",
+                  "name": "string",
+                  "preference_only": "boolean"
+                },
+                "industry_v1": {
+                  "id": "number",
+                  "name": "string",
+                  "preference_only": "boolean"
+                },
+                "monthly_income_v1": "null"
+              }
+            }
+          ],
+          "totalPages": "number"
+        },
+        "likes": {
+          "can_see_profile": "boolean",
+          "likes_received_count": "number",
+          "profiles": [
+            {
+              "avatar": "string",
+              "first_name": "string"
+            }
+          ]
+        }
+      },
+      "piiKeys": [
+        "first_name",
+        "name"
+      ]
+    }
+  }
+}

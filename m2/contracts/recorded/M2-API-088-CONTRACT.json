@@ -1,0 +1,99 @@
+{
+  "caseId": "M2-API-088-CONTRACT",
+  "recordedAt": "2026-10-24T06:17:21.770Z",
+  "runId": "qa-m2-20261024t061633-6671",
+  "build": "unknown — deployed commit not confirmed (M2Q-01)",
+  "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
+  "variants": {
+    "valid request": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "active_algorithms": {
+          "concierge": "string",
+          "discover": "string"
+        },
+        "active_plan_type": "null",
+        "age": "null",
+        "application_stage": "string",
+        "application_stage_v2": [
+          "string"
+        ],
+        "attempts_left": "number",
+        "auth_token": "string",
+        "avatar": "null",
+        "can_import_contact": "boolean",
+        "can_send_competitor_data": "boolean",
+        "display_watch_clip": "boolean",
+        "enable_multi_comment": "boolean",
+        "first_name": "null",
+        "gender": "null",
+        "has_partial_work": "boolean",
+        "id": "number",
+        "image_inappropriate_message": "string",
+        "intro_offer_timer": "null",
+        "invalid_account": "boolean",
+        "is_boost_active": "boolean",
+        "is_boost_available": "boolean",
+        "is_likely_to_pay": "boolean",
+        "is_liveness_verified": "null",
+        "is_onboarding_phase_2": "boolean",
+        "is_spark_enabled": "boolean",
+        "last_android_constant_file_update": "string",
+        "last_ios_constant_file_update": "string",
+        "mandatory": "boolean",
+        "message": "string",
+        "meta_trigger_event_list": [],
+        "move_image_upload_to_last_page": "boolean",
+        "percentage_profile_complete": "number",
+        "personalised_comment_popup_text": "null",
+        "popular_profile": "boolean",
+        "pre_discover_screen_text": {
+          "button_text": "string",
+          "header_text": "string",
+          "sub_text": [
+            "string"
+          ]
+        },
+        "profile_complete_without_selfie": "number",
+        "profile_state": "null",
+        "pubnub_origin_link": "string",
+        "ref": "null",
+        "selfie_compression_size": "number",
+        "selfie_gesture": "null",
+        "selfie_verification_allowed": "boolean",
+        "selfie_verification_message": "string",
+        "send_integrity_token": "boolean",
+        "show_complete_profile_popup": "boolean",
+        "show_discounted_pricing": "boolean",
+        "show_personalised_comment_popup": "boolean",
+        "show_weekly": "boolean",
+        "status": "boolean",
+        "store_kit_2_enabled": "boolean",
+        "success_stories": [
+          {
+            "date_text": "string",
+            "photos": [
+              "string"
+            ],
+            "top_message": "string"
+          }
+        ],
+        "use_liveliness_check": "boolean",
+        "use_presigned_url": "boolean",
+        "verification_status": "string",
+        "video_information_urls": {
+          "aisle_concierge": "string",
+          "five_points_someone": "string",
+          "safety_tips": "string",
+          "selfie_verification": "string"
+        },
+        "your_story_form_url": "string",
+        "zendesk_url": "string"
+      },
+      "piiKeys": [
+        "first_name"
+      ]
+    }
+  }
+}
