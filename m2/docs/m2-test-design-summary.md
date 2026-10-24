@@ -4,7 +4,7 @@
 
 Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-pii-affected-apis.md](aisle-pii-affected-apis.md) (Dev inventory (saurabh/pii-changes @ ae838f4, 16-Oct-2026)).
 
-**2473 test cases** (111 scenario + 2362 per-API) over **212 inventory entries** (11 groups). PASS 480 · FAIL 6 · BLOCKED 1987 · NEED DEV CLARIFICATION 0 · NOT APPLICABLE 0 · NOT RUN 0. Nothing has been executed as an M2 test case yet.
+**2473 test cases** (111 scenario + 2362 per-API) over **212 inventory entries** (11 groups). PASS 571 · FAIL 4 · BLOCKED 1898 · NEED DEV CLARIFICATION 0 · NOT APPLICABLE 0 · NOT RUN 0. Nothing has been executed as an M2 test case yet.
 
 ## By type and category (same Type values as M1)
 
@@ -41,9 +41,8 @@ Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-p
 | G10 CMS / admin                                          | 52   | 641      | Admin profile views, edits, search, curation, reviews, member activity, exports and the ActiveAdmin IRL page. Admin auth + permission checks; correct name/email/phone per profile.    |
 | M1 PII facade proxy (covered by Milestone 1)             | 12   | M1 suite | The /V1/api/v1/pii-test/* proxy routes (incl. readiness and free-text keys). Already covered by the 109 Milestone 1 cases; not duplicated in M2.                                       |
 
-## Runnable now (486 cases, no new access needed)
+## Runnable now (575 cases, no new access needed)
 
-- `M2-PIIR-001` Write a first name with the test route, then read it back
 - `M2-PIIR-002` Writing a new first name replaces the old one
 - `M2-PIIR-003` Read a first name for a user that has none
 - `M2-PIIR-004` Missing required parameters are refused with a clear message
@@ -51,15 +50,18 @@ Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-p
 - `M2-PIIR-006` First-name normalisation: spaces, repeated spaces, case, Unicode
 - `M2-PIIR-007` Batch first-name read returns the right name for each user
 - `M2-PIIR-008` Batch reads: size limit and malformed lists
-- `M2-PIIR-009` Profile first names by profile ref (real synthetic profiles)
 - `M2-PIIR-010` First-name source diagnostic for a profile
 - `M2-FNAME-011` Hide-name toggle on an ineligible profile (no verified selfie)
 - `M2-PHONE-005` Phone login with formatted, short, long or invalid numbers
 - POS (Valid request succeeds with correct PII): 40 APIs
+- CONTRACT (Response contract unchanged): 41 APIs
 - AUTH (Missing / invalid credential refused): 192 APIs
 - TOKEN (Wrong credential type refused): 190 APIs
+- PARAM (Missing / invalid parameters): 22 APIs
 - IDOR (Cannot act on / read another user): 50 APIs
 - CACHE (PII change reflected in later reads): 2 APIs
+- STATE (Wrong account / record state): 13 APIs
+- REPEAT (Repeated / double request): 15 APIs
 
 ## Per-API checks
 
