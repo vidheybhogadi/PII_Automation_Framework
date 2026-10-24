@@ -141,6 +141,15 @@ test.describe('UNIT M2 baselines and safety', () => {
       shapeDiff(a, bodyShape({ status: 'yes', user: { first_name: 'Qa', ids: [1], email: 'x' } })),
     ).toEqual(['$.note: missing', '$.status: boolean → string', '$.user.email: new key']);
     expect(JSON.stringify(a)).not.toContain('Qa');
+    // List items: their key set depends on the records returned — only common keys are compared (types still fail).
+    const list = bodyShape({
+      items: [
+        { id: 1, a: 'x' },
+        { id: 2, b: 'y' },
+      ],
+    });
+    expect(shapeDiff(list, bodyShape({ items: [{ id: 3, c: 'z' }] }))).toEqual([]);
+    expect(shapeDiff(list, bodyShape({ items: [{ id: '3' }] }))).toEqual(['$.items[].id: number → string']);
   });
 
   test('UT-M2-011 Delete / reset / deactivate / report routes are never sent for Dev-provided accounts', () => {

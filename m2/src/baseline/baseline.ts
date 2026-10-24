@@ -96,21 +96,25 @@ export function observe(res: ApiResponse): Observation {
  * Differences between an approved shape and a live one, as value-free paths ("$.profile.first_name: missing").
  * "null" matches any type (nullable fields); empty arrays are not compared element-wise.
  */
-export function shapeDiff(expected: Shape, actual: Shape, at = '$'): string[] {
+export function shapeDiff(expected: Shape, actual: Shape, at = '$', inList = false): string[] {
   if (expected === 'null' || actual === 'null') return [];
   if (Array.isArray(expected) || Array.isArray(actual)) {
     if (!Array.isArray(expected) || !Array.isArray(actual)) return [`${at}: type changed`];
     if (!expected.length || !actual.length) return [];
-    return shapeDiff(expected[0]!, actual[0]!, `${at}[]`);
+    return shapeDiff(expected[0]!, actual[0]!, `${at}[]`, true);
   }
   if (typeof expected === 'object' || typeof actual === 'object') {
     if (typeof expected !== 'object' || typeof actual !== 'object') return [`${at}: type changed`];
     const out: string[] = [];
+    // Inside list items the key SET depends on which records the list returns (other members' optional fields), so
+    // only keys present in both shapes are compared there (type changes still fail). Outside lists every key counts.
+    // New PII keys anywhere are still caught by the separate PII-key comparison.
     for (const k of Object.keys(expected)) {
-      if (!(k in actual)) out.push(`${at}.${k}: missing`);
-      else out.push(...shapeDiff(expected[k]!, actual[k]!, `${at}.${k}`));
+      if (!(k in actual)) {
+        if (!inList) out.push(`${at}.${k}: missing`);
+      } else out.push(...shapeDiff(expected[k]!, actual[k]!, `${at}.${k}`, inList));
     }
-    for (const k of Object.keys(actual)) if (!(k in expected)) out.push(`${at}.${k}: new key`);
+    if (!inList) for (const k of Object.keys(actual)) if (!(k in expected)) out.push(`${at}.${k}: new key`);
     return out;
   }
   return expected === actual ? [] : [`${at}: ${expected} → ${actual}`];
