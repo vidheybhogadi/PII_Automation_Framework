@@ -1,0 +1,68 @@
+{
+  "caseId": "M2-API-086-CONTRACT",
+  "recordedAt": "2026-10-24T06:17:20.900Z",
+  "runId": "qa-m2-20261024t061633-6671",
+  "build": "unknown — deployed commit not confirmed (M2Q-01)",
+  "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
+  "variants": {
+    "valid request": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "about": "null",
+        "age": "null",
+        "application_stage_v2": [
+          "string"
+        ],
+        "attempts_left": "number",
+        "can_send_competitor_data": "boolean",
+        "display_watch_clip": "boolean",
+        "enable_instagram_connection": "boolean",
+        "has_concierge_subscription": "boolean",
+        "has_intro_question": "boolean",
+        "has_mobile_number": "boolean",
+        "image_inappropriate_message": "null",
+        "invalid_account": "boolean",
+        "is_boost_active": "boolean",
+        "is_boost_available": "boolean",
+        "is_likely_to_pay": "boolean",
+        "is_onboarding_phase_2": "boolean",
+        "mandatory": "boolean",
+        "percentage_profile_complete": "number",
+        "popular_profile": "boolean",
+        "pre_discover_screen_text": {
+          "button_text": "string",
+          "header_text": "string",
+          "sub_text": [
+            "string"
+          ]
+        },
+        "profile_complete_without_selfie": "number",
+        "profile_state": "null",
+        "review_warning": "null",
+        "selfie_compression_size": "number",
+        "selfie_verification_allowed": "boolean",
+        "selfie_verification_message": "string",
+        "show_concierge_icon": "boolean",
+        "show_update_app": "boolean",
+        "show_weekly": "boolean",
+        "use_firebase_face_recognition": "boolean",
+        "use_presigned_url": "boolean",
+        "verification_status": "string",
+        "video_information_urls": {
+          "aisle_concierge": "string",
+          "five_points_someone": "string",
+          "safety_tips": "string",
+          "selfie_verification": "string"
+        },
+        "your_story_form_url": "string",
+        "zendesk_url": "string"
+      },
+      "piiKeys": []
+    }
+  },
+  "approved": {
+    "by": "QA lead",
+    "on": "2026-10-24"
+  }
+}

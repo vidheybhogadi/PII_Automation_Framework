@@ -115,15 +115,15 @@ export async function callerFor(
   if (api.auth.includes('TEST_TOKEN')) {
     const auth = AUTH.testToken(requireTestToken(fx.m2Config));
     if (groupOf(api.id).key === 'G1') {
-      // The write route only works for an EXISTING app user (M2Q-40, from code); reads take any id.
-      if (api.id === 'API-002') {
-        const p = await fx.accounts.onboarded(role === 'A' ? 0 : 1);
-        return { label: 'TEST_TOKEN', auth, values: { ...valuesFor(fx.m2Config, p), USER_ID: p.userId } };
-      }
+      // A valid request names EXISTING app users: the write route only works for them (M2Q-40, from code), and a
+      // contract recording should show a real reply, not the error / empty reply for a made-up id.
+      const p = await fx.accounts.onboarded(role === 'A' ? 0 : 1);
+      const other = await fx.accounts.onboarded(role === 'A' ? 1 : 0);
       return {
         label: 'TEST_TOKEN',
         auth,
-        values: { ...valuesFor(fx.m2Config), USER_ID: fx.data.userId(role) },
+        session: p,
+        values: { ...valuesFor(fx.m2Config, p, other), USER_ID: p.userId },
       };
     }
     const p = await fx.accounts.onboarded(role === 'A' ? 0 : 1);

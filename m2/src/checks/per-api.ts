@@ -226,7 +226,13 @@ export async function runContract(c: AnyCase, fx: CheckFixtures): Promise<void> 
   requireBaseline(c.id, ctxOf(fx));
   const api = apiOf(c);
   const caller = await callerFor(api, fx);
-  await withBaseline(c.id, ctxOf(fx), [{ label: 'valid request', send: () => send(api, fx, caller) }]);
+  // A baseline of a VALID request must be a valid reply: a server error is never recorded as the contract.
+  await withBaseline(
+    c.id,
+    ctxOf(fx),
+    [{ label: 'valid request', send: () => send(api, fx, caller) }],
+    noServerError,
+  );
 }
 
 export async function runParam(c: AnyCase, fx: CheckFixtures): Promise<void> {

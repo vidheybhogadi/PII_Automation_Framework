@@ -36,6 +36,8 @@ export interface BaselineFile {
   build: string;
   note: string;
   variants: Record<string, Observation>;
+  /** Variants that broke the case's own invariants while recording (e.g. a 5xx) — highlighted in the review. */
+  invariantFailures?: string[];
   approved?: { by: string; on: string };
 }
 
@@ -144,10 +146,19 @@ export async function withBaseline(
     : undefined;
   if (!ctx.record && !approved?.approved) blockPrereq(PREREQ.baseline.id, PREREQ.baseline.reason);
   const seen: Record<string, Observation> = {};
+  // Record mode: every variant is recorded even when one breaks an invariant (e.g. a 5xx); the failure is raised
+  // AFTER the recording is written, so the review sees the full picture and the test still fails.
+  const broken: { label: string; error: unknown }[] = [];
   for (const v of variants) {
     const res = await test.step(v.label, v.send);
     seen[v.label] = observe(res);
-    check(v.label, res);
+    if (ctx.record) {
+      try {
+        check(v.label, res);
+      } catch (error) {
+        broken.push({ label: v.label, error });
+      }
+    } else check(v.label, res);
     if (!ctx.record) {
       const want = approved!.variants[v.label];
       expect(want !== undefined, `${v.label}: variant exists in the approved baseline`).toBe(true);
@@ -170,6 +181,7 @@ export async function withBaseline(
       build: 'unknown — deployed commit not confirmed (M2Q-01)',
       note: 'Staging recording for review. Approve with npm run m2:contracts:approve.',
       variants: seen,
+      ...(broken.length ? { invariantFailures: broken.map((b) => b.label) } : {}),
     };
     mkdirSync(path.dirname(recordedFile(caseId)), { recursive: true });
     writeFileSync(recordedFile(caseId), `${JSON.stringify(file, null, 2)}\n`);
@@ -177,6 +189,7 @@ export async function withBaseline(
       type: 'recorded',
       description: `Baseline recorded: m2/contracts/recorded/${caseId}.json`,
     });
+    if (broken.length) throw broken[0]!.error;
     test.skip(true, `RECORDED baseline for ${caseId} (review and approve before it is asserted)`);
   }
 }

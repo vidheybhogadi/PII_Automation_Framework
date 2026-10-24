@@ -28,6 +28,8 @@ for (const f of files.sort()) {
           ...obs.piiKeys.filter((k) => !want.piiKeys.includes(k)).map((k) => `NEW PII key ${k}`),
           ...want.piiKeys.filter((k) => !obs.piiKeys.includes(k)).map((k) => `missing PII key ${k}`),
         ];
+    if (rec.invariantFailures?.includes(label))
+      notes.unshift('BROKE AN INVARIANT while recording (see the test failure)');
     if (notes.length) changed++;
     rows.push(
       `| ${rec.caseId} | ${label} | ${obs.status} | ${obs.piiKeys.join(', ') || '—'} | ${notes.join('; ') || 'matches approved'} |`,
