@@ -26,6 +26,7 @@ import {
   type Fx,
 } from '../../src/scenarios/helpers';
 import type { Profile } from '../../src/accounts/accounts';
+import { maskedFirstName, normalizeFirstName } from '../../scripts/m2-code-evidence';
 
 /** Own name (app) and PII name of a profile. */
 async function names(fx: Fx, p: Profile) {
@@ -159,23 +160,35 @@ test.describe('M2 scenarios — first name', () => {
 
   scenario('M2-FNAME-008', async (fx) => {
     const p = await fx.accounts.onboarded(0);
-    for (const value of ['  Qa  Name ', 'José', 'देवा', "D'Souza", 'Anne-Marie']) {
+    for (const value of ['  Qa  Name ', 'José', 'देवा', "D'Souza", 'Anne-Marie']) {
       const res = await editFirstName(fx, p, value);
       if (isSuccess(res.status)) {
         const now = await names(fx, p);
         expect(now.app === now.pii, 'app read and PII read are identical').toBe(true);
+        // From code (M2Q-06): the normalised value; lossy results are recorded as a possible defect.
+        if (/^[A-Za-z\s]+$/.test(value) || !/[A-Za-z]/.test(value))
+          expect(now.app === normalizeFirstName(value), 'stored as the normalised value').toBe(true);
+        else
+          noteEvidence(
+            `Lossy normalisation for a ${value.length}-character input (possible defect, M2Q-06).`,
+          );
       }
     }
   });
 
   scenario('M2-FNAME-009', async (fx) => {
     const [a, b] = await fx.accounts.connectedPair();
-    const full = nameOf(await ownProfile(fx, a));
+    const full = String(nameOf(await ownProfile(fx, a)));
     expectOk(await call(fx, 'API-032', asUser(fx, a)), 'toggle_hide_name (hide)');
     try {
-      expect(nameOf(await profileByRef(fx, b, a)) === full, 'B never sees A’s full name').toBe(false);
-      noteEvidence('Masked value and the owner’s own view are recorded (M2Q-13).');
-      await ownProfile(fx, a);
+      const seen = nameOf(await profileByRef(fx, b, a));
+      expect(seen === full, 'B never sees A’s full name').toBe(false);
+      expect(seen === maskedFirstName(full), 'B sees the first letter, capitalised (from code, M2Q-13)').toBe(
+        true,
+      );
+      expect(nameOf(await ownProfile(fx, a)) === full, 'A still sees the full name (from code, M2Q-13)').toBe(
+        true,
+      );
     } finally {
       await call(fx, 'API-032', asUser(fx, a)); // restore
     }
@@ -193,15 +206,30 @@ test.describe('M2 scenarios — first name', () => {
   });
 
   scenario('M2-FNAME-011', async (fx) => {
-    const [a, b] = await fx.accounts.connectedPair();
+    // Suite-created onboarded accounts have no verified selfie, so they are ineligible to hide the name.
+    const a = await fx.accounts.onboarded(0);
+    const b = await fx.accounts.onboarded(1);
     const full = nameOf(await ownProfile(fx, a));
     const res = await call(fx, 'API-032', asUser(fx, a));
-    noteEvidence('Toggle response body for an ineligible profile is recorded (M2Q-13).');
+    expect(res.status, `toggle_hide_name: ${res.summary()} — 200 (from code, M2Q-13)`).toBe(200);
+    const body = res.json() as { status?: unknown; first_name?: unknown } | undefined;
     expect(
-      nameOf(await profileByRef(fx, b, a)) === full,
-      'ineligible profile: name still shown in full',
+      body?.status === true && body?.first_name === full,
+      'reply {status:true, first_name:<full name>}',
     ).toBe(true);
-    if (isSuccess(res.status)) await call(fx, 'API-032', asUser(fx, a)); // restore if it toggled anyway
+    expect(nameOf(await ownProfile(fx, a)) === full, 'state unchanged for the owner').toBe(true);
+    // The viewed profile's own name (user.general_information.first_name), not a nested profile's.
+    const view = (await profileByRef(fx, b, a)).json() as
+      { user?: { first_name?: unknown; general_information?: { first_name?: unknown } } } | undefined;
+    const seen = view?.user?.general_information?.first_name ?? view?.user?.first_name;
+    if (seen === undefined)
+      noteEvidence('Another user’s view of a pending profile carries no first name — recorded.');
+    else {
+      noteEvidence(
+        `Another user's view: ${String(seen).length} characters; equals the masked initial: ${seen === maskedFirstName(String(full))}; equals the full name: ${seen === full}.`,
+      );
+      expect(seen === full, 'another user still sees the full name (not masked)').toBe(true);
+    }
   });
 
   scenario('M2-FNAME-013', async (fx) => {

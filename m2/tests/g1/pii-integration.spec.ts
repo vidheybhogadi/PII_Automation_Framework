@@ -1,20 +1,24 @@
 /**
- * G1 — PII integration routes (/V1/pii_integration/*, TEST_TOKEN). Scenario cases M2-PIIR-001/002/003/004/007.
+ * G1 — PII integration routes (/V1/pii_integration/*, TEST_TOKEN). Scenario cases M2-PIIR-*.
  *
- * Expected results come only from staging observations (2026-10-19) and the QA lead's answer to M2Q-20
- * (2026-10-23: synthetic non-numeric user_ids may be written). Details still open in M2Q-35 (write response,
- * missing-field errors, duplicate handling) are RECORDED as "observed", never asserted.
- * There is no delete route: written first names stay in the PII DB under run-prefixed synthetic ids (like M1).
+ * Evidence: staging observations (2026-10-19 / 10-23) and the Aisle app code (develop_new 944f76a, answers recorded
+ * on M2Q-01, M2Q-06, M2Q-35, M2Q-37, M2Q-40 — "from code, confirm with Dev"):
+ *   - POST first_name writes only for an EXISTING app user (it loads the profile by user_id; a non-numeric id is an
+ *     unhandled 500, an unknown numeric id 404). So the write cases use suite-created onboarded accounts
+ *     (M2_CREATE_ACCOUNTS=true), whose app user id is also their PII user_id (M2Q-37); they are deleted at teardown.
+ *   - write → 200 {status:true, user_id, ref, first_name:<normalised>}; missing / blank params → 400
+ *     "Missing required parameter: <name>"; batch ids are de-duplicated; no batch size limit.
+ *   - Name normalisation (assign_first_name): blank → ignored; stripped; reduced to A–Z letters when it contains any.
+ *     Lossy cases ("José" → "Jos", "D'Souza" → "DSouza") are recorded as a possible defect, not asserted as correct.
  */
 import type { ApiResponse } from '../../../core/http/api-response';
-import { maskIdentifier } from '../../../core/utils/redaction';
+import { normalizeFirstName } from '../../scripts/m2-code-evidence';
 import { AUTH } from '../../src/auth/credentials';
-import { requireTestToken } from '../../src/config/m2-config';
+import { requireTestToken, type M2Config } from '../../src/config/m2-config';
 import type { M2Client } from '../../src/clients/m2-client';
+import { scenario } from '../../src/checks/define';
 import { caseById, titleOf } from '../../src/design';
 import { blockIfOpen, expect, noteEvidence, test } from '../../src/fixtures/m2-fixtures';
-import type { M2Config } from '../../src/config/m2-config';
-import { scenario } from '../../src/checks/define';
 import { asTestToken, call, expectOk, nameOf, ownProfile, piiFirstName } from '../../src/scenarios/helpers';
 
 const READ = 'API-001';
@@ -31,7 +35,7 @@ async function write(
   m2: M2Client,
   config: M2Config,
   userId: string,
-  firstName: string,
+  firstName: unknown,
 ): Promise<ApiResponse> {
   return m2.call(WRITE, {
     auth: token(config),
@@ -42,13 +46,6 @@ async function write(
 
 async function read(m2: M2Client, config: M2Config, userId: string): Promise<ApiResponse> {
   return m2.call(READ, { auth: token(config), query: { user_id: userId } });
-}
-
-function leftBehind(userId: string) {
-  test.info().annotations.push({
-    type: 'cleanup',
-    description: `First name for ${maskIdentifier(userId)} left behind (no delete route for /V1/pii_integration)`,
-  });
 }
 
 /** Observed read shape (2026-10-19): 200 {status:true, user_id, first_name}. Value-free messages. */
@@ -63,33 +60,57 @@ function expectRead(res: ApiResponse, userId: string, firstName: string | null, 
   ).toBe(true);
 }
 
+/** From code (M2Q-35): 200 {status:true, user_id, ref, first_name:<normalised>}. */
+function expectWrite(res: ApiResponse, userId: string, firstName: string, what: string) {
+  const body = res.json() as
+    { status?: unknown; user_id?: unknown; ref?: unknown; first_name?: unknown } | undefined;
+  expect(res.status, `${what}: ${res.summary()}`).toBe(200);
+  expect(
+    body?.status === true && body?.user_id === userId,
+    `${what}: status:true for the requested user_id`,
+  ).toBe(true);
+  expect(typeof body?.ref === 'string' && body.ref.length > 0, `${what}: the profile ref is returned`).toBe(
+    true,
+  );
+  expect(body?.first_name === normalizeFirstName(firstName), `${what}: the normalised name is returned`).toBe(
+    true,
+  );
+}
+
 test.describe('M2 G1 — PII integration routes (TEST_TOKEN)', () => {
   const c1 = caseById('M2-PIIR-001');
-  test(titleOf(c1), { tag: c1.tags }, async ({ m2, m2Config, data, observe }) => {
+  test(titleOf(c1), { tag: c1.tags }, async ({ m2, m2Config, accounts, data, observe }) => {
     blockIfOpen(c1);
-    const userId = data.userId('piir001');
+    const userId = (await accounts.onboarded(0)).userId!;
     const name = data.firstName();
-    leftBehind(userId);
     const w = await test.step('Save a fake first name with POST /V1/pii_integration/first_name', () =>
       write(m2, m2Config, userId, name));
-    observe('write response (contract open: M2Q-35)', w);
+    observe('write', w);
+    expectWrite(w, userId, name, 'write');
     const r = await test.step('Read it back with GET /V1/pii_integration/first_name', () =>
       read(m2, m2Config, userId));
     observe('read', r);
-    expectRead(r, userId, name, 'read after write');
+    expectRead(r, userId, normalizeFirstName(name)!, 'read after write');
   });
 
   const c2 = caseById('M2-PIIR-002');
-  test(titleOf(c2), { tag: c2.tags }, async ({ m2, m2Config, data, observe }) => {
+  test(titleOf(c2), { tag: c2.tags }, async ({ m2, m2Config, accounts, data, observe }) => {
     blockIfOpen(c2);
-    const userId = data.userId('piir002');
+    const userId = (await accounts.onboarded(0)).userId!;
     const n1 = data.firstName();
     const n2 = data.firstName();
-    leftBehind(userId);
-    observe('write N1 (contract open: M2Q-35)', await write(m2, m2Config, userId, n1));
-    observe('write N2 (contract open: M2Q-35)', await write(m2, m2Config, userId, n2));
+    for (const [label, n] of [
+      ['write N1', n1],
+      ['write N2', n2],
+    ] as const) {
+      const w = await write(m2, m2Config, userId, n);
+      observe(label, w);
+      expectWrite(w, userId, n, label);
+    }
     expectRead(await read(m2, m2Config, userId), userId, n2, 'read after replacing N1 with N2');
-    observe('repeat write N2 (contract open: M2Q-35)', await write(m2, m2Config, userId, n2));
+    const again = await write(m2, m2Config, userId, n2);
+    observe('repeat write N2', again);
+    expectWrite(again, userId, n2, 'repeat write N2');
     expectRead(await read(m2, m2Config, userId), userId, n2, 'read after repeating N2');
   });
 
@@ -109,11 +130,8 @@ test.describe('M2 G1 — PII integration routes (TEST_TOKEN)', () => {
     const auth = token(m2Config);
     const expect400 = (res: ApiResponse, what: string, text?: string) => {
       observe(what, res);
-      expect(res.status, `${what}: ${res.summary()} — observed 400 on 2026-10-19`).toBe(400);
-      if (text)
-        expect(res.rawText().includes(text), `${what}: error text "${text}" (observed 2026-10-19)`).toBe(
-          true,
-        );
+      expect(res.status, `${what}: ${res.summary()} — 400`).toBe(400);
+      if (text) expect(res.rawText().includes(text), `${what}: error text "${text}"`).toBe(true);
     };
     expect400(
       await m2.call(READ, { auth }),
@@ -127,32 +145,30 @@ test.describe('M2 G1 — PII integration routes (TEST_TOKEN)', () => {
       'POST profile_first_name_source {}',
       'Missing required parameter: user_id or ref',
     );
-    // Contract still open (M2Q-35): recorded, not asserted.
-    noteEvidence('POST first_name without user_id / without first_name: recorded only (M2Q-35).');
-    observe(
-      'POST first_name without user_id (M2Q-35)',
+    // From code (M2Q-35): required_param raises before the profile lookup.
+    expect400(
       await m2.call(WRITE, { auth, body: { first_name: data.firstName() }, retry: false }),
+      'POST first_name without user_id',
+      'Missing required parameter: user_id',
     );
-    const noName = data.userId('piir004-noname');
-    observe(
-      'POST first_name without first_name (M2Q-35)',
-      await m2.call(WRITE, { auth, body: { user_id: noName }, retry: false }),
+    expect400(
+      await m2.call(WRITE, { auth, body: { user_id: data.userId('piir004-noname') }, retry: false }),
+      'POST first_name without first_name',
+      'Missing required parameter: first_name',
     );
   });
 
   const c7 = caseById('M2-PIIR-007');
-  test(titleOf(c7), { tag: c7.tags }, async ({ m2, m2Config, data, observe }) => {
+  test(titleOf(c7), { tag: c7.tags }, async ({ m2, m2Config, accounts, data, observe }) => {
     blockIfOpen(c7);
-    const a = data.userId('piir007-a');
-    const b = data.userId('piir007-b');
+    const a = (await accounts.onboarded(0)).userId!;
+    const b = (await accounts.onboarded(1)).userId!;
     const never = data.userId('piir007-c');
     const na = data.firstName();
     const nb = data.firstName();
-    leftBehind(a);
-    leftBehind(b);
     await test.step('Save fake names for users A and B', async () => {
-      observe('write A (contract open: M2Q-35)', await write(m2, m2Config, a, na));
-      observe('write B (contract open: M2Q-35)', await write(m2, m2Config, b, nb));
+      expectWrite(await write(m2, m2Config, a, na), a, na, 'write A');
+      expectWrite(await write(m2, m2Config, b, nb), b, nb, 'write B');
     });
     const res = await test.step('Batch-read [A, B, never-written C, A again]', () =>
       m2.call(BATCH, { auth: token(m2Config), body: { user_ids: [a, b, never, a] } }));
@@ -171,81 +187,89 @@ test.describe('M2 G1 — PII integration routes (TEST_TOKEN)', () => {
     expect(names[never] === undefined || names[never] === null, 'never-written C is absent or null').toBe(
       true,
     );
-    noteEvidence(
-      `Duplicate handling recorded only (M2Q-35): requested_user_count=${String(body?.requested_user_count)}, returned_user_count=${String(body?.returned_user_count)}, keys=${Object.keys(names).length}.`,
-    );
+    expect(body?.requested_user_count, 'requested_user_count counts unique ids (from code, M2Q-35)').toBe(3);
   });
 });
 
-// ---- Remaining G1 scenarios (B2) — blocked per design until their questions are answered -----------------
+// ---- Remaining G1 scenarios ---------------------------------------------------------------------------------
 test.describe('M2 G1 — PII integration routes: validation, batches, profiles', () => {
   scenario('M2-PIIR-005', async (fx) => {
     const tt = asTestToken(fx);
-    const userId = fx.data.userId('piir005');
-    const seed = await call(fx, 'API-002', tt, {
-      body: { user_id: userId, first_name: fx.data.firstName() },
-      retry: false,
-    });
-    expectOk(seed, 'seed write');
-    const stored = await piiFirstName(fx, userId);
+    const userId = (await fx.accounts.onboarded(0)).userId!;
+    const seed = fx.data.firstName();
+    expectOk(
+      await call(fx, WRITE, tt, { body: { user_id: userId, first_name: seed }, retry: false }),
+      'seed write',
+    );
     for (const [label, value] of [
       ['null', null],
       ['empty', ''],
       ['whitespace', '   '],
-      ['256 characters', 'Q'.repeat(256)],
+    ] as const) {
+      const res = await call(fx, WRITE, tt, { body: { user_id: userId, first_name: value }, retry: false });
+      expect(res.status, `${label}: 400 "Missing required parameter: first_name" (from code)`).toBe(400);
+      expect((await piiFirstName(fx, userId)) === seed, `${label}: the stored name is unchanged`).toBe(true);
+    }
+    // Code: no maximum length (profile validates presence only). Staging 2026-10-24: 256 characters → 500, which
+    // wins over the code reading — the evidenced requirement is "no server error on input" (possible defect).
+    const long = 'Q'.repeat(256);
+    const res = await call(fx, WRITE, tt, { body: { user_id: userId, first_name: long }, retry: false });
+    expect(res.status < 500, `256 characters: ${res.summary()} — no server error`).toBe(true);
+    if (res.status === 200)
+      expect((await piiFirstName(fx, userId)) === long, '256 characters: stored in full').toBe(true);
+    else
+      expect((await piiFirstName(fx, userId)) === seed, '256 characters refused: name unchanged').toBe(true);
+    for (const [_label, value] of [
       ['number', 123],
       ['array', ['a']],
       ['object', { a: 1 }],
-    ] as const) {
-      const res = await call(fx, 'API-002', tt, {
-        body: { user_id: userId, first_name: value },
-        retry: false,
-      });
-      if (!(res.status >= 200 && res.status < 300))
-        expect(
-          (await piiFirstName(fx, userId)) === stored,
-          `${label}: refused value leaves the stored name unchanged`,
-        ).toBe(true);
-    }
+    ] as const)
+      await call(fx, WRITE, tt, { body: { user_id: userId, first_name: value }, retry: false });
+    noteEvidence(
+      'Numbers / arrays / objects are converted to text by the app (from code) — recorded, not asserted.',
+    );
   });
 
   scenario('M2-PIIR-006', async (fx) => {
     const tt = asTestToken(fx);
-    for (const value of [
-      '  Qa  ',
-      'Qa  Test',
-      'qa',
-      'QA',
-      'José',
-      'José',
-      'देवा',
-      'தமிழ்',
-      "D'Souza",
-      'Anne-Marie',
-    ]) {
-      const userId = fx.data.userId('piir006');
-      const w = await call(fx, 'API-002', tt, { body: { user_id: userId, first_name: value }, retry: false });
-      if (w.status >= 200 && w.status < 300)
-        expect(typeof (await piiFirstName(fx, userId)), 'an accepted name is stored and readable').toBe(
-          'string',
-        );
+    const userId = (await fx.accounts.onboarded(0)).userId!;
+    // Asserted: values the normalisation keeps intact. Recorded: lossy ones (possible defect, see report).
+    for (const value of ['  Qa  ', 'qa', 'QA', 'देवा', 'தமிழ்']) {
+      expectOk(
+        await call(fx, WRITE, tt, { body: { user_id: userId, first_name: value }, retry: false }),
+        'write',
+      );
+      expect(
+        (await piiFirstName(fx, userId)) === normalizeFirstName(value),
+        'stored as the normalised value',
+      ).toBe(true);
     }
-    noteEvidence('Normalisation rule (trim, case, NFC/NFD) is recorded, not asserted (M2Q-06).');
+    for (const value of ['Qa  Test', 'José', 'José', "D'Souza", 'Anne-Marie']) {
+      await call(fx, WRITE, tt, { body: { user_id: userId, first_name: value }, retry: false });
+      const stored = await piiFirstName(fx, userId);
+      noteEvidence(
+        `Lossy normalisation (possible defect): a ${value.length}-character input was stored as ${String(stored).length} characters (expected by code: ${normalizeFirstName(value)?.length}).`,
+      );
+    }
   });
 
   scenario('M2-PIIR-008', async (fx) => {
     const tt = asTestToken(fx);
-    const empty = await call(fx, 'API-190', tt, { body: { user_ids: [] } });
+    const empty = await call(fx, BATCH, tt, { body: { user_ids: [] } });
     expect(empty.status, 'empty user_ids → 400 (observed 2026-10-19)').toBe(400);
-    for (const [label, body] of [
-      ['string instead of list', { user_ids: 'abc' }],
-      ['null entries', { user_ids: [null, null] }],
-      ['numbers', { user_ids: [1, 2, 3] }],
-      ['100 ids', { user_ids: Array.from({ length: 100 }, (_, i) => fx.data.userId(`b${i}`)) }],
+    for (const [label, ids] of [
+      ['string instead of list', 'abc,def'],
+      ['null entries', [null, 'abc']],
+      ['numbers', [1, 2, 3]],
+      ['100 ids', Array.from({ length: 100 }, (_, i) => fx.data.userId(`b${i}`))],
     ] as const) {
-      await call(fx, 'API-190', tt, { body });
-      await call(fx, 'API-003', tt, { body: { refs: (body as { user_ids: unknown }).user_ids } });
-      noteEvidence(`Batch "${label}": recorded (limit and malformed-list contract: M2Q-35).`);
+      for (const [apiId, key] of [
+        [BATCH, 'user_ids'],
+        [PROFILE_NAMES, 'refs'],
+      ] as const) {
+        const res = await call(fx, apiId, tt, { body: { [key]: ids } });
+        expect(res.status, `${apiId} ${label}: 200 (from code: no limit, list normalised)`).toBe(200);
+      }
     }
   });
 
@@ -253,15 +277,19 @@ test.describe('M2 G1 — PII integration routes: validation, batches, profiles',
     const a = await fx.accounts.onboarded(0);
     const b = await fx.accounts.onboarded(1);
     const unknown = `${fx.m2Config.runId}-none`;
-    const res = await call(fx, 'API-003', asTestToken(fx), { body: { refs: [a.ref, b.ref, unknown] } });
+    const res = await call(fx, PROFILE_NAMES, asTestToken(fx), { body: { refs: [a.ref, b.ref, unknown] } });
     expect(res.status, `profile_first_names: ${res.summary()}`).toBe(200);
-    const profiles = (res.json() as { profiles?: Record<string, unknown> } | undefined)?.profiles ?? {};
+    const profiles =
+      (res.json() as { profiles?: Record<string, { first_name?: unknown } | null> } | undefined)?.profiles ??
+      {};
     for (const [p, label] of [
       [a, 'A'],
       [b, 'B'],
     ] as const) {
       const own = nameOf(await ownProfile(fx, p));
-      expect(profiles[p.ref!] === own, `${label}’s ref maps to ${label}’s own first name`).toBe(true);
+      expect(profiles[p.ref!]?.first_name === own, `${label}’s ref maps to ${label}’s own first name`).toBe(
+        true,
+      );
     }
     expect(
       profiles[unknown] === null || profiles[unknown] === undefined,
@@ -271,12 +299,28 @@ test.describe('M2 G1 — PII integration routes: validation, batches, profiles',
 
   scenario('M2-PIIR-010', async (fx) => {
     const tt = asTestToken(fx);
-    const unknown = await call(fx, 'API-208', tt, { body: { ref: `${fx.m2Config.runId}-none` } });
+    const unknown = await call(fx, NAME_SOURCE, tt, { body: { ref: `${fx.m2Config.runId}-none` } });
     expect(unknown.status, 'unknown ref → 404 (observed 2026-10-19)').toBe(404);
     expect(unknown.rawText().includes('Profile not found'), 'error text "Profile not found"').toBe(true);
     const p = await fx.accounts.onboarded(0);
-    await call(fx, 'API-208', tt, { body: { ref: p.ref } });
-    await call(fx, 'API-208', tt, { body: { user_id: p.userId } });
-    noteEvidence('Success response of profile_first_name_source is recorded (M2Q-01).');
+    for (const body of [{ ref: p.ref }, { user_id: p.userId }]) {
+      const res = await call(fx, NAME_SOURCE, tt, { body });
+      expect(res.status, `profile_first_name_source: ${res.summary()} (from code, M2Q-01)`).toBe(200);
+      const keys = Object.keys((res.json() as object) ?? {}).sort();
+      expect(keys, 'success keys as in the code (M2Q-01)').toEqual(
+        [
+          'db_first_name_after',
+          'db_first_name_before',
+          'hide_first_name',
+          'pii_first_name',
+          'pii_only_write_performed',
+          'profile_response_first_name',
+          'profile_response_uses_pii',
+          'ref',
+          'status',
+          'user_id',
+        ].sort(),
+      );
+    }
   });
 });

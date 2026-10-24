@@ -34,8 +34,9 @@ export const PREREQ = {
       'Two connected (matched) synthetic accounts are needed — matching needs approved, discoverable profiles; set M2_CONNECTED_ACCOUNTS=<numberA>,<numberB>',
   },
   web: {
-    id: 'M2Q-41',
-    reason: 'How a web JWT (WEB_TOKEN) is issued is unknown (the UI team has no web app)',
+    id: 'M2Q-17',
+    reason:
+      'Needs a true web JWT (login with device_type "web", from code) — only the payment routes use it, and they need a provider sandbox',
   },
   admin: {
     id: 'M2Q-04',
@@ -47,7 +48,12 @@ export const PREREQ = {
   piiUserId: {
     id: 'M2Q-37',
     reason:
-      'Unknown which PII user_id the app uses for an app user (set M2_PII_USER_ID_SOURCE=app-id once Dev confirms)',
+      'No app user id to look up in the PII DB (PII user_id = app user id, from code; M2_PII_USER_ID_SOURCE=none disables)',
+  },
+  dbUnreachable: {
+    id: 'M2Q-16',
+    reason:
+      'The PII DB is configured but not reachable from this machine (a read-only SELECT 1 failed) — check VPN / network',
   },
   states: {
     id: 'M2Q-32',

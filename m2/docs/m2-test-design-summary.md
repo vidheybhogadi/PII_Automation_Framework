@@ -84,24 +84,24 @@ Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-p
 | Question | Topic                                | Type                          | Cases |
 | -------- | ------------------------------------ | ----------------------------- | ----- |
 | M2Q-03   | Test accounts                        | Access / environment          | 2035  |
-| M2Q-36   | Onboarding prerequisites             | Access / environment          | 1878  |
+| M2Q-36   | Onboarding prerequisites             | Access / environment          | 1881  |
 | M2Q-24   | Contracts                            | Access / environment          | 707   |
 | M2Q-04   | CMS access                           | Access / environment          | 533   |
+| M2Q-32   | Special account states               | Access / environment          | 500   |
 | M2Q-02   | Read gates                           | Access / environment          | 411   |
-| M2Q-32   | Special account states               | Access / environment          | 324   |
 | M2Q-17   | Payment sandboxes                    | Access / environment          | 296   |
-| M2Q-41   | Web token issuance                   | Access / environment          | 284   |
 | M2Q-10   | Best-effort writes                   | Access / environment          | 206   |
 | M2Q-11   | PII read failures                    | Contract / expected behaviour | 202   |
 | M2Q-05   | Unmigrated profiles                  | Contract / expected behaviour | 198   |
 | M2Q-13   | Hide name                            | Contract / expected behaviour | 114   |
 | M2Q-12   | Caching                              | Contract / expected behaviour | 66    |
 | M2Q-16   | DB access & schema                   | Access / environment          | 57    |
-| M2Q-37   | PII user_id for app users            | Access / environment          | 56    |
+| M2Q-37   | PII user_id for app users            | Access / environment          | 57    |
 | M2Q-14   | PII exposure rules                   | Contract / expected behaviour | 53    |
+| M2Q-41   | Web token issuance                   | Access / environment          | 29    |
 | M2Q-19   | Special auth routes                  | Access / environment          | 21    |
 | M2Q-27   | Free-text contract                   | Contract / expected behaviour | 19    |
-| M2Q-06   | First-name rules                     | Contract / expected behaviour | 16    |
+| M2Q-06   | First-name rules                     | Contract / expected behaviour | 17    |
 | M2Q-29   | Free-text failures & revoked keys    | Contract / expected behaviour | 8     |
 | M2Q-33   | App DB (aisleweb) read access        | Access / environment          | 8     |
 | M2Q-28   | Legacy free text                     | Contract / expected behaviour | 7     |
@@ -115,6 +115,7 @@ Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-p
 | M2Q-21   | Admin search                         | Contract / expected behaviour | 3     |
 | M2Q-22   | Test-data cleanup                    | Access / environment          | 3     |
 | M2Q-25   | Release scope                        | Contract / expected behaviour | 3     |
+| M2Q-40   | Test-route first-name write fails    | Possible defect — confirm     | 3     |
 | M2Q-09   | reset_profile                        | Possible defect — confirm     | 2     |
 | M2Q-20   | Test-token routes                    | Contract / expected behaviour | 1     |
 | M2Q-23   | Performance                          | Contract / expected behaviour | 1     |
@@ -124,4 +125,3 @@ Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-p
 | M2Q-42   | Login response without credential    | Possible defect — confirm     | 1     |
 | M2Q-38   | Unauthenticated payment verification | Possible defect — confirm     | 0     |
 | M2Q-39   | Invalid tokens cause server errors   | Possible defect — confirm     | 0     |
-| M2Q-40   | Test-route first-name write fails    | Possible defect — confirm     | 0     |

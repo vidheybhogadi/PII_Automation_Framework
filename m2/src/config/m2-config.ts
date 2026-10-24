@@ -34,7 +34,7 @@ export interface M2Config {
   readonly onboardedNumbers: readonly string[];
   /** Two pre-connected synthetic accounts (M2Q-36). */
   readonly connectedNumbers: readonly string[];
-  /** How the PII user_id is derived for an app user (M2Q-37); undefined = unknown → DB checks Blocked. */
+  /** How the PII user_id is derived for an app user (M2Q-37: app user id, from code); undefined → DB checks Blocked. */
   readonly piiUserIdSource: 'app-id' | undefined;
   /** Tenant the app writes under (M2Q-37); default "aisle", as observed for the facade in M1. */
   readonly piiTenant: string;
@@ -154,7 +154,8 @@ export function loadM2Config(env: NodeJS.ProcessEnv = process.env): M2Config {
     createAccounts: e.M2_CREATE_ACCOUNTS === 'true',
     onboardedNumbers: list(e.M2_ONBOARDED_ACCOUNTS),
     connectedNumbers: list(e.M2_CONNECTED_ACCOUNTS),
-    piiUserIdSource: e.M2_PII_USER_ID_SOURCE === 'app-id' ? 'app-id' : undefined,
+    // M2Q-37 answered from code: PII user_id = app user id. M2_PII_USER_ID_SOURCE=none switches the DB checks off.
+    piiUserIdSource: e.M2_PII_USER_ID_SOURCE === 'none' ? undefined : 'app-id',
     piiTenant: e.M2_PII_TENANT?.trim() || 'aisle',
     db: {
       engine: ['postgres', 'mysql'].includes(engine) ? engine : 'none',

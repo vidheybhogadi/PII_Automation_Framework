@@ -39,6 +39,21 @@ export class PiiDb {
     return new PiiDb(createDbAdapter({ db: config.db }), catalog, config.piiTenant);
   }
 
+  private reach: boolean | undefined;
+
+  /** One read-only SELECT 1, cached per worker. */
+  async reachable(): Promise<boolean> {
+    if (this.reach === undefined) {
+      try {
+        await this.adapter.query('SELECT 1 AS one', []);
+        this.reach = true;
+      } catch {
+        this.reach = false;
+      }
+    }
+    return this.reach;
+  }
+
   async rows(userId: string): Promise<PiiRow[]> {
     const q = this.catalog.queries.piiRecordsForUser!;
     const raw = await this.adapter.query<Record<string, unknown>>(q.sql, [this.tenant, userId]);

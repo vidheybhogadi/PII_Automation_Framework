@@ -31,6 +31,8 @@ const isCI = Boolean(process.env.CI);
 
 export default defineConfig({
   testDir: '.',
+  // Deletes the synthetic M2 accounts a run created (only when M2_CREATE_ACCOUNTS=true; no-op otherwise).
+  globalTeardown: './m2/src/accounts/global-teardown.ts',
   outputDir: './test-results',
   fullyParallel: true,
   forbidOnly: isCI,

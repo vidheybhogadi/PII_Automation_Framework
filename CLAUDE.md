@@ -48,6 +48,11 @@ route needs — user JWT, web JWT, `TEST_TOKEN` (`/V1/pii_integration/*`), CMS a
   `npm run m2:docs`) is a Dev-review document and may be edited directly. M2 **test code** changes still go through
   the testcase-manager agent (PROPOSE → approval → IMPLEMENT).
 - M2 open questions use `M2Q-xx` IDs and live in the workbook's Dev Review sheet; M1 `BQ-xx` rules are unchanged.
+- **Aisle codebase as evidence (user decision, 2026-10-24):** for M2, expected results may also come from the Aisle
+  app source (`https://github.com/aislenetwork/aisle_new`, local read-only clone `~/Downloads/PII/aisle_new`, branch
+  `saurabh/pii-changes` = inventory snapshot `ae838f4`; free text on `jup/free_text_pii`; `origin/develop_new` @ `944f76a` matches staging behaviour and is the ref cited in answers). Record them as answers with
+  `by: 'Aisle codebase (<ref>, <file:line>)'` and label them "from code — confirm with Dev"; staging observations
+  still win when they differ. Never run that code, never copy secrets/keys/credentials from it, and never commit it.
 - M2 tests must run separately from M1 (own Playwright project / tag `@m2`). Synthetic accounts only; payment,
   webhook and CMS-write cases never run against real providers or real users.
 - **M2 test accounts** (user decision, 2026-10-23): create them by phone login with a +91 number starting with

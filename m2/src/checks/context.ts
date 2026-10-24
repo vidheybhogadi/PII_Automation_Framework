@@ -6,6 +6,7 @@ import type { ApiResponse } from '../../../core/http/api-response';
 import type { InventoryApi } from '../../scripts/m2-inventory';
 import { groupOf } from '../../scripts/m2-inventory';
 import { isWebRoute, NEW_USER_OK } from '../../scripts/m2-baseline';
+import { ROUTE_STATE } from '../../scripts/m2-code-evidence';
 import type { Accounts, Profile } from '../accounts/accounts';
 import { AUTH } from '../auth/credentials';
 import type { UserSession } from '../auth/session';
@@ -90,7 +91,10 @@ export async function callerFor(
   if (api.auth.some((a) => ADMIN_AUTH.includes(a))) return fx.accounts.admin();
   if (api.auth.includes('INFOEDGE_PROFILE_API_TOKEN'))
     return blockPrereq(PREREQ.infoedge.id, PREREQ.infoedge.reason);
-  if (isWebRoute(api)) return fx.accounts.web(); // /web/* needs a web JWT (M2Q-41)
+  if (isWebRoute(api)) return fx.accounts.web(); // true web JWT (payment routes only)
+  const state = ROUTE_STATE[api.id];
+  if (state)
+    blockPrereq(PREREQ.states.id, `${api.id} needs a ${state.state} profile (from code: ${state.ref})`);
   if (api.auth.includes('USER_TOKEN')) {
     if (DESTRUCTIVE.includes(api.id))
       blockPrereq(
@@ -110,12 +114,18 @@ export async function callerFor(
   }
   if (api.auth.includes('TEST_TOKEN')) {
     const auth = AUTH.testToken(requireTestToken(fx.m2Config));
-    if (groupOf(api.id).key === 'G1')
+    if (groupOf(api.id).key === 'G1') {
+      // The write route only works for an EXISTING app user (M2Q-40, from code); reads take any id.
+      if (api.id === 'API-002') {
+        const p = await fx.accounts.onboarded(role === 'A' ? 0 : 1);
+        return { label: 'TEST_TOKEN', auth, values: { ...valuesFor(fx.m2Config, p), USER_ID: p.userId } };
+      }
       return {
         label: 'TEST_TOKEN',
         auth,
         values: { ...valuesFor(fx.m2Config), USER_ID: fx.data.userId(role) },
       };
+    }
     const p = await fx.accounts.onboarded(role === 'A' ? 0 : 1);
     // The profile the request is about travels with the caller (IDOR / "unchanged" checks read it).
     return { label: 'TEST_TOKEN', auth, session: p, values: valuesFor(fx.m2Config, p) };

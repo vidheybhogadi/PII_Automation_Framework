@@ -29,6 +29,11 @@ export const QUESTIONS: M2Question[] = [
     decision: 'Deployed commit + whether the inventory needs a refresh; success contract of API-208.',
     kind: 'Contract / expected behaviour',
     apis: ['API-208'],
+    answer: {
+      text: 'From code — confirm with Dev: POST /V1/pii_integration/profile_first_name_source exists on develop_new (not on ae838f4) and on success returns 200 {status:true, user_id, ref, pii_only_write_performed, db_first_name_before, db_first_name_after, pii_first_name, profile_response_first_name, profile_response_uses_pii, hide_first_name}; an optional first_name param writes the PII value only (test aid). Staging behaviour (400 / 404 texts) matches this code, so testa2 most likely runs develop_new or later — the exact deployed commit is still for Dev to confirm.',
+      by: 'Aisle codebase (develop_new 944f76a, app/controllers/v1/pii_integration_controller.rb:87-120)',
+      on: '2026-10-24',
+    },
   },
   {
     id: 'M2Q-02',
@@ -37,7 +42,7 @@ export const QUESTIONS: M2Question[] = [
       'What are ALLOW_PII_FIRST_NAME_READ, ALLOW_PII_EMAIL_READ and ALLOW_PII_PHONE_NUMBER_READ set to on testa2 today, and can they be switched (on/off) for a QA window? Is there a read-only way for QA to see the current values?',
     why: 'Every read expectation depends on the gate: off = local attribute, on = PII service with no fallback.',
     evidence:
-      'Dev doc "Field behavior that affects test results"; ClickUp 2026-10 comment: "reads are currently turned off in the test environment".',
+      'Dev doc "Field behavior that affects test results"; ClickUp 2026-10 comment: "reads are currently turned off in the test environment". Code (develop_new 944f76a): the gates are Configuration::Constant values ALLOW_PII_FIRST_NAME_READ / _EMAIL_READ / _PHONE_NUMBER_READ (app/models/configuration/constant.rb:482-490), default false when unset — the staging values are configuration, not code.',
     decision: 'Current values, a schedule for gate-on runs, and who toggles them.',
     kind: 'Access / environment',
     apis: [],
@@ -66,7 +71,7 @@ export const QUESTIONS: M2Question[] = [
       'Please provide CMS test admins: one non-associate admin (allowed to edit first names) and one associate admin (not allowed), with the webcms OTP process, plus a browser session for the legacy /users/* routes and /bangalore745/irl. Which permissions do the admin read/export routes (e.g. download_profile_details) require?',
     why: 'All G10 cases and the admin authorisation tests need two permission levels.',
     evidence:
-      'Dev doc: "Non-associate admin access is required for first-name edits"; CMS examples use webcms + OTP.',
+      'Dev doc: "Non-associate admin access is required for first-name edits"; CMS examples use webcms + OTP. Code (develop_new 944f76a): admin routes authenticate with the CMS admin JWT (verify_admin_token, authenticatable.rb:330-335); accounts and permissions are an access grant.',
     decision: 'Admin accounts + permission matrix for the PII-bearing admin routes.',
     kind: 'Access / environment',
     apis: ['API-136', 'API-138', 'API-139', 'API-140', 'API-179', 'API-192'],
@@ -78,7 +83,7 @@ export const QUESTIONS: M2Question[] = [
       'With a read gate ON, the doc says the read wrappers do not fall back to the local value when the PII record is missing. What should the app return for a not-yet-migrated profile — empty/null name, email, phone? Is that acceptable to Product, and will migration complete before any gate is switched on in production?',
     why: 'Decides whether a blank name/email/phone for an unmigrated profile is PASS (expected) or FAIL (data loss in UI, payments, invoices).',
     evidence:
-      'Dev doc: "These model read wrappers do not automatically fall back to local values"; ClickUp: ~1 lakh profiles migrated, null names expected for others.',
+      'Dev doc: "These model read wrappers do not automatically fall back to local values"; ClickUp: ~1 lakh profiles migrated, null names expected for others. Code (develop_new 944f76a, app/models/profile.rb:776-790, 810-822; app/services/pii/client.rb get_field): with the first-name gate ON, single reads return the PII value or nil when the user has no PII record (no fallback to the local name; Profile.get_first_name_for_user → Pii::FieldStore.get_first_name, NotFound → nil). Batch hydration (lists) keeps the profile\'s existing cached / local name when the PII batch returns no value for a user (apply_first_name! returns early on nil). Email / phone reads behave like the single read. Product acceptance of blank values is not settled by code. Kept open: the expected result is a Dev / Product decision.',
     decision: 'Expected response for unmigrated profiles per field, gate on vs off.',
     kind: 'Contract / expected behaviour',
     apis: ['API-013', 'API-021'],
@@ -94,6 +99,11 @@ export const QUESTIONS: M2Question[] = [
     decision: 'Normalisation + validation rules and error responses (status, body) per path.',
     kind: 'Contract / expected behaviour',
     apis: ['API-057', 'API-058', 'API-139'],
+    answer: {
+      text: 'From code — confirm with Dev: assign_first_name ignores a blank value (nil / "" / whitespace → no write, name unchanged). Otherwise normalize_first_name strips the value and, if it contains any A–Z letter, REMOVES every character that is not A–Z / a–z ("Qa  Test" → "QaTest", "D\'Souza" → "DSouza", "Anne-Marie" → "AnneMarie", "José" → "Jos"); a value with no Latin letter is kept stripped ("देवा"). No maximum length; Profile validates presence only. The same rule applies on app onboarding/edit, admin edit and the test route (all use assign_first_name). Case is kept.',
+      by: 'Aisle codebase (develop_new 944f76a, app/models/profile.rb:3137-3144, 6536-6540; app/models/profile.rb:35 validates presence)',
+      on: '2026-10-24',
+    },
   },
   {
     id: 'M2Q-07',
@@ -102,7 +112,7 @@ export const QUESTIONS: M2Question[] = [
       'Email: (a) how does a user change their email after onboarding? (edit ignores personal_email); (b) normalisation (case, trim) at Account::Email.add_email; (c) response for an invalid email at onboarding; (d) what happens when the email is already used by another user (search_user_ids)?',
     why: 'Defines the email write, validation and duplicate cases. Must not be guessed.',
     evidence:
-      'Dev doc API-057/058 notes; "Onboarding passes user_id to Account::Email.add_email; ordinary profile edit does not update email".',
+      'Dev doc API-057/058 notes; "Onboarding passes user_id to Account::Email.add_email; ordinary profile edit does not update email". Code (develop_new 944f76a): add_email only strips (case kept) and writes PII; account_emails rows are shared — a second user with the same email reuses the existing row (account/email.rb:9-18, 83-99). Change-email path and invalid-email response are not settled by code.',
     decision: 'Email update path (if any), normalisation, validation response and duplicate rule.',
     kind: 'Contract / expected behaviour',
     apis: ['API-057', 'API-058', 'API-061', 'API-129'],
@@ -113,7 +123,8 @@ export const QUESTIONS: M2Question[] = [
     question:
       'The doc says (a) returning-user login does not write PHONE to PII, and (b) admin phone edits (approve_and_edit, update_profile) update only the local number, so "the old remote value may continue to be displayed" with the phone gate on. Are these known gaps with a fix/backfill planned, or intended? Until fixed, should QA report them as defects?',
     why: 'These cases will fail by design once the phone gate is on. QA needs to know whether to report or track them.',
-    evidence: 'Dev doc "Field behavior" (Phone) and migration gaps section.',
+    evidence:
+      'Dev doc "Field behavior" (Phone) and migration gaps section. Code (develop_new 944f76a, app/models/user.rb:149, 444-466; app/models/admin_user.rb:109): confirmed as written in the Dev doc. PHONE is written to PII only when login creates a NEW user (user.rb:149 … if is_new_user); returning logins never write it. Admin phone edits (AdminUser → User#update_phone_number) change only the local phone_number_id and never call the PII write. With the phone gate ON the old PII phone keeps being shown — reported below as a possible defect. Kept open: the expected result is a Dev / Product decision.',
     decision: 'Defect vs accepted gap; fix version.',
     kind: 'Possible defect — confirm',
     apis: ['API-060', 'API-139', 'API-140'],
@@ -124,7 +135,8 @@ export const QUESTIONS: M2Question[] = [
     question:
       'POST /V1/user/reset_profile copies compatibility fields to a new user but "does not explicitly seed the new user\'s NAME, EMAIL or PHONE service rows". With gates on, the reset account would show blank PII. Is this a known gap? What is the expected result?',
     why: 'Determines whether M2-FNAME-029 / M2-PHONE-011 are expected failures or blocking defects.',
-    evidence: 'Dev doc API-198 note + migration gaps section.',
+    evidence:
+      'Dev doc API-198 note + migration gaps section. Code (develop_new 944f76a, app/models/user.rb:537-585, 599-640): reset_profile creates a new user + profile by copying local attributes (create_new_user_and_profile) and copies images, blocks and reports, but never writes NAME / EMAIL / PHONE to the PII service for the new user id. With the gates ON the reset account shows blank PII — possible defect. Kept open: the expected result is a Dev / Product decision.',
     decision: 'Defect vs intended; fix plan.',
     kind: 'Possible defect — confirm',
     apis: ['API-198'],
@@ -135,7 +147,8 @@ export const QUESTIONS: M2Question[] = [
     question:
       'Model writes catch Pii::Error, report it and continue with the local write, so an app success does not prove the PII write. How is a failed PII write reported (Sentry, log, metric) and reconciled later? Can QA force a PII write failure on staging (feature flag, bad key, service stub) to test it?',
     why: 'Without a way to observe or force failure, partial-failure cases cannot be executed and silent divergence goes unnoticed.',
-    evidence: 'Dev doc: "Direct model writes catch Pii::Error, report it and continue local writes".',
+    evidence:
+      'Dev doc: "Direct model writes catch Pii::Error, report it and continue local writes". Code (develop_new 944f76a): failed PII writes are caught, reported to Airbrake and the Rails log, and the local write continues (profile.rb:792-798, account/email.rb:38-45, sms_notification/phone_number.rb:206-213); there is no reconciliation job. Forcing a failure on staging is an environment action.',
     decision: 'Failure signal QA can check + an approved fault-injection method + reconciliation design.',
     kind: 'Access / environment',
     apis: ['API-057', 'API-058', 'API-139'],
@@ -150,6 +163,11 @@ export const QUESTIONS: M2Question[] = [
     decision: 'Expected degraded behaviour per API family + timeout/retry values.',
     kind: 'Contract / expected behaviour',
     apis: ['API-013', 'API-014'],
+    answer: {
+      text: 'From code — confirm with Dev: the Rails PII client uses a 5 s request timeout and 2 s connect timeout; reads retry up to 3 attempts on 502/503/504, timeouts and connection failures; writes never retry. There is no fallback: with a gate ON, a PII read error propagates (Pii::Error is re-raised by FieldStore), so the app request fails with a server error instead of a blank field. Free-text reads are the exception (they fall back to the legacy plaintext column).',
+      by: 'Aisle codebase (develop_new 944f76a, app/services/pii/config.rb:5-10; app/services/pii/client.rb:176-200; app/services/pii/field_store.rb:63-81)',
+      on: '2026-10-24',
+    },
   },
   {
     id: 'M2Q-12',
@@ -162,6 +180,11 @@ export const QUESTIONS: M2Question[] = [
     decision: 'TTL / propagation SLA; intended behaviour for nil hydration; QA cache-reset method.',
     kind: 'Contract / expected behaviour',
     apis: ['API-014', 'API-020', 'API-199'],
+    answer: {
+      text: "From code — confirm with Dev: decrypted PII values are cached in Redis per user and field (key pii:v1:user:<user_id>:<field>) for 30 days (PII_DECRYPTED_CACHE_TTL default 2,592,000 s). App writes (assign_first_name, add_email, phone write) update that cache immediately; facade (pii-test) writes do not. List hydration keeps the existing cached name when the batch read returns nil, single reads return nil (intended asymmetry not stated in code). QA can refresh a user's app caches with POST /V1/pii_integration/first_name (writes PII + local name and calls clear_cache!). Profile-cache (fill_cache!) propagation to other users' lists has no TTL in this code path.",
+      by: 'Aisle codebase (develop_new 944f76a, app/services/pii/config.rb:5; app/services/pii/field_cache.rb:29-55; app/controllers/v1/pii_integration_controller.rb:36-58)',
+      on: '2026-10-24',
+    },
   },
   {
     id: 'M2Q-13',
@@ -173,6 +196,11 @@ export const QUESTIONS: M2Question[] = [
     decision: 'Masking rule, owner view, consumer list, ineligible response.',
     kind: 'Contract / expected behaviour',
     apis: ['API-032'],
+    answer: {
+      text: 'From code — confirm with Dev: when hide_first_name is ON, other users see only the first letter, capitalised (select_first_name / apply_first_name!: first_name[0].capitalize). The owner sees the full name (own_general_information uses get_first_name). toggle_hide_name only toggles when the selfie is verified; for an ineligible profile it changes nothing and still answers 200 {status:true, first_name:<select_first_name>}. Push / chat / room names use select_first_name (masked).',
+      by: 'Aisle codebase (develop_new 944f76a, app/models/profile.rb:3125-3133, 4721-4729, 6173-6190; app/controllers/v1/users_controller.rb:255-258)',
+      on: '2026-10-24',
+    },
   },
   {
     id: 'M2Q-14',
@@ -185,6 +213,11 @@ export const QUESTIONS: M2Question[] = [
     decision: 'Allow-list of response fields per API family and role.',
     kind: 'Contract / expected behaviour',
     apis: ['API-021', 'API-063', 'API-068', 'API-179'],
+    answer: {
+      text: "From code — confirm with Dev: email and phone appear only in the owner's own_general_information (personal_email, phone_code, mobile_number); other users' profile and list payloads use general_information without them. is_test_user? (phone in TEST_USERS_PHONE_NUMBERS) only changes which lists are served, it does not add phones to responses. CMS role rules stay with M2Q-04.",
+      by: 'Aisle codebase (develop_new 944f76a, app/models/profile.rb:6173-6190, 5288-5290)',
+      on: '2026-10-24',
+    },
   },
   {
     id: 'M2Q-15',
@@ -193,7 +226,7 @@ export const QUESTIONS: M2Question[] = [
       'When an account is deleted (user/delete, delete_older_account, delete_current_account), are the NAME/EMAIL/PHONE records erased or tombstoned in the PII service (and the local compatibility columns)? When? What do PII reads return afterwards? Is a delete API in the PII service planned (M1 BQ-10)?',
     why: 'Right-to-erasure is a core DPDP requirement; QA needs the expected end state.',
     evidence:
-      'Dev doc API-059/196/197: deletion reads PII names/emails for the cleanup payload; no erase step documented.',
+      'Dev doc API-059/196/197: deletion reads PII names/emails for the cleanup payload; no erase step documented. Code (develop_new 944f76a, app/models/user.rb:649-680; app/services/pii/client.rb): account deletion (delete_all_account_info / delete_account!) archives images, marks requests and conversations deleted and sends the account-deleted email with the PII name and email, but never deletes or tombstones the NAME / EMAIL / PHONE records in the PII service (the Rails PII client has no delete call). PII reads still return the values afterwards — possible defect (DPDP erasure). Kept open: the expected result is a Dev / Product decision.',
     decision: 'Erasure behaviour + timing + how QA verifies it.',
     kind: 'Contract / expected behaviour',
     apis: ['API-059', 'API-131', 'API-196', 'API-197'],
@@ -245,7 +278,8 @@ export const QUESTIONS: M2Question[] = [
     question:
       'API-186 GET /api/profile_data/:user_id uses INFOEDGE_PROFILE_API_TOKEN — can QA have a test value? API-012 profile_info_web works without Authorization for public profiles — what are the public-visibility rules and which fields may it return?',
     why: 'Both are external/unauthenticated read paths and need explicit exposure checks.',
-    evidence: 'Dev doc API-012 and API-186 notes.',
+    evidence:
+      'Dev doc API-012 and API-186 notes. Code (develop_new 944f76a): /api/profile_data/:user_id → external#profile_data (routes.rb:731); the token value is an access grant.',
     decision: 'Token for QA (vault) + public-profile field allow-list.',
     kind: 'Access / environment',
     apis: ['API-012', 'API-186'],
@@ -272,7 +306,8 @@ export const QUESTIONS: M2Question[] = [
     question:
       '/admin/member/search uses PII-service search for first name and email even when the read gates are off, while phone still uses local SQL; /admin/members/search_profiles filters first name locally but shows the PII name. Is that intended? Is search exact-match and case-sensitive?',
     why: 'If the local and PII values differ (failed write, admin phone edit), search and display can disagree.',
-    evidence: 'Dev doc API-160 note + migration gaps section; FN-SAN-031/032.',
+    evidence:
+      'Dev doc API-160 note + migration gaps section; FN-SAN-031/032. Code (develop_new 944f76a, app/models/profile.rb:131, 885-900; app/controllers/admin/members_controller.rb:3-20): admin member search filters first name through the PII search (by_pii_first_name → Pii::FieldStore.search_first_name) and email through the PII search (scope by_email → Account::Email.search_user_ids) regardless of the read gates; phone uses the local SQL column. Matching rules are those of the PII service search (exact match on the normalised value; see M1). The PII name is shown via hydrate_profile_first_names!. Kept open: the expected result is a Dev / Product decision.',
     decision: 'Intended search source per field + matching rules.',
     kind: 'Contract / expected behaviour',
     apis: ['API-160', 'API-178'],
@@ -351,6 +386,11 @@ export const QUESTIONS: M2Question[] = [
     kind: 'Contract / expected behaviour',
     apis: ['API-187', 'API-063', 'API-069', 'API-121', 'API-119'],
     deferred: 'Parked by QA lead on 2026-10-23 ("keep it for future").',
+    answer: {
+      text: 'From code — confirm with Dev: encrypted free-text fields are chat message content and previous_message (chat_messages.encrypted_free_text_content / encrypted_free_text_previous_message), the conversation last-message preview (encrypted_free_text_last_message), the profile story about (encrypted_free_text_about) and stored image URLs (Amazon::Url encrypted_free_text_image_url). Decrypted text is returned in chat message lists (content, previous_message), the conversation list message preview and the profile story / about. Keys: one active key per context (data_category free_text + resource type + field), cached per process — not per user, conversation or message. Switches: PII_FREE_TEXT_ENCRYPTION_ENABLED plus PII_FREE_TEXT_<FIELD>_ENABLED (Configuration::Constant or ENV, default OFF). The legacy plaintext column is NOT cleared on write (possible defect). Staging switch values are not in code.',
+      by: 'Aisle codebase (develop_new 944f76a = jup/free_text_pii logic; app/models/chat/message.rb:351-393; app/models/chat/conversation.rb:1062-1080; app/models/account/story.rb:103-125; app/services/pii/key_manager.rb:15-38, 99-101; app/services/pii/config.rb:67-76)',
+      on: '2026-10-24',
+    },
   },
   {
     id: 'M2Q-28',
@@ -364,6 +404,11 @@ export const QUESTIONS: M2Question[] = [
     kind: 'Contract / expected behaviour',
     apis: ['API-069', 'API-063', 'API-119'],
     deferred: 'Parked by QA lead on 2026-10-23 ("keep it for future").',
+    answer: {
+      text: 'From code — confirm with Dev: legacy rows are read as plaintext — FreeTextStore.read returns the legacy column when the switch is OFF or the encrypted column is blank, so one conversation can mix legacy and encrypted messages. No backfill / migration code exists in the app; a backfill plan is not settled by code.',
+      by: 'Aisle codebase (develop_new 944f76a, app/services/pii/free_text_store.rb:34-41)',
+      on: '2026-10-24',
+    },
   },
   {
     id: 'M2Q-29',
@@ -376,6 +421,11 @@ export const QUESTIONS: M2Question[] = [
     kind: 'Contract / expected behaviour',
     apis: ['API-187', 'API-121', 'API-069', 'API-119'],
     deferred: 'Parked by QA lead on 2026-10-23 ("keep it for future").',
+    answer: {
+      text: 'From code — confirm with Dev: on WRITE, an encryption / key-service error raises inside before_validation, so the message or bio save fails (no unencrypted store of the encrypted column). On READ, any Pii::Error (key unavailable, revoked, tampered) falls back to the legacy plaintext column — and because the plaintext column is still written, revoking a key does not hide the text (crypto-shredding ineffective, possible defect).',
+      by: 'Aisle codebase (develop_new 944f76a, app/services/pii/free_text_store.rb:42-62; app/services/pii/free_text_encryption.rb:16-62)',
+      on: '2026-10-24',
+    },
   },
   {
     id: 'M2Q-30',
@@ -383,7 +433,8 @@ export const QUESTIONS: M2Question[] = [
     question:
       'Limits and validation for text, previous_message and about: max length (characters or bytes after encryption), empty / whitespace-only, emoji and non-Latin scripts, HTML. Are message_time_token / action_time_token used to de-duplicate a repeated send? Is send asynchronous (ChatMessageWorker) — how long until the message is readable?',
     why: 'Encryption adds overhead (nonce + tag, base64), so length limits and timing may change from master.',
-    evidence: 'Dev doc API-187: "Message persistence runs on ChatMessageWorker".',
+    evidence:
+      'Dev doc API-187: "Message persistence runs on ChatMessageWorker". Code (develop_new 944f76a): no length / content validation for chat text or about was found in the encryption path; limits are not settled by code.',
     decision: 'Limits, de-dup rule, expected read-after-send delay.',
     kind: 'Contract / expected behaviour',
     apis: ['API-187', 'API-121'],
@@ -446,6 +497,11 @@ export const QUESTIONS: M2Question[] = [
       'Write response contract, validation errors, duplicate handling, batch limits, side effects, route lifetime.',
     kind: 'Contract / expected behaviour',
     apis: ['API-001', 'API-002', 'API-003', 'API-190'],
+    answer: {
+      text: 'From code — confirm with Dev: (a) POST first_name → 200 {status:true, user_id, ref, first_name:<normalised>} for an EXISTING app user id (it loads the profile; an unknown numeric id → 404 "Profile not found"); (b) missing / blank user_id or first_name → 400 "Missing required parameter: <name>"; (c) batch ids are trimmed, blanks dropped and de-duplicated (requested_user_count = unique ids); a comma-separated string is accepted as a list; (d) no size limit in the route — PII reads are chunked by PII_BATCH_SIZE (50); (e) the POST writes PII AND the local profile name and clears the app caches; (f) route lifetime is not in code.',
+      by: 'Aisle codebase (develop_new 944f76a, app/controllers/v1/pii_integration_controller.rb:5-85, 141-147)',
+      on: '2026-10-24',
+    },
   },
   {
     id: 'M2Q-36',
@@ -459,7 +515,7 @@ export const QUESTIONS: M2Question[] = [
     kind: 'Access / environment',
     apis: ['API-057', 'API-061', 'API-059', 'API-013'],
     answer: {
-      text: 'Login + onboarding flow from the Aisle UI automation team, verified by QA on staging (m2/docs/onboarding-flow.md): OTP request with phone_code_id 242, device fields and the app’s static signature_v1 in the body; verify with OTP 1234; POST /V1/user/submit_profile with hard-coded option ids and 4 Aisle-CDN photo URLs; POST /V1/account_journey/update_community_message_agreed; re-verify until application_stage "completed"; delete with POST /V1/user/delete {id: ref, reason_id: 1}. Photos must match the declared gender (hosted male / female sets; POST /V1/images uploads an image). Still open (not blocking): the option-list routes (unknown even to the UI team); API-onboarded profiles may be disapproved by moderation (image_inappropriate → disapproved at ~26–35 s; with the gender-matched male set QA saw pending_not_verified >60 s) — need an admin approval or a test allow-list. Tests block at runtime when a profile is flagged. Web-token issuance moved to M2Q-41.',
+      text: 'Login + onboarding flow from the Aisle UI automation team, verified by QA on staging (m2/docs/onboarding-flow.md): OTP request with phone_code_id 242, device fields and the app’s static signature_v1 in the body; verify with OTP 1234; POST /V1/user/submit_profile with hard-coded option ids and 4 Aisle-CDN photo URLs; POST /V1/account_journey/update_community_message_agreed; re-verify until application_stage "completed"; delete with POST /V1/user/delete {id: ref, reason_id: 1}. Photos must match the declared gender (hosted male / female sets; POST /V1/images uploads an image). From code 2026-10-24 (develop_new 944f76a — confirm with Dev): option lists come from GET /V1/fields/list_all (Bearer; Fields.fetch_app_constant_list), GET /V1/fields/settle_down_option_list, GET /fields/faiths and GET /fields/languages (config/routes.rb:44-50, 455-456; app/controllers/v1/fields_controller.rb:74-77); photos via GET /V1/images/fetch_presigned_url and POST /V1/images/upload (routes.rb:329-331); automatic photo moderation is the Hive curator, which rejects photos whose detected gender does not match the profile (app/models/hive/curator.rb:1674-1810) — no test-account allow-list exists in code. Still open (not blocking): an admin approval or a test allow-list for API-onboarded profiles; tests block at runtime when a profile is flagged. Web-token issuance moved to M2Q-41.',
       by: 'UI automation team via QA lead',
       on: '2026-10-23',
     },
@@ -475,6 +531,11 @@ export const QUESTIONS: M2Question[] = [
     decision: 'Intended or defect; required proof (OTP session, device binding).',
     kind: 'Possible defect — confirm',
     apis: ['API-062'],
+    answer: {
+      text: 'From code — confirm with Dev: POST /V1/sessions/fetch_login_response (create_login_response_v1) has no authentication filter (authenticate_token is applied only to destroy_api, delete_account, update_profile, update_profile_web and reset_profile) and returns User.login_from_phone_number_v1 for the given user_id — including a fresh auth_token. Defect confirmed by code (account takeover from a user id).',
+      by: 'Aisle codebase (develop_new 944f76a, app/controllers/v1/sessions_controller.rb:3, 111-114)',
+      on: '2026-10-24',
+    },
   },
   {
     id: 'M2Q-41',
@@ -486,6 +547,11 @@ export const QUESTIONS: M2Question[] = [
     decision: 'Web login route / token issuance for test accounts.',
     kind: 'Access / environment',
     apis: ['API-012', 'API-119'],
+    answer: {
+      text: 'From code — confirm with Dev: the /web/* controllers authenticate with the normal APP user JWT (Web::ApiController#authenticate_token → User.verify_auth_token; a token with ptfrm "web" is rejected there). Their 401 for QA\'s accounts comes from the account-state filters (account_approved / account_approved_or_deactivated / account_deactivated → head :unauthorized), i.e. the profile is not approved. A true web token (ptfrm "web") is issued by generate_auth_token for device_type "web" and is used only by the payment routes with authenticate_web_token.',
+      by: 'Aisle codebase (develop_new 944f76a, app/controllers/web/api_controller.rb:7-27; app/models/concerns/authenticatable.rb:4-18, 41-55, 321-328; app/controllers/v1/payment_controller.rb:4)',
+      on: '2026-10-24',
+    },
   },
   {
     id: 'M2Q-37',
@@ -498,6 +564,11 @@ export const QUESTIONS: M2Question[] = [
     decision: 'Mapping app user → PII user_id (+ tenant).',
     kind: 'Access / environment',
     apis: ['API-060', 'API-057', 'API-058'],
+    answer: {
+      text: 'From code — confirm with Dev: the PII user_id is the app User id (Profile.user_id) — the numeric "id" returned by verify_number_login_v1 — sent as a string; the tenant is PII_SERVICE_TENANT_ID from the app environment (the same configuration the M1 facade proxy uses).',
+      by: 'Aisle codebase (develop_new 944f76a, app/models/profile.rb:776-795; app/models/concerns/authenticatable.rb:96-101; app/services/pii/config.rb:38-40)',
+      on: '2026-10-24',
+    },
   },
   {
     id: 'M2Q-38',
@@ -505,7 +576,8 @@ export const QUESTIONS: M2Question[] = [
     question:
       'Observed 2026-10-23: POST /V1/payment/verify_razorpay_payment_v1 and POST /V1/payment/verify_paytm_payment_v1 with NO credential and an empty body {} return 200 {"status":true}. Is this intended (e.g. provider-signed payloads only), and can an unauthenticated call ever activate or change a subscription?',
     why: 'A payment-verification route that answers success without any credential is a possible security defect.',
-    evidence: 'M2 Step 1 staging run 2026-10-23 (M2-API-070-AUTH, M2-API-072-AUTH).',
+    evidence:
+      'M2 Step 1 staging run 2026-10-23 (M2-API-070-AUTH, M2-API-072-AUTH). Code (develop_new 944f76a): by design these two actions skip authentication (payment_controller.rb:3-6) and act as provider callbacks — without an Authorization header they call verify_by_payment_id / verify_by_order_id and ALWAYS answer {status:true} (payment_controller.rb:15-25, 82-94); with an invalid Bearer they fail with 500 (user is nil). Whether an unauthenticated success reply is acceptable is a security decision for Dev.',
     decision: 'Intended or defect; required credential.',
     kind: 'Possible defect — confirm',
     apis: ['API-070', 'API-072'],
@@ -520,6 +592,11 @@ export const QUESTIONS: M2Question[] = [
     decision: 'Expected status for invalid / wrong-type tokens.',
     kind: 'Possible defect — confirm',
     apis: ['API-013', 'API-021', 'API-136'],
+    answer: {
+      text: 'From code — confirm with Dev: decode_token rescues only JWT::ExpiredSignature, so a malformed or wrongly-signed token raises JWT::DecodeError / VerificationError out of authenticate_token → 500 instead of the intended unauthorized_request (401). TEST_TOKEN on user routes is not a JWT and fails the same way. Defect confirmed by code (expected: 401 {unauthorized_request:true}). Also: the token is written to the logs (Rails.logger "Token: …", puts "token: …").',
+      by: 'Aisle codebase (develop_new 944f76a, app/models/concerns/authenticatable.rb:272-284, 303-304; app/controllers/v1/api_controller.rb:11-25)',
+      on: '2026-10-24',
+    },
   },
   {
     id: 'M2Q-40',
@@ -531,6 +608,11 @@ export const QUESTIONS: M2Question[] = [
     decision: 'Fix or correct input contract.',
     kind: 'Possible defect — confirm',
     apis: ['API-002'],
+    answer: {
+      text: 'From code — confirm with Dev: the write route loads Profile.by_user(user_id), a SQL comparison with the integer profiles.user_id — a non-numeric user_id raises a database error (unhandled → 500); an unknown numeric id → 404 "Profile not found". So the route only writes for EXISTING app users: tests must use a real (suite-created) account\'s user id. The unhandled 500 for non-numeric ids is a minor defect.',
+      by: 'Aisle codebase (develop_new 944f76a, app/controllers/v1/pii_integration_controller.rb:36-58; app/models/profile.rb:124)',
+      on: '2026-10-24',
+    },
   },
 ];
 
@@ -554,9 +636,6 @@ export const KNOWN_FINDINGS: Record<string, { question: string; security: boolea
     security: true,
     text: 'fetch_login_response returns a valid auth_token and profile data for another account’s user_id without any credential',
   },
-  'M2-PIIR-001': { question: 'M2Q-40', security: false, text: 'test-route first-name write returns 500' },
-  'M2-PIIR-002': { question: 'M2Q-40', security: false, text: 'test-route first-name write returns 500' },
-  'M2-PIIR-007': { question: 'M2Q-40', security: false, text: 'test-route first-name write returns 500' },
 };
 
 /** Marker for refusals that come back as a server error (5xx) instead of 401 — observed defect pattern. */

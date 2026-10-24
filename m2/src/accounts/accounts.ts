@@ -8,7 +8,7 @@
  *   it is handed out: image_inappropriate / disabled (moderation, open sub-question of M2Q-36) → Blocked.
  * - connectedPair() / trio(): two matched profiles (M2_CONNECTED_ACCOUNTS) — matching needs approved, discoverable
  *   profiles (M2Q-32), so without them the test is Blocked.
- * - web() / admin(): web JWT (M2Q-41) and CMS admin (M2Q-04) are not available → Blocked.
+ * - web() / admin(): true web JWT (payment routes, M2Q-17) and CMS admin (M2Q-04) are not available → Blocked.
  *
  * Ledger: every number the suite creates is written to reports/m2/accounts/<run>-w<n>.json (git-ignored: full
  * synthetic number, app user id, ref, device id, stage, profile state, deletion outcome — never tokens) BEFORE any
@@ -16,7 +16,7 @@
  * never-onboarded account is onboarded first so that it can be deleted; "disabled" profiles are marked unusable.
  * Dev-provided accounts are never deleted.
  */
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { ApiResponse } from '../../../core/http/api-response';
 import type { Logger } from '../../../core/utils/logger';
@@ -46,6 +46,8 @@ export interface LedgerEntry {
   deleteStatus: number | null;
   /** True when the profile cannot be used or deleted any more (e.g. "disabled"). */
   unusable?: boolean;
+  /** For an accepted login variant: the national test number used to log in again for clean-up. */
+  cleanupNumber?: string;
   note?: string;
 }
 
@@ -95,7 +97,17 @@ export class Accounts {
   async newUser(role = 'A'): Promise<UserSession> {
     const pooled = this.pool.get(role);
     if (pooled) return pooled;
-    const s = await this.freshUser();
+    this.requireCreate();
+    // A worker restarted after a failure re-uses the run's account for this role (log in again, never re-create).
+    const known = readRunPool(this.config.runId).roles[role];
+    const s = known
+      ? await this.sessions.loginWithNumber(known.mobileNumber, known.deviceId)
+      : await this.freshUser();
+    if (!known)
+      writeRunPool(
+        this.config.runId,
+        (p) => (p.roles[role] = { mobileNumber: s.mobileNumber, deviceId: s.device.uniqueIdentifier }),
+      );
     this.pool.set(role, s);
     return s;
   }
@@ -126,7 +138,9 @@ export class Accounts {
     const token = field(verify.json(), 'auth_token');
     if (typeof token === 'string') {
       registerSecretValue(token, USER_TOKEN_PLACEHOLDER);
+      const national = raw.replace(/\D/g, '').slice(-10);
       Object.assign(entry, {
+        ...(isAllowedTestNumber(national) ? { cleanupNumber: national } : {}),
         userId: String(field(verify.json(), 'id') ?? ''),
         note: 'login variant ACCEPTED',
       });
@@ -206,6 +220,14 @@ export class Accounts {
     const cached = this.profiles.get(key);
     if (cached) return cached;
     this.requireCreate();
+    const known = readRunPool(this.config.runId).onboarded[String(i)];
+    if (known) {
+      // Onboarded earlier in this run (another worker): log in again, never re-create or re-onboard.
+      const again = await this.sessions.loginWithNumber(known.mobileNumber, known.deviceId);
+      const p: Profile = { ...again, ref: again.ref ?? known.ref };
+      this.profiles.set(key, p);
+      return p;
+    }
     const fresh = await this.freshUser();
     const entry = this.ledger.find((e) => e.mobileNumber === fresh.mobileNumber)!;
     const domain = (process.env.AISLE_TEST_EMAIL_DOMAIN || 'example.test').toLowerCase();
@@ -233,6 +255,13 @@ export class Accounts {
       profileState: done.profileState,
     });
     this.flush();
+    writeRunPool(this.config.runId, (pool) => {
+      pool.onboarded[String(i)] = {
+        mobileNumber: p.mobileNumber,
+        deviceId: p.device.uniqueIdentifier,
+        ref: p.ref,
+      };
+    });
     this.profiles.set(key, p);
     return p;
   }
@@ -301,28 +330,13 @@ export class Accounts {
   }
 
   /**
-   * Delete every account this worker created: POST /V1/user/delete {id: ref, reason_id: 1}. A never-onboarded
-   * account is onboarded first (delete needs a profile); disabled profiles are marked unusable. Counts only are logged.
+   * Worker teardown: only saves the ledger. Accounts are deleted once at the END of the run (global teardown,
+   * m2/src/accounts/global-teardown.ts), because a worker restarted after a failure re-uses the run's accounts.
    */
-  async cleanup(): Promise<{ created: number; deleted: number; leftBehind: number }> {
-    let deleted = 0;
-    let leftBehind = 0;
-    for (const [number, s0] of this.own) {
-      const entry = this.ledger.find((e) => e.mobileNumber === number)!;
-      try {
-        const outcome = await deleteOwnAccount(this.sessions, this.config, s0, entry);
-        if (outcome) deleted++;
-        else leftBehind++;
-      } catch (e) {
-        Object.assign(entry, { deleted: false, note: `clean-up failed: ${(e as Error).name}` });
-        leftBehind++;
-      }
-      this.flush();
-    }
-    this.own.clear();
-    if (this.ledger.length)
-      this.log.info('Synthetic accounts', { created: this.ledger.length, deleted, leftBehind });
-    return { created: this.ledger.length, deleted, leftBehind };
+  async cleanup(): Promise<{ created: number }> {
+    this.flush();
+    if (this.ledger.length) this.log.info('Synthetic accounts', { created: this.ledger.length });
+    return { created: this.ledger.length };
   }
 }
 
@@ -371,4 +385,85 @@ export async function deleteOwnAccount(
   const res = await sessions.deleteAccount(s, ref);
   Object.assign(entry, { deleted: ok(res), deleteStatus: res.status });
   return ok(res);
+}
+
+interface RunPool {
+  roles: Record<string, { mobileNumber: string; deviceId: string }>;
+  onboarded: Record<string, { mobileNumber: string; deviceId: string; ref: string | undefined }>;
+}
+const poolFile = (runId: string) => path.join(ROOT, ACCOUNTS_DIR, `${runId}-pool.json`);
+
+/** The run's shared account pool (git-ignored, no tokens): which number serves which role / onboarded index. */
+export function readRunPool(runId: string): RunPool {
+  const f = poolFile(runId);
+  return existsSync(f) ? (JSON.parse(readFileSync(f, 'utf8')) as RunPool) : { roles: {}, onboarded: {} };
+}
+
+function writeRunPool(runId: string, change: (p: RunPool) => void): void {
+  const pool = readRunPool(runId);
+  change(pool);
+  mkdirSync(path.dirname(poolFile(runId)), { recursive: true });
+  writeFileSync(poolFile(runId), JSON.stringify(pool, null, 2));
+}
+
+/**
+ * Delete the not-yet-deleted accounts of ledger files (all runs, or one run): log in again with the number
+ * (OTP 1234), onboard a bare account if needed, then POST /V1/user/delete. Disabled profiles are marked unusable.
+ * Used by the global teardown (current run) and `npm run m2:accounts:cleanup` (all runs). Counts only.
+ */
+export async function cleanupLedgers(
+  config: M2Config,
+  sessions: SessionHelper,
+  runId?: string,
+): Promise<{ deleted: number; leftBehind: number; skipped: number }> {
+  const dir = path.join(ROOT, ACCOUNTS_DIR);
+  const files = existsSync(dir)
+    ? readdirSync(dir).filter(
+        (f) => f.endsWith('.json') && !f.endsWith('-pool.json') && (!runId || f.startsWith(runId)),
+      )
+    : [];
+  let deleted = 0;
+  let leftBehind = 0;
+  let skipped = 0;
+  // Numbers already deleted in ANY entry (several login variants can map to one account): never log in again —
+  // a login to a deleted number would create a new account.
+  const done = new Set<string>();
+  for (const f of files)
+    for (const e of (JSON.parse(readFileSync(path.join(dir, f), 'utf8')) as { accounts: LedgerEntry[] })
+      .accounts)
+      if (e.deleted === true) done.add(e.cleanupNumber ?? e.mobileNumber);
+  for (const f of files) {
+    const file = path.join(dir, f);
+    const ledger = JSON.parse(readFileSync(file, 'utf8')) as { runId: string; accounts: LedgerEntry[] };
+    for (const e of ledger.accounts) {
+      const number = e.cleanupNumber ?? e.mobileNumber;
+      if (e.deleted === true || e.unusable || !isAllowedTestNumber(number) || done.has(number)) {
+        skipped++;
+        if (done.has(number) && e.deleted !== true) {
+          e.deleted = true;
+          e.note = `${e.note ?? ''} (same account as an entry already deleted)`.trim();
+          writeFileSync(file, JSON.stringify(ledger, null, 2));
+        }
+        continue;
+      }
+      if (e.note?.startsWith('wrong-OTP') || e.note?.includes('refused')) {
+        skipped++;
+        continue;
+      }
+      try {
+        const s = await sessions.loginWithNumber(number, e.deviceId);
+        e.ref = e.ref ?? s.ref;
+        if (s.applicationStage === 'completed') e.onboarded = true;
+        if (await deleteOwnAccount(sessions, config, s, e)) {
+          deleted++;
+          done.add(number);
+        } else leftBehind++;
+      } catch (err) {
+        e.note = `clean-up failed: ${(err as Error).name}`;
+        leftBehind++;
+      }
+      writeFileSync(file, JSON.stringify(ledger, null, 2));
+    }
+  }
+  return { deleted, leftBehind, skipped };
 }

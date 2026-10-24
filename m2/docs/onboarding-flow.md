@@ -85,7 +85,11 @@ The fixtures re-check `profile_state` before they hand out an account. If it is 
 "disapproved" or "disabled", tests that need an active profile are **Blocked** with that reason (never failed,
 never passed).
 
-## 3. Delete (teardown and `npm run m2:accounts:cleanup`)
+## 3. Delete (end of run and `npm run m2:accounts:cleanup`)
+
+Accounts are deleted once at the end of a run (Playwright global teardown), not per worker: a worker restarted
+after a failure logs in again to the run's accounts (`reports/m2/accounts/<run>-pool.json`) instead of creating new
+ones.
 
 - `POST /V1/user/delete` `{id: <ref>, reason_id: 1, note: "Synthetic QA account"}` (Bearer) → 200.
   `{id}` alone returns 500.

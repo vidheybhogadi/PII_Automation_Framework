@@ -3,6 +3,7 @@
  * one status rule (open questions only). Shared by the test-case workbook and the API guide so both always agree.
  */
 import { buildBaseline, isWebRoute, needsProfile, type Baseline } from './m2-baseline';
+import { ROUTE_STATE } from './m2-code-evidence';
 import { groupingOf, type Grouping } from './m2-grouping';
 import { parseInventory, type InventoryApi } from './m2-inventory';
 import { OPEN, QUESTIONS, statusFromDeps } from './m2-questions';
@@ -44,6 +45,7 @@ function withDerivedDeps(c: M2Case, byId: Map<string, InventoryApi>): M2Case {
   const deps = new Set(c.deps);
   if (c.apis.some((id) => byId.get(id) && needsProfile(byId.get(id)!))) deps.add('M2Q-36');
   if (c.apis.some((id) => byId.get(id) && isWebRoute(byId.get(id)!))) deps.add('M2Q-41');
+  if (c.apis.some((id) => ROUTE_STATE[id])) deps.add('M2Q-32');
   const appUser = c.apis.some((id) => !/^API-(001|002|003|190|208)$/.test(id));
   if (c.id.startsWith('M2-DB-') && appUser) deps.add('M2Q-37');
   return deps.size === c.deps.length ? c : { ...c, deps: [...deps].sort() };

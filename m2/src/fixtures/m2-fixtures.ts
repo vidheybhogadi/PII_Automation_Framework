@@ -73,6 +73,8 @@ export const test = base.extend<M2TestFixtures, M2WorkerFixtures>({
 
   piiDb: async ({ piiDbWorker }, use) => {
     if (!piiDbWorker) blockPrereq(PREREQ.db.id, PREREQ.db.reason);
+    // Infrastructure, not product: an unreachable DB blocks (with the reason) instead of failing every DB check.
+    if (!(await piiDbWorker.reachable())) blockPrereq(PREREQ.dbUnreachable.id, PREREQ.dbUnreachable.reason);
     await use(piiDbWorker);
   },
 

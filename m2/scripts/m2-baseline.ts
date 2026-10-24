@@ -8,6 +8,7 @@
  * "same as master" for non-regression checks (needs the baseline, M2Q-24). Unknowns cite an M2Q question.
  */
 import { authLabel, FIELD_LABEL, groupOf, OBSERVED, type InventoryApi, type PiiField } from './m2-inventory';
+import { ROUTE_STATE } from './m2-code-evidence';
 import { statusFromDeps } from './m2-questions';
 import type { Category } from './m2-grouping';
 import type { Automation, M2Case, Mode, Priority, Status } from './m2-test-cases.data';
@@ -166,12 +167,8 @@ const keys = (a: InventoryApi) =>
  */
 export const NEW_USER_OK = ['API-060', 'API-062', 'API-086', 'API-088', 'API-089'];
 
-/** Routes that need a special account state QA does not create itself (M2Q-32). */
-export const STATE_PRECONDITION = ['API-030', 'API-124'];
-
-/** /web/* routes and WEB_TOKEN routes need a web JWT, whose issuance is unknown (M2Q-41). */
-export const isWebRoute = (a: Pick<InventoryApi, 'path' | 'auth'>) =>
-  a.path.startsWith('/web/') || a.auth.includes('WEB_TOKEN');
+/** Routes that need a true web JWT (ptfrm "web", payment routes only — M2Q-41 answered from code). */
+export const isWebRoute = (a: Pick<InventoryApi, 'path' | 'auth'>) => a.auth.includes('WEB_TOKEN');
 
 /** True when calling this API needs a finished (onboarded) profile — M2Q-36. */
 export function needsProfile(a: Pick<InventoryApi, 'id' | 'auth'>): boolean {
@@ -195,11 +192,10 @@ function accessDeps(a: InventoryApi): string[] {
   if (isWebhook(a)) d.add('M2Q-17');
   if (a.id === 'API-113' || a.id === 'API-114') d.add('M2Q-03');
   if (needsProfile(a)) d.add('M2Q-36');
-  // Web routes (/web/*) need a web JWT — staging answers 401 to the app user JWT (M2 run 2026-10-23) — M2Q-41.
-  if (isWebRoute(a)) d.add('M2Q-41');
-  // activate_user (app + web twin) needs a deactivated account; deactivating a profile can leave it unrecoverable
-  // ("disabled": activate 403, delete has no effect — staging 2026-10-23), so the state comes from M2Q-32.
-  if (STATE_PRECONDITION.includes(a.id)) d.add('M2Q-32');
+  // Routes whose controller requires an approved / deactivated / image-inappropriate profile (from code,
+  // m2-code-evidence.ts ROUTE_STATE) need a special account state QA cannot create — M2Q-32. /web/* routes take the
+  // normal app user JWT (M2Q-41, answered from code).
+  if (ROUTE_STATE[a.id]) d.add('M2Q-32');
   if (isPayment(a)) d.add('M2Q-17');
   if (a.id === 'API-012') d.add('M2Q-19');
   if (isLogin(a)) d.add('M2Q-03'); // approved test number + OTP shortcut
@@ -507,7 +503,8 @@ const RULES: Record<string, Rule> = {
       ],
       validate: 'No 5xx; no other user’s value; field value per the agreed rule.',
       why: 'Dev doc: enabled reads do not fall back to local values — unmigrated profiles may show blank PII here.',
-      expected: 'No 5xx, no wrong-user value. Field value: to be confirmed (M2Q-05).',
+      expected:
+        'No 5xx, no wrong-user value. Field value: open (M2Q-05) — code returns null for single reads (no local fallback) and keeps the cached name in lists.',
       evidence: 'Dev doc "Field behavior"; ClickUp migration comment.',
       db: API_ONLY,
       priority: ['G2', 'G3', 'G4', 'G7'].includes(g(a)) ? 'High' : 'Medium',
@@ -531,8 +528,8 @@ const RULES: Record<string, Rule> = {
       validate: 'A’s full name absent; masked form as agreed.',
       why: 'Each consumer builds names separately; one missed path leaks a hidden name.',
       expected: isAdmin(a)
-        ? 'Admin view of hidden names: to be confirmed (M2Q-13).'
-        : 'Full name never shown to other users; exact masked value per M2Q-13 (UI smoke FN-SAN-006 passed).',
+        ? 'Admin view of hidden names: not settled by code (the M2Q-13 answer covers app users); full name never shown to non-admins.'
+        : 'Full name never shown to other users; from code (M2Q-13) the hidden name shows as its first letter, capitalised (UI smoke FN-SAN-006 passed).',
       evidence: 'FN-SAN-006/028; Dev doc select_first_name access paths.',
       db: API_ONLY,
       priority: isAdmin(a) ? 'Medium' : 'Critical',
@@ -562,8 +559,8 @@ const RULES: Record<string, Rule> = {
       'Agreed degraded behaviour; no stack traces / internals; no wrong-user data; writes per best-effort rule.',
     why: 'This API now depends on the PII service at runtime.',
     expected: writesPii(a)
-      ? 'Doc-predicted: local write continues, PII error reported (best-effort). Response and reconciliation: to be confirmed (M2Q-10, M2Q-11).'
-      : 'To be confirmed (M2Q-11).',
+      ? 'From code: the local write continues and the PII error is reported to Airbrake / the log, no reconciliation job (M2Q-10: forcing a failure needs Dev); reads fail without fallback (M2Q-11).'
+      : 'From code (M2Q-11): no fallback — with a gate on, the request fails once the PII read errors (up to 3 attempts of 5 s); the reply shows no internals and no other user’s data.',
     evidence: 'Dev doc: no automatic fallback; "Direct model writes catch Pii::Error".',
     db: API_ONLY,
     priority: ['G2', 'G3', 'G4'].includes(g(a)) ? 'High' : 'Medium',
@@ -584,7 +581,8 @@ const RULES: Record<string, Rule> = {
       ],
       validate: 'New value within the agreed window; no reversion afterwards.',
       why: 'Profile and FieldStore caches can keep stale PII.',
-      expected: 'New value within the propagation window — to be confirmed (M2Q-12).',
+      expected:
+        'From code (M2Q-12): the writer’s own PII cache is updated at once; other users’ lists keep the cached profile name until the profile cache is rebuilt (no fixed window) — the time is recorded; a reversion after the new value appeared is a failure.',
       evidence:
         'Dev doc cache notes (hydration keeps cached name when nil; proxy writes bypass invalidation).',
       db: API_ONLY,
@@ -661,7 +659,9 @@ const RULES: Record<string, Rule> = {
       validate:
         'Accept/refuse per rule; stored value normalised identically in PII and local field; refused values change nothing.',
       why: 'This API writes PII — bad input would corrupt or wipe the stored value.',
-      expected: `To be confirmed (${qs.join(', ')}). Refused values leave PII unchanged.`,
+      expected: input.every((f) => f === 'NAME')
+        ? 'From code (M2Q-06): a blank value is ignored (name unchanged); otherwise the name is stripped and, when it contains any A–Z letter, reduced to its A–Z letters; no maximum length. Refused values leave PII unchanged.'
+        : `${input.includes('NAME') ? 'Name: from code (M2Q-06) blank → ignored, otherwise stripped and reduced to A–Z letters. ' : ''}Other fields: to be confirmed (${qs.filter((q) => q !== 'M2Q-06').join(', ')}). Refused values leave PII unchanged.`,
       evidence: 'No documented rule; M1 PII-service rules in BQ-36/37.',
       db: 'See DB-REFUSE for this API.',
       priority: 'High',

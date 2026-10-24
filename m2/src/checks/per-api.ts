@@ -13,6 +13,7 @@ import type { Profile } from '../accounts/accounts';
 import { isSuccess, PII_KEYS, scanResponse } from '../assertions/pii.assertions';
 import { AUTH } from '../auth/credentials';
 import { testPhoneNumber } from '../auth/test-phone';
+import { normalizeFirstName } from '../../scripts/m2-code-evidence';
 import type { UserSession } from '../auth/session';
 import type { PiiDb } from '../db/pii-db';
 import { snapshotSummary } from '../db/pii-db';
@@ -134,7 +135,7 @@ export async function runDbIsol(c: AnyCase, fx: CheckFixtures, db: PiiDb): Promi
   let bId: string;
   if (groupOf(api.id).key === 'G1') {
     aId = a.values.USER_ID!;
-    bId = fx.data.userId('B');
+    bId = (await fx.accounts.onboarded(1)).userId!; // a second real account (M2Q-40: existing users only)
   } else {
     if (!a.session) throw new Error(`${api.id}: needs a user account`);
     const b = await callerFor(api, fx, 'B');
@@ -439,7 +440,9 @@ export async function runCache(c: AnyCase, fx: CheckFixtures): Promise<void> {
   let change: () => Promise<ApiResponse>;
   if (groupOf(api.id).key === 'G1') {
     const tt = await callerFor(api, fx);
-    const userId = tt.values.USER_ID!;
+    // The test-route write needs an existing app user (M2Q-40, from code): a suite-created onboarded account.
+    const own = await fx.accounts.onboarded(0);
+    const userId = own.userId!;
     read = () =>
       send(
         api,
@@ -447,7 +450,7 @@ export async function runCache(c: AnyCase, fx: CheckFixtures): Promise<void> {
         tt,
         api.method === 'GET'
           ? { query: { user_id: userId } }
-          : { body: { user_ids: [userId], refs: [userId] } },
+          : { body: { user_ids: [userId], refs: [own.ref ?? userId] } },
       );
     change = () =>
       fx.m2.call('API-002', { auth: tt.auth, body: { user_id: userId, first_name: n2 }, retry: false });
@@ -561,11 +564,19 @@ export async function runField(c: AnyCase, fx: CheckFixtures): Promise<void> {
       setKey(body, key, value);
       const res = await send(api, fx, caller, { body, retry: false });
       fx.observe(`${key} ${label}`, res);
+      const after = caller.session ? await selfView(fx, caller.session) : undefined;
       if (!isSuccess(res.status) && caller.session)
-        expect(
-          (await selfView(fx, caller.session)) === before,
-          `${key} ${label}: a refused value changes nothing`,
-        ).toBe(true);
+        expect(after === before, `${key} ${label}: a refused value changes nothing`).toBe(true);
+      // From code (M2Q-06): blank names are ignored; others are stored normalised (lossy cases only recorded).
+      if (key === 'first_name' && caller.session && isSuccess(res.status)) {
+        const stored = (JSON.parse(after!) as { first_name: unknown }).first_name;
+        const want = typeof value === 'string' ? normalizeFirstName(value) : undefined;
+        if (value === null || want === undefined)
+          expect(after === before, `${key} ${label}: a blank name leaves the name unchanged`).toBe(true);
+        else if (/^[A-Za-z\s]*$/.test(value as string) || !/[A-Za-z]/.test(value as string))
+          expect(stored === want, `${key} ${label}: stored as the normalised value`).toBe(true);
+        else noteEvidence(`${key} ${label}: lossy normalisation recorded (possible defect, M2Q-06).`);
+      }
     }
   }
 }
