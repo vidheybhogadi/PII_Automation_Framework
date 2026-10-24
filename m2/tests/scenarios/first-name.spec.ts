@@ -14,6 +14,7 @@ import {
   editFirstName,
   expectOk,
   nameOf,
+  otherUsersView,
   ownProfile,
   piiFirstName,
   profileByRef,
@@ -181,7 +182,7 @@ test.describe('M2 scenarios — first name', () => {
     const full = String(nameOf(await ownProfile(fx, a)));
     expectOk(await call(fx, 'API-032', asUser(fx, a)), 'toggle_hide_name (hide)');
     try {
-      const seen = nameOf(await profileByRef(fx, b, a));
+      const seen = await otherUsersView(fx, b, a);
       expect(seen === full, 'B never sees A’s full name').toBe(false);
       expect(seen === maskedFirstName(full), 'B sees the first letter, capitalised (from code, M2Q-13)').toBe(
         true,
@@ -198,11 +199,11 @@ test.describe('M2 scenarios — first name', () => {
     const [a, b] = await fx.accounts.connectedPair();
     const full = nameOf(await ownProfile(fx, a));
     expectOk(await call(fx, 'API-032', asUser(fx, a)), 'hide');
-    expect(nameOf(await profileByRef(fx, b, a)) === full, 'hidden: B does not see the full name').toBe(false);
+    expect((await otherUsersView(fx, b, a)) === full, 'hidden: B does not see the full name').toBe(false);
     expectOk(await call(fx, 'API-032', asUser(fx, a)), 'unhide');
-    expect(nameOf(await profileByRef(fx, b, a)) === full, 'after unhide B sees A’s full name').toBe(true);
+    expect((await otherUsersView(fx, b, a)) === full, 'after unhide B sees A’s full name').toBe(true);
     const b2 = { ...(await fx.accounts.returningLogin(b)), ref: b.ref };
-    expect(nameOf(await profileByRef(fx, b2, a)) === full, 'state persists in a new session').toBe(true);
+    expect((await otherUsersView(fx, b2, a)) === full, 'state persists in a new session').toBe(true);
   });
 
   scenario('M2-FNAME-011', async (fx) => {
@@ -218,18 +219,13 @@ test.describe('M2 scenarios — first name', () => {
       'reply {status:true, first_name:<full name>}',
     ).toBe(true);
     expect(nameOf(await ownProfile(fx, a)) === full, 'state unchanged for the owner').toBe(true);
-    // The viewed profile's own name (user.general_information.first_name), not a nested profile's.
-    const view = (await profileByRef(fx, b, a)).json() as
-      { user?: { first_name?: unknown; general_information?: { first_name?: unknown } } } | undefined;
-    const seen = view?.user?.general_information?.first_name ?? view?.user?.first_name;
-    if (seen === undefined)
-      noteEvidence('Another user’s view of a pending profile carries no first name — recorded.');
-    else {
-      noteEvidence(
-        `Another user's view: ${String(seen).length} characters; equals the masked initial: ${seen === maskedFirstName(String(full))}; equals the full name: ${seen === full}.`,
-      );
-      expect(seen === full, 'another user still sees the full name (not masked)').toBe(true);
-    }
+    // Another user's view (profile_info?ref=A — /V1/users/:ref would return B's own profile).
+    const seen = await otherUsersView(fx, b, a);
+    const pii = await piiFirstName(fx, a.userId!);
+    noteEvidence(
+      `Another user's view: ${seen === undefined ? 'no first name for that ref' : `${String(seen).length} chars`}; view = owner: ${seen === full}; owner = PII: ${full === pii}.`,
+    );
+    expect(seen === full, 'another user still sees the full name (not masked)').toBe(true);
   });
 
   scenario('M2-FNAME-013', async (fx) => {
@@ -237,14 +233,16 @@ test.describe('M2 scenarios — first name', () => {
     const pii = await piiFirstName(fx, a.userId!);
     for (const [apiId, viewer] of [
       ['API-013', a],
-      ['API-021', a],
-      ['API-021', b],
-      ['API-011', b],
+      ['API-021', a], // own profile (users#show ignores :ref)
       ['API-086', a],
     ] as const) {
       const res = await call(fx, apiId, asUser(fx, viewer, a), { values: { REF: a.ref } });
       expect(nameOf(res) === pii, `${apiId}: name equals the PII first name`).toBe(true);
     }
+    expect(
+      (await otherUsersView(fx, b, a)) === pii,
+      'API-011 (another user): name equals the PII first name',
+    ).toBe(true);
   });
 
   scenario('M2-FNAME-014', async () => {

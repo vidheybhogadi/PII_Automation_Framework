@@ -55,7 +55,7 @@ export const test = base.extend<M2TestFixtures, M2WorkerFixtures>({
   accounts: [
     async ({ m2Config }, use, workerInfo) => {
       const log = new Logger({ level: m2Config.logging.level, toConsole: m2Config.logging.toConsole });
-      const accounts = new Accounts(m2Config, log, workerInfo.workerIndex);
+      const accounts = new Accounts(m2Config, log, workerInfo.workerIndex, workerInfo.parallelIndex);
       await use(accounts);
       await accounts.cleanup();
     },

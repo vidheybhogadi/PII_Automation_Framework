@@ -79,6 +79,11 @@ export class Accounts {
     private readonly config: M2Config,
     private readonly log: Logger,
     workerIndex: number,
+    /**
+     * Playwright parallel slot (0 … workers-1). The run pool is namespaced by it, so tests in parallel workers never
+     * share — and never concurrently rename — the same account; a worker restarted in the same slot re-uses its accounts.
+     */
+    private readonly slot = 0,
   ) {
     this.sessions = new SessionHelper(config, log, workerIndex);
     this.ledgerFile = path.join(ROOT, ACCOUNTS_DIR, `${config.runId}-w${workerIndex}.json`);
@@ -99,14 +104,18 @@ export class Accounts {
     if (pooled) return pooled;
     this.requireCreate();
     // A worker restarted after a failure re-uses the run's account for this role (log in again, never re-create).
-    const known = readRunPool(this.config.runId).roles[role];
+    const known = readRunPool(this.config.runId).roles[`${this.slot}:${role}`];
     const s = known
       ? await this.sessions.loginWithNumber(known.mobileNumber, known.deviceId)
       : await this.freshUser();
     if (!known)
       writeRunPool(
         this.config.runId,
-        (p) => (p.roles[role] = { mobileNumber: s.mobileNumber, deviceId: s.device.uniqueIdentifier }),
+        (p) =>
+          (p.roles[`${this.slot}:${role}`] = {
+            mobileNumber: s.mobileNumber,
+            deviceId: s.device.uniqueIdentifier,
+          }),
       );
     this.pool.set(role, s);
     return s;
@@ -220,7 +229,7 @@ export class Accounts {
     const cached = this.profiles.get(key);
     if (cached) return cached;
     this.requireCreate();
-    const known = readRunPool(this.config.runId).onboarded[String(i)];
+    const known = readRunPool(this.config.runId).onboarded[`${this.slot}:${i}`];
     if (known) {
       // Onboarded earlier in this run (another worker): log in again, never re-create or re-onboard.
       const again = await this.sessions.loginWithNumber(known.mobileNumber, known.deviceId);
@@ -256,7 +265,7 @@ export class Accounts {
     });
     this.flush();
     writeRunPool(this.config.runId, (pool) => {
-      pool.onboarded[String(i)] = {
+      pool.onboarded[`${this.slot}:${i}`] = {
         mobileNumber: p.mobileNumber,
         deviceId: p.device.uniqueIdentifier,
         ref: p.ref,

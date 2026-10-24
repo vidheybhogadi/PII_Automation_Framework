@@ -185,3 +185,40 @@ export function requireOwnOnboardedAccount(): never {
 /** Text that reveals internals in an error body (stack traces, framework classes, file paths). */
 export const INTERNALS =
   /\.rb:\d+|backtrace|ActiveRecord|NoMethodError|NameError|\/app\/|Traceback|Exception:/;
+
+/** The first name of the profile whose `ref` equals `ref`, anywhere in a body (first_name or general_information). */
+export function nameForRef(body: unknown, ref: string | undefined): unknown {
+  if (!ref || !body || typeof body !== 'object') return undefined;
+  const o = body as Record<string, unknown>;
+  if (String(o.ref ?? '') === ref) {
+    const gi = o.general_information as Record<string, unknown> | undefined;
+    if (o.first_name !== undefined) return o.first_name;
+    if (gi?.first_name !== undefined) return gi.first_name;
+  }
+  for (const v of Object.values(o)) {
+    const found = nameForRef(v, ref);
+    if (found !== undefined) return found;
+  }
+  return undefined;
+}
+
+/**
+ * How ANOTHER user sees a profile: GET /V1/users/profile_info?ref=<target>. (GET /V1/users/:ref is the caller's OWN
+ * profile — users#show → current_profile.get_specific_user ignores :ref; app/controllers/v1/users_controller.rb:113-120,
+ * app/models/profile.rb:2046-2067, develop_new 944f76a.) Returns the requested profile's first name
+ * (user.general_information.first_name), or undefined when the reply does not carry it.
+ */
+export async function otherUsersView(
+  fx: Fx,
+  viewer: UserSession | Profile,
+  target: Profile,
+): Promise<unknown> {
+  const res = await call(fx, 'API-011', asUser(fx, viewer, target, 'viewer'), {
+    query: { ref: target.ref ?? '' },
+  });
+  expectOk(res, 'profile_info (another user’s view)');
+  // profile_info answers {user: <the requested profile>, …}; its own name, not a nested profile's.
+  const user = (res.json() as { user?: Record<string, unknown> } | undefined)?.user;
+  const gi = user?.general_information as Record<string, unknown> | undefined;
+  return gi?.first_name ?? user?.first_name ?? nameForRef(res.json(), target.ref);
+}

@@ -509,7 +509,7 @@ export const CASES: M2Case[] = [
     data: 'A’s known first name.',
     steps: [
       'As A: POST /V1/users/toggle_hide_name (hide).',
-      'As B: GET /V1/users/:ref for A.',
+      'As B: GET /V1/users/profile_info?ref=<A> (GET /V1/users/:ref returns the caller’s own profile — from code).',
       'As A: GET own profile.',
     ],
     validate: 'Toggle response first_name; what B sees; what A sees.',
