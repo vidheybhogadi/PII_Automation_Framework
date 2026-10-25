@@ -77,9 +77,12 @@ export const ROUTE_STATE: Record<string, { state: string; ref: string }> = {
 /**
  * How the suite obtains the state a ROUTE_STATE route needs (user decision 2026-10-24, from code — confirm with Dev):
  * - 'approved' (incl. "approved or deactivated"): a suite account that staging approved by itself — male synthetic
- *   accounts were auto-approved within ~1–2 min on 2026-10-24; the suite waits up to 3 min, otherwise Blocked M2Q-32.
- * - 'deactivated': a throwaway suite account deactivated with POST /V1/users/deactivate_user, which is allowed for
- *   pending profiles (app/controllers/v1/users_controller.rb:3); re-activated before the clean-up delete.
+ *   accounts were auto-approved within ~1–2 min on 2026-10-24, 8–20 min in run qa-m2-20261024t134344; the suite
+ *   waits up to 15 min from onboarding, otherwise Blocked M2Q-32.
+ * - 'deactivated': a throwaway suite account deactivated with POST /V1/users/deactivate_user. The route is open to
+ *   pending profiles (app/controllers/v1/users_controller.rb:3), but Profile#deactivate_profile only changes approved /
+ *   pending / disapproved / vip_disapproved profiles (app/models/profile.rb:4583-4589) — so the account is approved
+ *   first; re-activated before the clean-up delete.
  * - 'image_inappropriate': cannot be created safely → stays Blocked (M2Q-32).
  */
 export type SuiteState = 'approved' | 'deactivated' | 'image_inappropriate';

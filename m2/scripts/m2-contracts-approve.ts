@@ -11,6 +11,8 @@
  * - Variants that broke an invariant while recording (e.g. a 5xx — invalid JSON → 502) are NEVER approved: they stay
  *   failing as findings. A recorded server error (status ≥ 500) is never approved either, even when the recording
  *   does not list it (recordings made before REPEAT / STATE had the no-server-error invariant, 2026-10-24).
+ * - Approved file marked "reRecord" (known stale, e.g. recorded while a deleting route had already consumed its
+ *   account): its variants are REPLACED by the recording, not merged, and the mark is dropped.
  * - Variants that must never be sent (safety rule, M2Q-46: a removed / blanked target, phone or login-OTP key) are
  *   NEVER approved — whether the recording marks them "notSent" or is an older recording that still contains them.
  */
@@ -81,12 +83,15 @@ for (const id of chosen) {
   const old = existsSync(approvedFile(id))
     ? (JSON.parse(readFileSync(approvedFile(id), 'utf8')) as BaselineFile)
     : undefined;
-  const variants: Record<string, Observation> = { ...(old?.approved ? old.variants : {}) };
+  // A stale approved file (reRecord) is replaced by the recording instead of merged.
+  const variants: Record<string, Observation> = {
+    ...(old?.approved && !old.reRecord ? old.variants : {}),
+  };
   // An approved variant that is now never sent (safety rule) is dropped from the approved file too.
   for (const label of Object.keys(variants))
     if (api && unsafeVariantLabel(api, label)) delete variants[label];
   for (const [label, obs] of Object.entries(approve)) variants[label] = merge(variants[label], obs);
-  if (old?.approved && JSON.stringify(old.variants) === JSON.stringify(variants)) {
+  if (old?.approved && !old.reRecord && JSON.stringify(old.variants) === JSON.stringify(variants)) {
     unchanged++;
     continue;
   }

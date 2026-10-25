@@ -35,7 +35,7 @@ import {
 } from './context';
 import { requireTestToken } from '../config/m2-config';
 import type { Synthetic } from './request-builder';
-import { buildRequest } from './request-builder';
+import { buildRequest, placeholdersIn } from './request-builder';
 import { variantSafety, wrongTypeValue } from './safety';
 import { suiteStateFor } from '../../scripts/m2-code-evidence';
 import { DB_FIELD, expectUnchanged, piiUserIdFor } from './db';
@@ -223,6 +223,18 @@ async function unchangedAround(fx: CheckFixtures, caller: Caller, run: () => Pro
     expect((await selfView(fx, caller.session)) === before, `${what}: own profile unchanged`).toBe(true);
 }
 
+/** { firstName: <the caller's current own first name> } for a profile caller; {} when it has none / no profile. */
+async function currentName(fx: CheckFixtures, caller: Caller): Promise<Partial<Synthetic>> {
+  if (!caller.session || !('ref' in caller.session)) return {};
+  const res = await fx.m2.call('API-013', {
+    auth: AUTH.user(caller.session.token),
+    device: caller.session.device,
+  });
+  const name =
+    res.status === 200 ? (res.json() as { first_name?: unknown } | undefined)?.first_name : undefined;
+  return typeof name === 'string' && name.trim() ? { firstName: name } : {};
+}
+
 /** Synthetic marker values a request carries (to detect echo). */
 const MARKERS = (fx: CheckFixtures) => [`FT_${fx.m2Config.runId}`, fx.m2Config.runId];
 
@@ -258,7 +270,11 @@ export async function runParam(c: AnyCase, fx: CheckFixtures): Promise<void> {
   requireBaseline(c.id, ctxOf(fx));
   const api = apiOf(c);
   const caller = await callerFor(api, fx);
-  const request = buildRequest(api, caller.values, syntheticFor(fx, caller.session));
+  // The caller's CURRENT first name goes into the request: a variant the route accepts (2xx) may legitimately write
+  // the name (submit_profile writes while pending_not_verified, user.rb:487-492, from code), and with the current
+  // name that write is a no-op — so "own profile unchanged" still proves that no variant changed anything else.
+  const synthetic = { ...syntheticFor(fx, caller.session), ...(await currentName(fx, caller)) };
+  const request = buildRequest(api, caller.values, synthetic);
   const variants: Variant[] = keysOf(c).map((key) => ({
     label: `without ${key}`,
     // Safety (M2Q-46): a target / phone / login-OTP key is never removed — the variant is Blocked, not sent.
@@ -284,6 +300,7 @@ export async function runParam(c: AnyCase, fx: CheckFixtures): Promise<void> {
       send: () =>
         send(api, fx, caller, {
           values: { REF: `${fx.m2Config.runId}-none`, USER_ID: `${fx.m2Config.runId}-none` },
+          synthetic,
         }),
     });
   await unchangedAround(
@@ -402,24 +419,24 @@ export async function runRepeat(c: AnyCase, fx: CheckFixtures): Promise<void> {
   requireBaseline(c.id, ctxOf(fx));
   const api = apiOf(c);
   const caller = await callerFor(api, fx);
+  // The SAME request four times: the synthetic values (name, email, text) are built once and re-used by every send.
+  const synthetic = syntheticFor(fx, caller.session);
+  const again = () => send(api, fx, caller, { synthetic, retry: false });
   let afterFirst: string | undefined;
   const variants: Variant[] = [
     {
       label: 'first request',
       send: async () => {
-        const r = await send(api, fx, caller, { retry: false });
+        const r = await again();
         afterFirst = caller.session ? await selfView(fx, caller.session) : undefined;
         return r;
       },
     },
-    { label: 'same request again', send: () => send(api, fx, caller, { retry: false }) },
+    { label: 'same request again', send: again },
   ];
   // A repeated request is still a valid request: a server error is never recorded or accepted as the contract.
   await withBaseline(c.id, ctxOf(fx), variants, noServerError);
-  const parallel = await Promise.all([
-    send(api, fx, caller, { retry: false }),
-    send(api, fx, caller, { retry: false }),
-  ]);
+  const parallel = await Promise.all([again(), again()]);
   parallel.forEach((r, i) => fx.observe(`${api.id} parallel #${i + 1}`, r));
   parallel.forEach((r, i) => noServerError(`parallel #${i + 1}`, r));
   if (caller.session)
@@ -714,7 +731,16 @@ function expectReplyValues(
   p: Profile,
   want: { firstName: unknown; email?: unknown },
 ): void {
-  const body = res.json();
+  let body = res.json();
+  if (api.id === 'API-011') {
+    // profile_info answers {user: <the VIEWED member>, own_info: <the caller>, …} (fetch_own_info, timer.rb:94):
+    // only the caller's own object is compared (2026-10-24, M2-API-011-GATE fix).
+    body = (body as { own_info?: unknown } | undefined)?.own_info;
+    if (!body || typeof body !== 'object') {
+      noteEvidence(`${api.id}: no own_info object in the reply — value part not checkable.`);
+      return;
+    }
+  }
   if (returnsOthers(api) && api.id !== 'API-021') {
     // Replies about other members: compare only entries of a suite account whose values are known.
     const mine = ownItems(body, p);
@@ -830,12 +856,19 @@ export async function runGate(c: AnyCase, fx: CheckFixtures): Promise<void> {
   if (DESTRUCTIVE.includes(api.id) || state === 'deactivated' || SUBMIT_PROFILE.includes(api.id))
     return runGateThrowaway(api, fx);
 
-  const pooled = await fx.accounts.onboarded(GATE_ACCOUNT);
+  // Conversation routes need a member of a conversation: the caller is account 0 of the suite's connected pair
+  // (its conversation id is only filled for a member), every other GATE case uses the dedicated gate account.
+  const conversation = placeholdersIn(api).includes('CONVERSATION_ID');
+  const pooled = conversation ? (await fx.accounts.suitePair()).a : await fx.accounts.onboarded(GATE_ACCOUNT);
   const p = state === 'approved' ? await fx.accounts.waitApproved(pooled, 'gate account') : pooled;
   const before = await ownValues(fx, p);
   // Anchor (gate off, M2Q-02): writes go to both stores, so the app's own name equals the PII name.
   expect(before.firstName === (await piiName(fx, p.userId!)), 'own first name = PII first name').toBe(true);
-  if (fx.accounts.isOwnOnboarded(GATE_ACCOUNT))
+  if (conversation)
+    noteEvidence(
+      `${api.id}: called by account 0 of the suite's connected pair (a conversation member); its current name and email are the expected values.`,
+    );
+  else if (fx.accounts.isOwnOnboarded(GATE_ACCOUNT))
     expect(
       before.email === onboardingValues(fx.m2Config.runId, GATE_ACCOUNT).email,
       'own email = the fake onboarding email',
@@ -905,13 +938,25 @@ export async function runGate(c: AnyCase, fx: CheckFixtures): Promise<void> {
 async function runGateThrowaway(api: ReturnType<typeof apiOf>, fx: CheckFixtures): Promise<void> {
   const caller = await callerFor(api, fx);
   const p = caller.session as Profile;
+  // The account's CURRENT name (the throwaway is shared by the API's cases, which may have renamed it); its known
+  // onboarding values when the own profile is not readable.
+  const now = await fx.m2.call('API-013', { auth: AUTH.user(p.token), device: p.device });
+  const current = now.status === 200 ? deepValue(now.json(), 'first_name') : undefined;
   const want: { firstName: unknown; email: unknown } = {
-    firstName: p.known?.firstName,
+    firstName: typeof current === 'string' ? current : p.known?.firstName,
     email: p.known?.email,
   };
   const input = PII_INPUT[api.id] ?? [];
   const synthetic: Partial<Synthetic> = {};
-  if (input.includes('NAME')) synthetic.firstName = want.firstName = fx.data.firstName();
+  // submit_profile_web only creates a profile when the user has none (user.rb:625, 637-641, develop_new 944f76a): for
+  // an account that already has one, the submitted name is NOT written — the existing name must stay unchanged.
+  const writesName = input.includes('NAME') && !SUBMIT_ONLY_WITHOUT_PROFILE.includes(api.id);
+  if (input.includes('NAME')) synthetic.firstName = fx.data.firstName();
+  if (writesName) want.firstName = synthetic.firstName;
+  else if (input.includes('NAME'))
+    noteEvidence(
+      `${api.id}: the account already has a profile, so the route does not write the submitted name — the existing name is expected unchanged (user.rb:625, 637-641; from code — confirm with Dev).`,
+    );
   if (input.includes('EMAIL')) want.email = undefined; // a new fake email is written; compared via the read-back
   const res = await send(api, fx, caller, { synthetic, retry: false });
   fx.observe(`${api.id} gate off (throwaway account)`, res);
@@ -932,8 +977,14 @@ async function runGateThrowaway(api: ReturnType<typeof apiOf>, fx: CheckFixtures
     `${api.id}: own profile afterwards shows the expected first name`,
   ).toBe(true);
   if (input.includes('NAME'))
-    expect((await piiName(fx, p.userId!)) === want.firstName, 'PII first name = the written name').toBe(true);
+    expect(
+      (await piiName(fx, p.userId!)) === want.firstName,
+      writesName ? 'PII first name = the written name' : 'PII first name unchanged',
+    ).toBe(true);
 }
+
+/** Profile submit routes that write only when the user has no profile yet (user.rb:625, 637-641, from code). */
+const SUBMIT_ONLY_WITHOUT_PROFILE = ['API-061'];
 
 // ---- PIIDOWN — PII service down / slow (Dev-assisted) ------------------------------------------------------
 export async function runPiiDown(c: AnyCase, fx: CheckFixtures): Promise<void> {

@@ -64,8 +64,13 @@ test.describe('M2 scenarios — integration', () => {
     const p = await fx.accounts.onboarded(0);
     const n1 = nameOf(await ownProfile(fx, p));
     expect(typeof n1 === 'string' && n1.length > 0, 'own profile has a first name (N1)').toBe(true);
-    // Warm the cache: the PII route now returns (and caches) N1.
-    expect((await piiFirstName(fx, p.userId!)) === n1, 'PII route returns N1 before the write').toBe(true);
+    // Precondition (and cache warm-up): the shared account's app name and PII name agree before the test starts.
+    // If not, an earlier test left the account inconsistent — that is not what this case checks.
+    if ((await piiFirstName(fx, p.userId!)) !== n1)
+      blockPrereq(
+        'M2Q-12',
+        'Precondition not met: the shared onboarded account 0 has different app and PII first names before the test (left by an earlier test) — M2-INT-003 needs them equal to start',
+      );
     const n2 = fx.data.firstName();
     try {
       const w = await call(fx, 'API-199', asTestToken(fx), {

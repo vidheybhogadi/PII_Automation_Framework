@@ -6,7 +6,7 @@ import { expect, test } from '@playwright/test';
 import { ApiResponse } from '../../../core/http/api-response';
 import { ExchangeRecorder } from '../../../core/utils/exchange-recorder';
 import { Logger } from '../../../core/utils/logger';
-import { registerSecretValue } from '../../../core/utils/redaction';
+import { registerSecretValue, scrubText } from '../../../core/utils/redaction';
 import { Secret } from '../../../core/utils/secret';
 import { listInventory } from '../../../reporting/generator/inventory';
 import { AUTH, expiredFormatJwt } from '../../src/auth/credentials';
@@ -41,12 +41,14 @@ import {
   wrongTypeValue,
 } from '../../src/checks/safety';
 import { idsIn } from '../../src/checks/catalogue';
+import { runsLate } from '../../src/checks/late';
 import {
   extendTestTimeout,
   ledgerDisposition,
   silentMp3,
   type LedgerEntry,
 } from '../../src/accounts/accounts';
+import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { submitProfileBody } from '../../src/accounts/onboarding';
@@ -281,7 +283,7 @@ test.describe('UNIT M2 request safety and placeholder values', () => {
       MBTI_ID: '8',
       DELETE_REASON_ID: '1',
     });
-    expect(c.approvalWaitMs).toBe(180_000);
+    expect(c.approvalWaitMs).toBe(900_000); // 15 min from onboarding (approval took 8–20 min, 2026-10-24)
     expect(timeToken(1_790_000_000_000)).toBe('17900000000000000');
     expect(timeToken()).toMatch(/^\d{17}$/);
     expect(publicUserName()).toMatch(/^qa_m2_[0-9a-f]{6}$/);
@@ -623,5 +625,141 @@ test.describe('UNIT M2 client wire behaviour', () => {
       Male.some((u) => Female.includes(u)),
       'gender sets do not overlap',
     ).toBe(false);
+  });
+});
+
+interface ListedSuite {
+  title: string;
+  specs?: { title: string }[];
+  suites?: ListedSuite[];
+}
+
+test.describe('UNIT M2 account-state and triage fixes (2026-10-24)', () => {
+  test('UT-M2-024 Id-keyed maps (user ids / profile refs as keys) are compared by the shape of their values', () => {
+    // Other ids come back in a later run: still the same contract.
+    const old = bodyShape({
+      status: true,
+      first_names: { '10234567': 'QaOne', '10234568': 'QaTwo' },
+      profiles: { '07D35A0B': { user_id: '10234567', first_name: 'QaOne' }, F3026335: null },
+    });
+    const now = bodyShape({
+      status: true,
+      first_names: { '10999999': 'QaThree' },
+      profiles: { '4DD39D55': { user_id: '10999999', first_name: 'QaThree' } },
+    });
+    expect(shapeDiff(old, now)).toEqual([]);
+    expect(JSON.stringify(now)).not.toMatch(/10999999|4DD39D55/);
+    // A changed VALUE shape is still caught.
+    expect(
+      shapeDiff(old, bodyShape({ status: true, first_names: { '1': 5 }, profiles: { AAAAAAAA: null } })),
+    ).toEqual(['$.first_names.<id>: string → number']);
+    // Approved files recorded before the fold (raw ids as keys) compare alike, and approving never accumulates ids.
+    const raw = { status: 'boolean', first_names: { '10234567': 'string', '10234568': 'string' } } as const;
+    expect(shapeDiff(raw, bodyShape({ status: true, first_names: { '10000001': 'QaX' } }))).toEqual([]);
+    expect(JSON.stringify(unionShapes(raw, now))).not.toMatch(/1023456|10999999|4DD39D55/);
+    // Ordinary objects keep their keys.
+    expect(bodyShape({ status: true })).toEqual({ status: 'boolean' });
+  });
+
+  test('UT-M2-025 Only the PII read routes may get a blank user_id / user_ids / refs; the write route never', () => {
+    const api = (id: string) => design().inventory.find((x) => x.id === id)!;
+    expect(missingProtectedIn(api('API-190'), { apiId: 'API-190', body: { user_ids: [] } })).toEqual([]);
+    expect(missingProtectedIn(api('API-003'), { apiId: 'API-003', body: { refs: [] } })).toEqual([]);
+    expect(missingProtectedIn(api('API-001'), { apiId: 'API-001', query: {} })).toEqual([]);
+    expect(
+      missingProtectedIn(api('API-002'), { apiId: 'API-002', body: { user_id: '', first_name: 'Qa' } }),
+    ).toEqual(['$body.user_id: missing or blank — would act on an unknown member']);
+    // A blank target of any other route stays refused (fail closed).
+    expect(
+      missingProtectedIn(api('API-046'), { apiId: 'API-046', body: { ref: '' } }).length,
+      'like with a blank ref is refused',
+    ).toBeGreaterThan(0);
+    // Ids that are not the suite's own are still refused on the read routes.
+    expect(
+      unsafeIdsIn({ apiId: 'API-190', body: { user_ids: [1, 2, 3] } }, new Set(['10234567']), new Set()),
+    ).toHaveLength(3);
+    expect(
+      unsafeIdsIn(
+        { apiId: 'API-190', body: { user_ids: [10234567, null] } },
+        new Set(['10234567']),
+        new Set(),
+      ),
+    ).toEqual([]);
+  });
+
+  test('UT-M2-026 Approval-dependent per-API cases are declared in the late folder, every other case in per-api', () => {
+    const late = design().cases.filter((c) => runsLate(c));
+    const byCheck = (id: string) => late.some((c) => c.id === id);
+    // Conversation route, approved-state route and EXPOSE run last; AUTH / TOKEN and plain routes do not.
+    for (const id of ['M2-API-069-POS', 'M2-API-120-POS', 'M2-API-021-EXPOSE'])
+      if (design().cases.some((c) => c.id === id && c.status === 'NOT RUN' && !c.na))
+        expect(byCheck(id), `${id} runs late`).toBe(true);
+    for (const c of late) expect(['AUTH', 'TOKEN', 'UNMIG', 'HIDDEN']).not.toContain(c.check);
+    expect(late.some((c) => c.id === 'M2-API-013-POS')).toBe(false);
+    // Which FILE declares each test (top-level suites of the JSON list are the spec files, in queue order).
+    const list = JSON.parse(
+      execSync('npx playwright test --list --reporter=json --project=m2-api', {
+        encoding: 'utf8',
+        maxBuffer: 64 * 1024 * 1024,
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }),
+    ) as { suites: ListedSuite[] };
+    const fileOf = new Map<string, string>();
+    const walk = (suite: ListedSuite, file: string) => {
+      for (const spec of suite.specs ?? []) fileOf.set(spec.title.split(' ')[0]!, file);
+      for (const child of suite.suites ?? []) walk(child, file);
+    };
+    for (const f of list.suites) walk(f, f.title);
+    for (const c of late)
+      expect(fileOf.get(c.id) ?? '', `${c.id} is declared in m2/tests/zz-late/`).toMatch(/zz-late\//);
+    for (const [id, file] of fileOf)
+      if (file.includes('zz-late/'))
+        expect(byCheck(id), `${id} in the late folder needs an approved account`).toBe(true);
+    const files = list.suites.map((x) => x.title);
+    expect(files[files.length - 1], 'the late folder is queued last').toMatch(/zz-late\//);
+  });
+
+  test('UT-M2-027 Reports keep 8-digit user ids readable but still mask phone numbers', () => {
+    expect(scrubText('user_id=10234567 ids 102345678')).toBe('user_id=10234567 ids 102345678');
+    for (const phone of ['1023456789', '+911023456789', '911023456789', '+91 10234 56789', '1234-56-78'])
+      expect(scrubText(`n ${phone} x`)).toBe('n [REDACTED_PHONE] x');
+  });
+});
+
+test.describe('UNIT M2 secret hygiene of recorded exchanges (2026-10-24)', () => {
+  test('UT-M2-028 Tokens handed out in replies (JWTs, auth_token / access_token / grant_token…) never reach a report', () => {
+    // Synthetic, unsigned JWT-shaped strings — NOT real credentials.
+    const jwt = 'eyJhbGciOiJub25lIn0.eyJzdWIiOiJxYS1zeW50aGV0aWMifQ.qa-fake-signature';
+    const opaque = 'qa-opaque-token-value-123';
+    const rec = new ExchangeRecorder();
+    rec.record({
+      requestId: 'rid',
+      phase: 'test',
+      method: 'POST',
+      url: `https://example.test/V1/x?auth_token=${opaque}&page=1`,
+      requestHeaders: { Authorization: `Bearer ${jwt}`, token: opaque, Accept: 'application/json' },
+      requestBody: Buffer.from(JSON.stringify({ refresh_token: opaque, first_name: 'Qa' })),
+      status: 200,
+      responseContentType: 'application/json',
+      responseBody: JSON.stringify({
+        data: {
+          auth_token: jwt,
+          access_token: opaque,
+          grant_token_v2: opaque,
+          jwt: opaque,
+          user_id: '10234567',
+        },
+        note: `embedded ${jwt} here`,
+      }),
+      durationMs: 1,
+    });
+    const out = JSON.stringify(rec.exchanges());
+    expect(out).not.toContain(jwt);
+    expect(out).not.toContain(opaque);
+    expect(out).toContain('[REDACTED]');
+    // Everything else stays readable.
+    expect(out).toContain('10234567');
+    expect(out).toContain('page=1');
+    expect(out).toContain('first_name');
   });
 });

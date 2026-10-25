@@ -52,7 +52,10 @@ export interface M2Config {
   readonly values: Readonly<Record<string, string>>;
   /** Default catalogue values for Dev cURL placeholders (DEFAULT_VALUES + PHONE_CODE_ID), checked live at run time. */
   readonly defaultValues: Readonly<Record<string, string>>;
-  /** How long to wait for staging's auto-approval of a suite account (M2_APPROVAL_WAIT_MS, default 3 min). */
+  /**
+   * How long staging may take to auto-approve a suite account, counted from its onboarding (M2_APPROVAL_WAIT_MS,
+   * default 15 min — approval took 8–20 min in run qa-m2-20261024t134344).
+   */
   readonly approvalWaitMs: number;
   /** Contract recording mode (npm run m2:contracts:record only). */
   readonly recordContracts: boolean;
@@ -222,7 +225,7 @@ export function loadM2Config(env: NodeJS.ProcessEnv = process.env): M2Config {
     },
     values,
     defaultValues: { ...DEFAULT_VALUES, PHONE_CODE_ID: String(phoneCodeId) },
-    approvalWaitMs: int(e.M2_APPROVAL_WAIT_MS, 180_000),
+    approvalWaitMs: int(e.M2_APPROVAL_WAIT_MS, 900_000),
     recordContracts: e.M2_CONTRACTS_RECORD === 'true',
     login: {
       phoneCodeId,

@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-027-CONTRACT",
-  "recordedAt": "2026-10-24T12:49:57.117Z",
-  "runId": "qa-m2-20261024t124732-dd5f",
+  "recordedAt": "2026-10-24T15:15:17.065Z",
+  "runId": "qa-m2-20261024t151249-c728",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -108,14 +108,28 @@
           "has_concierge_subscription": "boolean",
           "has_voted": "boolean",
           "hide_first_name": "boolean",
-          "icebreakers": "null",
+          "icebreakers": [
+            {
+              "answer": "string",
+              "answer_id": "number",
+              "hint": "string",
+              "question": "string",
+              "question_id": "number"
+            }
+          ],
           "incognito_mode_active": "boolean",
           "incognito_mode_popup_text": {
             "button_text_1": "string",
             "description_text": "string",
             "header_text": "string"
           },
-          "introduction": "null",
+          "introduction": {
+            "answer": "string",
+            "answer_id": "number",
+            "hint": "string",
+            "question": "string",
+            "question_id": "number"
+          },
           "is_email_unsubscribed": "boolean",
           "is_sms_unsubscribed": "boolean",
           "last_seen": "string",
@@ -319,16 +333,15 @@
               "value": "number"
             }
           ],
-          "user_interests_v2": [
+          "user_interests_v2": [],
+          "user_traits": [
             {
-              "common_interest": "string",
               "id": "number",
-              "interest_id": "number",
               "name": "string",
-              "order": "number"
+              "order": "number",
+              "trait_id": "number"
             }
           ],
-          "user_traits": [],
           "work": "null",
           "work_v1": "null"
         }

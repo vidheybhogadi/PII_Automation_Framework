@@ -99,6 +99,7 @@
     "by": "Aisle codebase (develop_new 944f76a) — confirm with Dev",
     "on": "2026-10-24"
   },
+  "reRecord": "stale (2026-10-24): recorded while the variants shared one throwaway account, so after the first successful delete / reset every later variant got 401; each variant now gets a fresh throwaway (FRESH_PER_VARIANT) — re-record and approve",
   "approvals": [
     {
       "by": "Aisle codebase (develop_new 944f76a) — confirm with Dev",

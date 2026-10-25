@@ -37,6 +37,9 @@ async function names(fx: Fx, p: Profile) {
   };
 }
 
+/** How long M2-FNAME-017 polls for the new name (kept well under the test's timeout). */
+const FNAME_017_POLL_MS = 40_000;
+
 const LISTS = [
   'API-005',
   'API-006',
@@ -132,7 +135,9 @@ test.describe('M2 scenarios — first name', () => {
   });
 
   scenario('M2-FNAME-007', async (fx) => {
-    const p = await fx.accounts.onboarded(0);
+    // Its own throwaway account: a refused edit that still changes the PII name (real defect seen 2026-10-24: 256
+    // characters → HTTP 500, PII name updated) must not leave the shared onboarded account 0 inconsistent.
+    const p = await fx.accounts.throwaway('M2-FNAME-007');
     for (const [label, value] of [
       ['omitted', undefined],
       ['null', null],
@@ -276,16 +281,23 @@ test.describe('M2 scenarios — first name', () => {
     for (const apiId of ['API-014', 'API-048', 'API-063', 'API-005']) await call(fx, apiId, asUser(fx, b, a));
     const n2 = fx.data.firstName();
     expectOk(await editFirstName(fx, a, n2), 'A edits name');
+    // The poll stays well inside the test's time (40 s poll + 60 s extra), so "not seen" is recorded as evidence
+    // instead of ending in a timeout.
+    test.info().setTimeout(test.info().timeout + 60_000);
     const start = Date.now();
     let seen = false;
-    while (!seen && Date.now() - start < 60_000) {
+    while (!seen && Date.now() - start < FNAME_017_POLL_MS) {
       const res = await call(fx, 'API-063', asUser(fx, b, a));
       seen = itemsWithRef(res.json()).some((i) => String(i.ref) === a.ref && i.first_name === n2);
       if (!seen) await new Promise((r) => setTimeout(r, 5_000));
     }
     noteEvidence(
-      `N2 ${seen ? `seen after ${Math.round((Date.now() - start) / 1000)} s` : 'not seen within 60 s'} (window: M2Q-12).`,
+      `N2 ${seen ? `seen after ${Math.round((Date.now() - start) / 1000)} s` : `not seen within ${FNAME_017_POLL_MS / 1000} s`} (window: M2Q-12).`,
     );
+    if (!seen)
+      noteEvidence(
+        'Note for Dev (M2Q-12, from code — confirm with Dev): list_connected_profiles builds each conversation from the Redis cache "conversation_<id>" (one-month expiry), which stores the counterpart’s first_name (chat/conversation.rb:800, 813, 845, develop_new 944f76a); a name edit does not seem to refresh that cache, so the old name can stay visible.',
+      );
   });
 
   scenario('M2-FNAME-018', async () => {

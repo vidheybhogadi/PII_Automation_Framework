@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-024-CONTRACT",
-  "recordedAt": "2026-10-24T12:49:56.423Z",
-  "runId": "qa-m2-20261024t124732-dd5f",
+  "recordedAt": "2026-10-24T15:15:16.541Z",
+  "runId": "qa-m2-20261024t151249-c728",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -12,12 +12,7 @@
         "ref": "string",
         "user": {
           "about": "string",
-          "audio_prompt": {
-            "audio_url": "string",
-            "audio_url_id": "number",
-            "question": "string",
-            "question_id": "number"
-          },
+          "audio_prompt": "null",
           "delete_reasons": [
             {
               "id": "number",
@@ -139,14 +134,7 @@
           "is_sms_unsubscribed": "boolean",
           "last_seen": "string",
           "own_meetup": "null",
-          "partial_work": {
-            "college": "string",
-            "education": "string",
-            "graduation_year": "string",
-            "industry": "string",
-            "work": "string",
-            "work_title": "string"
-          },
+          "partial_work": "null",
           "percentage_profile_complete": "number",
           "photos": [
             {
@@ -158,10 +146,20 @@
               "prompt": "null",
               "prompt_id": "null",
               "selected": "boolean",
-              "status": "null"
+              "status": "string"
             }
           ],
-          "preferences": [],
+          "preferences": [
+            {
+              "answer_id": "number",
+              "id": "number",
+              "preference_question": {
+                "first_choice": "string",
+                "second_choice": "string"
+              },
+              "value": "number"
+            }
+          ],
           "profile_complete_without_selfie": "number",
           "profile_sharing_enabled": "boolean",
           "profile_sharing_popup_text": {
@@ -345,12 +343,7 @@
             }
           ],
           "work": "null",
-          "work_v1": {
-            "college": "string",
-            "graduation_year": "string",
-            "industry": "string",
-            "work_title": "string"
-          }
+          "work_v1": "null"
         }
       },
       "piiKeys": [

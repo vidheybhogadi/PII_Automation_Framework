@@ -45,6 +45,10 @@ for (const f of files.sort()) {
       `| ${rec.caseId} | ${label} | ${obs.status} | ${obs.piiKeys.join(', ') || '—'} | ${notes.join('; ') || ok} |`,
     );
   }
+  if (app?.reRecord)
+    rows.push(
+      `| ${rec.caseId} | (all) | — | — | APPROVED FILE MARKED FOR RE-RECORDING — ${app.reRecord}; approving replaces it |`,
+    );
   // Variants deliberately not sent (safety rule, M2Q-46): listed so the review sees them, never approved.
   for (const [label, reason] of Object.entries(rec.notSent ?? {}))
     rows.push(`| ${rec.caseId} | ${label} | — | — | NOT SENT — ${reason}; never approved |`);

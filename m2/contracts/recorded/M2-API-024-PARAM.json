@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-024-PARAM",
-  "recordedAt": "2026-10-24T12:51:49.681Z",
-  "runId": "qa-m2-20261024t124732-dd5f",
+  "recordedAt": "2026-10-24T15:16:09.752Z",
+  "runId": "qa-m2-20261024t151249-c728",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -90,7 +90,12 @@
               "name": "string",
               "preference_only": "boolean"
             },
-            "mbti": "null",
+            "mbti": {
+              "id": "number",
+              "mbti_type": "string",
+              "name": "string",
+              "preference_only": "boolean"
+            },
             "mobile_number": "string",
             "mother_tongue": {
               "id": "number",
@@ -173,7 +178,7 @@
               "prompt": "null",
               "prompt_id": "null",
               "selected": "boolean",
-              "status": "null"
+              "status": "string"
             }
           ],
           "preferences": [
@@ -352,14 +357,7 @@
             "about": "string",
             "story_id": "number"
           },
-          "user_interests": [
-            {
-              "id": "number",
-              "interest_id": "number",
-              "name": "string",
-              "value": "number"
-            }
-          ],
+          "user_interests": [],
           "user_interests_v2": [],
           "user_traits": [
             {
@@ -460,7 +458,12 @@
               "name": "string",
               "preference_only": "boolean"
             },
-            "mbti": "null",
+            "mbti": {
+              "id": "number",
+              "mbti_type": "string",
+              "name": "string",
+              "preference_only": "boolean"
+            },
             "mobile_number": "string",
             "mother_tongue": {
               "id": "number",
@@ -543,7 +546,7 @@
               "prompt": "null",
               "prompt_id": "null",
               "selected": "boolean",
-              "status": "null"
+              "status": "string"
             }
           ],
           "preferences": [

@@ -15,7 +15,7 @@ import {
   setDeep,
   type Fx,
 } from '../../src/scenarios/helpers';
-import type { Profile } from '../../src/accounts/accounts';
+import { extendTestTimeout, type Profile } from '../../src/accounts/accounts';
 
 const text = (fx: Fx, label: string) => `FT_${fx.m2Config.runId}_${label}`;
 
@@ -27,16 +27,52 @@ async function sendMessage(fx: Fx, a: Profile, b: Profile, body: string) {
   });
 }
 
-const chat = (fx: Fx, viewer: Profile, other: Profile) => call(fx, 'API-069', asUser(fx, viewer, other));
+/**
+ * chat_messages returns the messages OLDER than the request's created_at, 10 per page (chat/message.rb:47, 57,
+ * develop_new 944f76a — from code, confirm with Dev); Dev's example date is in the past, so a just-sent message would
+ * never be listed. The cursor is set 5 minutes in the future (format %Y-%m-%dT%H:%M:%SZ).
+ */
+const futureCursor = () => new Date(Date.now() + 5 * 60_000).toISOString().replace(/\.\d{3}Z$/, 'Z');
+
+/** One chat_messages page for `viewer` (conversation id from the suite pair, or `conversationId` when given). */
+async function chat(fx: Fx, viewer: Profile, other: Profile, page = 1, conversationId?: string) {
+  const caller = asUser(fx, viewer, other);
+  if (conversationId) caller.values = { ...caller.values, CONVERSATION_ID: conversationId };
+  const body = await devBody(fx, 'API-069', caller);
+  setDeep(body, 'created_at', futureCursor());
+  setDeep(body, 'page', page);
+  return call(fx, 'API-069', caller, { body });
+}
+
+/** Messages are saved asynchronously (ChatMessageWorker): read pages 1…pages until `done` holds, up to ~30 s. */
+async function readChatUntil(
+  fx: Fx,
+  viewer: Profile,
+  other: Profile,
+  done: (text: string) => boolean,
+  pages = 1,
+): Promise<string> {
+  extendTestTimeout(CHAT_SAVE_WAIT_MS + 15_000); // the poll gets its own time on top of the test's
+  const start = Date.now();
+  for (;;) {
+    let all = '';
+    for (let page = 1; page <= pages; page++) all += (await chat(fx, viewer, other, page)).rawText();
+    if (done(all) || Date.now() - start >= CHAT_SAVE_WAIT_MS) return all;
+    await new Promise((r) => setTimeout(r, 3_000));
+  }
+}
+
+const CHAT_SAVE_WAIT_MS = 30_000;
 
 test.describe('M2 scenarios — free text', () => {
   scenario('M2-FT-001', async (fx) => {
     const [a, b] = await fx.accounts.connectedPair();
     const t = text(fx, 'chat hello');
     expectOk(await sendMessage(fx, a, b, t), 'A sends');
-    expect((await chat(fx, b, a)).rawText().includes(t), 'B reads the exact text').toBe(true);
+    const has = (text: string) => text.includes(t);
+    expect(has(await readChatUntil(fx, b, a, has)), 'B reads the exact text').toBe(true);
     await call(fx, 'API-063', asUser(fx, b, a));
-    expect((await chat(fx, a, b)).rawText().includes(t), 'A reads the same text').toBe(true);
+    expect(has(await readChatUntil(fx, a, b, has)), 'A reads the same text').toBe(true);
   });
 
   scenario('M2-FT-002', async (fx) => {
@@ -68,12 +104,8 @@ test.describe('M2 scenarios — free text', () => {
     const [a, b] = await fx.accounts.connectedPair();
     const texts = Array.from({ length: 25 }, (_, i) => text(fx, `msg-${String(i).padStart(2, '0')}`));
     for (const t of texts) expectOk(await sendMessage(fx, a, b, t), 'send');
-    let all = '';
-    for (let page = 1; page <= 5; page++) {
-      const body = await devBody(fx, 'API-069', asUser(fx, b, a));
-      setDeep(body, 'page', page);
-      all += (await call(fx, 'API-069', asUser(fx, b, a), { body })).rawText();
-    }
+    // 25 messages at 10 per page: pages 1–3, cursor in the future, polled while the messages are saved.
+    const all = await readChatUntil(fx, b, a, (text) => texts.every((t) => text.includes(t)), 3);
     for (const t of texts) expect(all.includes(t), 'every text intact across pages').toBe(true);
   });
 
@@ -90,10 +122,8 @@ test.describe('M2 scenarios — free text', () => {
     ]) {
       const t = `${text(fx, 'special')} ${special}`;
       expectOk(await sendMessage(fx, a, b, t), 'send');
-      expect(
-        (await chat(fx, b, a)).rawText().includes(JSON.stringify(t).slice(1, -1)),
-        'identical text for the other user',
-      ).toBe(true);
+      const has = (text: string) => text.includes(JSON.stringify(t).slice(1, -1));
+      expect(has(await readChatUntil(fx, b, a, has)), 'identical text for the other user').toBe(true);
     }
   });
 
@@ -112,7 +142,19 @@ test.describe('M2 scenarios — free text', () => {
     const [a, b, c] = await fx.accounts.trio();
     const t = text(fx, 'pair only');
     expectOk(await sendMessage(fx, a, b, t), 'A sends to B');
-    for (const res of [await chat(fx, c, a), await call(fx, 'API-063', asUser(fx, c))])
+    // C asks for the A–B conversation BY ITS ID (taken from the pair — an IDOR-style read), after the message is
+    // readable by B; without the pair's id this part cannot be sent.
+    const has = (body: string) => body.includes(t);
+    noteEvidence(
+      `B (a member) ${has(await readChatUntil(fx, b, a, has)) ? 'reads' : 'does not read (yet)'} the text before C asks.`,
+    );
+    const conversationId = await fx.accounts.pairConversationId();
+    if (!conversationId)
+      blockPrereq(
+        PREREQ.connected.id,
+        'The A–B conversation id is only known for the suite’s own connected pair (M2_CREATE_ACCOUNTS=true)',
+      );
+    for (const res of [await chat(fx, c, a, 1, conversationId), await call(fx, 'API-063', asUser(fx, c))])
       expect(res.rawText().includes(t), 'C never sees the A–B text').toBe(false);
     const post = await sendMessage(fx, c, b, text(fx, 'intruder'));
     expect(post.status >= 200 && post.status < 300, 'C cannot post to a ref it is not connected to').toBe(

@@ -255,18 +255,34 @@ test.describe('M2 G1 — PII integration routes: validation, batches, profiles',
 
   scenario('M2-PIIR-008', async (fx) => {
     const tt = asTestToken(fx);
+    // A blank list is refused with 400 before any lookup (safety.ts BLANK_REFUSED_READS, from code).
     const empty = await call(fx, BATCH, tt, { body: { user_ids: [] } });
     expect(empty.status, 'empty user_ids → 400 (observed 2026-10-19)').toBe(400);
-    for (const [label, ids] of [
-      ['string instead of list', 'abc,def'],
-      ['null entries', [null, 'abc']],
-      ['numbers', [1, 2, 3]],
-      ['100 ids', Array.from({ length: 100 }, (_, i) => fx.data.userId(`b${i}`))],
+    // Only the suite's own ids or run-prefixed unknown values are named (never ids such as 1, 2, 3 or "abc", which
+    // may belong to real staging members).
+    const a = await fx.accounts.onboarded(0);
+    const b = await fx.accounts.onboarded(1);
+    const unknown = [fx.data.userId('piir008-x'), fx.data.userId('piir008-y')];
+    const own = { user_ids: [a.userId!, b.userId!], refs: [a.ref!, b.ref!] };
+    for (const [apiId, key] of [
+      [BATCH, 'user_ids'],
+      [PROFILE_NAMES, 'refs'],
     ] as const) {
-      for (const [apiId, key] of [
-        [BATCH, 'user_ids'],
-        [PROFILE_NAMES, 'refs'],
+      for (const [label, ids] of [
+        ['string instead of list', unknown.join(',')],
+        ['null entries', [null, own[key][0]]],
+        ['numbers', own.user_ids.map(Number)],
+        ['100 ids', Array.from({ length: 100 }, (_, i) => fx.data.userId(`b${i}`))],
       ] as const) {
+        if (key === 'refs' && label === 'numbers') {
+          // Refs are 8 hex characters, and all-digit refs exist: a suite user id sent as a ref could name a real
+          // member's profile, whose name the reply would carry. Not sent (safety, M2Q-46).
+          test.info().annotations.push({
+            type: 'blocked-variant',
+            description: `${apiId} refs as numbers: NOT SENT — a numeric value could be a real member’s ref (M2Q-46)`,
+          });
+          continue;
+        }
         const res = await call(fx, apiId, tt, { body: { [key]: ids } });
         expect(res.status, `${apiId} ${label}: 200 (from code: no limit, list normalised)`).toBe(200);
       }

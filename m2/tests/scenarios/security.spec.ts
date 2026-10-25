@@ -5,7 +5,8 @@ import { isSuccess, scanResponse } from '../../src/assertions/pii.assertions';
 import { scenario } from '../../src/checks/define';
 import { blockPrereq, PREREQ } from '../../src/prereq';
 import { expect, test } from '../../src/fixtures/m2-fixtures';
-import { asTestToken, asUser, call, devBody, INTERNALS, setDeep } from '../../src/scenarios/helpers';
+import { UNSAFE_REASON } from '../../src/checks/safety';
+import { asUser, call, devBody, INTERNALS, setDeep } from '../../src/scenarios/helpers';
 
 test.describe('M2 scenarios — security', () => {
   scenario('M2-SEC-004', async () => {
@@ -22,18 +23,19 @@ test.describe('M2 scenarios — security', () => {
   scenario('M2-SEC-006', async (fx) => {
     const marker = `QaEcho${fx.data.firstName()}`;
     const p = await fx.accounts.onboarded(0);
-    const cases: [
-      string,
-      ReturnType<typeof asUser> | ReturnType<typeof asTestToken>,
-      Record<string, unknown>,
-    ][] = [];
+    const cases: [string, ReturnType<typeof asUser>, Record<string, unknown>][] = [];
     for (const apiId of ['API-057', 'API-058']) {
       const body = await devBody(fx, apiId, asUser(fx, p));
       setDeep(body, 'first_name', `${marker}${'x'.repeat(300)}`);
       setDeep(body, 'personal_email', `${marker}@`);
       cases.push([apiId, asUser(fx, p), body]);
     }
-    cases.push(['API-002', asTestToken(fx), { user_id: '', first_name: marker }]);
+    // API-002 with a blank user_id is NOT sent: it is a write route, so the safety guard never lets a target key be
+    // blank (M2Q-46) — even though the code refuses it with 400 before any lookup. Recorded as a blocked variant.
+    test.info().annotations.push({
+      type: 'blocked-variant',
+      description: `API-002 blank user_id: NOT SENT — ${UNSAFE_REASON}`,
+    });
     for (const [apiId, caller, body] of cases) {
       const res = await call(fx, apiId, caller, { body, retry: false });
       if (isSuccess(res.status)) continue;

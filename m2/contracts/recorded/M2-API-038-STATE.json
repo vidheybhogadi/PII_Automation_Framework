@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-038-STATE",
-  "recordedAt": "2026-10-24T12:55:31.934Z",
-  "runId": "qa-m2-20261024t124732-dd5f",
+  "recordedAt": "2026-10-24T15:18:25.849Z",
+  "runId": "qa-m2-20261024t151249-c728",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -13,12 +13,7 @@
         "user": {
           "about": "string",
           "approved_time": "number",
-          "audio_prompt": {
-            "audio_url": "string",
-            "audio_url_id": "number",
-            "question": "string",
-            "question_id": "number"
-          },
+          "audio_prompt": "null",
           "delete_reasons": [
             {
               "id": "number",
@@ -127,28 +122,14 @@
           "has_partial_work": "boolean",
           "has_voted": "boolean",
           "hide_first_name": "boolean",
-          "icebreakers": [
-            {
-              "answer": "string",
-              "answer_id": "number",
-              "hint": "string",
-              "question": "string",
-              "question_id": "number"
-            }
-          ],
+          "icebreakers": "null",
           "incognito_mode_active": "boolean",
           "incognito_mode_popup_text": {
             "button_text_1": "string",
             "description_text": "string",
             "header_text": "string"
           },
-          "introduction": {
-            "answer": "string",
-            "answer_id": "number",
-            "hint": "string",
-            "question": "string",
-            "question_id": "number"
-          },
+          "introduction": "null",
           "is_email_unsubscribed": "boolean",
           "is_facebook_data_fetched": "boolean",
           "is_sms_unsubscribed": "boolean",
@@ -200,7 +181,6 @@
               "answer_id": "number",
               "invitation_type": "string",
               "question": "string",
-              "question_id": "number",
               "preferences": [
                 {
                   "answer": "string",
@@ -427,12 +407,7 @@
         "user": {
           "about": "string",
           "approved_time": "number",
-          "audio_prompt": {
-            "audio_url": "string",
-            "audio_url_id": "number",
-            "question": "string",
-            "question_id": "number"
-          },
+          "audio_prompt": "null",
           "delete_reasons": [
             {
               "id": "number",
@@ -541,28 +516,14 @@
           "has_partial_work": "boolean",
           "has_voted": "boolean",
           "hide_first_name": "boolean",
-          "icebreakers": [
-            {
-              "answer": "string",
-              "answer_id": "number",
-              "hint": "string",
-              "question": "string",
-              "question_id": "number"
-            }
-          ],
+          "icebreakers": "null",
           "incognito_mode_active": "boolean",
           "incognito_mode_popup_text": {
             "button_text_1": "string",
             "description_text": "string",
             "header_text": "string"
           },
-          "introduction": {
-            "answer": "string",
-            "answer_id": "number",
-            "hint": "string",
-            "question": "string",
-            "question_id": "number"
-          },
+          "introduction": "null",
           "is_email_unsubscribed": "boolean",
           "is_facebook_data_fetched": "boolean",
           "is_sms_unsubscribed": "boolean",
@@ -614,7 +575,6 @@
               "answer_id": "number",
               "invitation_type": "string",
               "question": "string",
-              "question_id": "number",
               "preferences": [
                 {
                   "answer": "string",
@@ -841,12 +801,7 @@
         "user": {
           "about": "string",
           "approved_time": "number",
-          "audio_prompt": {
-            "audio_url": "string",
-            "audio_url_id": "number",
-            "question": "string",
-            "question_id": "number"
-          },
+          "audio_prompt": "null",
           "delete_reasons": [
             {
               "id": "number",
@@ -955,28 +910,14 @@
           "has_partial_work": "boolean",
           "has_voted": "boolean",
           "hide_first_name": "boolean",
-          "icebreakers": [
-            {
-              "answer": "string",
-              "answer_id": "number",
-              "hint": "string",
-              "question": "string",
-              "question_id": "number"
-            }
-          ],
+          "icebreakers": "null",
           "incognito_mode_active": "boolean",
           "incognito_mode_popup_text": {
             "button_text_1": "string",
             "description_text": "string",
             "header_text": "string"
           },
-          "introduction": {
-            "answer": "string",
-            "answer_id": "number",
-            "hint": "string",
-            "question": "string",
-            "question_id": "number"
-          },
+          "introduction": "null",
           "is_email_unsubscribed": "boolean",
           "is_facebook_data_fetched": "boolean",
           "is_sms_unsubscribed": "boolean",
@@ -1028,7 +969,6 @@
               "answer_id": "number",
               "invitation_type": "string",
               "question": "string",
-              "question_id": "number",
               "preferences": [
                 {
                   "answer": "string",

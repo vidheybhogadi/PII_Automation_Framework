@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-100-STATE",
-  "recordedAt": "2026-10-24T12:55:53.414Z",
-  "runId": "qa-m2-20261024t124732-dd5f",
+  "recordedAt": "2026-10-24T15:18:44.168Z",
+  "runId": "qa-m2-20261024t151249-c728",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -31,7 +31,7 @@
         "ref": "string",
         "status": "boolean",
         "user": {
-          "about": "null",
+          "about": "string",
           "audio_prompt": {
             "audio_url": "string",
             "audio_url_id": "number",
@@ -359,7 +359,10 @@
           "show_incognito_mode": "boolean",
           "show_mandatory_complete_profile_popup": "boolean",
           "show_weekly": "boolean",
-          "story": "null",
+          "story": {
+            "about": "string",
+            "story_id": "number"
+          },
           "user_interests": [
             {
               "id": "number",
@@ -368,7 +371,15 @@
               "value": "number"
             }
           ],
-          "user_interests_v2": [],
+          "user_interests_v2": [
+            {
+              "common_interest": "string",
+              "id": "number",
+              "interest_id": "number",
+              "name": "string",
+              "order": "number"
+            }
+          ],
           "user_traits": [
             {
               "id": "number",
@@ -419,7 +430,7 @@
         "ref": "string",
         "status": "boolean",
         "user": {
-          "about": "null",
+          "about": "string",
           "audio_prompt": {
             "audio_url": "string",
             "audio_url_id": "number",
@@ -747,7 +758,10 @@
           "show_incognito_mode": "boolean",
           "show_mandatory_complete_profile_popup": "boolean",
           "show_weekly": "boolean",
-          "story": "null",
+          "story": {
+            "about": "string",
+            "story_id": "number"
+          },
           "user_interests": [
             {
               "id": "number",
@@ -756,7 +770,15 @@
               "value": "number"
             }
           ],
-          "user_interests_v2": [],
+          "user_interests_v2": [
+            {
+              "common_interest": "string",
+              "id": "number",
+              "interest_id": "number",
+              "name": "string",
+              "order": "number"
+            }
+          ],
           "user_traits": [
             {
               "id": "number",
@@ -807,7 +829,7 @@
         "ref": "string",
         "status": "boolean",
         "user": {
-          "about": "null",
+          "about": "string",
           "audio_prompt": {
             "audio_url": "string",
             "audio_url_id": "number",
@@ -1135,7 +1157,10 @@
           "show_incognito_mode": "boolean",
           "show_mandatory_complete_profile_popup": "boolean",
           "show_weekly": "boolean",
-          "story": "null",
+          "story": {
+            "about": "string",
+            "story_id": "number"
+          },
           "user_interests": [
             {
               "id": "number",
@@ -1144,7 +1169,15 @@
               "value": "number"
             }
           ],
-          "user_interests_v2": [],
+          "user_interests_v2": [
+            {
+              "common_interest": "string",
+              "id": "number",
+              "interest_id": "number",
+              "name": "string",
+              "order": "number"
+            }
+          ],
           "user_traits": [
             {
               "id": "number",

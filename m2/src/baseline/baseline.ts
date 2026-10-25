@@ -41,6 +41,11 @@ export interface BaselineFile {
   /** Variants deliberately NOT sent (safety rule, e.g. M2Q-46): label → Blocked reason. Never approved. */
   notSent?: Record<string, string>;
   approved?: { by: string; on: string };
+  /**
+   * Set on an approved file known to be stale (the reason): the next approval REPLACES its variants with the new
+   * recording instead of merging, and drops this mark. Normal runs still assert against it (and say so).
+   */
+  reRecord?: string;
   /** Every approval that changed the file (approve merges new recordings into the approved shape). */
   approvals?: { by: string; on: string; recordedAt: string; runId: string }[];
 }
@@ -49,7 +54,21 @@ export const CONTRACTS_DIR = path.join(ROOT, 'm2/contracts');
 export const recordedFile = (caseId: string) => path.join(CONTRACTS_DIR, 'recorded', `${caseId}.json`);
 export const approvedFile = (caseId: string) => path.join(CONTRACTS_DIR, 'approved', `${caseId}.json`);
 
-/** Recursive key/type shape. Arrays: merged shape of their elements; null stays "null". */
+/**
+ * A key that names a RECORD, not a field: all digits (an app user id) or an 8-character upper-case hex profile ref.
+ * An object whose keys are all such ids is an id-keyed map (e.g. first_names: {<user id>: name}, profiles: {<ref>:
+ * {…}}): which ids come back depends on the request, so the map is compared by the shape of its VALUES, under the
+ * single key ID_MAP_KEY (2026-10-24, M2-API-003-CONTRACT / M2-API-190-CONTRACT fix).
+ */
+export const ID_LIKE_KEY = /^(\d+|[0-9A-F]{8})$/;
+export const ID_MAP_KEY = '<id>';
+
+const isIdMap = (o: object) => {
+  const keys = Object.keys(o);
+  return keys.length > 0 && keys.every((k) => ID_LIKE_KEY.test(k));
+};
+
+/** Recursive key/type shape. Arrays: merged shape of their elements; null stays "null"; id-keyed maps → {<id>: …}. */
 export function shapeOf(v: unknown): Shape {
   if (v === null || v === undefined) return 'null';
   if (Array.isArray(v)) {
@@ -58,11 +77,37 @@ export function shapeOf(v: unknown): Shape {
     return [merged];
   }
   if (typeof v === 'object') {
+    if (isIdMap(v as object))
+      return {
+        [ID_MAP_KEY]: Object.values(v as Record<string, unknown>)
+          .map(shapeOf)
+          .reduce((a, b) => mergeShapes(a, b)),
+      };
     const out: Record<string, Shape> = {};
     for (const k of Object.keys(v as object).sort()) out[k] = shapeOf((v as Record<string, unknown>)[k]);
     return out;
   }
   return typeof v;
+}
+
+/**
+ * The same shape with every id-keyed map folded to {<id>: <union of its value shapes>} — applied to approved files
+ * recorded before shapeOf folded maps, so old and new recordings compare alike. Idempotent.
+ */
+export function normalizeShape(s: Shape): Shape {
+  if (Array.isArray(s)) return s.map(normalizeShape);
+  if (s && typeof s === 'object') {
+    if (isIdMap(s))
+      return {
+        [ID_MAP_KEY]: Object.values(s)
+          .map(normalizeShape)
+          .reduce((a, b) => unionRaw(a, b)),
+      };
+    const out: Record<string, Shape> = {};
+    for (const k of Object.keys(s).sort()) out[k] = normalizeShape(s[k]!);
+    return out;
+  }
+  return s;
 }
 
 function mergeShapes(a: Shape, b: Shape): Shape {
@@ -109,7 +154,11 @@ const kindOf = (s: Shape) =>
  *   list vs value), not by their keys. New PII keys anywhere are still caught by the separate PII-key comparison.
  * `itemDepth`: -1 outside lists, 0 = a list item, 1 = a value of an item's top-level key.
  */
-export function shapeDiff(expected: Shape, actual: Shape, at = '$', itemDepth = -1): string[] {
+export function shapeDiff(expected: Shape, actual: Shape): string[] {
+  return diffShapes(normalizeShape(expected), normalizeShape(actual));
+}
+
+function diffShapes(expected: Shape, actual: Shape, at = '$', itemDepth = -1): string[] {
   if (expected === 'null' || actual === 'null') return [];
   const ek = kindOf(expected);
   const ak = kindOf(actual);
@@ -117,7 +166,7 @@ export function shapeDiff(expected: Shape, actual: Shape, at = '$', itemDepth = 
   if (Array.isArray(expected) || Array.isArray(actual)) {
     if (!Array.isArray(expected) || !Array.isArray(actual)) return [`${at}: type changed`];
     if (!expected.length || !actual.length) return [];
-    return shapeDiff(expected[0]!, actual[0]!, `${at}[]`, 0);
+    return diffShapes(expected[0]!, actual[0]!, `${at}[]`, 0);
   }
   if (typeof expected === 'object' || typeof actual === 'object') {
     if (typeof expected !== 'object' || typeof actual !== 'object') return [`${at}: type changed`];
@@ -127,7 +176,7 @@ export function shapeDiff(expected: Shape, actual: Shape, at = '$', itemDepth = 
     for (const k of Object.keys(expected)) {
       if (!(k in actual)) {
         if (!inList) out.push(`${at}.${k}: missing`);
-      } else out.push(...shapeDiff(expected[k]!, actual[k]!, `${at}.${k}`, next));
+      } else out.push(...diffShapes(expected[k]!, actual[k]!, `${at}.${k}`, next));
     }
     if (!inList) for (const k of Object.keys(actual)) if (!(k in expected)) out.push(`${at}.${k}: new key`);
     return out;
@@ -162,18 +211,25 @@ export function piiKeyDiff(
   return { failures, notes };
 }
 
-/** Union of two shapes (approving a new recording on top of an approved one); conflicting types → the newer one. */
+/**
+ * Union of two shapes (approving a new recording on top of an approved one); conflicting types → the newer one.
+ * Id-keyed maps are folded first (normalizeShape), so the union never accumulates record ids.
+ */
 export function unionShapes(a: Shape, b: Shape): Shape {
+  return unionRaw(normalizeShape(a), normalizeShape(b));
+}
+
+function unionRaw(a: Shape, b: Shape): Shape {
   if (a === 'null') return b;
   if (b === 'null') return a;
   if (Array.isArray(a) && Array.isArray(b)) {
     if (!a.length) return b;
     if (!b.length) return a;
-    return [unionShapes(a[0]!, b[0]!)];
+    return [unionRaw(a[0]!, b[0]!)];
   }
   if (typeof a === 'object' && typeof b === 'object' && !Array.isArray(a) && !Array.isArray(b)) {
     const out: Record<string, Shape> = { ...a };
-    for (const [k, v] of Object.entries(b)) out[k] = k in out ? unionShapes(out[k]!, v) : v;
+    for (const [k, v] of Object.entries(b)) out[k] = k in out ? unionRaw(out[k]!, v) : v;
     return Object.fromEntries(
       Object.keys(out)
         .sort()
@@ -247,6 +303,11 @@ export async function withBaseline(
       .info()
       .annotations.push({ type: 'blocked-variant', description: `${v.label}: NOT SENT — ${v.notSent}` });
   }
+  if (!ctx.record && approved?.reRecord)
+    test.info().annotations.push({
+      type: 'assumption',
+      description: `Approved baseline marked for re-recording: ${approved.reRecord} (npm run m2:contracts:record, then approve).`,
+    });
   const toSend = variants.filter((x) => !x.notSent);
   if (!toSend.length) blockPrereq(PREREQ.unsafeVariants.id, PREREQ.unsafeVariants.reason);
   for (const v of toSend) {

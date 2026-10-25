@@ -9,6 +9,8 @@
  *              workbook (npm run m2:docs) copies it into "Last Run (observed)".
  * - `accounts` (worker) synthetic accounts: new accounts only with M2_CREATE_ACCOUNTS=true, Dev-provided onboarded
  *              / connected accounts, ledger + clean-up (m2/src/accounts/accounts.ts).
+ * - `accountWarmUp` (worker, auto) onboards the accounts that need staging's approval at worker start (once per
+ *              slot and run), so approval runs while other tests execute.
  * - `piiDb`    (worker) read-only PII DB, or a Blocked test when it is not configured here (M2Q-16).
  */
 import { test as base, expect } from '@playwright/test';
@@ -42,7 +44,12 @@ export interface M2WorkerFixtures {
   m2Config: M2Config;
   accounts: Accounts;
   piiDbWorker: PiiDb | undefined;
+  /** Auto: onboards the accounts that need approval when a worker starts (Accounts.warmUp). */
+  accountWarmUp: void;
 }
+
+/** Time for the worker-start onboarding of up to six synthetic accounts (Accounts.warmUp). */
+const WARM_UP_TIMEOUT_MS = 300_000;
 
 export const test = base.extend<M2TestFixtures, M2WorkerFixtures>({
   m2Config: [
@@ -60,6 +67,15 @@ export const test = base.extend<M2TestFixtures, M2WorkerFixtures>({
       await accounts.cleanup();
     },
     { scope: 'worker' },
+  ],
+
+  accountWarmUp: [
+    async ({ accounts }, use) => {
+      // Once per slot and run (accounts already in the run pool are not touched), so approval starts early.
+      await accounts.warmUp();
+      await use();
+    },
+    { scope: 'worker', auto: true, timeout: WARM_UP_TIMEOUT_MS },
   ],
 
   piiDbWorker: [

@@ -67,6 +67,28 @@ export function maskSecretsOnly(text: string): string {
   return out;
 }
 
+/** A JWT-looking value (header.payload.signature, base64url) — e.g. a user auth_token in a login reply. */
+const JWT_PATTERN = /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+/g;
+/** Keys whose value is a credential, whatever it looks like (auth_token, access_token, grant_token_…, jwt, token). */
+export const TOKEN_KEY_PATTERN = /^(auth_token|access_token|refresh_token|token|jwt|grant_token\w*)$/i;
+const TOKEN_KEYS = 'auth_token|access_token|refresh_token|token|jwt|grant_token\\w*';
+/** "key": "value" (JSON, any spacing) and key=value (query / form) for the token keys. */
+const TOKEN_JSON_PATTERN = new RegExp(`("(?:${TOKEN_KEYS})"\\s*:\\s*)"(?:[^"\\\\]|\\\\.)*"`, 'gi');
+const TOKEN_FORM_PATTERN = new RegExp(`(\\b(?:${TOKEN_KEYS})=)[^&\\s"']+`, 'gi');
+
+/**
+ * Replace credentials that were never registered as secrets — tokens issued INSIDE a reply (login, verify,
+ * submit_profile, reset_profile …): every JWT-looking value, and the value of every auth_token / access_token /
+ * refresh_token / token / jwt / grant_token* key (JSON or key=value), with [REDACTED]. Used by the exchange
+ * recorder for request and response bodies, URLs and headers before anything is written to a report (2026-10-24).
+ */
+export function maskTokens(text: string): string {
+  return text
+    .replace(TOKEN_JSON_PATTERN, `$1"${REDACTED}"`)
+    .replace(TOKEN_FORM_PATTERN, `$1${REDACTED}`)
+    .replace(JWT_PATTERN, REDACTED);
+}
+
 export function isSensitiveKey(key: string): boolean {
   return SENSITIVE_KEYS.has(key.toLowerCase());
 }
@@ -79,6 +101,13 @@ const PEM_PATTERN = /-----BEGIN [A-Z ]+-----[\s\S]*?-----END [A-Z ]+-----/g;
 const EMAIL_PATTERN = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
 /** 8+ digits, optionally separated by space ( ) . - and an optional leading "+" — phone-like. */
 const PHONE_PATTERN = /\+?\d(?:[\s().-]*\d){7,}/g;
+/**
+ * A bare run of 8–9 digits (no "+", no separators) is a record id — e.g. an Aisle app user id — not a phone number
+ * (an Indian mobile has 10 digits): kept, so reports stay readable (2026-10-24). Every 10+ digit run, every "+…"
+ * value and every separated number is still masked.
+ */
+const BARE_SHORT_ID = /^\d{8,9}$/;
+const maskPhone = (match: string): string => (BARE_SHORT_ID.test(match) ? match : '[REDACTED_PHONE]');
 /** "Bearer <anything>" — an Authorization value, whatever the token looks like. */
 const BEARER_PATTERN = /\bBearer\s+(?!\[REDACTED)[^\s"',;}]+/gi;
 /** Base64 runs of 40+ chars: 32-byte keys (44 chars) and 64-byte signatures (88 chars). */
@@ -103,7 +132,7 @@ export function scrubText(input: string): string {
     .replace(PEM_PATTERN, '[REDACTED_PEM]')
     .replace(EMAIL_PATTERN, '[REDACTED_EMAIL]')
     .replace(BASE64_BLOB_PATTERN, '[REDACTED_B64]')
-    .replace(PHONE_PATTERN, '[REDACTED_PHONE]');
+    .replace(PHONE_PATTERN, maskPhone);
   // eslint-disable-next-line no-control-regex
   return text.replace(/\u0000(\d+)\u0000/g, (_m, index: string) => protectedTokens[Number(index)] ?? '');
 }

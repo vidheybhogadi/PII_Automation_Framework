@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-107-PARAM",
-  "recordedAt": "2026-10-24T12:52:49.382Z",
-  "runId": "qa-m2-20261024t124732-dd5f",
+  "recordedAt": "2026-10-24T15:17:11.446Z",
+  "runId": "qa-m2-20261024t151249-c728",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {

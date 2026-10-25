@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-131-PARAM",
-  "recordedAt": "2026-10-24T12:53:17.936Z",
-  "runId": "qa-m2-20261024t124732-dd5f",
+  "recordedAt": "2026-10-24T15:17:32.645Z",
+  "runId": "qa-m2-20261024t151249-c728",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -14,9 +14,11 @@
       "piiKeys": []
     },
     "without note": {
-      "status": 401,
-      "contentType": "text/html",
-      "shape": "empty",
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "status": "boolean"
+      },
       "piiKeys": []
     }
   },
@@ -30,6 +32,12 @@
       "on": "2026-10-24",
       "recordedAt": "2026-10-24T12:53:17.936Z",
       "runId": "qa-m2-20261024t124732-dd5f"
+    },
+    {
+      "by": "Aisle codebase (develop_new 944f76a) — confirm with Dev",
+      "on": "2026-10-24",
+      "recordedAt": "2026-10-24T15:17:32.645Z",
+      "runId": "qa-m2-20261024t151249-c728"
     }
   ]
 }

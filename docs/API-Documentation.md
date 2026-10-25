@@ -2,7 +2,7 @@
 
 # Aisle API Documentation
 
-Every Aisle API: what it does, how to call it, the path a request takes through the code, and which data it reads and writes. 213 endpoints · staging `https://testa2.aisle.co` · generated 2026-10-24.
+Every Aisle API: what it does, how to call it, the path a request takes through the code, and which data it reads and writes. 213 endpoints · staging `https://testa2.aisle.co` · generated 2026-10-25.
 
 The same content is published as a website from the [API_Guide](https://github.com/vidheybhogadi/API_Guide) repository.
 

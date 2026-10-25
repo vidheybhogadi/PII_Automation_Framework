@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-121-CONTRACT",
-  "recordedAt": "2026-10-24T12:50:39.942Z",
-  "runId": "qa-m2-20261024t124732-dd5f",
+  "recordedAt": "2026-10-24T15:34:41.836Z",
+  "runId": "qa-m2-20261024t151249-c728",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -80,7 +80,12 @@
               "name": "string",
               "preference_only": "boolean"
             },
-            "mbti": "null",
+            "mbti": {
+              "id": "number",
+              "mbti_type": "string",
+              "name": "string",
+              "preference_only": "boolean"
+            },
             "mobile_number": "string",
             "mother_tongue": {
               "id": "number",
@@ -92,12 +97,7 @@
             "phone_code": "string",
             "politics": "null",
             "ref_id": "string",
-            "settle": {
-              "id": "number",
-              "name": "string",
-              "name_alias": "string",
-              "prefix": "string"
-            },
+            "settle": "null",
             "smoking_id": "number",
             "smoking_v1": {
               "id": "number",
@@ -155,6 +155,7 @@
           "percentage_profile_complete": "number",
           "photos": [
             {
+              "archive_reason": "string",
               "feedback_prompt": "null",
               "feedback_prompt_v2": "null",
               "feedback_prompt_v3": "null",
@@ -350,7 +351,15 @@
               "value": "number"
             }
           ],
-          "user_interests_v2": [],
+          "user_interests_v2": [
+            {
+              "common_interest": "string",
+              "id": "number",
+              "interest_id": "number",
+              "name": "string",
+              "order": "number"
+            }
+          ],
           "user_traits": [
             {
               "id": "number",

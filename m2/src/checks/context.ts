@@ -11,7 +11,13 @@ import { groupOf } from '../../scripts/m2-inventory';
 import { PAUSED_APIS } from '../../scripts/m2-all-cases';
 import { isWebRoute, NEW_USER_OK } from '../../scripts/m2-baseline';
 import { ROUTE_STATE, suiteStateFor } from '../../scripts/m2-code-evidence';
-import { DELETING_APIS, type Accounts, type Profile } from '../accounts/accounts';
+import {
+  DEACTIVATION_KEY,
+  DELETING_APIS,
+  RESETTING_APIS,
+  type Accounts,
+  type Profile,
+} from '../accounts/accounts';
 import { AUTH } from '../auth/credentials';
 import type { UserSession } from '../auth/session';
 import { TEST_OTP } from '../auth/test-phone';
@@ -157,7 +163,8 @@ export async function completeValues(
         break;
       }
       case 'REQUEST_ID':
-        if (self) out[name] = await fx.accounts.requestId(await fx.accounts.otherFor(self), self);
+        // A dedicated, approved invite sender of the opposite gender (Accounts.requestId); the caller receives.
+        if (self) out[name] = await fx.accounts.requestId(self);
         break;
       default:
         break;
@@ -217,7 +224,9 @@ async function userFor(
     const p = await fx.accounts.throwaway(key);
     return state === 'approved' ? fx.accounts.waitApproved(p, key) : p;
   }
-  if (state === 'deactivated') return fx.accounts.deactivated(key);
+  // One shared deactivation throwaway per role (pre-onboarded by warmUp so its approval clock starts early).
+  if (state === 'deactivated')
+    return fx.accounts.deactivated(role === 'A' ? DEACTIVATION_KEY : `${DEACTIVATION_KEY}:B`);
   if (ONCE_PER_ACCOUNT.includes(api.id)) return fx.accounts.throwaway(`${key}:${test.info().testId}`);
   if (SUBMIT_PROFILE.includes(api.id)) return fx.accounts.throwaway(key);
   if (NEW_USER_OK.includes(api.id)) return fx.accounts.newUser(role);
@@ -372,5 +381,8 @@ export async function send(
   // again — a login to a deleted number creates a new account).
   if (DELETING_APIS.includes(api.id) && caller.session && res.status >= 200 && res.status < 300)
     await fx.accounts.recordDeletedBy(caller.session, api.id, res.status);
+  // A successful reset consumes the throwaway (a reset account answers 406 to the next reset): fresh one next time.
+  if (RESETTING_APIS.includes(api.id) && caller.session && res.status >= 200 && res.status < 300)
+    fx.accounts.markConsumed(caller.session, api.id, res.status);
   return res;
 }

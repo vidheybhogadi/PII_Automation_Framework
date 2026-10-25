@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-068-PARAM",
-  "recordedAt": "2026-10-24T12:52:42.033Z",
-  "runId": "qa-m2-20261024t124732-dd5f",
+  "recordedAt": "2026-10-24T15:17:04.700Z",
+  "runId": "qa-m2-20261024t151249-c728",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -10,52 +10,8 @@
       "contentType": "application/json",
       "shape": {
         "conversations": {
-          "grant_token_pubnub": {
-            "pubnub_channel_groups": [
-              "string"
-            ],
-            "report_options": [
-              {
-                "id": "number",
-                "name": "string",
-                "show_on_connection": "boolean"
-              }
-            ],
-            "token": "string",
-            "use_pubnub": "boolean"
-          },
-          "messages": [
-            {
-              "avatar": "string",
-              "call_enabled": "boolean",
-              "can_call": "boolean",
-              "can_send_message": "boolean",
-              "conversation_id": "number",
-              "date": "string",
-              "first_name": "string",
-              "has_sent_last_message": "boolean",
-              "initiator_id": "number",
-              "is_boost_connection": "boolean",
-              "is_full_connection": "boolean",
-              "is_initiator": "boolean",
-              "is_profile_state_disabled": "boolean",
-              "link_time": "string",
-              "link_type": "string",
-              "link_type_v1": "null",
-              "message": "string",
-              "message_info": "null",
-              "no_message_sent": "boolean",
-              "older_messages_present": "boolean",
-              "payment_message": "null",
-              "pubnub_channel": "string",
-              "ref": "string",
-              "ref_id": "string",
-              "sent_from_for_you": "boolean",
-              "tag": "null",
-              "unread": "boolean",
-              "video_call_message": "string"
-            }
-          ],
+          "grant_token_pubnub": "null",
+          "messages": [],
           "report_options": [
             {
               "id": "number",
@@ -74,7 +30,6 @@
         "user_id": "number"
       },
       "piiKeys": [
-        "first_name",
         "name"
       ]
     },
@@ -83,52 +38,8 @@
       "contentType": "application/json",
       "shape": {
         "conversations": {
-          "grant_token_pubnub": {
-            "pubnub_channel_groups": [
-              "string"
-            ],
-            "report_options": [
-              {
-                "id": "number",
-                "name": "string",
-                "show_on_connection": "boolean"
-              }
-            ],
-            "token": "string",
-            "use_pubnub": "boolean"
-          },
-          "messages": [
-            {
-              "avatar": "string",
-              "call_enabled": "boolean",
-              "can_call": "boolean",
-              "can_send_message": "boolean",
-              "conversation_id": "number",
-              "date": "string",
-              "first_name": "string",
-              "has_sent_last_message": "boolean",
-              "initiator_id": "number",
-              "is_boost_connection": "boolean",
-              "is_full_connection": "boolean",
-              "is_initiator": "boolean",
-              "is_profile_state_disabled": "boolean",
-              "link_time": "string",
-              "link_type": "string",
-              "link_type_v1": "null",
-              "message": "string",
-              "message_info": "null",
-              "no_message_sent": "boolean",
-              "older_messages_present": "boolean",
-              "payment_message": "null",
-              "pubnub_channel": "string",
-              "ref": "string",
-              "ref_id": "string",
-              "sent_from_for_you": "boolean",
-              "tag": "null",
-              "unread": "boolean",
-              "video_call_message": "string"
-            }
-          ],
+          "grant_token_pubnub": "null",
+          "messages": [],
           "report_options": [
             {
               "id": "number",
@@ -147,7 +58,6 @@
         "user_id": "number"
       },
       "piiKeys": [
-        "first_name",
         "name"
       ]
     }

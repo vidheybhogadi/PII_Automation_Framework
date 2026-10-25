@@ -1,0 +1,28 @@
+{
+  "caseId": "M2-API-030-REPEAT",
+  "recordedAt": "2026-10-24T15:53:09.734Z",
+  "runId": "qa-m2-20261024t151249-c728",
+  "build": "unknown — deployed commit not confirmed (M2Q-01)",
+  "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
+  "variants": {
+    "first request": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "is_boost_available": "boolean",
+        "profile_state": "string",
+        "status": "boolean"
+      },
+      "piiKeys": []
+    },
+    "same request again": {
+      "status": 403,
+      "contentType": "application/json",
+      "shape": {
+        "profile_state": "string",
+        "zendesk_url": "string"
+      },
+      "piiKeys": []
+    }
+  }
+}

@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-014-CONTRACT",
-  "recordedAt": "2026-10-24T12:49:53.488Z",
-  "runId": "qa-m2-20261024t124732-dd5f",
+  "recordedAt": "2026-10-24T15:15:10.307Z",
+  "runId": "qa-m2-20261024t151249-c728",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -31,7 +31,7 @@
               "string"
             ],
             "display_new_tag": "boolean",
-            "distance": "null",
+            "distance": "string",
             "drinking_v2_id": "number",
             "faith_id": "number",
             "general_information": {
@@ -91,20 +91,19 @@
                 "name": "string",
                 "preference_only": "boolean"
               },
-              "mbti": "null",
+              "mbti": {
+                "id": "number",
+                "mbti_type": "string",
+                "name": "string",
+                "preference_only": "boolean"
+              },
               "mother_tongue": {
                 "id": "number",
                 "name": "string"
               },
               "mother_tongue_id": "number",
-              "pet": {
-                "id": "number",
-                "name": "string"
-              },
-              "politics": {
-                "id": "number",
-                "name": "string"
-              },
+              "pet": "null",
+              "politics": "null",
               "ref_id": "string",
               "settle": {
                 "id": "number",
@@ -160,17 +159,17 @@
             "mother_tongue_id": "number",
             "online_code": "number",
             "partial_work": {
+              "college": "string",
               "education": "string",
+              "graduation_year": "string",
+              "industry": "string",
               "work": "string",
               "work_title": "string",
               "new_qualification": {
                 "id": "number",
                 "name": "string",
                 "preference_only": "boolean"
-              },
-              "college": "string",
-              "graduation_year": "string",
-              "industry": "string"
+              }
             },
             "photos": [
               {
@@ -184,8 +183,31 @@
                 "status": "string"
               }
             ],
-            "preferences": [],
-            "profile_data_list": [],
+            "preferences": [
+              {
+                "answer_id": "number",
+                "id": "number",
+                "preference_question": {
+                  "first_choice": "string",
+                  "second_choice": "string"
+                },
+                "value": "number"
+              }
+            ],
+            "profile_data_list": [
+              {
+                "invitation_type": "string",
+                "preferences": [
+                  {
+                    "answer": "string",
+                    "answer_id": "number",
+                    "first_choice": "string",
+                    "second_choice": "string"
+                  }
+                ],
+                "question": "string"
+              }
+            ],
             "profile_sharing_enabled": "boolean",
             "relationship_goal": {
               "id": "number",
@@ -208,8 +230,23 @@
             "tab_name": "null",
             "user_id": "number",
             "user_interests": [],
-            "user_interests_v2": [],
-            "user_traits": [],
+            "user_interests_v2": [
+              {
+                "common_interest": "string",
+                "id": "number",
+                "interest_id": "number",
+                "name": "string",
+                "order": "number"
+              }
+            ],
+            "user_traits": [
+              {
+                "id": "number",
+                "name": "string",
+                "order": "number",
+                "trait_id": "number"
+              }
+            ],
             "verification_status": "string",
             "work": {
               "experience_v1": {

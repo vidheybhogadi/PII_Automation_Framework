@@ -24,6 +24,11 @@
  *    observed 500); every other target key's wrong-type variant is not sent.
  * 4. missingProtectedIn(): checked by send() before EVERY request — a target / phone / login-OTP key of the Dev request
  *    that is missing, null or blank in the outgoing request is refused (fail closed, covers scenarios too).
+ *    Exception (2026-10-24, BLANK_REFUSED_READS): the TEST_TOKEN READ routes of /V1/pii_integration reject a blank
+ *    user_id / user_ids / refs with 400 "Missing required parameter" BEFORE any lookup (required_param /
+ *    array_param raise on value.blank?, pii_integration_controller.rb:6, 21, 61, 134-147, develop_new 944f76a — from
+ *    code, confirm with Dev), and they only read. Only these keys of only these routes may be blank; every write
+ *    route (incl. API-002) stays fail-closed.
  * 5. unsafeIdsIn() also checks phone keys: only an allowed synthetic number (10xxxxxxxx, never 106; isAllowedTestNumber,
  *    with or without +91) or a non-numeric "qa…" value; phone_code_id only the configured India id or "qa…".
  */
@@ -138,15 +143,28 @@ function valuesOf(body: unknown, key: string, out: unknown[] = []): unknown[] {
 }
 
 /**
+ * READ routes that refuse a blank target key with 400 before any lookup (rule 4 exception, from code — confirm with
+ * Dev): GET /V1/pii_integration/first_name (user_id), POST …/profile_first_names (refs), POST …/first_names/batch
+ * (user_ids). Writes are never listed here.
+ */
+export const BLANK_REFUSED_READS: Readonly<Record<string, readonly string[]>> = {
+  'API-001': ['user_id'],
+  'API-003': ['refs'],
+  'API-190': ['user_ids'],
+};
+
+/**
  * Rule 4: locations (never values) of protected Dev keys that are missing, null or blank in the outgoing request.
- * A raw body (invalid JSON / multipart) is not inspected.
+ * A raw body (invalid JSON / multipart) is not inspected. Only BLANK_REFUSED_READS may be blank.
  */
 export function missingProtectedIn(api: CurlApi, req: SafetyInput & { rawBody?: boolean }): string[] {
   const out: string[] = [];
   const queryKeys = new Set(
     [...(api.curl[0] ?? '').matchAll(/--data-urlencode "([^=]+)=/g)].map((m) => m[1]!),
   );
+  const blankAllowed = BLANK_REFUSED_READS[api.id] ?? [];
   for (const [key, kind] of protectedKeys(api)) {
+    if (blankAllowed.includes(key)) continue; // refused with 400 before any lookup (read-only route)
     const what =
       kind === 'target' ? 'would act on an unknown member' : 'would log in / write with no synthetic number';
     if (queryKeys.has(key)) {

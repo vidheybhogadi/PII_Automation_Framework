@@ -36,7 +36,7 @@ export const PREREQ = {
   approval: {
     id: 'M2Q-32',
     reason:
-      'Needs an APPROVED synthetic profile — staging did not auto-approve the suite account in time (male accounts were auto-approved within ~1–2 min on 2026-10-24; wait: M2_APPROVAL_WAIT_MS, default 3 min)',
+      'Needs an APPROVED synthetic profile — staging did not auto-approve the suite account in time (approval took 8–20 min in run qa-m2-20261024t134344; window from onboarding: M2_APPROVAL_WAIT_MS, default 15 min)',
   },
   devOnly: {
     id: 'M2Q-45',

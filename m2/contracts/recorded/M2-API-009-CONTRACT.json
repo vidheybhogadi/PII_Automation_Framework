@@ -1,0 +1,18 @@
+{
+  "caseId": "M2-API-009-CONTRACT",
+  "recordedAt": "2026-10-24T15:18:46.586Z",
+  "runId": "qa-m2-20261024t151249-c728",
+  "build": "unknown — deployed commit not confirmed (M2Q-01)",
+  "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
+  "variants": {
+    "valid request": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "conversation_id": "number",
+        "status": "boolean"
+      },
+      "piiKeys": []
+    }
+  }
+}

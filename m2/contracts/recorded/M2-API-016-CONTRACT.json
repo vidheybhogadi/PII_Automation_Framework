@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-016-CONTRACT",
-  "recordedAt": "2026-10-24T12:49:54.098Z",
-  "runId": "qa-m2-20261024t124732-dd5f",
+  "recordedAt": "2026-10-24T15:15:13.391Z",
+  "runId": "qa-m2-20261024t151249-c728",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -42,12 +42,7 @@
               "faith_id": "number",
               "general_information": {
                 "age": "number",
-                "cast": {
-                  "faith_id": "number",
-                  "id": "number",
-                  "name": "string",
-                  "position": "number"
-                },
+                "cast": "null",
                 "date_of_birth": "string",
                 "date_of_birth_v1": "string",
                 "diet": {
@@ -76,7 +71,10 @@
                 "gender": "string",
                 "height": "number",
                 "home_town": "string",
-                "kid": "null",
+                "kid": {
+                  "id": "number",
+                  "name": "string"
+                },
                 "languages": [
                   {
                     "id": "number",
@@ -94,13 +92,21 @@
                   "name": "string",
                   "preference_only": "boolean"
                 },
-                "mbti": "null",
+                "mbti": {
+                  "id": "number",
+                  "mbti_type": "string",
+                  "name": "string",
+                  "preference_only": "boolean"
+                },
                 "mother_tongue": {
                   "id": "number",
                   "name": "string"
                 },
                 "mother_tongue_id": "number",
-                "pet": "null",
+                "pet": {
+                  "id": "number",
+                  "name": "string"
+                },
                 "politics": "null",
                 "ref_id": "string",
                 "settle": {
@@ -158,17 +164,16 @@
               "online_code": "number",
               "partial_work": {
                 "education": "string",
-                "industry": "string",
                 "new_qualification": {
                   "id": "number",
                   "name": "string",
                   "preference_only": "boolean"
                 },
                 "work": "string",
-                "work_title": "string",
                 "college": "string",
                 "graduation_year": "string",
-                "new_income": "null"
+                "industry": "string",
+                "work_title": "string"
               },
               "photos": [
                 {
@@ -231,14 +236,7 @@
               },
               "tab_name": "null",
               "user_id": "number",
-              "user_interests": [
-                {
-                  "id": "number",
-                  "interest_id": "number",
-                  "name": "string",
-                  "value": "number"
-                }
-              ],
+              "user_interests": [],
               "user_interests_v2": [
                 {
                   "common_interest": "string",
@@ -351,7 +349,7 @@
               "prompt": "null",
               "prompt_id": "null",
               "selected": "boolean",
-              "status": "null"
+              "status": "string"
             }
           ],
           "image_prompts": [

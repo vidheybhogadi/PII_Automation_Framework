@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-015-CONTRACT",
-  "recordedAt": "2026-10-24T12:49:52.385Z",
-  "runId": "qa-m2-20261024t124732-dd5f",
+  "recordedAt": "2026-10-24T15:15:11.474Z",
+  "runId": "qa-m2-20261024t151249-c728",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -102,14 +102,8 @@
                 "name": "string"
               },
               "mother_tongue_id": "number",
-              "pet": {
-                "id": "number",
-                "name": "string"
-              },
-              "politics": {
-                "id": "number",
-                "name": "string"
-              },
+              "pet": "null",
+              "politics": "null",
               "ref_id": "string",
               "settle": {
                 "id": "number",
@@ -165,18 +159,17 @@
             "mother_tongue_id": "number",
             "online_code": "number",
             "partial_work": {
+              "college": "string",
               "education": "string",
+              "graduation_year": "string",
+              "industry": "string",
               "work": "string",
               "work_title": "string",
               "new_qualification": {
                 "id": "number",
                 "name": "string",
                 "preference_only": "boolean"
-              },
-              "college": "string",
-              "graduation_year": "string",
-              "industry": "string",
-              "new_income": "null"
+              }
             },
             "photos": [
               {
@@ -203,11 +196,7 @@
             ],
             "profile_data_list": [
               {
-                "answer": "string",
-                "answer_id": "number",
                 "invitation_type": "string",
-                "question": "string",
-                "question_id": "number",
                 "preferences": [
                   {
                     "answer": "string",
@@ -215,7 +204,8 @@
                     "first_choice": "string",
                     "second_choice": "string"
                   }
-                ]
+                ],
+                "question": "string"
               }
             ],
             "profile_sharing_enabled": "boolean",
@@ -239,14 +229,7 @@
             },
             "tab_name": "null",
             "user_id": "number",
-            "user_interests": [
-              {
-                "id": "number",
-                "interest_id": "number",
-                "name": "string",
-                "value": "number"
-              }
-            ],
+            "user_interests": [],
             "user_interests_v2": [
               {
                 "common_interest": "string",
@@ -256,7 +239,14 @@
                 "order": "number"
               }
             ],
-            "user_traits": [],
+            "user_traits": [
+              {
+                "id": "number",
+                "name": "string",
+                "order": "number",
+                "trait_id": "number"
+              }
+            ],
             "verification_status": "string",
             "work": {
               "experience_v1": {

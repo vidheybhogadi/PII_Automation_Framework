@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-024-REPEAT",
-  "recordedAt": "2026-10-24T12:53:31.999Z",
-  "runId": "qa-m2-20261024t124732-dd5f",
+  "recordedAt": "2026-10-24T15:17:35.385Z",
+  "runId": "qa-m2-20261024t151249-c728",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -113,14 +113,28 @@
           "has_concierge_subscription": "boolean",
           "has_voted": "boolean",
           "hide_first_name": "boolean",
-          "icebreakers": "null",
+          "icebreakers": [
+            {
+              "answer": "string",
+              "answer_id": "number",
+              "hint": "string",
+              "question": "string",
+              "question_id": "number"
+            }
+          ],
           "incognito_mode_active": "boolean",
           "incognito_mode_popup_text": {
             "button_text_1": "string",
             "description_text": "string",
             "header_text": "string"
           },
-          "introduction": "null",
+          "introduction": {
+            "answer": "string",
+            "answer_id": "number",
+            "hint": "string",
+            "question": "string",
+            "question_id": "number"
+          },
           "is_email_unsubscribed": "boolean",
           "is_sms_unsubscribed": "boolean",
           "last_seen": "string",
@@ -174,7 +188,7 @@
             "is_default": "boolean",
             "is_hidden": "boolean",
             "name": "string",
-            "optional_relationship_goal_message": "null",
+            "optional_relationship_goal_message": "string",
             "prefix": "string",
             "show_on_profile": "boolean"
           },
@@ -465,14 +479,28 @@
           "has_concierge_subscription": "boolean",
           "has_voted": "boolean",
           "hide_first_name": "boolean",
-          "icebreakers": "null",
+          "icebreakers": [
+            {
+              "answer": "string",
+              "answer_id": "number",
+              "hint": "string",
+              "question": "string",
+              "question_id": "number"
+            }
+          ],
           "incognito_mode_active": "boolean",
           "incognito_mode_popup_text": {
             "button_text_1": "string",
             "description_text": "string",
             "header_text": "string"
           },
-          "introduction": "null",
+          "introduction": {
+            "answer": "string",
+            "answer_id": "number",
+            "hint": "string",
+            "question": "string",
+            "question_id": "number"
+          },
           "is_email_unsubscribed": "boolean",
           "is_sms_unsubscribed": "boolean",
           "last_seen": "string",
@@ -526,7 +554,7 @@
             "is_default": "boolean",
             "is_hidden": "boolean",
             "name": "string",
-            "optional_relationship_goal_message": "null",
+            "optional_relationship_goal_message": "string",
             "prefix": "string",
             "show_on_profile": "boolean"
           },

@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-036-BODY",
-  "recordedAt": "2026-10-24T12:48:03.663Z",
-  "runId": "qa-m2-20261024t124732-dd5f",
+  "recordedAt": "2026-10-24T15:13:47.596Z",
+  "runId": "qa-m2-20261024t151249-c728",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -347,7 +347,14 @@
               "order": "number"
             }
           ],
-          "user_traits": [],
+          "user_traits": [
+            {
+              "id": "number",
+              "name": "string",
+              "order": "number",
+              "trait_id": "number"
+            }
+          ],
           "work": "null",
           "work_v1": "null"
         }
@@ -672,7 +679,14 @@
               "order": "number"
             }
           ],
-          "user_traits": [],
+          "user_traits": [
+            {
+              "id": "number",
+              "name": "string",
+              "order": "number",
+              "trait_id": "number"
+            }
+          ],
           "work": "null",
           "work_v1": "null"
         }

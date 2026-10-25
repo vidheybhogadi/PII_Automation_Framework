@@ -4,7 +4,7 @@
 
 Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-pii-affected-apis.md](aisle-pii-affected-apis.md) (Dev inventory (saurabh/pii-changes @ ae838f4, 16-Oct-2026)).
 
-**2473 test cases** (111 scenario + 2362 per-API) over **212 inventory entries** (11 groups). PASS 869 · FAIL 79 · BLOCKED 1331 · NEED DEV CLARIFICATION 0 · WAITING 1 · NOT APPLICABLE 193 · NOT RUN 0. Nothing has been executed as an M2 test case yet.
+**2473 test cases** (111 scenario + 2362 per-API) over **212 inventory entries** (11 groups). PASS 975 · FAIL 119 · BLOCKED 1185 · NEED DEV CLARIFICATION 0 · WAITING 1 · NOT APPLICABLE 193 · NOT RUN 0. Nothing has been executed as an M2 test case yet.
 
 ## By type and category (same Type values as M1)
 
@@ -41,7 +41,7 @@ Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-p
 | G10 CMS / admin                                          | 52   | 641      | Admin profile views, edits, search, curation, reviews, member activity, exports and the ActiveAdmin IRL page. Admin auth + permission checks; correct name/email/phone per profile.    |
 | M1 PII facade proxy (covered by Milestone 1)             | 12   | M1 suite | The /V1/api/v1/pii-test/* proxy routes (incl. readiness and free-text keys). Already covered by the 109 Milestone 1 cases; not duplicated in M2.                                       |
 
-## Runnable now (948 cases, no new access needed)
+## Runnable now (1094 cases, no new access needed)
 
 - `M2-PIIR-001` Write a first name with the test route, then read it back
 - `M2-PIIR-002` Writing a new first name replaces the old one
@@ -75,18 +75,19 @@ Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-p
 - `M2-INT-003` A name written through the M1 facade does not refresh app caches
 - `M2-FT-001` A sent chat message (text + quoted previous message) is readable by the other person exactly as sent
 - `M2-FT-004` Many messages in one conversation: order, pagination and the created_at cursor still work
-- POS (Valid request succeeds with correct PII): 90 APIs
-- CONTRACT (Response contract unchanged): 87 APIs
+- `M2-FT-007` A third user cannot read or post into another pair’s conversation
+- POS (Valid request succeeds with correct PII): 94 APIs
+- CONTRACT (Response contract unchanged): 97 APIs
 - AUTH (Missing / invalid credential refused): 190 APIs
 - TOKEN (Wrong credential type refused): 188 APIs
-- PARAM (Missing / invalid parameters): 64 APIs
-- BODY (Malformed body / wrong data types): 35 APIs
-- IDOR (Cannot act on / read another user): 75 APIs
-- EXPOSE (No unintended PII exposure): 3 APIs
-- GATE (Read gate off: same value read back (gate on: waiting)): 78 APIs
-- CACHE (PII change reflected in later reads): 2 APIs
-- STATE (Wrong account / record state): 47 APIs
-- REPEAT (Repeated / double request): 56 APIs
+- PARAM (Missing / invalid parameters): 65 APIs
+- BODY (Malformed body / wrong data types): 48 APIs
+- IDOR (Cannot act on / read another user): 88 APIs
+- EXPOSE (No unintended PII exposure): 47 APIs
+- GATE (Read gate off: same value read back (gate on: waiting)): 102 APIs
+- CACHE (PII change reflected in later reads): 33 APIs
+- STATE (Wrong account / record state): 49 APIs
+- REPEAT (Repeated / double request): 59 APIs
 - FIELD (PII input validation & normalisation): 1 APIs
 
 ## Per-API checks

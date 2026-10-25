@@ -92,7 +92,9 @@ never passed).
 - Delete / reset / deactivate routes, and profile re-submission routes, use a **throwaway** account per API. It is
   onboarded for that API and shared by its cases in one worker. It is replaced once a case deletes, resets or
   deactivates it. Public user name cases (settable once) get one throwaway account per case.
-- Approved-state routes wait up to 3 minutes (`M2_APPROVAL_WAIT_MS`) for staging to approve a male account by itself.
+- Approved-state routes, the suite's connected pair, invites and the deactivated-state account wait for staging to
+  approve the account by itself — at most 15 minutes from its onboarding (`M2_APPROVAL_WAIT_MS`). The accounts that
+  need approval are onboarded when a worker starts, so approval runs while other tests execute.
   On 2026-10-24, male synthetic accounts were seen approved after about 1–2 minutes. If no approval comes, the test is
   **Blocked** (M2Q-32).
 - Deactivated-state routes use a throwaway account that the suite deactivates itself

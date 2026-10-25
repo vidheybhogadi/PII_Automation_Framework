@@ -1,12 +1,12 @@
 {
   "caseId": "M2-API-198-CONTRACT",
-  "recordedAt": "2026-10-24T12:51:30.850Z",
-  "runId": "qa-m2-20261024t124732-dd5f",
+  "recordedAt": "2026-10-24T15:15:55.997Z",
+  "runId": "qa-m2-20261024t151249-c728",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
     "valid request": {
-      "status": 200,
+      "status": 406,
       "contentType": "application/json",
       "shape": {
         "about": "null",
@@ -67,6 +67,7 @@
         "show_personalised_comment_popup": "boolean",
         "show_update_app": "boolean",
         "show_weekly": "boolean",
+        "status": "boolean",
         "status_v1": "boolean",
         "store_kit_2_enabled": "boolean",
         "use_firebase_face_recognition": "boolean",

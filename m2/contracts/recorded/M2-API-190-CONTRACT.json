@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-190-CONTRACT",
-  "recordedAt": "2026-10-24T12:51:12.064Z",
-  "runId": "qa-m2-20261024t124732-dd5f",
+  "recordedAt": "2026-10-24T15:15:55.333Z",
+  "runId": "qa-m2-20261024t151249-c728",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -10,8 +10,7 @@
       "contentType": "application/json",
       "shape": {
         "first_names": {
-          "19849579": "string",
-          "19849581": "string"
+          "<id>": "string"
         },
         "requested_user_count": "number",
         "returned_user_count": "number",

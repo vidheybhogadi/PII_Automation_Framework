@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-020-CONTRACT",
-  "recordedAt": "2026-10-24T12:49:55.337Z",
-  "runId": "qa-m2-20261024t124732-dd5f",
+  "recordedAt": "2026-10-24T15:15:15.164Z",
+  "runId": "qa-m2-20261024t151249-c728",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -30,7 +30,7 @@
             ],
             "display_message": "null",
             "display_new_tag": "boolean",
-            "distance": "null",
+            "distance": "string",
             "drinking_v2_id": "number",
             "faith_id": "number",
             "general_information": {
@@ -68,8 +68,11 @@
               "first_name": "string",
               "gender": "string",
               "height": "number",
-              "home_town": "string",
-              "kid": "null",
+              "home_town": "null",
+              "kid": {
+                "id": "number",
+                "name": "string"
+              },
               "languages": [
                 {
                   "id": "number",
@@ -87,22 +90,29 @@
                 "name": "string",
                 "preference_only": "boolean"
               },
-              "mbti": "null",
+              "mbti": {
+                "id": "number",
+                "mbti_type": "string",
+                "name": "string",
+                "preference_only": "boolean"
+              },
               "mother_tongue": {
                 "id": "number",
                 "name": "string"
               },
               "mother_tongue_id": "number",
-              "pet": {
-                "id": "number",
-                "name": "string"
-              },
+              "pet": "null",
               "politics": {
                 "id": "number",
                 "name": "string"
               },
               "ref_id": "string",
-              "settle": "null",
+              "settle": {
+                "id": "number",
+                "name": "string",
+                "name_alias": "string",
+                "prefix": "string"
+              },
               "smoking_id": "number",
               "smoking_v1": {
                 "id": "number",
@@ -156,17 +166,16 @@
               }
             ],
             "partial_work": {
-              "college": "string",
               "education": "string",
-              "graduation_year": "string",
-              "new_income": "null",
               "new_qualification": {
                 "id": "number",
                 "name": "string",
                 "preference_only": "boolean"
               },
               "work": "string",
+              "graduation_year": "string",
               "work_title": "string",
+              "college": "string",
               "industry": "string"
             },
             "photos": [
@@ -175,8 +184,8 @@
                 "feedback": "null",
                 "photo": "string",
                 "photo_id": "number",
-                "prompt": "string",
-                "prompt_id": "number",
+                "prompt": "null",
+                "prompt_id": "null",
                 "selected": "boolean",
                 "status": "string"
               }
@@ -194,11 +203,7 @@
             ],
             "profile_data_list": [
               {
-                "answer": "string",
-                "answer_id": "number",
                 "invitation_type": "string",
-                "question": "string",
-                "question_id": "number",
                 "preferences": [
                   {
                     "answer": "string",
@@ -206,7 +211,8 @@
                     "first_choice": "string",
                     "second_choice": "string"
                   }
-                ]
+                ],
+                "question": "string"
               }
             ],
             "profile_sharing_enabled": "boolean",
@@ -229,23 +235,8 @@
             },
             "user_id": "number",
             "user_interests": [],
-            "user_interests_v2": [
-              {
-                "common_interest": "string",
-                "id": "number",
-                "interest_id": "number",
-                "name": "string",
-                "order": "number"
-              }
-            ],
-            "user_traits": [
-              {
-                "id": "number",
-                "name": "string",
-                "order": "number",
-                "trait_id": "number"
-              }
-            ],
+            "user_interests_v2": [],
+            "user_traits": [],
             "verification_status": "string",
             "work": {
               "experience_v1": {

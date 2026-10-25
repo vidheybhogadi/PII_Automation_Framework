@@ -6,12 +6,16 @@
  * call phase and duration. All test data is synthetic (qa-auto-… users, "QA Automation User …" names,
  * example.test emails), so bodies are shown in full.
  *
- * What is NEVER captured: the Aisle test token (or any other registered secret). It is replaced by its
+ * What is NEVER captured: the Aisle test token (or any other registered secret), nor any token a reply hands out
+ * (JWT-looking values and auth_token / access_token / refresh_token / token / jwt / grant_token* values → [REDACTED]). It is replaced by its
  * placeholder — `Authorization: Bearer $AISLE_TEST_TOKEN` — so a copied curl runs with your own .env and the real
  * value never reaches a file, report, artifact or email.
  */
 import type { CallPhase } from './phase';
-import { maskSecretsOnly } from './redaction';
+import { maskSecretsOnly as maskRegistered, maskTokens, REDACTED, TOKEN_KEY_PATTERN } from './redaction';
+
+/** Registered secrets → placeholders, then any other token (JWTs, token-key values) → [REDACTED]. */
+const maskSecretsOnly = (text: string): string => maskTokens(maskRegistered(text));
 
 /** Bodies longer than this are cut (with a note) to keep the report small. */
 export const MAX_BODY_CHARS = 16_384;
@@ -88,7 +92,12 @@ export class ExchangeRecorder {
     durationMs: number;
   }): void {
     const headers = Object.fromEntries(
-      Object.entries(input.requestHeaders).map(([k, v]) => [k, maskSecretsOnly(v)]),
+      Object.entries(input.requestHeaders).map(([k, v]) => [
+        k,
+        TOKEN_KEY_PATTERN.test(k) && !/^\$[A-Z0-9_]+$/.test(maskRegistered(v))
+          ? REDACTED
+          : maskSecretsOnly(v),
+      ]),
     );
     const reqFull =
       input.requestBody === undefined ? null : maskSecretsOnly(input.requestBody.toString('utf8'));
