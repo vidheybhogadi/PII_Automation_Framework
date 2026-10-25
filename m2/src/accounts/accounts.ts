@@ -34,6 +34,7 @@ import path from 'node:path';
 import type { ApiResponse } from '../../../core/http/api-response';
 import type { Logger } from '../../../core/utils/logger';
 import { registerSecretValue } from '../../../core/utils/redaction';
+import type { Secret } from '../../../core/utils/secret';
 import { AUTH } from '../auth/credentials';
 import { field, SessionHelper, USER_TOKEN_PLACEHOLDER, type UserSession } from '../auth/session';
 import type { ExtraRoute } from '../clients/m2-client';
@@ -920,8 +921,38 @@ export class Accounts {
 
   /** Phone numbers of every account this worker knows, except `self` — must never appear in `self`'s replies. */
   numbersExcept(self?: { mobileNumber: string }): string[] {
-    const all = [...this.pool.values(), ...this.profiles.values()].map((s) => s.mobileNumber);
-    return [...new Set(all)].filter((n) => n !== self?.mobileNumber);
+    // Audit fix 2026-10-25: every suite account of the RUN — other workers' accounts come from the shared run pool
+    // (roles, onboarded, throwaways, senders, pairs), this worker's from memory and its ledger.
+    const pool = readRunPool(this.config.runId);
+    const all = [
+      ...[
+        ...this.pool.values(),
+        ...this.profiles.values(),
+        ...this.own.values(),
+        ...this.throwaways.values(),
+      ].map((s) => s.mobileNumber),
+      ...this.ledger.map((e) => e.cleanupNumber ?? e.mobileNumber),
+      ...Object.values(pool.roles).map((r) => r.mobileNumber),
+      ...Object.values(pool.onboarded).map((r) => r.mobileNumber),
+      ...Object.values(pool.throwaways).map((r) => r.mobileNumber),
+      ...Object.values(pool.senders).flatMap((list) => list.map((r) => r.mobileNumber)),
+      ...Object.values(pool.pairs).flatMap((p) => [p.a, p.b]),
+    ];
+    // Only well-formed synthetic numbers (a refused login variant may have tracked a malformed one).
+    return [...new Set(all)].filter((n) => isAllowedTestNumber(n) && n !== self?.mobileNumber);
+  }
+
+  /** Every onboarded suite profile this worker holds (pooled and throwaway) — for value checks of list entries. */
+  suiteProfiles(): Profile[] {
+    const out = new Map<string, Profile>();
+    for (const p of [...this.profiles.values(), ...this.throwaways.values()]) out.set(p.mobileNumber, p);
+    return [...out.values()];
+  }
+
+  /** The suite profile with this ref (this worker's), if any. */
+  profileByRef(ref: string | undefined): Profile | undefined {
+    if (!ref) return undefined;
+    return this.suiteProfiles().find((p) => p.ref === ref);
   }
 
   /**
@@ -936,6 +967,21 @@ export class Accounts {
 
   web(): never {
     return blockPrereq(PREREQ.web.id, PREREQ.web.reason);
+  }
+
+  private webJwtCache: Promise<Secret | undefined> | undefined;
+
+  /**
+   * A web JWT (ptfrm "web") of the suite's onboarded account 1 — only as the WRONG credential type of the TOKEN
+   * checks (session.ts webToken; the account's app token is not touched). Blocks when accounts cannot be created or
+   * staging issues no web token.
+   */
+  async webJwt(): Promise<Secret> {
+    this.requireCreate();
+    this.webJwtCache ??= (async () => this.sessions.webToken(await this.onboarded(1)))();
+    const token = await this.webJwtCache;
+    if (!token) blockPrereq(PREREQ.webJwt.id, PREREQ.webJwt.reason);
+    return token;
   }
 
   admin(): never {

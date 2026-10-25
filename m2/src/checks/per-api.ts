@@ -4,7 +4,7 @@
  * ("observed" / "assumption" annotations), never guessed. Prerequisites the environment cannot provide block the
  * test (prereq.ts).
  */
-import { expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import type { ApiResponse } from '../../../core/http/api-response';
 import type { AnyCase } from '../../scripts/m2-all-cases';
 import { PII_INPUT, returnsOthers } from '../../scripts/m2-baseline';
@@ -39,6 +39,8 @@ import { buildRequest, placeholdersIn } from './request-builder';
 import { variantSafety, wrongTypeValue } from './safety';
 import { suiteStateFor } from '../../scripts/m2-code-evidence';
 import { DB_FIELD, expectUnchanged, piiUserIdFor } from './db';
+import { aboutOf, ABOUT_KEY, normalizeValue, stableView, viewDiff, type OwnView } from './own-view';
+import { combineViews, hasIdorTarget, isStatusOnlyReply, mentionsAccount, stateVerdict } from './verdicts';
 
 export const apiOf = (c: AnyCase) => apiById(c.apis[0]!);
 
@@ -89,30 +91,154 @@ export async function runPos(c: AnyCase, fx: CheckFixtures): Promise<void> {
     return;
   }
   const caller = await callerFor(api, fx);
+  // For replies that carry only a status flag, the effect is read from the caller's / target's own view.
+  const target = targetOf(fx, caller);
+  const views = async () =>
+    combineViews({
+      caller: caller.session ? await selfView(fx, caller.session, { keepCounts: true }) : undefined,
+      target: target ? await selfView(fx, target, { keepCounts: true }) : undefined,
+    });
+  const before = caller.session ? await views() : undefined;
   const res = await send(api, fx, caller);
   fx.observe(`${api.id} ${caller.label}`, res);
   expect(isSuccess(res.status), `${api.id}: ${res.summary()} — a valid request must succeed`).toBe(true);
   expectNoForeignPii(res, fx, caller.session, api.id);
+  noteEvidence(`PII keys in the reply: ${piiKeysIn(res).join(', ') || 'none'}.`);
+  // Values vs the PII service (M2Q-37 answered: PII user_id = app user id, from code).
+  await expectPiiValues(api, fx, res, caller);
+  if (res.isJson && isStatusOnlyReply(res.json())) {
+    const effect = before ? viewDiff(before, await views()) : [];
+    noteEvidence(
+      effect.length
+        ? `${api.id}: the reply is status-only; observable effect in the own views: ${effect.join(', ')}.`
+        : `${api.id}: status-only — the reply carries only a status flag and nothing changed observably in the caller’s or target’s own view; the success status is the only evidence.`,
+    );
+  }
+}
+
+/**
+ * POS values (audit fix 2026-10-25): the caller's own first name in the reply (outside lists) and every suite
+ * account's entry (inside lists) must equal that account's PII first name (G1 read route, TEST_TOKEN). Read gates
+ * are OFF (M2Q-02), so the app value and the PII value are the same store write — a mismatch is a defect.
+ */
+async function expectPiiValues(
+  api: ReturnType<typeof apiOf>,
+  fx: CheckFixtures,
+  res: ApiResponse,
+  caller: Caller,
+): Promise<void> {
+  if (!res.isJson || !caller.session) {
+    noteEvidence(`${api.id}: value part not checkable — no JSON reply or no account behind the caller.`);
+    return;
+  }
+  if (!fx.m2Config.testToken) {
+    noteEvidence(`${api.id}: value part not checkable — TEST_TOKEN (the PII read route) is not configured.`);
+    return;
+  }
+  let body = res.json();
+  if (api.id === 'API-011') body = (body as { own_info?: unknown } | undefined)?.own_info;
+  const checked: string[] = [];
+  const self = caller.session;
+  if ((!returnsOthers(api) || api.id === 'API-021' || api.id === 'API-011') && self.userId) {
+    const shown = valueOutsideLists(body, 'first_name');
+    if (typeof shown === 'string') {
+      expect(
+        shown === (await piiName(fx, self.userId)),
+        `${api.id}: the caller’s own first name equals its PII first name`,
+      ).toBe(true);
+      checked.push('own first name');
+    }
+  }
+  let profiles = 0;
+  for (const p of fx.accounts.suiteProfiles()) {
+    if (profiles >= 5 || !p.userId) break;
+    const items = ownItems(body, p).filter((i) => typeof i.first_name === 'string');
+    if (!items.length) continue;
+    profiles++;
+    const pii = await piiName(fx, p.userId);
+    for (const item of items)
+      expect(item.first_name === pii, `${api.id}: a suite account’s entry shows its PII first name`).toBe(
+        true,
+      );
+    checked.push('suite account entry');
+  }
   noteEvidence(
-    `PII keys in the reply: ${piiKeysIn(res).join(', ') || 'none'}. Values vs the PII service: compared once the app user → PII user_id mapping is known (M2Q-37).`,
+    checked.length
+      ? `${api.id}: compared with the PII first name — ${[...new Set(checked)].join(', ')}.`
+      : `${api.id}: value part not checkable — the reply carries no first name of the caller or of a suite account (not value-verified).`,
   );
 }
 
-/** A user's own view (for "B unchanged" checks): verify_user for new accounts, fetch_own_info for profiles. */
-async function selfView(fx: CheckFixtures, s: UserSession | Profile): Promise<string> {
+/** The suite profile a request targets (its OTHER_REF / OTHER_USER_ID), if the suite knows it. */
+function targetOf(fx: CheckFixtures, caller: Caller): Profile | undefined {
+  const ref = caller.values.OTHER_REF;
+  return ref ? fx.accounts.profileByRef(ref) : undefined;
+}
+
+/**
+ * A user's own view for "unchanged" / "what changed" checks (audit fix 2026-10-25): the WHOLE own-profile reply
+ * (fetch_own_info; verify_user for sessions without a ref key) minus volatile keys (own-view.ts), plus the own
+ * about / story text from GET /V1/users/:ref. `keepCounts` keeps likes / invites / daily counters (STATE / POS).
+ */
+async function selfView(
+  fx: CheckFixtures,
+  s: UserSession | Profile,
+  opts: { keepCounts?: boolean } = {},
+): Promise<OwnView> {
   const id = 'ref' in s ? 'API-013' : 'API-088';
   const res = await fx.m2.call(id, { auth: AUTH.user(s.token), device: s.device });
-  const body = res.json() as Record<string, unknown> | undefined;
-  return JSON.stringify({
-    status: res.status,
-    first_name: body?.first_name ?? null,
-    stage: body?.application_stage ?? null,
-  });
+  const view = stableView(res.status === 200 ? res.json() : undefined, opts);
+  if (s.ref && res.status === 200) {
+    const owner: Caller = {
+      label: 'owner',
+      auth: AUTH.user(s.token),
+      device: s.device,
+      session: s,
+      values: valuesFor(fx.m2Config, s),
+    };
+    const byRef = await send(apiById('API-021'), fx, owner, { values: { REF: s.ref } });
+    view[ABOUT_KEY] = byRef.status === 200 ? normalizeValue(aboutOf(byRef.json())) : `HTTP ${byRef.status}`;
+  }
+  return { status: res.status, view };
+}
+
+/**
+ * Effects the Aisle code gives a route for an input the check sends (from code — confirm with Dev). The design does
+ * not document them as expected, so the "unchanged" check still FAILS — this only explains the finding.
+ */
+const CODE_EFFECTS: Record<string, string> = {
+  'API-039':
+    'without mbti_id the route sets the "close" MBTI option (Profile#update_mbti_info_data, app/models/profile.rb:4803-4810, develop_new 944f76a — from code, confirm with Dev); not documented as expected → finding',
+  'API-022':
+    'without about the route deletes the active story / bio (Account::Story.add_story, app/models/account/story.rb:24, develop_new 944f76a — from code, confirm with Dev); not documented as expected → finding',
+};
+
+/** Fail with the changed key names (value-free) when two own views differ. */
+function expectSameView(
+  before: OwnView | undefined,
+  after: OwnView | undefined,
+  what: string,
+  apiId?: string,
+): void {
+  if (!before || !after) return;
+  const changed = viewDiff(before, after);
+  if (changed.length && apiId && CODE_EFFECTS[apiId]) noteEvidence(`${apiId}: ${CODE_EFFECTS[apiId]}`);
+  expect(changed, `${what}: own view unchanged (changed keys listed, values never shown)`).toEqual([]);
+}
+
+/** Phone forms and the known fake email of a suite account — the values another user must never see. */
+function ownPiiOf(fx: CheckFixtures, s: UserSession | Profile): string[] {
+  const email =
+    ('known' in s ? s.known?.email : undefined) ?? fx.m2Config.values[`EMAIL_${s.mobileNumber}`] ?? undefined;
+  return [...phoneForms(s.mobileNumber), ...(email ? [email] : [])];
 }
 
 // ---- IDOR — cannot act on / read another user --------------------------------------------------------------
 export async function runIdor(c: AnyCase, fx: CheckFixtures): Promise<void> {
   const api = apiOf(c);
+  // Audit fix 2026-10-25: a request without any user / profile id cannot carry B's identifiers — never a pass.
+  if (!hasIdorTarget(placeholdersIn(api)))
+    blockPrereq(PREREQ.noTarget.id, `${api.id}: ${PREREQ.noTarget.reason}`);
   const a = await callerFor(api, fx, 'A');
   const b = await callerFor(api, fx, 'B');
   if (!a.session || !b.session)
@@ -126,12 +252,14 @@ export async function runIdor(c: AnyCase, fx: CheckFixtures): Promise<void> {
     values: { USER_ID: other.USER_ID, REF: other.REF, OTHER_USER_ID: other.USER_ID, OTHER_REF: other.REF },
   });
   fx.observe(`${api.id} user A with B’s identifiers`, res);
-  const leaks = scanResponse(res, { allowKeys: PII_KEYS, known: [b.session.mobileNumber] }).filter(
+  const leaks = scanResponse(res, { allowKeys: PII_KEYS, known: ownPiiOf(fx, b.session) }).filter(
     (f) => f.kind === 'known test value',
   );
-  expect(leaks, `${api.id}: B’s phone number never appears in A’s reply (locations only)`).toEqual([]);
-  const after = await selfView(fx, b.session);
-  expect(after === before, `${api.id}: B’s own view (status, first name, stage) unchanged`).toBe(true);
+  expect(
+    leaks,
+    `${api.id}: B’s phone (national / full) and email never appear in A’s reply (locations only)`,
+  ).toEqual([]);
+  expectSameView(before, await selfView(fx, b.session), `${api.id}: B’s own profile`);
 }
 
 // ---- DB-ISOL — other fields and users untouched -----------------------------------------------------------
@@ -183,20 +311,24 @@ export async function runExpose(c: AnyCase, fx: CheckFixtures): Promise<void> {
   };
   const res = await send(api, fx, viewer);
   fx.observe(`${api.id} as B (A visible)`, res);
-  const known = [
-    ...phoneForms(a.mobileNumber),
-    ...(fx.m2Config.values[`EMAIL_${a.mobileNumber}`]
-      ? [fx.m2Config.values[`EMAIL_${a.mobileNumber}`]!]
-      : []),
-  ];
-  const leaks = scanResponse(res, { allowKeys: PII_KEYS, known }).filter(
+  // A's phone forms and A's known fake email (onboarding values; M2_VALUE_EMAIL_<number> for Dev-provided accounts).
+  const leaks = scanResponse(res, { allowKeys: PII_KEYS, known: ownPiiOf(fx, a) }).filter(
     (f) => f.kind === 'known test value',
   );
   expect(
     leaks,
     `${api.id}: A’s phone (national / full) and email never appear in B’s reply (locations only)`,
   ).toEqual([]);
-  noteEvidence('A’s email is searched when M2_VALUE_EMAIL_<A’s number> is set (Dev-provided accounts).');
+  // Audit fix 2026-10-25: "A's data is not in the reply" proves nothing unless A is in the reply at all.
+  if (!mentionsAccount(res.isJson ? res.json() : undefined, { ref: a.ref, userId: a.userId }))
+    blockPrereq(
+      'M2Q-32',
+      `${api.id}: A not in reply — nothing to check (HTTP ${res.status}; A’s ref / user id not in B’s reply — needs A visible to B in this route)`,
+    );
+  if (!('known' in a && a.known?.email) && !fx.m2Config.values[`EMAIL_${a.mobileNumber}`])
+    noteEvidence(
+      'A’s email unknown (Dev-provided account without M2_VALUE_EMAIL_<number>) — phone forms searched only.',
+    );
 }
 
 // ---- Baseline-backed checks (M2Q-24: approved staging recordings) -----------------------------------------
@@ -215,12 +347,27 @@ function noEcho(markers: string[]) {
   };
 }
 
-/** Before/after own view of a user caller ("nothing changed"); no-op for TEST_TOKEN callers. */
-async function unchangedAround(fx: CheckFixtures, caller: Caller, run: () => Promise<void>, what: string) {
+/**
+ * Before/after own view of the caller's account ("nothing changed") — the full own profile minus volatile keys plus
+ * the about text (audit fix 2026-10-25). A change the code explains (CODE_EFFECTS) still fails, with that reason.
+ */
+async function unchangedAround(
+  fx: CheckFixtures,
+  caller: Caller,
+  run: () => Promise<void>,
+  what: string,
+  apiId?: string,
+  /**
+   * The VALID request, sent once first: the variants re-send the rest of the valid body, so the reference state is
+   * "after the valid request" — then only what a variant changes beyond the valid request is reported.
+   */
+  settle?: () => Promise<ApiResponse>,
+) {
+  if (caller.session && settle)
+    fx.observe(`${apiId ?? ''} valid request first (reference state)`, await settle());
   const before = caller.session ? await selfView(fx, caller.session) : undefined;
   await run();
-  if (caller.session)
-    expect((await selfView(fx, caller.session)) === before, `${what}: own profile unchanged`).toBe(true);
+  if (caller.session) expectSameView(before, await selfView(fx, caller.session), what, apiId);
 }
 
 /** { firstName: <the caller's current own first name> } for a profile caller; {} when it has none / no profile. */
@@ -292,12 +439,27 @@ export async function runContract(c: AnyCase, fx: CheckFixtures): Promise<void> 
   const api = apiOf(c);
   const caller = await callerFor(api, fx);
   // A baseline of a VALID request must be a valid reply: a server error is never recorded as the contract.
-  await withBaseline(
-    c.id,
-    ctxOf(fx),
-    [{ label: 'valid request', send: () => send(api, fx, caller) }],
-    noServerError,
-  );
+  let sent = false;
+  try {
+    await withBaseline(
+      c.id,
+      ctxOf(fx),
+      [
+        {
+          label: 'valid request',
+          send: async () => {
+            const r = await send(api, fx, caller);
+            sent = isSuccess(r.status);
+            return r;
+          },
+        },
+      ],
+      noServerError,
+    );
+  } finally {
+    // Toggle routes (audit fix 2026-10-25): sent a second time so the account is left as it was.
+    if (sent && TOGGLES.includes(api.id)) fx.observe(`${api.id} restore`, await send(api, fx, caller));
+  }
 }
 
 export async function runParam(c: AnyCase, fx: CheckFixtures): Promise<void> {
@@ -346,14 +508,18 @@ export async function runParam(c: AnyCase, fx: CheckFixtures): Promise<void> {
   if (fresh) {
     await run();
     expectGone(gone);
-  } else await unchangedAround(fx, caller, run, 'missing / invalid parameters');
+  } else
+    await unchangedAround(fx, caller, run, 'missing / invalid parameters', api.id, () =>
+      send(api, fx, caller, { synthetic, retry: false }),
+    );
 }
 
 export async function runBody(c: AnyCase, fx: CheckFixtures): Promise<void> {
   requireBaseline(c.id, ctxOf(fx));
   const api = apiOf(c);
   const caller = await callerFor(api, fx);
-  const request = buildRequest(api, caller.values, syntheticFor(fx, caller.session));
+  const synth = syntheticFor(fx, caller.session);
+  const request = buildRequest(api, caller.values, synth);
   const base = (request.body ?? {}) as Record<string, unknown>;
   const marker = `QaBody${fx.data.firstName()}`;
   const fresh = FRESH_PER_VARIANT.includes(api.id);
@@ -427,19 +593,50 @@ export async function runBody(c: AnyCase, fx: CheckFixtures): Promise<void> {
   if (fresh) {
     await run();
     expectGone(gone);
-  } else await unchangedAround(fx, caller, run, 'malformed bodies (no PII written via unexpected keys)');
+  } else
+    await unchangedAround(
+      fx,
+      caller,
+      run,
+      'malformed bodies (no PII written via unexpected keys)',
+      api.id,
+      () => send(api, fx, caller, { synthetic: synth, retry: false }),
+    );
 }
 
 export async function runState(c: AnyCase, fx: CheckFixtures): Promise<void> {
   requireBaseline(c.id, ctxOf(fx));
   const api = apiOf(c);
   const caller = await callerFor(api, fx);
+  // Audit fix 2026-10-25: "already done" and "wrong target" are verified by STATE (the caller's and the target's own
+  // views, counters included), not by the status alone.
+  const target = targetOf(fx, caller);
+  const views = async () =>
+    combineViews({
+      caller: caller.session ? await selfView(fx, caller.session, { keepCounts: true }) : undefined,
+      target: target ? await selfView(fx, target, { keepCounts: true }) : undefined,
+    });
+  const toggle = TOGGLES.includes(api.id);
+  // Without any id in the request, "wrong target" is the same request again (nothing to swap).
+  const targetless = !hasIdorTarget(placeholdersIn(api));
+  const seen: Record<string, OwnView> = {};
+  const statuses: number[] = [];
+  const step = (label: string, go: () => Promise<ApiResponse>) => async () => {
+    const res = await go();
+    statuses.push(res.status);
+    seen[label] = await views();
+    return res;
+  };
+  const before = await views();
   const variants: Variant[] = [
-    { label: 'valid request', send: () => send(api, fx, caller, { retry: false }) },
-    { label: 'action already done (sent again)', send: () => send(api, fx, caller, { retry: false }) },
+    { label: 'valid request', send: step('valid', () => send(api, fx, caller, { retry: false })) },
+    {
+      label: 'action already done (sent again)',
+      send: step('again', () => send(api, fx, caller, { retry: false })),
+    },
     {
       label: 'wrong target (unknown ids)',
-      send: () =>
+      send: step('wrong', () =>
         send(api, fx, caller, {
           values: {
             REF: `${fx.m2Config.runId}-none`,
@@ -448,16 +645,43 @@ export async function runState(c: AnyCase, fx: CheckFixtures): Promise<void> {
           },
           retry: false,
         }),
+      ),
     },
   ];
   noteEvidence('Deactivated / pending / banned account states need special accounts (M2Q-32) — not sent.');
+  if (targetless)
+    noteEvidence(
+      `${api.id}: the request names no id, so "wrong target" is the same request sent a third time.`,
+    );
   const others = fx.accounts.numbersExcept(caller.session);
-  await withBaseline(c.id, ctxOf(fx), variants, (l, r) => {
-    noServerError(l, r);
-    if (isSuccess(r.status)) return;
-    const leaks = scanResponse(r, { known: others }).filter((f) => f.kind === 'known test value');
-    expect(leaks, `${l}: no PII in the error (locations only)`).toEqual([]);
-  });
+  try {
+    await withBaseline(c.id, ctxOf(fx), variants, (l, r) => {
+      noServerError(l, r);
+      if (isSuccess(r.status)) return;
+      const leaks = scanResponse(r, { known: others }).filter((f) => f.kind === 'known test value');
+      expect(leaks, `${l}: no PII in the error (locations only)`).toEqual([]);
+    });
+  } finally {
+    // A toggle sent an odd number of times (valid, again, and the target-less "wrong target") is flipped back.
+    if (toggle && targetless && seen.wrong) fx.observe(`${api.id} restore`, await send(api, fx, caller));
+  }
+  if (!seen.valid || !seen.again || !seen.wrong) return; // record mode skipped / a variant was not sent
+  const verdict = stateVerdict(
+    { before, afterValid: seen.valid, afterAgain: seen.again, afterWrong: seen.wrong },
+    statuses,
+    toggle,
+    toggle && targetless,
+  );
+  noteEvidence(`${api.id}: observable effect of the valid request: ${verdict.effect.join(', ') || 'none'}.`);
+  expect(verdict.failures, `${api.id}: state after each variant (changed keys only)`).toEqual([]);
+  if (verdict.nonDiscriminating) {
+    for (const v of variants.slice(1))
+      test.info().annotations.push({
+        type: 'blocked-variant',
+        description: `${v.label}: status assertion non-discriminating — HTTP ${statuses[0]} for every variant and no observable state change`,
+      });
+    blockPrereq(PREREQ.statusOnly.id, `${api.id}: ${PREREQ.statusOnly.reason}`);
+  }
 }
 
 export async function runRepeat(c: AnyCase, fx: CheckFixtures): Promise<void> {
@@ -467,28 +691,46 @@ export async function runRepeat(c: AnyCase, fx: CheckFixtures): Promise<void> {
   // The SAME request four times: the synthetic values (name, email, text) are built once and re-used by every send.
   const synthetic = syntheticFor(fx, caller.session);
   const again = () => send(api, fx, caller, { synthetic, retry: false });
-  let afterFirst: string | undefined;
+  const view = async () => (caller.session ? selfView(fx, caller.session) : undefined);
+  // Toggle routes flip a setting on every send (audit fix 2026-10-25): sent twice they must be back at the start,
+  // and the account is always left as it was.
+  const toggle = TOGGLES.includes(api.id);
+  const initial = toggle ? await view() : undefined;
+  let afterFirst: OwnView | undefined;
+  let afterSecond: OwnView | undefined;
   const variants: Variant[] = [
     {
       label: 'first request',
       send: async () => {
         const r = await again();
-        afterFirst = caller.session ? await selfView(fx, caller.session) : undefined;
+        afterFirst = await view();
         return r;
       },
     },
-    { label: 'same request again', send: again },
+    {
+      label: 'same request again',
+      send: async () => {
+        const r = await again();
+        if (toggle) afterSecond = await view();
+        return r;
+      },
+    },
   ];
   // A repeated request is still a valid request: a server error is never recorded or accepted as the contract.
   await withBaseline(c.id, ctxOf(fx), variants, noServerError);
   const parallel = await Promise.all([again(), again()]);
   parallel.forEach((r, i) => fx.observe(`${api.id} parallel #${i + 1}`, r));
   parallel.forEach((r, i) => noServerError(`parallel #${i + 1}`, r));
-  if (caller.session)
-    expect(
-      (await selfView(fx, caller.session)) === afterFirst,
-      'repeats change nothing after the first request',
-    ).toBe(true);
+  if (toggle) {
+    expectSameView(initial, afterSecond, `${api.id}: toggle sent twice is back at the start`);
+    const end = await view();
+    if (initial && end && viewDiff(initial, end).length) {
+      noteEvidence(`${api.id}: the two parallel toggles did not cancel out — sent once more to restore.`);
+      fx.observe(`${api.id} restore`, await again());
+    }
+    return;
+  }
+  expectSameView(afterFirst, await view(), `${api.id}: repeats change nothing after the first request`);
 }
 
 /** Delete a key anywhere in a body. */
@@ -731,13 +973,16 @@ export async function runField(c: AnyCase, fx: CheckFixtures): Promise<void> {
       fx.observe(`${key} ${label}`, res);
       const after = caller.session ? await selfView(fx, caller.session) : undefined;
       if (!isSuccess(res.status) && caller.session)
-        expect(after === before, `${key} ${label}: a refused value changes nothing`).toBe(true);
+        expectSameView(before, after, `${key} ${label}: a refused value changes nothing`);
       // From code (M2Q-06): blank names are ignored; others are stored normalised (lossy cases only recorded).
       if (key === 'first_name' && caller.session && isSuccess(res.status)) {
-        const stored = (JSON.parse(after!) as { first_name: unknown }).first_name;
+        const stored = after?.view.first_name;
         const want = typeof value === 'string' ? normalizeFirstName(value) : undefined;
         if (value === null || want === undefined)
-          expect(after === before, `${key} ${label}: a blank name leaves the name unchanged`).toBe(true);
+          expect(
+            before?.view.first_name === stored,
+            `${key} ${label}: a blank name leaves the name unchanged`,
+          ).toBe(true);
         else if (/^[A-Za-z\s]*$/.test(value as string) || !/[A-Za-z]/.test(value as string))
           expect(stored === want, `${key} ${label}: stored as the normalised value`).toBe(true);
         else noteEvidence(`${key} ${label}: lossy normalisation recorded (possible defect, M2Q-06).`);
@@ -865,9 +1110,16 @@ function expectReplyValues(
   const email = valueOutsideLists(body, 'email') ?? valueOutsideLists(body, 'personal_email');
   if (typeof email === 'string' && want.email !== undefined)
     expect(email === want.email, `${api.id}: the reply shows the account’s email`).toBe(true);
-  for (const item of ownItems(body, p).filter((i) => typeof i.first_name === 'string'))
+  const entries = ownItems(body, p).filter((i) => typeof i.first_name === 'string');
+  for (const item of entries)
     expect(item.first_name === want.firstName, `${api.id}: the account’s own list entry shows its name`).toBe(
       true,
+    );
+  // Audit fix 2026-10-25: a reply without the account's own first name is NOT value-verified — said so explicitly;
+  // the case still rests on the anchor (own name = PII name) and the own-profile read-back.
+  if (typeof shown !== 'string' && !entries.length)
+    noteEvidence(
+      `${api.id}: value part not checkable — the reply carries no own first name (not value-verified; only the anchor and the own-profile read-back were compared).`,
     );
 }
 

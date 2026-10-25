@@ -515,5 +515,9 @@
   "approved": {
     "by": "QA lead",
     "on": "2026-10-24"
+  },
+  "acceptedBecause": {
+    "without page": "V1::ApiController#standardize_params: a missing or non-positive page (a non-numeric value → to_i 0) becomes DEFAULT_PAGE (app/controllers/v1/api_controller.rb:103-108, develop_new 944f76a) — from code, confirm with Dev",
+    "without items_per_page": "V1::ApiController#standardize_params: a missing items_per_page becomes DEFAULT_ITEMS_PER_PAGE (app/controllers/v1/api_controller.rb:109-113, develop_new 944f76a) — from code, confirm with Dev"
   }
 }

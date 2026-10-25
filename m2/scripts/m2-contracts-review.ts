@@ -11,6 +11,8 @@ import path from 'node:path';
 import {
   approvedFile,
   CONTRACTS_DIR,
+  invalidAcceptedProblem,
+  isInvalidVariant,
   piiKeyDiff,
   shapeDiff,
   type BaselineFile,
@@ -37,10 +39,19 @@ for (const f of files.sort()) {
         ];
     if (rec.invariantFailures?.includes(label) || obs.status >= 500)
       notes.unshift('BROKE AN INVARIANT while recording (see the test failure) — never approved');
+    // Audit fix 2026-10-25: a 2xx to invalid input fails unless acceptedBecause names the code reference.
+    if (invalidAcceptedProblem(rec.caseId, label, obs.status, app))
+      notes.push(
+        'INVALID INPUT ACCEPTED (2xx) — fails until a code reference is recorded with --accept "<label>=<code ref>", otherwise a finding',
+      );
+    const accepted =
+      isInvalidVariant(rec.caseId, label) && app?.acceptedBecause?.[label] && obs.status < 300
+        ? `; 2xx accepted: ${app.acceptedBecause[label]}`
+        : '';
     if (notes.length) changed++;
     const ok = pii.notes.length
-      ? `matches approved (list-item data differences ignored; ${pii.notes.join('; ')})`
-      : 'matches approved (list-item data differences ignored)';
+      ? `matches approved (list-item data differences ignored; ${pii.notes.join('; ')})${accepted}`
+      : `matches approved (list-item data differences ignored)${accepted}`;
     rows.push(
       `| ${rec.caseId} | ${label} | ${obs.status} | ${obs.piiKeys.join(', ') || '—'} | ${notes.join('; ') || ok} |`,
     );

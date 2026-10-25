@@ -5,7 +5,7 @@ agent (PROPOSE → approval → IMPLEMENT); see `CLAUDE.md`.
 
 | Folder     | What                                                                                      |
 | ---------- | ----------------------------------------------------------------------------------------- |
-| `per-api/` | Per-API checks generated from the design (`AUTH`, `TOKEN`): one test per inventory API    |
+| `per-api/` | Per-API checks generated from the design (`AUTH`, `TOKEN`, …): one test per inventory API |
 | `g1/`      | G1 scenario cases (PII integration routes, TEST_TOKEN): M2-PIIR-001/002/003/004/007       |
 | `unit/`    | Framework self-tests (project `m2-unit`, no network; part of `npm run verify`)            |
 | `zz-late/` | Per-API cases that need an approved suite account — queued last (`m2/src/checks/late.ts`) |
@@ -30,6 +30,11 @@ agent (PROPOSE → approval → IMPLEMENT); see `CLAUDE.md`.
   up to `M2_APPROVAL_WAIT_MS` (default 15 min) from onboarding, and the approval-dependent cases run last.
 - **Contracts**: `npm run m2:contracts:record` (explicit only) → `m2/contracts/recorded/` → `npm run m2:contracts:review`
   (`m2/contracts/REVIEW.md`) → `npm run m2:contracts:approve -- --by "<name>" <case…|all>` → asserted from
-  `m2/contracts/approved/`.
+  `m2/contracts/approved/`. A 2xx to INVALID input (PARAM / BODY, STATE except "valid request") fails unless the
+  approved file names the code reference in `acceptedBecause` (`--accept "<variant>=<code ref>"`, one case at a time).
+- **No false passes** (audit fixes 2026-10-25): a refusal is a 4xx — a 5xx fails (M2Q-39); TOKEN sends a parseable
+  credential of the wrong type (web JWT on app routes); "unchanged" compares the whole own profile minus volatile keys
+  plus the about text (`m2/src/checks/own-view.ts`); STATE is decided by state; EXPOSE needs the writer in the reply
+  and IDOR a target id in the request, otherwise Blocked (`m2/src/checks/verdicts.ts`).
 - **Results**: `npm run m2:test` → `reports/m2/latest/run-data.json` → `npm run m2:report` (HTML) and
   `npm run m2:docs` (workbook "Current Status", "Automation Status", "Last Run (observed)").

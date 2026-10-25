@@ -35,5 +35,8 @@
       "recordedAt": "2026-10-24T15:36:32.516Z",
       "runId": "qa-m2-20261024t151249-c728"
     }
-  ]
+  ],
+  "acceptedBecause": {
+    "page with the wrong type": "V1::ApiController#standardize_params: a missing or non-positive page (a non-numeric value → to_i 0) becomes DEFAULT_PAGE (app/controllers/v1/api_controller.rb:103-108, develop_new 944f76a) — from code, confirm with Dev"
+  }
 }

@@ -165,6 +165,21 @@ const keys = (a: InventoryApi) =>
     ? a.requestKeys.slice(0, 14).join(', ') + (a.requestKeys.length > 14 ? ', …' : '')
     : 'none';
 
+/** Paging keys every V1 / web controller defaults (standardize_params). */
+const PAGED = ['page', 'items_per_page'];
+/**
+ * Documented defaulting of paging keys (from code, develop_new 944f76a — confirm with Dev): V1::ApiController and
+ * Web::ApiController#standardize_params turn a missing or non-positive page (a non-numeric value → to_i 0) into
+ * DEFAULT_PAGE and a missing items_per_page into DEFAULT_ITEMS_PER_PAGE (v1/api_controller.rb:103-113,
+ * web/api_controller.rb:29-39). A non-numeric items_per_page becomes 0 — not a default, so not accepted.
+ */
+function pagedNote(a: InventoryApi, variant: 'without' | 'wrong type'): string {
+  const keys = PAGED.filter((k) => a.requestKeys.includes(k) && (variant === 'without' || k === 'page'));
+  if (!keys.length) return '';
+  const what = variant === 'without' ? `Without ${keys.join(' / ')}` : 'With a non-numeric page';
+  return ` ${what} the request is defaulted (from code: standardize_params sets the default page / items per page — confirm with Dev), so its 2xx is expected and recorded in the approved baseline as acceptedBecause.`;
+}
+
 /**
  * User-JWT routes that work for a NEW (onboarding-stage) account — observed on staging 2026-10-23 (login,
  * GET verify_user, GET verify_user_v1, app_launch; fetch_login_response is a pre-login route). Every other user / web route needs a finished profile (M2Q-36).
@@ -299,12 +314,12 @@ const RULES: Record<string, Rule> = {
         ? 'Inspect the outcome (subscription / provider payload / rebuilt profile) and the PII fields involved.'
         : `Compare every ${fields(a.fields)} value in the response (or in the follow-up own-profile read for actions) with the PII value of the profile it belongs to.`,
     ],
-    validate: `Business outcome as on master; ${fields(a.fields)} values correct and attributed to the right profile.`,
+    validate: `Business outcome as on master; ${fields(a.fields)} values correct and attributed to the right profile: the caller’s own first name in the reply and every suite account’s entry equal that account’s PII first name (read through the PII first-name test route). A reply that carries only a status flag is reported as status-only, with any effect seen in the caller’s / target’s own profile.`,
     why: `This API reaches the changed PII code path (${ACCESS_PATH(a)}).`,
     expected:
       a.id === 'API-186'
         ? 'Succeeds; response omits first name (Dev doc API-186).'
-        : `Succeeds as on master; PII values equal the PII service values for the right profile.${OBSERVED[a.id] ? ` ${OBSERVED[a.id]}` : ''}`,
+        : `Succeeds as on master; PII values equal the PII service values for the right profile (PII user_id = app user id, M2Q-37 answer from code; read gates off, so app and PII values must match).${OBSERVED[a.id] ? ` ${OBSERVED[a.id]}` : ''}`,
     evidence: `Dev doc ${a.id} access path${OBSERVED[a.id] ? ' + staging observation' : ''}.`,
     db: API_ONLY,
     priority: ['G1', 'G2', 'G3'].includes(g(a))
@@ -388,10 +403,12 @@ const RULES: Record<string, Rule> = {
       pre: 'No account needed.',
       data: 'No Authorization header / cookie; "Bearer invalid"; an expired-format token.',
       steps: [`Send ${req(a)} without credentials.`, 'Send with an invalid credential.'],
-      validate: 'Refused (no 2xx); body contains no PII.',
+      // M2Q-39 is cited in `validate` (not in pre / expected / db, which feed the dependency list): this case has no
+      // dependency — it runs and FAILS on a 5xx.
+      validate:
+        'Refused with a 4xx (400–499): not 2xx, and a 5xx server error is NOT a refusal — it fails as the confirmed defect M2Q-39 (decode_token rescues only JWT::ExpiredSignature, authenticatable.rb:272-283; from code, confirm with Dev); body contains no PII.',
       why: 'Every route in this inventory returns or changes PII; it must require its credential.',
-      expected:
-        'Refused, no PII. Observed on staging 2026-10-19: app route without token → 401 {unauthorized_request:true}; TEST_TOKEN route → 401 (empty body). Exact code per route family to be recorded.',
+      expected: `Refused with a 4xx, no PII. Observed on staging 2026-10-19: app route without token → 401 {unauthorized_request:true}; TEST_TOKEN route → 401 (empty body). A server error (5xx) for an invalid or expired token is a FAILURE, never a pass (defect confirmed from code).${a.auth.includes('ADMIN_SESSION_COOKIE') ? ' The browser-only admin page refuses with a 302 to its login page (observed 2026-10-25) — only that redirect counts as a refusal.' : ''}`,
       evidence: 'Staging probe 2026-10-19; Dev doc "Request setup".',
       db: API_ONLY,
       priority: returnsOthers(a) || writesPii(a) || isRead(a) || isTestRoute(a) ? 'Critical' : 'High',
@@ -405,24 +422,31 @@ const RULES: Record<string, Rule> = {
     if (a.id === 'API-012')
       return { na: 'Authorization optional by design — covered by AUTH (public-profile rules).' };
     if (isLogin(a)) return { na: 'Pre-login route — no credential type; OTP checks are in AUTH.' };
-    const wrong = usesTestToken(a)
-      ? 'a normal user JWT (M2Q-03)'
-      : a.auth.includes('ADMIN_TOKEN') || a.auth.includes('ADMIN_SESSION_COOKIE')
-        ? 'TEST_TOKEN (available now) and a normal user JWT (M2Q-03)'
-        : 'TEST_TOKEN (available now)';
+    // Audit fix 2026-10-25: a wrong credential the route can PARSE (wrongCredentialsFor in m2/src/auth/credentials.ts),
+    // so a refusal proves "wrong type" — TEST_TOKEN on app routes only reached the token-decode error (5xx).
+    const infoedge = a.auth.includes('INFOEDGE_PROFILE_API_TOKEN');
+    const appRoute = !infoedge && a.auth.includes('USER_TOKEN');
+    const wrong = infoedge
+      ? 'TEST_TOKEN (another static token)'
+      : appRoute
+        ? 'a web JWT of a synthetic account (ptfrm "web": a real JWT the app routes reject — verify_auth_token, from code)'
+        : 'a normal app user JWT of a synthetic account';
     return {
-      pre: usesTestToken(a)
-        ? 'A synthetic user JWT (M2Q-03).'
-        : 'TEST_TOKEN from .env (no other account needed for this variant).',
+      pre: infoedge
+        ? 'TEST_TOKEN from .env.'
+        : appRoute
+          ? 'An onboarded synthetic account (M2Q-03) and its web JWT (login with device_type "web", from code).'
+          : 'A synthetic user JWT (M2Q-03).',
       data: `Valid credential of the wrong type: ${wrong}.`,
       steps: [`Send ${req(a)} with ${wrong}.`],
-      validate: 'Refused; no PII in the body.',
+      validate:
+        'Refused with a 4xx (400–499); a 5xx server error is NOT a refusal — it fails (defect M2Q-39, from code); no PII in the body.',
       why: 'Dev doc: "Tokens are different credentials and are not interchangeable" — a mix-up would open PII to the wrong caller.',
-      expected: 'Refused (no 2xx), no PII.',
-      evidence: 'Dev doc "Request setup".',
+      expected: `Refused with a 4xx, no PII; a server error (5xx) is a failure, never a known-defect pass.${a.auth.includes('ADMIN_SESSION_COOKIE') ? ' The browser-only admin page refuses with a 302 to its login page (observed 2026-10-25).' : ''}`,
+      evidence: `Dev doc "Request setup"; Aisle codebase (develop_new 944f76a, authenticatable.rb:303-308 verify_auth_token rejects ptfrm "web"; 321-324 verify_web_token rejects other platforms) — from code, confirm with Dev.`,
       db: API_ONLY,
       priority: isTestRoute(a) || isAdmin(a) ? 'Critical' : 'High',
-      deps: usesTestToken(a) || isAdmin(a) ? ['M2Q-03'] : [],
+      deps: infoedge ? [] : ['M2Q-03'],
     };
   },
 
@@ -431,11 +455,15 @@ const RULES: Record<string, Rule> = {
     return {
       pre: accountPre(a),
       data: `Omit each key in turn (${keys(a)}); unknown / other-format ids${/:ref|:user_id/.test(a.path) ? '; unknown path id' : ''}.`,
-      steps: [`Send ${req(a)} once per variant.`, 'Re-read the affected profile/record.'],
-      validate: '4xx (not 5xx) with a clear message; nothing changed; no PII echoed.',
+      steps: [
+        `Send the valid ${req(a)} once (reference state), then once per variant.`,
+        'Re-read the caller’s own profile (all stable fields and the about text) and compare.',
+      ],
+      validate:
+        '4xx (not 5xx) with a clear message; a 2xx for missing / invalid input fails ("invalid input accepted") unless the approved baseline names the code reference that makes it optional or defaulted (acceptedBecause); nothing changed in the caller’s own profile beyond the valid request (full own profile minus volatile counters / timers / texts, plus the about text); no PII echoed.',
       why: 'Bad input on a PII path must fail safely and never fall through to another user’s record.',
-      expected: 'Refused as on master (no 5xx); no change; no submitted or stored PII in the error.',
-      evidence: 'Non-regression rule (baseline M2Q-24); M1 BQ-08 echo finding.',
+      expected: `Refused as on master (no 5xx); no change; no submitted or stored PII in the error.${pagedNote(a, 'without')}`,
+      evidence: `Non-regression rule (baseline M2Q-24); M1 BQ-08 echo finding.${PAGED.some((k) => a.requestKeys.includes(k)) ? ' Aisle codebase (develop_new 944f76a, v1/api_controller.rb:103-113, web/api_controller.rb:29-39 standardize_params) — from code, confirm with Dev.' : ''}`,
       db: API_ONLY,
       priority: writesPii(a) ? 'High' : 'Medium',
       deps: [...accessDeps(a), 'M2Q-24'],
@@ -448,11 +476,15 @@ const RULES: Record<string, Rule> = {
     return {
       pre: accountPre(a),
       data: 'Invalid JSON; arrays/objects/numbers/null for string keys; strings for numeric/boolean keys; extra unknown keys (e.g. user_id, tenant_id, first_name).',
-      steps: [`Send ${req(a)} once per variant.`, 'Re-read the affected profile/record.'],
-      validate: '4xx (not 5xx); unknown keys ignored (no PII written through them); no echo.',
+      steps: [
+        `Send the valid ${req(a)} once (reference state), then once per variant.`,
+        'Re-read the caller’s own profile (all stable fields and the about text) and compare.',
+      ],
+      validate:
+        '4xx (not 5xx); a 2xx for a malformed body fails ("invalid input accepted") unless the approved baseline names the code reference (acceptedBecause); unknown keys ignored (no PII written through them; caller’s own profile unchanged beyond the valid request); no echo.',
       why: 'Extra keys like user_id/first_name must not become a hidden write path.',
-      expected: 'Refused or ignored as on master; no PII written via unexpected keys.',
-      evidence: 'Non-regression rule (baseline M2Q-24).',
+      expected: `Refused or ignored as on master; no PII written via unexpected keys.${pagedNote(a, 'wrong type')}`,
+      evidence: `Non-regression rule (baseline M2Q-24).${a.requestKeys.includes('page') ? ' Aisle codebase (develop_new 944f76a, standardize_params) — from code, confirm with Dev.' : ''}`,
       db: API_ONLY,
       priority: writesPii(a) ? 'High' : 'Low',
       deps: [...accessDeps(a), 'M2Q-24'],
@@ -470,7 +502,7 @@ const RULES: Record<string, Rule> = {
       data: 'B’s ref / user_id / conversation / record ids, added to A’s request (query, body or path).',
       steps: [`As A send ${req(a)} with B’s identifiers.`, 'Read B’s profile and PII before/after.'],
       validate:
-        'Request acts only for A (or is refused); B’s email/phone never returned; B’s data never changed.',
+        'Request acts only for A (or is refused); B’s phone (national / full) and known fake email never returned; B’s own profile (all stable fields and the about text) never changed. A request that names no user / profile id cannot carry B’s identifiers → Blocked ("no target in request"), never a pass.',
       why: 'Classic IDOR on routes that now read and return PII.',
       expected: 'A can only read/change A’s own PII; B unchanged.',
       evidence: 'Dev doc: email/phone only via own_general_information (owner).',
@@ -517,9 +549,14 @@ const RULES: Record<string, Rule> = {
       return { na: 'Returns only the caller’s own data (own_detailed_v1 / own records) — covered by IDOR.' };
     return {
       pre: 'A visible to B in this response (like / invite / match / connection / room / event) (M2Q-03).',
-      data: 'A’s email and phone (national and full) as search strings.',
-      steps: [`As B send ${req(a)}.`, 'Deep-search the whole JSON body for A’s email and phone.'],
-      validate: 'No match in any field.',
+      data: 'A’s known fake email and phone (national and full) as search strings.',
+      steps: [
+        `As B send ${req(a)}.`,
+        'Deep-search the whole JSON body for A’s email and phone.',
+        'Check that A is in the reply at all (A’s ref or user id).',
+      ],
+      validate:
+        'No match in any field — and A must appear in the reply (ref / user id); otherwise there is nothing to check and the case is Blocked ("A not in reply", needs A visible to B — M2Q-32), never a pass.',
       why: 'Email and phone are owner-only; a match is a leak.',
       expected:
         'No other member’s email or phone (Dev doc API-063/068: phone is not added to other members’ fields).',
@@ -598,7 +635,7 @@ const RULES: Record<string, Rule> = {
         'Check the reply for server errors, other people’s data and personal-data fields this API should not carry.',
       ],
       validate:
-        'Gate off (today): the value read back equals the value written / onboarded; no 5xx; no other test account’s data; no unlisted personal-data field. Gate on → PII value: waiting (M2Q-43).',
+        'Gate off (today): the value read back equals the value written / onboarded; no 5xx; no other test account’s data; no unlisted personal-data field. A reply that carries no own first name is noted "value part not checkable" (not value-verified — only the anchor and the own-profile read-back decide). Gate on → PII value: waiting (M2Q-43).',
       why: 'Read gates (switches that make the app read personal data from the PII service instead of its own database) are OFF on staging today. Writes must still land correctly and nothing else may leak, otherwise users would see wrong or other people’s data.',
       expected: `Gate OFF (staging today, M2Q-02): no server error (5xx); the value read back is exactly the fake value written or onboarded (first name exact — fake names are letters only; email exact — plain lower-case fake email; phone shown to the owner = the login number in an accepted form); no other test account’s name, email or phone; no personal-data field with a real-looking value that the Dev inventory does not list for this API (${fields(a.fields)}). Gate ON → PII value: waiting for Dev to enable the read gates (M2Q-43).${a.fields.includes('EMAIL') ? ' Email reads also need a local email_id (Dev doc).' : ''}`,
       evidence: `QA lead answer M2Q-02 (2026-10-24); Dev doc "Field behavior"${isTestRoute(a) ? '; M2Q-35 answer (test-route write updates PII and the app profile — from code, confirm with Dev)' : ''}.`,
@@ -656,10 +693,15 @@ const RULES: Record<string, Rule> = {
     return {
       pre: accountPre(a),
       data: 'Account/record in a disallowed state (deactivated, pending, banned, action already done, wrong target).',
-      steps: [`Send ${req(a)} in each disallowed state.`, 'Re-read the profile.'],
-      validate: 'Refused as on master; no PII in the error; no state or PII change.',
+      steps: [
+        'Read the caller’s and the target’s own profiles (counters included).',
+        `Send the valid ${req(a)}, then the same request again, then with unknown ids; re-read both profiles after each.`,
+      ],
+      validate:
+        'Verified by state, not only by status: the valid request’s effect is read from the caller’s and the target’s own profiles; “action already done” changes nothing more (a toggle sent twice is back at the start); “wrong target” changes nothing. A 2xx for these two variants needs a code reference in the approved baseline (acceptedBecause), otherwise it fails. When every variant gets the same status and nothing observable changes, the status proves nothing → Blocked (non-discriminating), never a pass. No PII in errors.',
       why: 'Error paths of these actions now also run the PII serializer.',
-      expected: 'Same outcome as master; no PII in errors; nothing changed.',
+      expected:
+        'Same outcome as master; no PII in errors; a repeated or wrong-target action changes nothing (checked in the own profiles).',
       evidence: 'Non-regression rule (baseline M2Q-24).',
       db: API_ONLY,
       priority: 'Low',
@@ -677,8 +719,9 @@ const RULES: Record<string, Rule> = {
         `Send ${req(a)} twice sequentially, then twice in parallel.`,
         'Read the profile / records / PII.',
       ],
-      validate:
-        'Same outcome as master; no duplicate side effects (subscriptions, likes, messages, PII records); PII unchanged.',
+      validate: /toggle|toogle/.test(a.path)
+        ? 'Same outcome as master; the toggle sent twice is back at the start (caller’s full own profile compared); the account is left as it was (sent once more if the parallel pair did not cancel out).'
+        : 'Same outcome as master; no duplicate side effects (subscriptions, likes, messages, PII records); the caller’s full own profile (stable fields and the about text) unchanged after the first request.',
       why: 'Mobile clients retry; duplicates on a PII path create inconsistent records.',
       expected: isWebhook(a)
         ? 'Replayed callback does not activate twice (as on master).'

@@ -42,6 +42,7 @@ export const COMMUNITY_AGREED: ExtraRoute = {
 export const VERIFY_LOGIN_API = 'API-060';
 export const DELETE_ACCOUNT_API = 'API-059';
 export const USER_TOKEN_PLACEHOLDER = '$M2_USER_TOKEN';
+export const WEB_TOKEN_PLACEHOLDER = '$M2_WEB_TOKEN';
 
 export interface UserSession {
   /** App user id from the verify response (synthetic account). */
@@ -171,6 +172,42 @@ export class SessionHelper {
       device,
       retry: false,
     });
+  }
+
+  /**
+   * A WEB JWT (ptfrm "web") for an existing synthetic account WITH a profile, for the TOKEN checks (valid credential
+   * of the wrong type). From code (develop_new 944f76a — confirm with Dev): verify_number_login_v1 with device_type
+   * "web" answers create_login_web_response, whose auth_token is generate_web_auth_token (ptfrm "web") — and it
+   * returns before DeviceInfo::UserDetail.set_data, so the account's app device and app token are not touched
+   * (user.rb:143-163, authenticatable.rb:41-55, 242-261). The OTP is requested with the account's own device; the
+   * verify carries device_type "web" (header — standardize_params copies it into params — and body) and a separate
+   * device id. The token is registered as `$M2_WEB_TOKEN` at once and never logged. undefined = no token issued.
+   */
+  async webToken(s: UserSession): Promise<Secret | undefined> {
+    if (!isAllowedTestNumber(s.mobileNumber)) throw new SessionError('Not an allowed synthetic test number');
+    const otp = await this.requestOtp(s.mobileNumber, s.device);
+    if (otp.status !== 200) return undefined;
+    const web: Device = {
+      deviceType: 'web',
+      appVersion: s.device.appVersion ?? this.config.login.appVersion,
+      uniqueIdentifier: `${s.device.uniqueIdentifier}-web`,
+    };
+    const verify = await this.client.call(VERIFY_LOGIN_API, {
+      auth: AUTH.none,
+      body: {
+        phone_code_id: this.config.login.phoneCodeId,
+        mobile_number: s.mobileNumber,
+        otp: TEST_OTP,
+        device_type: 'web',
+        unique_identifier: web.uniqueIdentifier,
+      },
+      device: web,
+      retry: false,
+    });
+    const token = field(verify.json(), 'auth_token');
+    if (verify.status !== 200 || typeof token !== 'string' || !token) return undefined;
+    registerSecretValue(token, WEB_TOKEN_PLACEHOLDER);
+    return new Secret(token);
   }
 
   /**

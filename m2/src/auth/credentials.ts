@@ -37,7 +37,34 @@ export const AUTH = {
   testToken: (secret: Secret): AuthMode => ({ kind: 'secret', label: 'TEST_TOKEN', secret }),
   /** A user JWT from the session helper. */
   user: (secret: Secret): AuthMode => ({ kind: 'secret', label: 'user JWT', secret }),
+  /** A web JWT (ptfrm "web") of a synthetic account — valid, but rejected by the app routes (verify_auth_token). */
+  web: (secret: Secret): AuthMode => ({ kind: 'secret', label: 'web JWT', secret }),
 };
+
+/** The valid credential of the WRONG type a TOKEN check sends (audit fix 2026-10-25). */
+export type WrongCredential = 'web JWT' | 'user JWT' | 'TEST_TOKEN';
+
+/**
+ * Which valid-but-wrong credential is meaningful for a route's auth (Dev inventory) — a credential the route can
+ * parse, so a refusal proves "wrong type", not "unreadable token" (from code, develop_new 944f76a — confirm with
+ * Dev):
+ * - app user routes (USER_TOKEN): a web JWT — a real RS256 JWT with ptfrm "web", which verify_auth_token rejects
+ *   (authenticatable.rb:303-308). TEST_TOKEN is not a JWT there, so it only reached the decode error (M2Q-39).
+ * - web-token routes (WEB_TOKEN), TEST_TOKEN routes and CMS routes: a normal app user JWT (verify_web_token rejects
+ *   ptfrm ≠ "web", authenticatable.rb:321-324; the test routes compare TEST_TOKEN; an app JWT names no admin user).
+ * - INFOEDGE: TEST_TOKEN (another static shared token — the meaningful mix-up there).
+ */
+export function wrongCredentialsFor(auth: readonly string[]): WrongCredential[] {
+  if (auth.includes('INFOEDGE_PROFILE_API_TOKEN')) return ['TEST_TOKEN'];
+  if (auth.includes('USER_TOKEN')) return ['web JWT'];
+  if (
+    auth.includes('TEST_TOKEN') ||
+    auth.includes('WEB_TOKEN') ||
+    auth.some((a) => ['ADMIN_TOKEN', 'webcms', 'ADMIN_SESSION_COOKIE'].includes(a))
+  )
+    return ['user JWT'];
+  return ['TEST_TOKEN'];
+}
 
 /** The invalid-credential variants every AUTH check sends (Dev design: none, "Bearer invalid", expired-format). */
 export const INVALID_VARIANTS = (): AuthMode[] => [AUTH.none, AUTH.invalidBearer, AUTH.expiredJwt()];

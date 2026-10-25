@@ -157,9 +157,37 @@ export function shapeOf(res: ApiResponse): string {
   return `${res.status} ${type || 'text'} (${text.length} chars)`;
 }
 
-/** The call must be refused (not 2xx) and the reply must contain no personal data. */
-export function expectRefusedWithoutPii(res: ApiResponse, label: string, o: ScanOptions = {}): void {
-  expect(isSuccess(res.status), `${label}: ${res.summary()} — expected a refusal (not 2xx)`).toBe(false);
+/**
+ * Why a status is NOT a refusal, or undefined when it is one (400–499). Audit fix 2026-10-25: a 5xx is a server
+ * error, not a refusal — for a missing / invalid / expired / wrong-type credential it is the confirmed defect M2Q-39
+ * (decode_token rescues only JWT::ExpiredSignature, so malformed or wrongly-signed tokens raise out of
+ * authenticate_token — authenticatable.rb:272-283, develop_new 944f76a; from code — confirm with Dev).
+ */
+export function refusalProblem(status: number): string | undefined {
+  if (status >= 400 && status < 500) return undefined;
+  if (status >= 500)
+    return `server error ${status} is not a refusal (expected 400–499); for a missing / invalid / expired / wrong-type credential this is defect M2Q-39 (decode_token rescues only JWT::ExpiredSignature, authenticatable.rb:272-283 — from code, confirm with Dev)`;
+  return `HTTP ${status} is not a refusal (expected 400–499)`;
+}
+
+/** A 302 to the admin login page (ActiveAdmin's refusal: "You are being redirected" to …/login). */
+export const isLoginRedirect = (res: ApiResponse) =>
+  res.status === 302 &&
+  /\/login\b/.test(`${res.header('location') ?? ''} ${res.isJson ? '' : res.rawText().slice(0, 2000)}`);
+
+/**
+ * The call must be refused with a 4xx (400–499 — neither 2xx/3xx nor a 5xx) and the reply must contain no personal
+ * data. `loginRedirectOk`: browser (ActiveAdmin session-cookie) routes refuse by redirecting to the admin login page
+ * (observed 2026-10-25, API-192: 302 "You are being redirected" to /bangalore745/login) — only that redirect counts.
+ */
+export function expectRefusedWithoutPii(
+  res: ApiResponse,
+  label: string,
+  o: ScanOptions = {},
+  opts: { loginRedirectOk?: boolean } = {},
+): void {
+  const problem = opts.loginRedirectOk && isLoginRedirect(res) ? undefined : refusalProblem(res.status);
+  expect(problem === undefined, `${label}: ${res.summary()} — ${problem ?? 'refused'}`).toBe(true);
   const findings = scanResponse(res, o);
   expect(findings, `${label}: the refusal must contain no personal data (locations only)`).toEqual([]);
 }

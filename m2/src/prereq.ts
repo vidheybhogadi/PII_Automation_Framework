@@ -88,4 +88,21 @@ export const PREREQ = {
     id: 'M2Q-24',
     reason: 'No approved contract baseline for this case yet (npm run m2:contracts:record, review, approve)',
   },
+  webJwt: {
+    id: 'M2Q-41',
+    reason:
+      'Staging issued no web JWT (verify_number_login_v1 with device_type "web" for an onboarded synthetic account) — the wrong-type credential of this TOKEN check is missing',
+  },
+  /** Audit fix 2026-10-25 (IDOR): nothing of B's can be put into a request that names no user / profile id. */
+  noTarget: {
+    id: 'M2-NO-TARGET',
+    reason:
+      'no target in request — the Dev request names no user / profile id (REF, USER_ID, OTHER_*), so B’s identifiers cannot be sent; an IDOR check on other ids (conversation, request) needs its own design',
+  },
+  /** Audit fix 2026-10-25 (STATE): a status that is the same for every variant proves nothing. */
+  statusOnly: {
+    id: 'M2-STATUS-ONLY',
+    reason:
+      'non-discriminating — every variant got the same status and the valid request changed nothing observable in the caller’s or the target’s own view, so "already done" / "wrong target" cannot be told from success',
+  },
 } as const;

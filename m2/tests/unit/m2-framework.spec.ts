@@ -9,10 +9,11 @@ import { Logger } from '../../../core/utils/logger';
 import { registerSecretValue, scrubText } from '../../../core/utils/redaction';
 import { Secret } from '../../../core/utils/secret';
 import { listInventory } from '../../../reporting/generator/inventory';
-import { AUTH, expiredFormatJwt } from '../../src/auth/credentials';
+import { AUTH, expiredFormatJwt, wrongCredentialsFor } from '../../src/auth/credentials';
 import { isAllowedTestNumber, testPhoneNumber } from '../../src/auth/test-phone';
 import {
   expectRefusedWithoutPii,
+  refusalProblem,
   scanForPii,
   scanResponse,
   shapeOf,
@@ -21,10 +22,27 @@ import {
 import { statusFromDeps } from '../../scripts/m2-questions';
 import { M2Client } from '../../src/clients/m2-client';
 import { loadM2Config } from '../../src/config/m2-config';
-import { caseById, design, titleOf } from '../../src/design';
+import { apiById, caseById, design, titleOf } from '../../src/design';
+import {
+  aboutOf,
+  ABOUT_KEY,
+  REQUIRED_VIEW_KEYS,
+  stableView,
+  viewDiff,
+  type OwnView,
+} from '../../src/checks/own-view';
+import {
+  combineViews,
+  hasIdorTarget,
+  isStatusOnlyReply,
+  mentionsAccount,
+  stateVerdict,
+} from '../../src/checks/verdicts';
 import { tryBuildRequest, questionFor } from '../../src/checks/request-builder';
 import {
   approvableVariants,
+  invalidAcceptedProblem,
+  isInvalidVariant,
   piiKeyDiff,
   shapeDiff,
   shapeOf as bodyShape,
@@ -49,7 +67,7 @@ import {
   type LedgerEntry,
 } from '../../src/accounts/accounts';
 import { execSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { submitProfileBody } from '../../src/accounts/onboarding';
 import { SessionHelper } from '../../src/auth/session';
@@ -761,5 +779,199 @@ test.describe('UNIT M2 secret hygiene of recorded exchanges (2026-10-24)', () =>
     expect(out).toContain('10234567');
     expect(out).toContain('page=1');
     expect(out).toContain('first_name');
+  });
+});
+
+test.describe('UNIT M2 audit fixes — no false passes (2026-10-25)', () => {
+  test('UT-M2-029 A refusal is a 4xx: a 5xx fails citing M2Q-39, and TOKEN sends a credential of the wrong type that the route can parse', () => {
+    expectRefusedWithoutPii(res(401, '{"unauthorized_request":true}'), '401');
+    expectRefusedWithoutPii(res(403, '{}'), '403');
+    expect(refusalProblem(401)).toBeUndefined();
+    expect(refusalProblem(500)).toContain('M2Q-39');
+    expect(() => expectRefusedWithoutPii(res(500, '{"title":"Oops!"}'), 'server error')).toThrow(/M2Q-39/);
+    expect(() => expectRefusedWithoutPii(res(200, '{}'), 'accepted')).toThrow();
+    expect(() => expectRefusedWithoutPii(res(302, '', 'text/html'), 'redirect')).toThrow();
+    // Only the admin page's redirect to its login page counts, and only where the caller allows it.
+    const toLogin = res(
+      302,
+      '<html>You are being <a href="https://x.test/admin745/login">redirected</a>.',
+      'text/html',
+    );
+    expect(() => expectRefusedWithoutPii(toLogin, 'login redirect')).toThrow();
+    expectRefusedWithoutPii(toLogin, 'login redirect', {}, { loginRedirectOk: true });
+    expect(() =>
+      expectRefusedWithoutPii(
+        res(302, '<a href="/home">x</a>', 'text/html'),
+        'other',
+        {},
+        { loginRedirectOk: true },
+      ),
+    ).toThrow();
+    // Wrong-type credentials (from code): app routes get a web JWT, never TEST_TOKEN.
+    expect(wrongCredentialsFor(['USER_TOKEN'])).toEqual(['web JWT']);
+    expect(wrongCredentialsFor(['WEB_TOKEN'])).toEqual(['user JWT']);
+    expect(wrongCredentialsFor(['TEST_TOKEN'])).toEqual(['user JWT']);
+    expect(wrongCredentialsFor(['ADMIN_TOKEN', 'webcms'])).toEqual(['user JWT']);
+    expect(wrongCredentialsFor(['ADMIN_SESSION_COOKIE'])).toEqual(['user JWT']);
+    expect(wrongCredentialsFor(['INFOEDGE_PROFILE_API_TOKEN'])).toEqual(['TEST_TOKEN']);
+    for (const c of design().cases.filter((x) => x.check === 'TOKEN'))
+      if (apiById(c.apis[0]!).auth.includes('USER_TOKEN'))
+        expect(wrongCredentialsFor(apiById(c.apis[0]!).auth), c.id).not.toContain('TEST_TOKEN');
+    // No "known defect" annotation path is left for server errors on bad credentials.
+    const fixtures = readFileSync(path.join(__dirname, '../../src/fixtures/m2-fixtures.ts'), 'utf8');
+    expect(fixtures).not.toContain('SERVER_ERROR_ON_BAD_CREDENTIAL');
+    expect(fixtures).not.toMatch(/res\.status >= 500/);
+  });
+
+  test('UT-M2-030 The "unchanged" view is the whole own profile minus volatile keys, plus the about text', () => {
+    const own = {
+      user_id: 1,
+      first_name: 'Qa',
+      profile_state: 'approved',
+      has_selected_mbti: false,
+      percentage_profile_complete: 43,
+      hide_first_name: false,
+      verification_status: 'not_verified',
+      daily_likes_left: 20,
+      likes_received_count: 0,
+      intro_offer_timer: 10,
+      boost_time: { start_time: null },
+      selfie_verification_message_v1: 'x',
+      show_complete_profile_popup: true,
+      success_stories: [{ a: 1 }],
+      preferences: [{ id: 21 }, { id: 4 }],
+      image_list: [{ photo: 'https://img.test/a.png?sig=1' }],
+    };
+    const v = stableView(own);
+    for (const k of REQUIRED_VIEW_KEYS) expect(Object.keys(v), k).toContain(k);
+    for (const k of [
+      'daily_likes_left',
+      'likes_received_count',
+      'intro_offer_timer',
+      'boost_time',
+      'selfie_verification_message_v1',
+      'show_complete_profile_popup',
+      'success_stories',
+    ])
+      expect(Object.keys(v), k).not.toContain(k);
+    expect(Object.keys(stableView(own, { keepCounts: true }))).toContain('likes_received_count');
+    const view = (b: object, about: unknown = 'bio'): OwnView => ({
+      status: 200,
+      view: { ...stableView(b), [ABOUT_KEY]: about },
+    });
+    // Random list order, signed URL query, counters and timers do not count as a change …
+    expect(
+      viewDiff(
+        view(own),
+        view({
+          ...own,
+          preferences: [{ id: 4 }, { id: 21 }],
+          image_list: [{ photo: 'https://img.test/a.png?sig=2' }],
+          daily_likes_left: 19,
+          intro_offer_timer: 9,
+        }),
+      ),
+    ).toEqual([]);
+    // … the audit's false passes do: has_selected_mbti (API-039 PARAM) and a deleted bio (API-022 PARAM).
+    expect(viewDiff(view(own), view({ ...own, has_selected_mbti: true }))).toEqual(['has_selected_mbti']);
+    expect(viewDiff(view(own), view(own, null))).toEqual([ABOUT_KEY]);
+    expect(viewDiff(view(own), { status: 401, view: {} })).toContain('status');
+    expect(aboutOf({ user: { about: 'x' } })).toBe('x');
+    expect(aboutOf({ user: {} })).toBeNull();
+  });
+
+  test('UT-M2-031 Baselines: a 2xx to invalid input is accepted only with an acceptedBecause code reference', () => {
+    expect(isInvalidVariant('M2-API-005-PARAM', 'without page')).toBe(true);
+    expect(isInvalidVariant('M2-API-015-BODY', 'invalid JSON')).toBe(true);
+    expect(isInvalidVariant('M2-API-046-STATE', 'valid request')).toBe(false);
+    expect(isInvalidVariant('M2-API-046-STATE', 'wrong target (unknown ids)')).toBe(true);
+    expect(isInvalidVariant('M2-API-046-CONTRACT', 'valid request')).toBe(false);
+    expect(isInvalidVariant('M2-API-046-REPEAT', 'same request again')).toBe(false);
+    expect(invalidAcceptedProblem('M2-API-022-PARAM', 'without about', 200, {})).toMatch(
+      /invalid input accepted/,
+    );
+    expect(invalidAcceptedProblem('M2-API-022-PARAM', 'without about', 422, {})).toBeUndefined();
+    expect(
+      invalidAcceptedProblem('M2-API-005-PARAM', 'without page', 200, {
+        acceptedBecause: { 'without page': 'ref' },
+      }),
+    ).toBeUndefined();
+    expect(invalidAcceptedProblem('M2-API-046-STATE', 'valid request', 200, {})).toBeUndefined();
+    // Approved files: acceptedBecause only for 2xx invalid-input variants, each with a code reference — only the
+    // paging defaults the design documents (no bulk acceptance).
+    const dir = path.join(__dirname, '../../contracts/approved');
+    for (const f of readdirSync(dir).filter((x) => x.endsWith('.json'))) {
+      const file = JSON.parse(readFileSync(path.join(dir, f), 'utf8')) as BaselineFile;
+      for (const [label, why] of Object.entries(file.acceptedBecause ?? {})) {
+        expect(isInvalidVariant(file.caseId, label), `${file.caseId} ${label}`).toBe(true);
+        expect(file.variants[label]?.status, `${file.caseId} ${label}`).toBeGreaterThanOrEqual(200);
+        expect(why, `${file.caseId} ${label}`).toMatch(/\.rb:\d+/);
+        expect(
+          ['without page', 'without items_per_page', 'page with the wrong type'],
+          `${file.caseId} ${label}`,
+        ).toContain(label);
+      }
+    }
+  });
+
+  test('UT-M2-032 STATE is decided by state: double effects and wrong-target changes fail; status-only replies are non-discriminating', () => {
+    const v = (x: Record<string, unknown>): OwnView => ({ status: 0, view: x });
+    const s0 = v({ 'target.likes_received_count': 0 });
+    const s1 = v({ 'target.likes_received_count': 1 });
+    const s2 = v({ 'target.likes_received_count': 2 });
+    const ok = [200, 200, 200];
+    expect(stateVerdict({ before: s0, afterValid: s1, afterAgain: s1, afterWrong: s1 }, ok, false)).toEqual({
+      effect: ['target.likes_received_count'],
+      failures: [],
+      nonDiscriminating: false,
+    });
+    expect(
+      stateVerdict({ before: s0, afterValid: s1, afterAgain: s2, afterWrong: s2 }, ok, false).failures[0],
+    ).toMatch(/already done/);
+    expect(
+      stateVerdict({ before: s0, afterValid: s1, afterAgain: s1, afterWrong: s2 }, ok, false).failures[0],
+    ).toMatch(/wrong target/);
+    // Toggle: sent twice is back at the start; a target-less third send flips again.
+    const on = v({ 'caller.hide_first_name': true });
+    const off = v({ 'caller.hide_first_name': false });
+    expect(
+      stateVerdict({ before: off, afterValid: on, afterAgain: off, afterWrong: on }, ok, true, true).failures,
+    ).toEqual([]);
+    expect(
+      stateVerdict({ before: off, afterValid: on, afterAgain: on, afterWrong: on }, ok, true, true)
+        .failures[0],
+    ).toMatch(/toggle/);
+    // Same status everywhere and nothing observable → non-discriminating; a different status discriminates.
+    expect(
+      stateVerdict({ before: s0, afterValid: s0, afterAgain: s0, afterWrong: s0 }, ok, false)
+        .nonDiscriminating,
+    ).toBe(true);
+    expect(
+      stateVerdict({ before: s0, afterValid: s0, afterAgain: s0, afterWrong: s0 }, [200, 200, 404], false)
+        .nonDiscriminating,
+    ).toBe(false);
+    expect(combineViews({ caller: { status: 200, view: { a: 1 } }, target: undefined }).view).toEqual({
+      'caller.status': 200,
+      'caller.a': 1,
+    });
+  });
+
+  test('UT-M2-033 EXPOSE needs the writer in the reply; IDOR needs a target id in the request; status-only replies are recognised', () => {
+    const a = { ref: 'AB12CD34', userId: '19849927' };
+    expect(mentionsAccount({ data: [{ ref: 'AB12CD34', first_name: 'Qa' }] }, a)).toBe(true);
+    expect(mentionsAccount({ data: [{ user_id: 19849927 }] }, a)).toBe(true);
+    expect(mentionsAccount({ first_names: { '19849927': 'Qa' } }, a)).toBe(true);
+    expect(mentionsAccount({ data: [{ ref: 'FFFFFFFF' }] }, a)).toBe(false);
+    expect(mentionsAccount({ status: true }, a)).toBe(false);
+    expect(mentionsAccount({ ref: 'AB12CD34' }, {})).toBe(false);
+    expect(hasIdorTarget(['REF'])).toBe(true);
+    expect(hasIdorTarget(['OTHER_USER_ID'])).toBe(true);
+    expect(hasIdorTarget(['USER_ID', 'PAGE'])).toBe(true);
+    expect(hasIdorTarget(['CONVERSATION_ID', 'MESSAGE_TIME_TOKEN'])).toBe(false);
+    expect(hasIdorTarget([])).toBe(false);
+    expect(isStatusOnlyReply({ status: true })).toBe(true);
+    expect(isStatusOnlyReply({ status: true, message: 'ok' })).toBe(true);
+    expect(isStatusOnlyReply({ status: true, user: {} })).toBe(false);
+    expect(isStatusOnlyReply([])).toBe(false);
   });
 });

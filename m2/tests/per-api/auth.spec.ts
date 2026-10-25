@@ -4,7 +4,9 @@
  *
  * Each test sends the API with no credential, with "Bearer invalid" and with an expired, wrongly-signed JWT, and no
  * request body ({} for non-GET), so a route that wrongly accepted the call would have nothing to act on.
- * Pass = every reply is refused (not 2xx) and carries no personal data. Where staging recorded the exact refusal
+ * Pass = every reply is refused with a 4xx (400–499) and carries no personal data; a 5xx is a FAILURE, not a refusal
+ * (defect M2Q-39, from code); the browser-only admin page may refuse with its 302 to the admin login page. Where
+ * staging recorded the exact refusal
  * (m2-inventory.ts OBSERVED_NO_CREDENTIAL), the no-credential reply must match it exactly. Every reply's status and
  * body shape is recorded ("observed").
  *
@@ -42,7 +44,7 @@ test.describe('M2 per-API checks — missing / invalid credential refused (AUTH)
       for (const { auth, label, res } of replies) {
         await test.step(`Check ${label} is refused without personal data`, () => {
           if (auth.kind === 'none' && observed) expectObservedRefusal(res, observed, label);
-          expectRefusedWithoutPii(res, label);
+          expectRefusedWithoutPii(res, label, {}, { loginRedirectOk: cookieRoute });
         });
       }
     });

@@ -8,7 +8,9 @@
  *   2. REVIEW — m2/contracts/REVIEW.md (npm run m2:contracts:review) lists new / changed recordings vs approved.
  *   3. APPROVE — `npm run m2:contracts:approve -- --by "<name>" <case…|all>` copies a reviewed recording to
  *      m2/contracts/approved/ with {approved: {by, on}}.
- *   4. ASSERT — normal runs compare only against approved files; no approved file → Blocked (M2Q-24).
+ *   4. ASSERT — normal runs compare only against approved files; no approved file → Blocked (M2Q-24). A 2xx to an
+ *      INVALID-input variant fails unless the approved file carries `acceptedBecause` for that label (audit fix
+ *      2026-10-25 — an approved 2xx is no longer proof that accepting the input is right).
  * Caveat (M2Q-24 answer): staging already runs the PII branch, so baselines catch future changes, not differences
  * from master.
  */
@@ -48,6 +50,39 @@ export interface BaselineFile {
   reRecord?: string;
   /** Every approval that changed the file (approve merges new recordings into the approved shape). */
   approvals?: { by: string; on: string; recordedAt: string; runId: string }[];
+  /**
+   * Audit fix 2026-10-25: invalid-input variants (PARAM / BODY, and STATE except "valid request") whose 2xx reply is
+   * ACCEPTED, label → the code reference that makes the input optional / defaulted (e.g. standardize_params). Without
+   * an entry, a 2xx for invalid input is a failure ("invalid input accepted") even when the approved file has 2xx.
+   */
+  acceptedBecause?: Record<string, string>;
+}
+
+/** Checks whose variants all send INVALID input (STATE: every variant but the valid request). */
+const INVALID_CHECKS = ['PARAM', 'BODY'];
+export const VALID_STATE_VARIANT = 'valid request';
+
+/** Whether a baseline variant sends invalid input (by the case's check, from its id M2-API-nnn-<CHECK>). */
+export function isInvalidVariant(caseId: string, label: string): boolean {
+  const check = caseId.match(/^M2-API-\d+-(.+)$/)?.[1];
+  if (!check) return false;
+  if (INVALID_CHECKS.includes(check)) return true;
+  return check === 'STATE' && label !== VALID_STATE_VARIANT;
+}
+
+/**
+ * Why a reply to an invalid-input variant is NOT acceptable, or undefined: a 2xx is accepted only when the approved
+ * baseline names the code reference for that label in `acceptedBecause` (never inferred, never bulk-added).
+ */
+export function invalidAcceptedProblem(
+  caseId: string,
+  label: string,
+  status: number,
+  approved: Pick<BaselineFile, 'acceptedBecause'> | undefined,
+): string | undefined {
+  if (!isInvalidVariant(caseId, label) || status < 200 || status >= 300) return undefined;
+  if (approved?.acceptedBecause?.[label]) return undefined;
+  return `invalid input accepted (HTTP ${status}) — a 2xx for this variant is allowed only with an acceptedBecause code reference in the approved baseline (npm run m2:contracts:approve -- --by "<name>" --accept "${label}=<code ref>" ${caseId})`;
 }
 
 export const CONTRACTS_DIR = path.join(ROOT, 'm2/contracts');
@@ -323,6 +358,13 @@ export async function withBaseline(
     if (!ctx.record) {
       const want = approved!.variants[v.label];
       expect(want !== undefined, `${v.label}: variant exists in the approved baseline`).toBe(true);
+      const accepted = invalidAcceptedProblem(caseId, v.label, res.status, approved);
+      expect(accepted === undefined, `${v.label}: ${accepted ?? 'ok'}`).toBe(true);
+      if (isInvalidVariant(caseId, v.label) && approved!.acceptedBecause?.[v.label])
+        test.info().annotations.push({
+          type: 'assumption',
+          description: `${v.label}: 2xx accepted — ${approved!.acceptedBecause[v.label]}`,
+        });
       expect(res.status, `${v.label}: status as in the approved baseline`).toBe(want!.status);
       expect(
         shapeDiff(want!.shape, seen[v.label]!.shape),

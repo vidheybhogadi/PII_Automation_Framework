@@ -169,5 +169,9 @@
       "recordedAt": "2026-10-24T12:52:42.033Z",
       "runId": "qa-m2-20261024t124732-dd5f"
     }
-  ]
+  ],
+  "acceptedBecause": {
+    "without page": "V1::ApiController#standardize_params: a missing or non-positive page (a non-numeric value → to_i 0) becomes DEFAULT_PAGE (app/controllers/v1/api_controller.rb:103-108, develop_new 944f76a) — from code, confirm with Dev",
+    "without items_per_page": "V1::ApiController#standardize_params: a missing items_per_page becomes DEFAULT_ITEMS_PER_PAGE (app/controllers/v1/api_controller.rb:109-113, develop_new 944f76a) — from code, confirm with Dev"
+  }
 }

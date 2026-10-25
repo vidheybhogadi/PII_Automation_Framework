@@ -18,7 +18,7 @@ import type { ApiResponse } from '../../../core/http/api-response';
 import { ExchangeRecorder } from '../../../core/utils/exchange-recorder';
 import { Logger } from '../../../core/utils/logger';
 import type { AnyCase } from '../../scripts/m2-all-cases';
-import { KNOWN_FINDINGS, READ_GATES_ON, SERVER_ERROR_ON_BAD_CREDENTIAL } from '../../scripts/m2-questions';
+import { KNOWN_FINDINGS, READ_GATES_ON } from '../../scripts/m2-questions';
 import { Accounts } from '../accounts/accounts';
 import { shapeOf } from '../assertions/pii.assertions';
 import type { SessionHelper } from '../auth/session';
@@ -118,13 +118,9 @@ export const test = base.extend<M2TestFixtures, M2WorkerFixtures>({
 
   observe: async ({}, use, testInfo) => {
     await use((label, res) => {
+      // Only what was seen. A server error on a bad credential is NOT annotated as a "known defect" any more (audit
+      // fix 2026-10-25): the refusal assertion itself fails on any 5xx and cites M2Q-39 (expectRefusedWithoutPii).
       testInfo.annotations.push({ type: 'observed', description: `${label}: ${shapeOf(res)}` });
-      // Observed defect pattern (M2Q-39): a bad credential answered with a server error instead of 401.
-      if (res.status >= 500 && /invalid-bearer|expired-format JWT|TEST_TOKEN|user JWT/.test(label))
-        testInfo.annotations.push({
-          type: 'known-defect',
-          description: `${SERVER_ERROR_ON_BAD_CREDENTIAL}: ${label} → ${res.status} instead of 401`,
-        });
     });
   },
 

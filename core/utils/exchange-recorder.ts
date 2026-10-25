@@ -17,8 +17,11 @@ import { maskSecretsOnly as maskRegistered, maskTokens, REDACTED, TOKEN_KEY_PATT
 /** Registered secrets → placeholders, then any other token (JWTs, token-key values) → [REDACTED]. */
 const maskSecretsOnly = (text: string): string => maskTokens(maskRegistered(text));
 
-/** Bodies longer than this are cut (with a note) to keep the report small. */
-export const MAX_BODY_CHARS = 16_384;
+/**
+ * Bodies longer than this are cut (with a note) to keep the report small. 256 KB (was 16 KB until 2026-10-25: the
+ * M2 own-profile replies are ~20–40 KB, so the recorded reply was cut before the keys an audit needs). Still redacted.
+ */
+export const MAX_BODY_CHARS = 262_144;
 
 export interface HttpExchange {
   requestId: string;

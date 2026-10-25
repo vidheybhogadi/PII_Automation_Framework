@@ -770,9 +770,6 @@ export const KNOWN_FINDINGS: Record<string, { question: string; security: boolea
   },
 };
 
-/** Marker for refusals that come back as a server error (5xx) instead of 401 — observed defect pattern. */
-export const SERVER_ERROR_ON_BAD_CREDENTIAL = 'M2Q-39';
-
 /** Questions that still block: no answer yet (deferred questions are still open). */
 export const OPEN = new Set(QUESTIONS.filter((q) => !q.answer).map((q) => q.id));
 const WAITING_KIND = 'Waiting for Dev (environment change)';

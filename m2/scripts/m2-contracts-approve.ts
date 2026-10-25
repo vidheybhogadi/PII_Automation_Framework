@@ -3,7 +3,12 @@
  *
  *   npm run m2:contracts:approve -- --by "Parul" M2-API-013-CONTRACT M2-API-021-PARAM
  *   npm run m2:contracts:approve -- --by "Parul" all
+ *   npm run m2:contracts:approve -- --by "Parul" --accept "without page=<code ref>" M2-API-005-PARAM
  *
+ * - acceptedBecause (audit fix 2026-10-25): a 2xx reply to an INVALID-input variant (PARAM / BODY / STATE except
+ *   "valid request") fails in normal runs unless the approved file names the code reference that makes the input
+ *   optional / defaulted for that label. Add one with --accept "<label>=<code ref>" (one case at a time; works on an
+ *   approved file without a new recording too). Existing entries are kept on every re-approval.
  * - No approved file yet: the recording is copied with {approved: {by, on}}.
  * - Approved file exists (2026-10-24): the recording is MERGED into it — union of key/type shapes and PII key names
  *   per variant (data-dependent list contents accumulate instead of flip-flopping); a changed status takes the new
@@ -22,6 +27,7 @@ import {
   approvableVariants,
   approvedFile,
   CONTRACTS_DIR,
+  isInvalidVariant,
   recordedFile,
   unionShapes,
   type BaselineFile,
@@ -41,11 +47,25 @@ function apiOfCase(caseId: string) {
 }
 
 const args = process.argv.slice(2);
-const byIdx = args.indexOf('--by');
-const by = byIdx >= 0 ? args[byIdx + 1] : undefined;
-const ids = args.filter((a, i) => a !== '--by' && i !== byIdx + 1);
+let by: string | undefined;
+const ids: string[] = [];
+/** --accept "<variant label>=<code ref>" (repeatable): see acceptedBecause in baseline.ts. */
+const accepts: Record<string, string> = {};
+for (let i = 0; i < args.length; i++) {
+  if (args[i] === '--by') by = args[++i];
+  else if (args[i] === '--accept') {
+    const [label, ...ref] = (args[++i] ?? '').split('=');
+    if (!label?.trim() || !ref.join('=').trim()) {
+      console.error('--accept needs "<variant label>=<code ref>"');
+      process.exit(1);
+    }
+    accepts[label.trim()] = ref.join('=').trim();
+  } else ids.push(args[i]!);
+}
 if (!by || !ids.length) {
-  console.error('Usage: npm run m2:contracts:approve -- --by "<name>" <case…|all>');
+  console.error(
+    'Usage: npm run m2:contracts:approve -- --by "<name>" [--accept "<variant>=<code ref>" …] <case…|all>',
+  );
   process.exit(1);
 }
 const recordedDir = path.join(CONTRACTS_DIR, 'recorded');
@@ -55,7 +75,33 @@ const all = existsSync(recordedDir)
       .map((f) => f.replace(/\.json$/, ''))
   : [];
 const chosen = ids.includes('all') ? all : ids;
+if (Object.keys(accepts).length && (chosen.length !== 1 || ids.includes('all'))) {
+  console.error('--accept applies to exactly one case: name it (not "all").');
+  process.exit(1);
+}
 const on = new Date().toISOString().slice(0, 10);
+
+/**
+ * --accept for an already approved case without a new recording: only the acceptedBecause entry is added (each label
+ * must be an invalid-input variant of the approved file).
+ */
+if (Object.keys(accepts).length && !existsSync(recordedFile(chosen[0]!))) {
+  const id = chosen[0]!;
+  if (!existsSync(approvedFile(id))) {
+    console.error(`No approved baseline and no recording for ${id}`);
+    process.exit(1);
+  }
+  const file = JSON.parse(readFileSync(approvedFile(id), 'utf8')) as BaselineFile;
+  for (const label of Object.keys(accepts))
+    if (!file.variants[label] || !isInvalidVariant(id, label)) {
+      console.error(`${id}: "${label}" is not an invalid-input variant of the approved baseline`);
+      process.exit(1);
+    }
+  file.acceptedBecause = { ...(file.acceptedBecause ?? {}), ...accepts };
+  writeFileSync(approvedFile(id), `${JSON.stringify(file, null, 2)}\n`);
+  console.log(`${id}: acceptedBecause set for ${Object.keys(accepts).length} variant(s) by ${by}.`);
+  process.exit(0);
+}
 
 function merge(old: Observation | undefined, rec: Observation): Observation {
   if (!old || old.status !== rec.status) return rec;
@@ -91,7 +137,20 @@ for (const id of chosen) {
   for (const label of Object.keys(variants))
     if (api && unsafeVariantLabel(api, label)) delete variants[label];
   for (const [label, obs] of Object.entries(approve)) variants[label] = merge(variants[label], obs);
-  if (old?.approved && !old.reRecord && JSON.stringify(old.variants) === JSON.stringify(variants)) {
+  // acceptedBecause survives every approval (kept for labels still in the file) and --accept adds to it.
+  const acceptedBecause = Object.fromEntries(
+    Object.entries({ ...(old?.acceptedBecause ?? {}), ...accepts }).filter(([label]) => label in variants),
+  );
+  for (const label of Object.keys(accepts))
+    if (!(label in variants) || !isInvalidVariant(id, label))
+      console.error(`${id}: --accept "${label}" ignored — not an invalid-input variant of this baseline`);
+  const sameAccepted = JSON.stringify(old?.acceptedBecause ?? {}) === JSON.stringify(acceptedBecause);
+  if (
+    old?.approved &&
+    !old.reRecord &&
+    sameAccepted &&
+    JSON.stringify(old.variants) === JSON.stringify(variants)
+  ) {
     unchanged++;
     continue;
   }
@@ -109,6 +168,7 @@ for (const id of chosen) {
     variants,
     approved: { by, on },
     approvals: history,
+    ...(Object.keys(acceptedBecause).length ? { acceptedBecause } : {}),
   };
   mkdirSync(path.dirname(approvedFile(id)), { recursive: true });
   writeFileSync(approvedFile(id), `${JSON.stringify(file, null, 2)}\n`);
