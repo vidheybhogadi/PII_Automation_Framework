@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-120-PARAM",
-  "recordedAt": "2026-10-24T15:35:46.963Z",
-  "runId": "qa-m2-20261024t151249-c728",
+  "recordedAt": "2026-10-25T16:53:12.296Z",
+  "runId": "qa-m2-20261025t162950-f4a2",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -103,9 +103,23 @@
             },
             "workout": "null"
           },
-          "icebreakers": "null",
+          "icebreakers": [
+            {
+              "answer": "string",
+              "answer_id": "number",
+              "hint": "string",
+              "question": "string",
+              "question_id": "number"
+            }
+          ],
           "instagram_username": "null",
-          "introduction": "null",
+          "introduction": {
+            "answer": "string",
+            "answer_id": "number",
+            "hint": "string",
+            "question": "string",
+            "question_id": "number"
+          },
           "is_email_unsubscribed": "boolean",
           "is_facebook_connected": "boolean",
           "is_sms_unsubscribed": "boolean",
@@ -130,7 +144,7 @@
               "prompt": "null",
               "prompt_id": "null",
               "selected": "boolean",
-              "status": "null"
+              "status": "string"
             }
           ],
           "preferences": [

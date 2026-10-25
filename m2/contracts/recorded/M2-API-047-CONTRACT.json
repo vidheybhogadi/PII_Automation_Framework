@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-047-CONTRACT",
-  "recordedAt": "2026-10-24T15:15:28.316Z",
-  "runId": "qa-m2-20261024t151249-c728",
+  "recordedAt": "2026-10-25T16:33:06.216Z",
+  "runId": "qa-m2-20261025t162950-f4a2",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -180,7 +180,150 @@
             "show_on_connection": "boolean"
           }
         ],
-        "users": []
+        "users": [
+          {
+            "approved_time": "number",
+            "audio_prompt": "null",
+            "compatibility_check": [],
+            "diet_id": "number",
+            "disapproved_time": "number",
+            "discover_profile_order": [
+              "string"
+            ],
+            "display_new_tag": "boolean",
+            "distance": "string",
+            "drinking_v2_id": "number",
+            "faith_id": "number",
+            "general_information": {
+              "age": "number",
+              "cast": "null",
+              "date_of_birth": "string",
+              "date_of_birth_v1": "string",
+              "diet": {
+                "id": "number",
+                "name": "string",
+                "preference_only": "boolean"
+              },
+              "diet_id": "number",
+              "drinking_id": "number",
+              "drinking_v1": {
+                "id": "number",
+                "name": "string",
+                "name_alias": "string"
+              },
+              "drinking_v2": {
+                "id": "number",
+                "name": "string",
+                "preference_only": "boolean"
+              },
+              "faith": {
+                "id": "number",
+                "name": "string"
+              },
+              "faith_id": "number",
+              "first_name": "string",
+              "gender": "string",
+              "height": "number",
+              "home_town": "null",
+              "kid": "null",
+              "languages": [
+                {
+                  "id": "number",
+                  "is_mother_tongue": "boolean",
+                  "name": "string"
+                }
+              ],
+              "location": {
+                "full": "string",
+                "summary": "string"
+              },
+              "marital_status_id": "number",
+              "marital_status_v1": {
+                "id": "number",
+                "name": "string",
+                "preference_only": "boolean"
+              },
+              "mbti": "null",
+              "mother_tongue": {
+                "id": "number",
+                "name": "string"
+              },
+              "mother_tongue_id": "number",
+              "pet": "null",
+              "politics": "null",
+              "ref_id": "string",
+              "settle": "null",
+              "smoking_id": "number",
+              "smoking_v1": {
+                "id": "number",
+                "name": "string",
+                "name_alias": "string"
+              },
+              "smoking_v2": {
+                "id": "number",
+                "name": "string",
+                "preference_only": "boolean"
+              },
+              "sun_sign_v1": {
+                "id": "number",
+                "name": "string"
+              },
+              "workout": "null"
+            },
+            "has_active_subscription": "boolean",
+            "has_audio_prompt": "boolean",
+            "has_filled_work_v1": "boolean",
+            "has_partial_work": "boolean",
+            "has_received_like": "boolean",
+            "has_sent_like": "boolean",
+            "has_sent_request": "boolean",
+            "icebreakers": "null",
+            "invitation_type": "null",
+            "is_connected": "boolean",
+            "is_facebook_data_fetched": "boolean",
+            "last_seen": "string",
+            "last_seen_window": "string",
+            "marital_status_id": "number",
+            "meetup": "null",
+            "mother_tongue_id": "number",
+            "online_code": "number",
+            "partial_work": "null",
+            "photos": [
+              {
+                "archive_reason": "string",
+                "feedback": "null",
+                "photo": "string",
+                "photo_id": "number",
+                "prompt": "null",
+                "prompt_id": "null",
+                "selected": "boolean",
+                "status": "string"
+              }
+            ],
+            "preferences": [],
+            "profile_data_list": [],
+            "profile_sharing_enabled": "boolean",
+            "relationship_goal": {
+              "id": "number",
+              "is_default": "boolean",
+              "is_hidden": "boolean",
+              "name": "string",
+              "optional_relationship_goal_message": "string",
+              "prefix": "string",
+              "show_on_profile": "boolean"
+            },
+            "show_concierge_badge": "boolean",
+            "smoking_v2_id": "number",
+            "story": "null",
+            "user_id": "number",
+            "user_interests": [],
+            "user_interests_v2": [],
+            "user_traits": [],
+            "verification_status": "string",
+            "work": "null",
+            "work_v1": "null"
+          }
+        ]
       },
       "piiKeys": [
         "first_name",

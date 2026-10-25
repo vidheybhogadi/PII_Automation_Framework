@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-037-PARAM",
-  "recordedAt": "2026-10-24T15:16:13.933Z",
-  "runId": "qa-m2-20261024t151249-c728",
+  "recordedAt": "2026-10-25T16:34:02.800Z",
+  "runId": "qa-m2-20261025t162950-f4a2",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -11,7 +11,7 @@
       "shape": {
         "status": "boolean",
         "user": {
-          "about": "null",
+          "about": "string",
           "audio_prompt": "null",
           "delete_reasons": [
             {
@@ -321,7 +321,10 @@
           "show_incognito_mode": "boolean",
           "show_mandatory_complete_profile_popup": "boolean",
           "show_weekly": "boolean",
-          "story": "null",
+          "story": {
+            "about": "string",
+            "story_id": "number"
+          },
           "user_interests": [
             {
               "id": "number",
@@ -356,7 +359,7 @@
       "shape": {
         "status": "boolean",
         "user": {
-          "about": "null",
+          "about": "string",
           "audio_prompt": "null",
           "delete_reasons": [
             {
@@ -666,7 +669,10 @@
           "show_incognito_mode": "boolean",
           "show_mandatory_complete_profile_popup": "boolean",
           "show_weekly": "boolean",
-          "story": "null",
+          "story": {
+            "about": "string",
+            "story_id": "number"
+          },
           "user_interests": [
             {
               "id": "number",
@@ -701,7 +707,7 @@
       "shape": {
         "status": "boolean",
         "user": {
-          "about": "null",
+          "about": "string",
           "audio_prompt": "null",
           "delete_reasons": [
             {
@@ -1011,7 +1017,10 @@
           "show_incognito_mode": "boolean",
           "show_mandatory_complete_profile_popup": "boolean",
           "show_weekly": "boolean",
-          "story": "null",
+          "story": {
+            "about": "string",
+            "story_id": "number"
+          },
           "user_interests": [
             {
               "id": "number",

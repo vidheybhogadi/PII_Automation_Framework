@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-040-STATE",
-  "recordedAt": "2026-10-24T15:18:28.334Z",
-  "runId": "qa-m2-20261024t151249-c728",
+  "recordedAt": "2026-10-25T16:36:31.354Z",
+  "runId": "qa-m2-20261025t162950-f4a2",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -90,12 +90,7 @@
               "name": "string",
               "preference_only": "boolean"
             },
-            "mbti": {
-              "id": "number",
-              "mbti_type": "string",
-              "name": "string",
-              "preference_only": "boolean"
-            },
+            "mbti": "null",
             "mobile_number": "string",
             "mother_tongue": {
               "id": "number",
@@ -107,7 +102,12 @@
             "phone_code": "string",
             "politics": "null",
             "ref_id": "string",
-            "settle": "null",
+            "settle": {
+              "id": "number",
+              "name": "string",
+              "name_alias": "string",
+              "prefix": "string"
+            },
             "smoking_id": "number",
             "smoking_v1": {
               "id": "number",
@@ -165,7 +165,6 @@
           "percentage_profile_complete": "number",
           "photos": [
             {
-              "archive_reason": "string",
               "feedback_prompt": "null",
               "feedback_prompt_v2": "null",
               "feedback_prompt_v3": "null",
@@ -174,7 +173,7 @@
               "prompt": "null",
               "prompt_id": "null",
               "selected": "boolean",
-              "status": "null"
+              "status": "string"
             }
           ],
           "preferences": [
@@ -203,7 +202,7 @@
             "is_default": "boolean",
             "is_hidden": "boolean",
             "name": "string",
-            "optional_relationship_goal_message": "string",
+            "optional_relationship_goal_message": "null",
             "prefix": "string",
             "show_on_profile": "boolean"
           },
@@ -479,12 +478,7 @@
               "name": "string",
               "preference_only": "boolean"
             },
-            "mbti": {
-              "id": "number",
-              "mbti_type": "string",
-              "name": "string",
-              "preference_only": "boolean"
-            },
+            "mbti": "null",
             "mobile_number": "string",
             "mother_tongue": {
               "id": "number",
@@ -496,7 +490,12 @@
             "phone_code": "string",
             "politics": "null",
             "ref_id": "string",
-            "settle": "null",
+            "settle": {
+              "id": "number",
+              "name": "string",
+              "name_alias": "string",
+              "prefix": "string"
+            },
             "smoking_id": "number",
             "smoking_v1": {
               "id": "number",
@@ -554,7 +553,6 @@
           "percentage_profile_complete": "number",
           "photos": [
             {
-              "archive_reason": "string",
               "feedback_prompt": "null",
               "feedback_prompt_v2": "null",
               "feedback_prompt_v3": "null",
@@ -563,7 +561,7 @@
               "prompt": "null",
               "prompt_id": "null",
               "selected": "boolean",
-              "status": "null"
+              "status": "string"
             }
           ],
           "preferences": [
@@ -592,7 +590,7 @@
             "is_default": "boolean",
             "is_hidden": "boolean",
             "name": "string",
-            "optional_relationship_goal_message": "string",
+            "optional_relationship_goal_message": "null",
             "prefix": "string",
             "show_on_profile": "boolean"
           },
@@ -868,12 +866,7 @@
               "name": "string",
               "preference_only": "boolean"
             },
-            "mbti": {
-              "id": "number",
-              "mbti_type": "string",
-              "name": "string",
-              "preference_only": "boolean"
-            },
+            "mbti": "null",
             "mobile_number": "string",
             "mother_tongue": {
               "id": "number",
@@ -885,7 +878,12 @@
             "phone_code": "string",
             "politics": "null",
             "ref_id": "string",
-            "settle": "null",
+            "settle": {
+              "id": "number",
+              "name": "string",
+              "name_alias": "string",
+              "prefix": "string"
+            },
             "smoking_id": "number",
             "smoking_v1": {
               "id": "number",
@@ -943,7 +941,6 @@
           "percentage_profile_complete": "number",
           "photos": [
             {
-              "archive_reason": "string",
               "feedback_prompt": "null",
               "feedback_prompt_v2": "null",
               "feedback_prompt_v3": "null",
@@ -952,7 +949,7 @@
               "prompt": "null",
               "prompt_id": "null",
               "selected": "boolean",
-              "status": "null"
+              "status": "string"
             }
           ],
           "preferences": [
@@ -981,7 +978,7 @@
             "is_default": "boolean",
             "is_hidden": "boolean",
             "name": "string",
-            "optional_relationship_goal_message": "string",
+            "optional_relationship_goal_message": "null",
             "prefix": "string",
             "show_on_profile": "boolean"
           },

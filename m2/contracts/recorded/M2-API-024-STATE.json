@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-024-STATE",
-  "recordedAt": "2026-10-24T15:18:15.625Z",
-  "runId": "qa-m2-20261024t151249-c728",
+  "recordedAt": "2026-10-25T16:36:06.376Z",
+  "runId": "qa-m2-20261025t162950-f4a2",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -11,7 +11,7 @@
       "shape": {
         "ref": "string",
         "user": {
-          "about": "string",
+          "about": "null",
           "audio_prompt": {
             "audio_url": "string",
             "audio_url_id": "number",
@@ -97,7 +97,12 @@
             "phone_code": "string",
             "politics": "null",
             "ref_id": "string",
-            "settle": "null",
+            "settle": {
+              "id": "number",
+              "name": "string",
+              "name_alias": "string",
+              "prefix": "string"
+            },
             "smoking_id": "number",
             "smoking_v1": {
               "id": "number",
@@ -339,10 +344,7 @@
           "show_incognito_mode": "boolean",
           "show_mandatory_complete_profile_popup": "boolean",
           "show_weekly": "boolean",
-          "story": {
-            "about": "string",
-            "story_id": "number"
-          },
+          "story": "null",
           "user_interests": [
             {
               "id": "number",
@@ -382,7 +384,7 @@
       "shape": {
         "ref": "string",
         "user": {
-          "about": "string",
+          "about": "null",
           "audio_prompt": {
             "audio_url": "string",
             "audio_url_id": "number",
@@ -468,7 +470,12 @@
             "phone_code": "string",
             "politics": "null",
             "ref_id": "string",
-            "settle": "null",
+            "settle": {
+              "id": "number",
+              "name": "string",
+              "name_alias": "string",
+              "prefix": "string"
+            },
             "smoking_id": "number",
             "smoking_v1": {
               "id": "number",
@@ -710,10 +717,7 @@
           "show_incognito_mode": "boolean",
           "show_mandatory_complete_profile_popup": "boolean",
           "show_weekly": "boolean",
-          "story": {
-            "about": "string",
-            "story_id": "number"
-          },
+          "story": "null",
           "user_interests": [
             {
               "id": "number",
@@ -753,7 +757,7 @@
       "shape": {
         "ref": "string",
         "user": {
-          "about": "string",
+          "about": "null",
           "audio_prompt": {
             "audio_url": "string",
             "audio_url_id": "number",
@@ -839,7 +843,12 @@
             "phone_code": "string",
             "politics": "null",
             "ref_id": "string",
-            "settle": "null",
+            "settle": {
+              "id": "number",
+              "name": "string",
+              "name_alias": "string",
+              "prefix": "string"
+            },
             "smoking_id": "number",
             "smoking_v1": {
               "id": "number",
@@ -1081,10 +1090,7 @@
           "show_incognito_mode": "boolean",
           "show_mandatory_complete_profile_popup": "boolean",
           "show_weekly": "boolean",
-          "story": {
-            "about": "string",
-            "story_id": "number"
-          },
+          "story": "null",
           "user_interests": [
             {
               "id": "number",

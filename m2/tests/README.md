@@ -38,9 +38,13 @@ agent (PROPOSE → approval → IMPLEMENT); see `CLAUDE.md`.
   (005, 116, 006–008), a like A → B (048, 126, 054), B's like (047) or pass (049), a chat message (069), a share link
   (016 with `?ps=`), or an account already listed (014, 015, 019, 020). GET `/V1/users/:ref` and `/web/users/:ref`
   answer the caller's own profile, so their CACHE case is own-profile. API-106 stays Blocked (M2Q-45).
-- **Removed for good** (user decision 2026-10-25, IDs never reused, UT-M2-034): 73 IDOR cases whose request names no
-  user / profile id, and 30 EXPOSE / CACHE cases on routes whose reply never contains another member (code references
-  in `m2/scripts/m2-code-evidence.ts` NO_OTHER_USER). The design rules in `m2/scripts/m2-baseline.ts` keep them out.
+- **Removed for good** (user decision 2026-10-25, IDs never reused, UT-M2-034): 102 IDOR cases whose request names no
+  user / profile id — whatever open question still holds the route (73, then 29 payment, Dev-only-id and other
+  routes) — and 30 EXPOSE / CACHE cases on routes whose reply never contains another member (code references in
+  `m2/scripts/m2-code-evidence.ts` NO_OTHER_USER). The design rules in `m2/scripts/m2-baseline.ts` keep them out.
+  Kept: API-012 (user_name selects the target profile), API-073 and API-083 (conversation_id of a chat) — their
+  request names another member through another key (IDOR_OTHER_TARGET, from code); they stay Blocked until the
+  runner can send that key for B.
 - **Contract states** (item 4, 2026-10-25): send_request_to_profile (API-004) runs as an approved account with daily
   requests left towards a fresh approved receiver; deactivate (API-029 / API-123) on an approved throwaway that is
   re-activated for re-use; fetch_login_response (API-062) on a brand-new account per case; invite accept / pass routes

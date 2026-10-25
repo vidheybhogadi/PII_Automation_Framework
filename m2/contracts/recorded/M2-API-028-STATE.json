@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-028-STATE",
-  "recordedAt": "2026-10-24T15:18:18.788Z",
-  "runId": "qa-m2-20261024t151249-c728",
+  "recordedAt": "2026-10-25T16:36:12.898Z",
+  "runId": "qa-m2-20261025t162950-f4a2",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -10,8 +10,13 @@
       "contentType": "application/json",
       "shape": {
         "user": {
-          "about": "string",
-          "audio_prompt": "null",
+          "about": "null",
+          "audio_prompt": {
+            "audio_url": "string",
+            "audio_url_id": "number",
+            "question": "string",
+            "question_id": "number"
+          },
           "delete_reasons": [
             {
               "id": "number",
@@ -74,7 +79,12 @@
               "name": "string",
               "preference_only": "boolean"
             },
-            "mbti": "null",
+            "mbti": {
+              "id": "number",
+              "mbti_type": "string",
+              "name": "string",
+              "preference_only": "boolean"
+            },
             "mobile_number": "string",
             "mother_tongue": {
               "id": "number",
@@ -112,14 +122,28 @@
           "has_concierge_subscription": "boolean",
           "has_voted": "boolean",
           "hide_first_name": "boolean",
-          "icebreakers": "null",
+          "icebreakers": [
+            {
+              "answer": "string",
+              "answer_id": "number",
+              "hint": "string",
+              "question": "string",
+              "question_id": "number"
+            }
+          ],
           "incognito_mode_active": "boolean",
           "incognito_mode_popup_text": {
             "button_text_1": "string",
             "description_text": "string",
             "header_text": "string"
           },
-          "introduction": "null",
+          "introduction": {
+            "answer": "string",
+            "answer_id": "number",
+            "hint": "string",
+            "question": "string",
+            "question_id": "number"
+          },
           "is_email_unsubscribed": "boolean",
           "is_sms_unsubscribed": "boolean",
           "last_seen": "string",
@@ -173,7 +197,7 @@
             "is_default": "boolean",
             "is_hidden": "boolean",
             "name": "string",
-            "optional_relationship_goal_message": "null",
+            "optional_relationship_goal_message": "string",
             "prefix": "string",
             "show_on_profile": "boolean"
           },
@@ -319,10 +343,7 @@
           "show_incognito_mode": "boolean",
           "show_mandatory_complete_profile_popup": "boolean",
           "show_weekly": "boolean",
-          "story": {
-            "about": "string",
-            "story_id": "number"
-          },
+          "story": "null",
           "user_interests": [
             {
               "id": "number",
@@ -331,15 +352,7 @@
               "value": "number"
             }
           ],
-          "user_interests_v2": [
-            {
-              "common_interest": "string",
-              "id": "number",
-              "interest_id": "number",
-              "name": "string",
-              "order": "number"
-            }
-          ],
+          "user_interests_v2": [],
           "user_traits": [
             {
               "id": "number",
@@ -369,8 +382,13 @@
       "contentType": "application/json",
       "shape": {
         "user": {
-          "about": "string",
-          "audio_prompt": "null",
+          "about": "null",
+          "audio_prompt": {
+            "audio_url": "string",
+            "audio_url_id": "number",
+            "question": "string",
+            "question_id": "number"
+          },
           "delete_reasons": [
             {
               "id": "number",
@@ -433,7 +451,12 @@
               "name": "string",
               "preference_only": "boolean"
             },
-            "mbti": "null",
+            "mbti": {
+              "id": "number",
+              "mbti_type": "string",
+              "name": "string",
+              "preference_only": "boolean"
+            },
             "mobile_number": "string",
             "mother_tongue": {
               "id": "number",
@@ -471,14 +494,28 @@
           "has_concierge_subscription": "boolean",
           "has_voted": "boolean",
           "hide_first_name": "boolean",
-          "icebreakers": "null",
+          "icebreakers": [
+            {
+              "answer": "string",
+              "answer_id": "number",
+              "hint": "string",
+              "question": "string",
+              "question_id": "number"
+            }
+          ],
           "incognito_mode_active": "boolean",
           "incognito_mode_popup_text": {
             "button_text_1": "string",
             "description_text": "string",
             "header_text": "string"
           },
-          "introduction": "null",
+          "introduction": {
+            "answer": "string",
+            "answer_id": "number",
+            "hint": "string",
+            "question": "string",
+            "question_id": "number"
+          },
           "is_email_unsubscribed": "boolean",
           "is_sms_unsubscribed": "boolean",
           "last_seen": "string",
@@ -532,7 +569,7 @@
             "is_default": "boolean",
             "is_hidden": "boolean",
             "name": "string",
-            "optional_relationship_goal_message": "null",
+            "optional_relationship_goal_message": "string",
             "prefix": "string",
             "show_on_profile": "boolean"
           },
@@ -678,10 +715,7 @@
           "show_incognito_mode": "boolean",
           "show_mandatory_complete_profile_popup": "boolean",
           "show_weekly": "boolean",
-          "story": {
-            "about": "string",
-            "story_id": "number"
-          },
+          "story": "null",
           "user_interests": [
             {
               "id": "number",
@@ -690,15 +724,7 @@
               "value": "number"
             }
           ],
-          "user_interests_v2": [
-            {
-              "common_interest": "string",
-              "id": "number",
-              "interest_id": "number",
-              "name": "string",
-              "order": "number"
-            }
-          ],
+          "user_interests_v2": [],
           "user_traits": [
             {
               "id": "number",
@@ -728,8 +754,13 @@
       "contentType": "application/json",
       "shape": {
         "user": {
-          "about": "string",
-          "audio_prompt": "null",
+          "about": "null",
+          "audio_prompt": {
+            "audio_url": "string",
+            "audio_url_id": "number",
+            "question": "string",
+            "question_id": "number"
+          },
           "delete_reasons": [
             {
               "id": "number",
@@ -792,7 +823,12 @@
               "name": "string",
               "preference_only": "boolean"
             },
-            "mbti": "null",
+            "mbti": {
+              "id": "number",
+              "mbti_type": "string",
+              "name": "string",
+              "preference_only": "boolean"
+            },
             "mobile_number": "string",
             "mother_tongue": {
               "id": "number",
@@ -830,14 +866,28 @@
           "has_concierge_subscription": "boolean",
           "has_voted": "boolean",
           "hide_first_name": "boolean",
-          "icebreakers": "null",
+          "icebreakers": [
+            {
+              "answer": "string",
+              "answer_id": "number",
+              "hint": "string",
+              "question": "string",
+              "question_id": "number"
+            }
+          ],
           "incognito_mode_active": "boolean",
           "incognito_mode_popup_text": {
             "button_text_1": "string",
             "description_text": "string",
             "header_text": "string"
           },
-          "introduction": "null",
+          "introduction": {
+            "answer": "string",
+            "answer_id": "number",
+            "hint": "string",
+            "question": "string",
+            "question_id": "number"
+          },
           "is_email_unsubscribed": "boolean",
           "is_sms_unsubscribed": "boolean",
           "last_seen": "string",
@@ -891,7 +941,7 @@
             "is_default": "boolean",
             "is_hidden": "boolean",
             "name": "string",
-            "optional_relationship_goal_message": "null",
+            "optional_relationship_goal_message": "string",
             "prefix": "string",
             "show_on_profile": "boolean"
           },
@@ -1037,10 +1087,7 @@
           "show_incognito_mode": "boolean",
           "show_mandatory_complete_profile_popup": "boolean",
           "show_weekly": "boolean",
-          "story": {
-            "about": "string",
-            "story_id": "number"
-          },
+          "story": "null",
           "user_interests": [
             {
               "id": "number",
@@ -1049,15 +1096,7 @@
               "value": "number"
             }
           ],
-          "user_interests_v2": [
-            {
-              "common_interest": "string",
-              "id": "number",
-              "interest_id": "number",
-              "name": "string",
-              "order": "number"
-            }
-          ],
+          "user_interests_v2": [],
           "user_traits": [
             {
               "id": "number",

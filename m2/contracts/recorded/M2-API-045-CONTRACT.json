@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-045-CONTRACT",
-  "recordedAt": "2026-10-24T15:15:27.300Z",
-  "runId": "qa-m2-20261024t151249-c728",
+  "recordedAt": "2026-10-25T16:33:05.405Z",
+  "runId": "qa-m2-20261025t162950-f4a2",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -18,12 +18,7 @@
             {
               "already_passed": "boolean",
               "approved_time": "number",
-              "audio_prompt": {
-                "audio_url": "string",
-                "audio_url_id": "number",
-                "question": "string",
-                "question_id": "number"
-              },
+              "audio_prompt": "null",
               "audio_url": "null",
               "can_send_reply_v1": "boolean",
               "compatibility_check": [],
@@ -34,16 +29,11 @@
               ],
               "display_new_tag": "boolean",
               "distance": "string",
-              "drinking_id": "number",
+              "drinking_v2_id": "number",
               "faith_id": "number",
               "general_information": {
                 "age": "number",
-                "cast": {
-                  "faith_id": "number",
-                  "id": "number",
-                  "name": "string",
-                  "position": "number"
-                },
+                "cast": "null",
                 "date_of_birth": "string",
                 "date_of_birth_v1": "string",
                 "diet": {
@@ -71,11 +61,8 @@
                 "first_name": "string",
                 "gender": "string",
                 "height": "number",
-                "home_town": "null",
-                "kid": {
-                  "id": "number",
-                  "name": "string"
-                },
+                "home_town": "string",
+                "kid": "null",
                 "languages": [
                   {
                     "id": "number",
@@ -104,21 +91,10 @@
                   "name": "string"
                 },
                 "mother_tongue_id": "number",
-                "pet": {
-                  "id": "number",
-                  "name": "string"
-                },
-                "politics": {
-                  "id": "number",
-                  "name": "string"
-                },
+                "pet": "null",
+                "politics": "null",
                 "ref_id": "string",
-                "settle": {
-                  "id": "number",
-                  "name": "string",
-                  "name_alias": "string",
-                  "prefix": "string"
-                },
+                "settle": "null",
                 "smoking_id": "number",
                 "smoking_v1": {
                   "id": "number",
@@ -174,10 +150,10 @@
                   "preference_only": "boolean"
                 },
                 "work": "string",
-                "industry": "string",
                 "work_title": "string",
                 "college": "string",
-                "graduation_year": "string"
+                "graduation_year": "string",
+                "industry": "string"
               },
               "photos": [
                 {
@@ -188,7 +164,7 @@
                   "prompt": "null",
                   "prompt_id": "null",
                   "selected": "boolean",
-                  "status": "null"
+                  "status": "string"
                 }
               ],
               "preferences": [
@@ -229,7 +205,7 @@
               "reply_id": "null",
               "reply_message": "null",
               "show_concierge_badge": "boolean",
-              "smoking_id": "number",
+              "smoking_v2_id": "number",
               "spark_id": "null",
               "story": {
                 "about": "string",
@@ -256,36 +232,13 @@
                 }
               ],
               "verification_status": "string",
-              "work": {
-                "experience_v1": {
-                  "id": "number",
-                  "name": "string",
-                  "name_alias": "string"
-                },
-                "field_of_study_v1": {
-                  "id": "number",
-                  "name": "string"
-                },
-                "highest_qualification_v1": {
-                  "id": "number",
-                  "name": "string",
-                  "preference_only": "boolean"
-                },
-                "industry_v1": {
-                  "id": "number",
-                  "name": "string",
-                  "preference_only": "boolean"
-                },
-                "monthly_income_v1": "null"
-              },
+              "work": "null",
               "work_v1": {
                 "college": "string",
                 "graduation_year": "string",
                 "industry": "string",
                 "work_title": "string"
-              },
-              "drinking_v2_id": "number",
-              "smoking_v2_id": "number"
+              }
             }
           ]
         },

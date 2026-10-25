@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-028-CONTRACT",
-  "recordedAt": "2026-10-24T15:15:17.523Z",
-  "runId": "qa-m2-20261024t151249-c728",
+  "recordedAt": "2026-10-25T16:32:55.616Z",
+  "runId": "qa-m2-20261025t162950-f4a2",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -135,6 +135,7 @@
           "percentage_profile_complete": "number",
           "photos": [
             {
+              "archive_reason": "string",
               "feedback_prompt": "null",
               "feedback_prompt_v2": "null",
               "feedback_prompt_v3": "null",
@@ -143,7 +144,7 @@
               "prompt": "null",
               "prompt_id": "null",
               "selected": "boolean",
-              "status": "string"
+              "status": "null"
             }
           ],
           "preferences": [],
@@ -312,16 +313,15 @@
             "about": "string",
             "story_id": "number"
           },
-          "user_interests": [],
-          "user_interests_v2": [
+          "user_interests": [
             {
-              "common_interest": "string",
               "id": "number",
               "interest_id": "number",
               "name": "string",
-              "order": "number"
+              "value": "number"
             }
           ],
+          "user_interests_v2": [],
           "user_traits": [
             {
               "id": "number",

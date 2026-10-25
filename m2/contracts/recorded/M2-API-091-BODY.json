@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-091-BODY",
-  "recordedAt": "2026-10-24T15:14:37.287Z",
-  "runId": "qa-m2-20261024t151249-c728",
+  "recordedAt": "2026-10-25T16:32:17.611Z",
+  "runId": "qa-m2-20261025t162950-f4a2",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -35,13 +35,8 @@
       "shape": {
         "ref": "string",
         "user": {
-          "about": "null",
-          "audio_prompt": {
-            "audio_url": "string",
-            "audio_url_id": "number",
-            "question": "string",
-            "question_id": "number"
-          },
+          "about": "string",
+          "audio_prompt": "null",
           "delete_reasons": [
             {
               "id": "number",
@@ -149,14 +144,7 @@
           "is_sms_unsubscribed": "boolean",
           "last_seen": "string",
           "own_meetup": "null",
-          "partial_work": {
-            "college": "string",
-            "education": "string",
-            "graduation_year": "string",
-            "industry": "string",
-            "work": "string",
-            "work_title": "string"
-          },
+          "partial_work": "null",
           "percentage_profile_complete": "number",
           "photos": [
             {
@@ -171,7 +159,17 @@
               "status": "string"
             }
           ],
-          "preferences": [],
+          "preferences": [
+            {
+              "answer_id": "number",
+              "id": "number",
+              "preference_question": {
+                "first_choice": "string",
+                "second_choice": "string"
+              },
+              "value": "number"
+            }
+          ],
           "profile_complete_without_selfie": "number",
           "profile_sharing_enabled": "boolean",
           "profile_sharing_popup_text": {
@@ -333,32 +331,22 @@
           "show_incognito_mode": "boolean",
           "show_mandatory_complete_profile_popup": "boolean",
           "show_weekly": "boolean",
-          "story": "null",
-          "user_interests": [],
-          "user_interests_v2": [
+          "story": {
+            "about": "string",
+            "story_id": "number"
+          },
+          "user_interests": [
             {
-              "common_interest": "string",
               "id": "number",
               "interest_id": "number",
               "name": "string",
-              "order": "number"
+              "value": "number"
             }
           ],
-          "user_traits": [
-            {
-              "id": "number",
-              "name": "string",
-              "order": "number",
-              "trait_id": "number"
-            }
-          ],
+          "user_interests_v2": [],
+          "user_traits": [],
           "work": "null",
-          "work_v1": {
-            "college": "string",
-            "graduation_year": "string",
-            "industry": "string",
-            "work_title": "string"
-          }
+          "work_v1": "null"
         }
       },
       "piiKeys": [
@@ -374,13 +362,8 @@
       "shape": {
         "ref": "string",
         "user": {
-          "about": "null",
-          "audio_prompt": {
-            "audio_url": "string",
-            "audio_url_id": "number",
-            "question": "string",
-            "question_id": "number"
-          },
+          "about": "string",
+          "audio_prompt": "null",
           "delete_reasons": [
             {
               "id": "number",
@@ -488,14 +471,7 @@
           "is_sms_unsubscribed": "boolean",
           "last_seen": "string",
           "own_meetup": "null",
-          "partial_work": {
-            "college": "string",
-            "education": "string",
-            "graduation_year": "string",
-            "industry": "string",
-            "work": "string",
-            "work_title": "string"
-          },
+          "partial_work": "null",
           "percentage_profile_complete": "number",
           "photos": [
             {
@@ -510,7 +486,17 @@
               "status": "string"
             }
           ],
-          "preferences": [],
+          "preferences": [
+            {
+              "answer_id": "number",
+              "id": "number",
+              "preference_question": {
+                "first_choice": "string",
+                "second_choice": "string"
+              },
+              "value": "number"
+            }
+          ],
           "profile_complete_without_selfie": "number",
           "profile_sharing_enabled": "boolean",
           "profile_sharing_popup_text": {
@@ -672,32 +658,22 @@
           "show_incognito_mode": "boolean",
           "show_mandatory_complete_profile_popup": "boolean",
           "show_weekly": "boolean",
-          "story": "null",
-          "user_interests": [],
-          "user_interests_v2": [
+          "story": {
+            "about": "string",
+            "story_id": "number"
+          },
+          "user_interests": [
             {
-              "common_interest": "string",
               "id": "number",
               "interest_id": "number",
               "name": "string",
-              "order": "number"
+              "value": "number"
             }
           ],
-          "user_traits": [
-            {
-              "id": "number",
-              "name": "string",
-              "order": "number",
-              "trait_id": "number"
-            }
-          ],
+          "user_interests_v2": [],
+          "user_traits": [],
           "work": "null",
-          "work_v1": {
-            "college": "string",
-            "graduation_year": "string",
-            "industry": "string",
-            "work_title": "string"
-          }
+          "work_v1": "null"
         }
       },
       "piiKeys": [

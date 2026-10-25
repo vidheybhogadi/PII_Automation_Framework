@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-038-CONTRACT",
-  "recordedAt": "2026-10-24T15:15:21.357Z",
-  "runId": "qa-m2-20261024t151249-c728",
+  "recordedAt": "2026-10-25T16:32:58.153Z",
+  "runId": "qa-m2-20261025t162950-f4a2",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -13,12 +13,7 @@
         "user": {
           "about": "string",
           "approved_time": "number",
-          "audio_prompt": {
-            "audio_url": "string",
-            "audio_url_id": "number",
-            "question": "string",
-            "question_id": "number"
-          },
+          "audio_prompt": "null",
           "delete_reasons": [
             {
               "id": "number",
@@ -97,12 +92,7 @@
             "phone_code": "string",
             "politics": "null",
             "ref_id": "string",
-            "settle": {
-              "id": "number",
-              "name": "string",
-              "name_alias": "string",
-              "prefix": "string"
-            },
+            "settle": "null",
             "smoking_id": "number",
             "smoking_v1": {
               "id": "number",
@@ -127,14 +117,28 @@
           "has_partial_work": "boolean",
           "has_voted": "boolean",
           "hide_first_name": "boolean",
-          "icebreakers": "null",
+          "icebreakers": [
+            {
+              "answer": "string",
+              "answer_id": "number",
+              "hint": "string",
+              "question": "string",
+              "question_id": "number"
+            }
+          ],
           "incognito_mode_active": "boolean",
           "incognito_mode_popup_text": {
             "button_text_1": "string",
             "description_text": "string",
             "header_text": "string"
           },
-          "introduction": "null",
+          "introduction": {
+            "answer": "string",
+            "answer_id": "number",
+            "hint": "string",
+            "question": "string",
+            "question_id": "number"
+          },
           "is_email_unsubscribed": "boolean",
           "is_facebook_data_fetched": "boolean",
           "is_sms_unsubscribed": "boolean",
@@ -145,14 +149,7 @@
           "mother_tongue_id": "number",
           "online_code": "number",
           "own_meetup": "null",
-          "partial_work": {
-            "college": "string",
-            "education": "string",
-            "graduation_year": "string",
-            "industry": "string",
-            "work": "string",
-            "work_title": "string"
-          },
+          "partial_work": "null",
           "percentage_profile_complete": "number",
           "photos": [
             {
@@ -185,6 +182,7 @@
               "answer_id": "number",
               "invitation_type": "string",
               "question": "string",
+              "question_id": "number",
               "preferences": [
                 {
                   "answer": "string",
@@ -361,7 +359,14 @@
             "story_id": "number"
           },
           "user_id": "number",
-          "user_interests": [],
+          "user_interests": [
+            {
+              "id": "number",
+              "interest_id": "number",
+              "name": "string",
+              "value": "number"
+            }
+          ],
           "user_interests_v2": [
             {
               "common_interest": "string",
@@ -371,22 +376,10 @@
               "order": "number"
             }
           ],
-          "user_traits": [
-            {
-              "id": "number",
-              "name": "string",
-              "order": "number",
-              "trait_id": "number"
-            }
-          ],
+          "user_traits": [],
           "verification_status": "string",
           "work": "null",
-          "work_v1": {
-            "college": "string",
-            "graduation_year": "string",
-            "industry": "string",
-            "work_title": "string"
-          }
+          "work_v1": "null"
         }
       },
       "piiKeys": [

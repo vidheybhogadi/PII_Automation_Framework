@@ -39,7 +39,7 @@ import {
   stateVerdict,
 } from '../../src/checks/verdicts';
 import { placeholdersIn, tryBuildRequest, questionFor } from '../../src/checks/request-builder';
-import { NO_OTHER_USER, OWN_PROFILE_BY_REF } from '../../scripts/m2-code-evidence';
+import { IDOR_OTHER_TARGET, NO_OTHER_USER, OWN_PROFILE_BY_REF } from '../../scripts/m2-code-evidence';
 import {
   approvableVariants,
   invalidAcceptedProblem,
@@ -993,7 +993,8 @@ test.describe('UNIT M2 audit fixes — no false passes (2026-10-25)', () => {
   });
 
   test('UT-M2-034 Removed for good (2026-10-25): no-target IDOR, EXPOSE / CACHE on routes that never show another member', () => {
-    // User decision 2026-10-25: 103 cases that can never run in any environment. Their IDs are never reused.
+    // User decisions 2026-10-25: 132 cases that can never run in any environment (103, then 29 more no-target IDOR
+    // cases on routes still held by an open question). Their IDs are never reused.
     const removed: Record<string, string[]> = {
       IDOR: [
         '005',
@@ -1010,6 +1011,7 @@ test.describe('UNIT M2 audit fixes — no false passes (2026-10-25)', () => {
         '019',
         '020',
         '022',
+        '023',
         '024',
         '025',
         '026',
@@ -1017,6 +1019,7 @@ test.describe('UNIT M2 audit fixes — no false passes (2026-10-25)', () => {
         '028',
         '029',
         '030',
+        '031',
         '032',
         '033',
         '034',
@@ -1043,18 +1046,40 @@ test.describe('UNIT M2 audit fixes — no false passes (2026-10-25)', () => {
         '067',
         '068',
         '069',
+        '070',
+        '071',
+        '072',
+        '074',
+        '075',
+        '076',
+        '077',
+        '078',
+        '079',
+        '084',
         '085',
         '086',
         '087',
         '088',
         '089',
+        '090',
         '091',
+        '092',
+        '093',
+        '096',
         '097',
         '099',
         '100',
+        '101',
+        '102',
+        '105',
         '106',
         '107',
         '108',
+        '109',
+        '110',
+        '111',
+        '112',
+        '115',
         '116',
         '117',
         '118',
@@ -1066,8 +1091,13 @@ test.describe('UNIT M2 audit fixes — no false passes (2026-10-25)', () => {
         '129',
         '130',
         '131',
+        '133',
         '134',
+        '189',
         '191',
+        '193',
+        '194',
+        '195',
         '198',
       ],
       EXPOSE: [
@@ -1101,7 +1131,7 @@ test.describe('UNIT M2 audit fixes — no false passes (2026-10-25)', () => {
       CACHE: ['017', '018', '107', '191'],
     };
     const ids = Object.entries(removed).flatMap(([check, apis]) => apis.map((a) => `M2-API-${a}-${check}`));
-    expect(ids.length).toBe(103);
+    expect(ids.length).toBe(132);
     const cases = design().cases;
     for (const id of ids)
       expect(
@@ -1109,8 +1139,20 @@ test.describe('UNIT M2 audit fixes — no false passes (2026-10-25)', () => {
         `${id} stays removed`,
       ).toBe(false);
     // The rules that removed them still hold for every generated case.
-    for (const c of cases.filter((x) => x.check === 'IDOR' && x.status === 'NOT RUN'))
-      expect(hasIdorTarget(placeholdersIn(apiById(c.apis[0]!))), `${c.id} names a target id`).toBe(true);
+    // Whatever its status (open questions no longer keep a no-target IDOR case alive).
+    for (const c of cases.filter((x) => x.check === 'IDOR'))
+      expect(
+        hasIdorTarget(placeholdersIn(apiById(c.apis[0]!))) || Boolean(IDOR_OTHER_TARGET[c.apis[0]!]),
+        `${c.id} names a target id`,
+      ).toBe(true);
+    // The routes kept for another target key (from code) keep their IDOR case, each with a code reference.
+    for (const [api, why] of Object.entries(IDOR_OTHER_TARGET)) {
+      expect(
+        cases.some((c) => c.id === `M2-API-${api.slice(4)}-IDOR`),
+        `${api} keeps its IDOR case`,
+      ).toBe(true);
+      expect(why).toMatch(/\.rb:\d+/);
+    }
     for (const c of cases.filter((x) => x.check === 'EXPOSE'))
       expect(NO_OTHER_USER[c.apis[0]!], `${c.id}: route can show another member`).toBeUndefined();
     for (const c of cases.filter((x) => x.check === 'CACHE' && NO_OTHER_USER[x.apis[0]!]))

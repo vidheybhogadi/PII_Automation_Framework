@@ -1,0 +1,41 @@
+{
+  "caseId": "M2-API-117-PARAM",
+  "recordedAt": "2026-10-25T16:53:05.705Z",
+  "runId": "qa-m2-20261025t162950-f4a2",
+  "build": "unknown — deployed commit not confirmed (M2Q-01)",
+  "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
+  "variants": {
+    "without id": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "status": "boolean"
+      },
+      "piiKeys": []
+    },
+    "without invitation_type": {
+      "status": 500,
+      "contentType": "application/json",
+      "shape": {
+        "is_backend_error": "boolean",
+        "message": "string",
+        "title": "string"
+      },
+      "piiKeys": []
+    },
+    "without message": {
+      "status": 500,
+      "contentType": "application/json",
+      "shape": {
+        "is_backend_error": "boolean",
+        "message": "string",
+        "title": "string"
+      },
+      "piiKeys": []
+    }
+  },
+  "invariantFailures": [
+    "without invitation_type",
+    "without message"
+  ]
+}

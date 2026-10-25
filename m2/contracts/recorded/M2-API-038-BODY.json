@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-038-BODY",
-  "recordedAt": "2026-10-24T15:13:50.305Z",
-  "runId": "qa-m2-20261024t151249-c728",
+  "recordedAt": "2026-10-25T16:31:24.446Z",
+  "runId": "qa-m2-20261025t162950-f4a2",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -376,23 +376,8 @@
               "value": "number"
             }
           ],
-          "user_interests_v2": [
-            {
-              "common_interest": "string",
-              "id": "number",
-              "interest_id": "number",
-              "name": "string",
-              "order": "number"
-            }
-          ],
-          "user_traits": [
-            {
-              "id": "number",
-              "name": "string",
-              "order": "number",
-              "trait_id": "number"
-            }
-          ],
+          "user_interests_v2": [],
+          "user_traits": [],
           "verification_status": "string",
           "work": "null",
           "work_v1": "null"
@@ -752,23 +737,8 @@
               "value": "number"
             }
           ],
-          "user_interests_v2": [
-            {
-              "common_interest": "string",
-              "id": "number",
-              "interest_id": "number",
-              "name": "string",
-              "order": "number"
-            }
-          ],
-          "user_traits": [
-            {
-              "id": "number",
-              "name": "string",
-              "order": "number",
-              "trait_id": "number"
-            }
-          ],
+          "user_interests_v2": [],
+          "user_traits": [],
           "verification_status": "string",
           "work": "null",
           "work_v1": "null"

@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-019-PARAM",
-  "recordedAt": "2026-10-24T15:16:05.727Z",
-  "runId": "qa-m2-20261024t151249-c728",
+  "recordedAt": "2026-10-25T16:33:52.395Z",
+  "runId": "qa-m2-20261025t162950-f4a2",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -77,6 +77,7 @@
           ],
           "image_list": [
             {
+              "archive_reason": "string",
               "feedback_prompt": "null",
               "feedback_prompt_v2": "null",
               "feedback_prompt_v3": "null",
@@ -85,7 +86,7 @@
               "prompt": "null",
               "prompt_id": "null",
               "selected": "boolean",
-              "status": "string"
+              "status": "null"
             }
           ],
           "image_prompts": [
@@ -239,7 +240,12 @@
             "faith_id": "number",
             "general_information": {
               "age": "number",
-              "cast": "null",
+              "cast": {
+                "faith_id": "number",
+                "id": "number",
+                "name": "string",
+                "position": "number"
+              },
               "date_of_birth": "string",
               "date_of_birth_v1": "string",
               "diet": {
@@ -355,17 +361,15 @@
             "mother_tongue_id": "number",
             "online_code": "number",
             "partial_work": {
-              "college": "string",
               "education": "string",
-              "work": "string",
               "new_qualification": {
                 "id": "number",
                 "name": "string",
                 "preference_only": "boolean"
               },
-              "industry": "string",
-              "work_title": "string",
-              "graduation_year": "string"
+              "work": "string",
+              "graduation_year": "string",
+              "work_title": "string"
             },
             "photos": [
               {
@@ -373,14 +377,40 @@
                 "feedback": "null",
                 "photo": "string",
                 "photo_id": "number",
-                "prompt": "null",
-                "prompt_id": "null",
+                "prompt": "string",
+                "prompt_id": "number",
                 "selected": "boolean",
-                "status": "string"
+                "status": "null"
               }
             ],
-            "preferences": [],
-            "profile_data_list": [],
+            "preferences": [
+              {
+                "answer_id": "number",
+                "id": "number",
+                "preference_question": {
+                  "first_choice": "string",
+                  "second_choice": "string"
+                },
+                "value": "number"
+              }
+            ],
+            "profile_data_list": [
+              {
+                "answer": "string",
+                "answer_id": "number",
+                "invitation_type": "string",
+                "question": "string",
+                "question_id": "number",
+                "preferences": [
+                  {
+                    "answer": "string",
+                    "answer_id": "number",
+                    "first_choice": "string",
+                    "second_choice": "string"
+                  }
+                ]
+              }
+            ],
             "profile_sharing_enabled": "boolean",
             "relationship_goal": {
               "id": "number",
@@ -403,16 +433,47 @@
             "tab_name": "null",
             "user_id": "number",
             "user_interests": [],
-            "user_interests_v2": [],
-            "user_traits": [],
+            "user_interests_v2": [
+              {
+                "common_interest": "string",
+                "id": "number",
+                "interest_id": "number",
+                "name": "string",
+                "order": "number"
+              }
+            ],
+            "user_traits": [
+              {
+                "id": "number",
+                "name": "string",
+                "order": "number",
+                "trait_id": "number"
+              }
+            ],
             "verification_status": "string",
-            "work": "null",
-            "work_v1": {
-              "college": "string",
-              "graduation_year": "string",
-              "industry": "string",
-              "work_title": "string"
-            }
+            "work": {
+              "experience_v1": {
+                "id": "number",
+                "name": "string",
+                "name_alias": "string"
+              },
+              "field_of_study_v1": {
+                "id": "number",
+                "name": "string"
+              },
+              "highest_qualification_v1": {
+                "id": "number",
+                "name": "string",
+                "preference_only": "boolean"
+              },
+              "industry_v1": {
+                "id": "number",
+                "name": "string",
+                "preference_only": "boolean"
+              },
+              "monthly_income_v1": "null"
+            },
+            "work_v1": "null"
           }
         ]
       },
@@ -493,6 +554,7 @@
           ],
           "image_list": [
             {
+              "archive_reason": "string",
               "feedback_prompt": "null",
               "feedback_prompt_v2": "null",
               "feedback_prompt_v3": "null",
@@ -501,7 +563,7 @@
               "prompt": "null",
               "prompt_id": "null",
               "selected": "boolean",
-              "status": "string"
+              "status": "null"
             }
           ],
           "image_prompts": [
@@ -655,7 +717,12 @@
             "faith_id": "number",
             "general_information": {
               "age": "number",
-              "cast": "null",
+              "cast": {
+                "faith_id": "number",
+                "id": "number",
+                "name": "string",
+                "position": "number"
+              },
               "date_of_birth": "string",
               "date_of_birth_v1": "string",
               "diet": {
@@ -771,17 +838,15 @@
             "mother_tongue_id": "number",
             "online_code": "number",
             "partial_work": {
-              "college": "string",
               "education": "string",
-              "work": "string",
               "new_qualification": {
                 "id": "number",
                 "name": "string",
                 "preference_only": "boolean"
               },
-              "industry": "string",
-              "work_title": "string",
-              "graduation_year": "string"
+              "work": "string",
+              "graduation_year": "string",
+              "work_title": "string"
             },
             "photos": [
               {
@@ -789,14 +854,40 @@
                 "feedback": "null",
                 "photo": "string",
                 "photo_id": "number",
-                "prompt": "null",
-                "prompt_id": "null",
+                "prompt": "string",
+                "prompt_id": "number",
                 "selected": "boolean",
-                "status": "string"
+                "status": "null"
               }
             ],
-            "preferences": [],
-            "profile_data_list": [],
+            "preferences": [
+              {
+                "answer_id": "number",
+                "id": "number",
+                "preference_question": {
+                  "first_choice": "string",
+                  "second_choice": "string"
+                },
+                "value": "number"
+              }
+            ],
+            "profile_data_list": [
+              {
+                "answer": "string",
+                "answer_id": "number",
+                "invitation_type": "string",
+                "question": "string",
+                "question_id": "number",
+                "preferences": [
+                  {
+                    "answer": "string",
+                    "answer_id": "number",
+                    "first_choice": "string",
+                    "second_choice": "string"
+                  }
+                ]
+              }
+            ],
             "profile_sharing_enabled": "boolean",
             "relationship_goal": {
               "id": "number",
@@ -819,16 +910,47 @@
             "tab_name": "null",
             "user_id": "number",
             "user_interests": [],
-            "user_interests_v2": [],
-            "user_traits": [],
+            "user_interests_v2": [
+              {
+                "common_interest": "string",
+                "id": "number",
+                "interest_id": "number",
+                "name": "string",
+                "order": "number"
+              }
+            ],
+            "user_traits": [
+              {
+                "id": "number",
+                "name": "string",
+                "order": "number",
+                "trait_id": "number"
+              }
+            ],
             "verification_status": "string",
-            "work": "null",
-            "work_v1": {
-              "college": "string",
-              "graduation_year": "string",
-              "industry": "string",
-              "work_title": "string"
-            }
+            "work": {
+              "experience_v1": {
+                "id": "number",
+                "name": "string",
+                "name_alias": "string"
+              },
+              "field_of_study_v1": {
+                "id": "number",
+                "name": "string"
+              },
+              "highest_qualification_v1": {
+                "id": "number",
+                "name": "string",
+                "preference_only": "boolean"
+              },
+              "industry_v1": {
+                "id": "number",
+                "name": "string",
+                "preference_only": "boolean"
+              },
+              "monthly_income_v1": "null"
+            },
+            "work_v1": "null"
           }
         ]
       },

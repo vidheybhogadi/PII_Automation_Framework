@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-036-PARAM",
-  "recordedAt": "2026-10-24T15:16:11.828Z",
-  "runId": "qa-m2-20261024t151249-c728",
+  "recordedAt": "2026-10-25T16:34:02.402Z",
+  "runId": "qa-m2-20261025t162950-f4a2",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -11,7 +11,7 @@
       "shape": {
         "status": "boolean",
         "user": {
-          "about": "string",
+          "about": "null",
           "audio_prompt": {
             "audio_url": "string",
             "audio_url_id": "number",
@@ -155,6 +155,7 @@
           "percentage_profile_complete": "number",
           "photos": [
             {
+              "archive_reason": "string",
               "feedback_prompt": "null",
               "feedback_prompt_v2": "null",
               "feedback_prompt_v3": "null",
@@ -163,20 +164,10 @@
               "prompt": "null",
               "prompt_id": "null",
               "selected": "boolean",
-              "status": "string"
+              "status": "null"
             }
           ],
-          "preferences": [
-            {
-              "answer_id": "number",
-              "id": "number",
-              "preference_question": {
-                "first_choice": "string",
-                "second_choice": "string"
-              },
-              "value": "number"
-            }
-          ],
+          "preferences": [],
           "profile_complete_without_selfie": "number",
           "profile_sharing_enabled": "boolean",
           "profile_sharing_popup_text": {
@@ -338,10 +329,7 @@
           "show_incognito_mode": "boolean",
           "show_mandatory_complete_profile_popup": "boolean",
           "show_weekly": "boolean",
-          "story": {
-            "about": "string",
-            "story_id": "number"
-          },
+          "story": "null",
           "user_interests": [
             {
               "id": "number",

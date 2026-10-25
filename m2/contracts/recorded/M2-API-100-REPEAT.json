@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-100-REPEAT",
-  "recordedAt": "2026-10-24T15:18:05.101Z",
-  "runId": "qa-m2-20261024t151249-c728",
+  "recordedAt": "2026-10-25T16:35:54.518Z",
+  "runId": "qa-m2-20261025t162950-f4a2",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -100,12 +100,7 @@
               "name": "string",
               "preference_only": "boolean"
             },
-            "mbti": {
-              "id": "number",
-              "mbti_type": "string",
-              "name": "string",
-              "preference_only": "boolean"
-            },
+            "mbti": "null",
             "mobile_number": "string",
             "mother_tongue": {
               "id": "number",
@@ -175,7 +170,6 @@
           "percentage_profile_complete": "number",
           "photos": [
             {
-              "archive_reason": "string",
               "feedback_prompt": "null",
               "feedback_prompt_v2": "null",
               "feedback_prompt_v3": "null",
@@ -184,7 +178,7 @@
               "prompt": "null",
               "prompt_id": "null",
               "selected": "boolean",
-              "status": "null"
+              "status": "string"
             }
           ],
           "preferences": [
@@ -213,7 +207,7 @@
             "is_default": "boolean",
             "is_hidden": "boolean",
             "name": "string",
-            "optional_relationship_goal_message": "string",
+            "optional_relationship_goal_message": "null",
             "prefix": "string",
             "show_on_profile": "boolean"
           },
@@ -499,12 +493,7 @@
               "name": "string",
               "preference_only": "boolean"
             },
-            "mbti": {
-              "id": "number",
-              "mbti_type": "string",
-              "name": "string",
-              "preference_only": "boolean"
-            },
+            "mbti": "null",
             "mobile_number": "string",
             "mother_tongue": {
               "id": "number",
@@ -574,7 +563,6 @@
           "percentage_profile_complete": "number",
           "photos": [
             {
-              "archive_reason": "string",
               "feedback_prompt": "null",
               "feedback_prompt_v2": "null",
               "feedback_prompt_v3": "null",
@@ -583,7 +571,7 @@
               "prompt": "null",
               "prompt_id": "null",
               "selected": "boolean",
-              "status": "null"
+              "status": "string"
             }
           ],
           "preferences": [
@@ -612,7 +600,7 @@
             "is_default": "boolean",
             "is_hidden": "boolean",
             "name": "string",
-            "optional_relationship_goal_message": "string",
+            "optional_relationship_goal_message": "null",
             "prefix": "string",
             "show_on_profile": "boolean"
           },

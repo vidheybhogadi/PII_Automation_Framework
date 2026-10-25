@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-026-BODY",
-  "recordedAt": "2026-10-24T15:13:45.199Z",
-  "runId": "qa-m2-20261024t151249-c728",
+  "recordedAt": "2026-10-25T16:31:20.313Z",
+  "runId": "qa-m2-20261025t162950-f4a2",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -35,7 +35,7 @@
       "shape": {
         "ref": "string",
         "user": {
-          "about": "string",
+          "about": "null",
           "audio_prompt": "null",
           "delete_reasons": [
             {
@@ -321,18 +321,8 @@
           "show_incognito_mode": "boolean",
           "show_mandatory_complete_profile_popup": "boolean",
           "show_weekly": "boolean",
-          "story": {
-            "about": "string",
-            "story_id": "number"
-          },
-          "user_interests": [
-            {
-              "id": "number",
-              "interest_id": "number",
-              "name": "string",
-              "value": "number"
-            }
-          ],
+          "story": "null",
+          "user_interests": [],
           "user_interests_v2": [
             {
               "common_interest": "string",

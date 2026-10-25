@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-022-REPEAT",
-  "recordedAt": "2026-10-24T15:17:34.716Z",
-  "runId": "qa-m2-20261024t151249-c728",
+  "recordedAt": "2026-10-25T16:35:11.639Z",
+  "runId": "qa-m2-20261025t162950-f4a2",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -120,18 +120,10 @@
           "is_sms_unsubscribed": "boolean",
           "last_seen": "string",
           "own_meetup": "null",
-          "partial_work": {
-            "college": "string",
-            "education": "string",
-            "graduation_year": "string",
-            "industry": "string",
-            "work": "string",
-            "work_title": "string"
-          },
+          "partial_work": "null",
           "percentage_profile_complete": "number",
           "photos": [
             {
-              "archive_reason": "string",
               "feedback_prompt": "null",
               "feedback_prompt_v2": "null",
               "feedback_prompt_v3": "null",
@@ -140,7 +132,7 @@
               "prompt": "null",
               "prompt_id": "null",
               "selected": "boolean",
-              "status": "null"
+              "status": "string"
             }
           ],
           "preferences": [
@@ -327,15 +319,7 @@
               "value": "number"
             }
           ],
-          "user_interests_v2": [
-            {
-              "common_interest": "string",
-              "id": "number",
-              "interest_id": "number",
-              "name": "string",
-              "order": "number"
-            }
-          ],
+          "user_interests_v2": [],
           "user_traits": [
             {
               "id": "number",
@@ -345,12 +329,7 @@
             }
           ],
           "work": "null",
-          "work_v1": {
-            "college": "string",
-            "graduation_year": "string",
-            "industry": "string",
-            "work_title": "string"
-          }
+          "work_v1": "null"
         }
       },
       "piiKeys": [
@@ -475,18 +454,10 @@
           "is_sms_unsubscribed": "boolean",
           "last_seen": "string",
           "own_meetup": "null",
-          "partial_work": {
-            "college": "string",
-            "education": "string",
-            "graduation_year": "string",
-            "industry": "string",
-            "work": "string",
-            "work_title": "string"
-          },
+          "partial_work": "null",
           "percentage_profile_complete": "number",
           "photos": [
             {
-              "archive_reason": "string",
               "feedback_prompt": "null",
               "feedback_prompt_v2": "null",
               "feedback_prompt_v3": "null",
@@ -495,7 +466,7 @@
               "prompt": "null",
               "prompt_id": "null",
               "selected": "boolean",
-              "status": "null"
+              "status": "string"
             }
           ],
           "preferences": [
@@ -682,15 +653,7 @@
               "value": "number"
             }
           ],
-          "user_interests_v2": [
-            {
-              "common_interest": "string",
-              "id": "number",
-              "interest_id": "number",
-              "name": "string",
-              "order": "number"
-            }
-          ],
+          "user_interests_v2": [],
           "user_traits": [
             {
               "id": "number",
@@ -700,12 +663,7 @@
             }
           ],
           "work": "null",
-          "work_v1": {
-            "college": "string",
-            "graduation_year": "string",
-            "industry": "string",
-            "work_title": "string"
-          }
+          "work_v1": "null"
         }
       },
       "piiKeys": [

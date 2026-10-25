@@ -1,0 +1,60 @@
+{
+  "caseId": "M2-API-118-BODY",
+  "recordedAt": "2026-10-25T16:59:56.807Z",
+  "runId": "qa-m2-20261025t162950-f4a2",
+  "build": "unknown — deployed commit not confirmed (M2Q-01)",
+  "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
+  "variants": {
+    "invalid JSON": {
+      "status": 502,
+      "contentType": "application/json",
+      "shape": {
+        "cloudflare_error": "boolean",
+        "detail": "string",
+        "error_category": "string",
+        "error_code": "number",
+        "error_name": "string",
+        "footer": "string",
+        "instance": "string",
+        "owner_action_required": "boolean",
+        "ray_id": "string",
+        "retry_after": "number",
+        "retryable": "boolean",
+        "status": "number",
+        "timestamp": "string",
+        "title": "string",
+        "type": "string",
+        "what_you_should_do": "string",
+        "zone": "string"
+      },
+      "piiKeys": []
+    },
+    "extra keys user_id / tenant_id / first_name": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "status": "boolean"
+      },
+      "piiKeys": []
+    },
+    "id with the wrong type": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "status": "boolean"
+      },
+      "piiKeys": []
+    },
+    "invitation_type with the wrong type": {
+      "status": 200,
+      "contentType": "application/json",
+      "shape": {
+        "status": "boolean"
+      },
+      "piiKeys": []
+    }
+  },
+  "invariantFailures": [
+    "invalid JSON"
+  ]
+}

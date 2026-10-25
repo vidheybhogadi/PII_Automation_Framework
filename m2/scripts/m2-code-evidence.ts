@@ -176,6 +176,20 @@ export const FRESH_ACCOUNT = ['API-062'];
 export const OWN_PROFILE_BY_REF = ['API-021', 'API-120'];
 
 /**
+ * IDOR routes whose request names another member through a key other than REF / USER_ID / OTHER_* (from code —
+ * confirm with Dev; saurabh/pii-changes ae838f4). They keep their IDOR case although the no-target rule would drop it
+ * (user decision 2026-10-25: never remove a case whose request can carry another member's identifier).
+ */
+export const IDOR_OTHER_TARGET: Record<string, string> = {
+  'API-012':
+    'user_name selects the TARGET profile that is returned (app/models/profile.rb:1191-1194; Dev note: “The target profile must satisfy public-profile visibility rules”)',
+  'API-073':
+    'conversation_id is stored on the Cashfree order and later used to enable chat exclusivity in that conversation (app/models/payment/cashfree/api.rb:189; app/models/payment/cashfree/transaction.rb:364-371)',
+  'API-083':
+    'conversation_id is stored on the PhonePe one-time payment and later used to enable chat exclusivity in that conversation (app/models/payment/phonepay.rb:540-542; app/models/payment/phonepay/transaction.rb:342-357)',
+};
+
+/**
  * First-name normalisation applied by Profile#assign_first_name (app/models/profile.rb:3137-3144, 6536-6540):
  * blank → no write; otherwise strip, and if the value contains any A–Z letter, drop every non A–Z character.
  * Returns undefined when the value would not be written.

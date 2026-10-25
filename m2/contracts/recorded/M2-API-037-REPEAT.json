@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-037-REPEAT",
-  "recordedAt": "2026-10-24T15:17:40.622Z",
-  "runId": "qa-m2-20261024t151249-c728",
+  "recordedAt": "2026-10-25T16:35:21.802Z",
+  "runId": "qa-m2-20261025t162950-f4a2",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -11,13 +11,8 @@
       "shape": {
         "status": "boolean",
         "user": {
-          "about": "string",
-          "audio_prompt": {
-            "audio_url": "string",
-            "audio_url_id": "number",
-            "question": "string",
-            "question_id": "number"
-          },
+          "about": "null",
+          "audio_prompt": "null",
           "delete_reasons": [
             {
               "id": "number",
@@ -80,7 +75,12 @@
               "name": "string",
               "preference_only": "boolean"
             },
-            "mbti": "null",
+            "mbti": {
+              "id": "number",
+              "mbti_type": "string",
+              "name": "string",
+              "preference_only": "boolean"
+            },
             "mobile_number": "string",
             "mother_tongue": {
               "id": "number",
@@ -92,7 +92,12 @@
             "phone_code": "string",
             "politics": "null",
             "ref_id": "string",
-            "settle": "null",
+            "settle": {
+              "id": "number",
+              "name": "string",
+              "name_alias": "string",
+              "prefix": "string"
+            },
             "smoking_id": "number",
             "smoking_v1": {
               "id": "number",
@@ -334,10 +339,7 @@
           "show_incognito_mode": "boolean",
           "show_mandatory_complete_profile_popup": "boolean",
           "show_weekly": "boolean",
-          "story": {
-            "about": "string",
-            "story_id": "number"
-          },
+          "story": "null",
           "user_interests": [
             {
               "id": "number",
@@ -346,7 +348,15 @@
               "value": "number"
             }
           ],
-          "user_interests_v2": [],
+          "user_interests_v2": [
+            {
+              "common_interest": "string",
+              "id": "number",
+              "interest_id": "number",
+              "name": "string",
+              "order": "number"
+            }
+          ],
           "user_traits": [
             {
               "id": "number",
@@ -377,13 +387,8 @@
       "shape": {
         "status": "boolean",
         "user": {
-          "about": "string",
-          "audio_prompt": {
-            "audio_url": "string",
-            "audio_url_id": "number",
-            "question": "string",
-            "question_id": "number"
-          },
+          "about": "null",
+          "audio_prompt": "null",
           "delete_reasons": [
             {
               "id": "number",
@@ -446,7 +451,12 @@
               "name": "string",
               "preference_only": "boolean"
             },
-            "mbti": "null",
+            "mbti": {
+              "id": "number",
+              "mbti_type": "string",
+              "name": "string",
+              "preference_only": "boolean"
+            },
             "mobile_number": "string",
             "mother_tongue": {
               "id": "number",
@@ -458,7 +468,12 @@
             "phone_code": "string",
             "politics": "null",
             "ref_id": "string",
-            "settle": "null",
+            "settle": {
+              "id": "number",
+              "name": "string",
+              "name_alias": "string",
+              "prefix": "string"
+            },
             "smoking_id": "number",
             "smoking_v1": {
               "id": "number",
@@ -700,10 +715,7 @@
           "show_incognito_mode": "boolean",
           "show_mandatory_complete_profile_popup": "boolean",
           "show_weekly": "boolean",
-          "story": {
-            "about": "string",
-            "story_id": "number"
-          },
+          "story": "null",
           "user_interests": [
             {
               "id": "number",
@@ -712,7 +724,15 @@
               "value": "number"
             }
           ],
-          "user_interests_v2": [],
+          "user_interests_v2": [
+            {
+              "common_interest": "string",
+              "id": "number",
+              "interest_id": "number",
+              "name": "string",
+              "order": "number"
+            }
+          ],
           "user_traits": [
             {
               "id": "number",

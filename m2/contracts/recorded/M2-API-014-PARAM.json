@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-014-PARAM",
-  "recordedAt": "2026-10-24T15:16:02.103Z",
-  "runId": "qa-m2-20261024t151249-c728",
+  "recordedAt": "2026-10-25T16:33:43.735Z",
+  "runId": "qa-m2-20261025t162950-f4a2",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -32,7 +32,7 @@
             ],
             "display_new_tag": "boolean",
             "distance": "string",
-            "drinking_id": "number",
+            "drinking_v2_id": "number",
             "faith_id": "number",
             "general_information": {
               "age": "number",
@@ -69,7 +69,7 @@
               "first_name": "string",
               "gender": "string",
               "height": "number",
-              "home_town": "null",
+              "home_town": "string",
               "kid": {
                 "id": "number",
                 "name": "string"
@@ -102,14 +102,8 @@
                 "name": "string"
               },
               "mother_tongue_id": "number",
-              "pet": {
-                "id": "number",
-                "name": "string"
-              },
-              "politics": {
-                "id": "number",
-                "name": "string"
-              },
+              "pet": "null",
+              "politics": "null",
               "ref_id": "string",
               "settle": {
                 "id": "number",
@@ -165,17 +159,17 @@
             "mother_tongue_id": "number",
             "online_code": "number",
             "partial_work": {
+              "college": "string",
               "education": "string",
+              "graduation_year": "string",
+              "industry": "string",
+              "work": "string",
+              "work_title": "string",
               "new_qualification": {
                 "id": "number",
                 "name": "string",
                 "preference_only": "boolean"
-              },
-              "work": "string",
-              "industry": "string",
-              "work_title": "string",
-              "college": "string",
-              "graduation_year": "string"
+              }
             },
             "photos": [
               {
@@ -186,7 +180,7 @@
                 "prompt": "null",
                 "prompt_id": "null",
                 "selected": "boolean",
-                "status": "null"
+                "status": "string"
               }
             ],
             "preferences": [
@@ -227,7 +221,7 @@
             "reply_id": "null",
             "reply_message": "null",
             "show_concierge_badge": "boolean",
-            "smoking_id": "number",
+            "smoking_v2_id": "number",
             "spark_id": "null",
             "story": {
               "about": "string",
@@ -281,9 +275,7 @@
               "graduation_year": "string",
               "industry": "string",
               "work_title": "string"
-            },
-            "drinking_v2_id": "number",
-            "smoking_v2_id": "number"
+            }
           }
         ]
       },
@@ -319,7 +311,7 @@
             ],
             "display_new_tag": "boolean",
             "distance": "string",
-            "drinking_id": "number",
+            "drinking_v2_id": "number",
             "faith_id": "number",
             "general_information": {
               "age": "number",
@@ -356,7 +348,7 @@
               "first_name": "string",
               "gender": "string",
               "height": "number",
-              "home_town": "null",
+              "home_town": "string",
               "kid": {
                 "id": "number",
                 "name": "string"
@@ -389,14 +381,8 @@
                 "name": "string"
               },
               "mother_tongue_id": "number",
-              "pet": {
-                "id": "number",
-                "name": "string"
-              },
-              "politics": {
-                "id": "number",
-                "name": "string"
-              },
+              "pet": "null",
+              "politics": "null",
               "ref_id": "string",
               "settle": {
                 "id": "number",
@@ -452,17 +438,17 @@
             "mother_tongue_id": "number",
             "online_code": "number",
             "partial_work": {
+              "college": "string",
               "education": "string",
+              "graduation_year": "string",
+              "industry": "string",
+              "work": "string",
+              "work_title": "string",
               "new_qualification": {
                 "id": "number",
                 "name": "string",
                 "preference_only": "boolean"
-              },
-              "work": "string",
-              "industry": "string",
-              "work_title": "string",
-              "college": "string",
-              "graduation_year": "string"
+              }
             },
             "photos": [
               {
@@ -473,7 +459,7 @@
                 "prompt": "null",
                 "prompt_id": "null",
                 "selected": "boolean",
-                "status": "null"
+                "status": "string"
               }
             ],
             "preferences": [
@@ -514,7 +500,7 @@
             "reply_id": "null",
             "reply_message": "null",
             "show_concierge_badge": "boolean",
-            "smoking_id": "number",
+            "smoking_v2_id": "number",
             "spark_id": "null",
             "story": {
               "about": "string",
@@ -568,9 +554,7 @@
               "graduation_year": "string",
               "industry": "string",
               "work_title": "string"
-            },
-            "drinking_v2_id": "number",
-            "smoking_v2_id": "number"
+            }
           }
         ]
       },

@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-015-PARAM",
-  "recordedAt": "2026-10-24T15:16:02.744Z",
-  "runId": "qa-m2-20261024t151249-c728",
+  "recordedAt": "2026-10-25T16:33:53.692Z",
+  "runId": "qa-m2-20261025t162950-f4a2",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -16,12 +16,7 @@
           {
             "already_passed": "boolean",
             "approved_time": "number",
-            "audio_prompt": {
-              "audio_url": "string",
-              "audio_url_id": "number",
-              "question": "string",
-              "question_id": "number"
-            },
+            "audio_prompt": "null",
             "audio_url": "null",
             "can_send_reply_v1": "boolean",
             "compatibility_check": [],
@@ -36,12 +31,7 @@
             "faith_id": "number",
             "general_information": {
               "age": "number",
-              "cast": {
-                "faith_id": "number",
-                "id": "number",
-                "name": "string",
-                "position": "number"
-              },
+              "cast": "null",
               "date_of_birth": "string",
               "date_of_birth_v1": "string",
               "diet": {
@@ -70,10 +60,7 @@
               "gender": "string",
               "height": "number",
               "home_town": "string",
-              "kid": {
-                "id": "number",
-                "name": "string"
-              },
+              "kid": "null",
               "languages": [
                 {
                   "id": "number",
@@ -102,21 +89,10 @@
                 "name": "string"
               },
               "mother_tongue_id": "number",
-              "pet": {
-                "id": "number",
-                "name": "string"
-              },
-              "politics": {
-                "id": "number",
-                "name": "string"
-              },
+              "pet": "null",
+              "politics": "null",
               "ref_id": "string",
-              "settle": {
-                "id": "number",
-                "name": "string",
-                "name_alias": "string",
-                "prefix": "string"
-              },
+              "settle": "null",
               "smoking_id": "number",
               "smoking_v1": {
                 "id": "number",
@@ -166,17 +142,16 @@
             "online_code": "number",
             "partial_work": {
               "education": "string",
-              "work": "string",
-              "work_title": "string",
               "new_qualification": {
                 "id": "number",
                 "name": "string",
                 "preference_only": "boolean"
               },
+              "work": "string",
+              "work_title": "string",
               "college": "string",
               "graduation_year": "string",
-              "industry": "string",
-              "new_income": "null"
+              "industry": "string"
             },
             "photos": [
               {
@@ -203,11 +178,7 @@
             ],
             "profile_data_list": [
               {
-                "answer": "string",
-                "answer_id": "number",
                 "invitation_type": "string",
-                "question": "string",
-                "question_id": "number",
                 "preferences": [
                   {
                     "answer": "string",
@@ -215,7 +186,8 @@
                     "first_choice": "string",
                     "second_choice": "string"
                   }
-                ]
+                ],
+                "question": "string"
               }
             ],
             "profile_sharing_enabled": "boolean",
@@ -239,14 +211,7 @@
             },
             "tab_name": "null",
             "user_id": "number",
-            "user_interests": [
-              {
-                "id": "number",
-                "interest_id": "number",
-                "name": "string",
-                "value": "number"
-              }
-            ],
+            "user_interests": [],
             "user_interests_v2": [
               {
                 "common_interest": "string",
@@ -256,30 +221,16 @@
                 "order": "number"
               }
             ],
-            "user_traits": [],
+            "user_traits": [
+              {
+                "id": "number",
+                "name": "string",
+                "order": "number",
+                "trait_id": "number"
+              }
+            ],
             "verification_status": "string",
-            "work": {
-              "experience_v1": {
-                "id": "number",
-                "name": "string",
-                "name_alias": "string"
-              },
-              "field_of_study_v1": {
-                "id": "number",
-                "name": "string"
-              },
-              "highest_qualification_v1": {
-                "id": "number",
-                "name": "string",
-                "preference_only": "boolean"
-              },
-              "industry_v1": {
-                "id": "number",
-                "name": "string",
-                "preference_only": "boolean"
-              },
-              "monthly_income_v1": "null"
-            },
+            "work": "null",
             "work_v1": {
               "college": "string",
               "graduation_year": "string",
@@ -305,12 +256,7 @@
           {
             "already_passed": "boolean",
             "approved_time": "number",
-            "audio_prompt": {
-              "audio_url": "string",
-              "audio_url_id": "number",
-              "question": "string",
-              "question_id": "number"
-            },
+            "audio_prompt": "null",
             "audio_url": "null",
             "can_send_reply_v1": "boolean",
             "compatibility_check": [],
@@ -325,12 +271,7 @@
             "faith_id": "number",
             "general_information": {
               "age": "number",
-              "cast": {
-                "faith_id": "number",
-                "id": "number",
-                "name": "string",
-                "position": "number"
-              },
+              "cast": "null",
               "date_of_birth": "string",
               "date_of_birth_v1": "string",
               "diet": {
@@ -359,10 +300,7 @@
               "gender": "string",
               "height": "number",
               "home_town": "string",
-              "kid": {
-                "id": "number",
-                "name": "string"
-              },
+              "kid": "null",
               "languages": [
                 {
                   "id": "number",
@@ -391,21 +329,10 @@
                 "name": "string"
               },
               "mother_tongue_id": "number",
-              "pet": {
-                "id": "number",
-                "name": "string"
-              },
-              "politics": {
-                "id": "number",
-                "name": "string"
-              },
+              "pet": "null",
+              "politics": "null",
               "ref_id": "string",
-              "settle": {
-                "id": "number",
-                "name": "string",
-                "name_alias": "string",
-                "prefix": "string"
-              },
+              "settle": "null",
               "smoking_id": "number",
               "smoking_v1": {
                 "id": "number",
@@ -455,17 +382,16 @@
             "online_code": "number",
             "partial_work": {
               "education": "string",
-              "work": "string",
-              "work_title": "string",
               "new_qualification": {
                 "id": "number",
                 "name": "string",
                 "preference_only": "boolean"
               },
+              "work": "string",
+              "work_title": "string",
               "college": "string",
               "graduation_year": "string",
-              "industry": "string",
-              "new_income": "null"
+              "industry": "string"
             },
             "photos": [
               {
@@ -492,11 +418,7 @@
             ],
             "profile_data_list": [
               {
-                "answer": "string",
-                "answer_id": "number",
                 "invitation_type": "string",
-                "question": "string",
-                "question_id": "number",
                 "preferences": [
                   {
                     "answer": "string",
@@ -504,7 +426,8 @@
                     "first_choice": "string",
                     "second_choice": "string"
                   }
-                ]
+                ],
+                "question": "string"
               }
             ],
             "profile_sharing_enabled": "boolean",
@@ -528,14 +451,7 @@
             },
             "tab_name": "null",
             "user_id": "number",
-            "user_interests": [
-              {
-                "id": "number",
-                "interest_id": "number",
-                "name": "string",
-                "value": "number"
-              }
-            ],
+            "user_interests": [],
             "user_interests_v2": [
               {
                 "common_interest": "string",
@@ -545,30 +461,16 @@
                 "order": "number"
               }
             ],
-            "user_traits": [],
+            "user_traits": [
+              {
+                "id": "number",
+                "name": "string",
+                "order": "number",
+                "trait_id": "number"
+              }
+            ],
             "verification_status": "string",
-            "work": {
-              "experience_v1": {
-                "id": "number",
-                "name": "string",
-                "name_alias": "string"
-              },
-              "field_of_study_v1": {
-                "id": "number",
-                "name": "string"
-              },
-              "highest_qualification_v1": {
-                "id": "number",
-                "name": "string",
-                "preference_only": "boolean"
-              },
-              "industry_v1": {
-                "id": "number",
-                "name": "string",
-                "preference_only": "boolean"
-              },
-              "monthly_income_v1": "null"
-            },
+            "work": "null",
             "work_v1": {
               "college": "string",
               "graduation_year": "string",

@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-024-CONTRACT",
-  "recordedAt": "2026-10-24T15:15:16.541Z",
-  "runId": "qa-m2-20261024t151249-c728",
+  "recordedAt": "2026-10-25T16:32:53.673Z",
+  "runId": "qa-m2-20261025t162950-f4a2",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -12,7 +12,12 @@
         "ref": "string",
         "user": {
           "about": "string",
-          "audio_prompt": "null",
+          "audio_prompt": {
+            "audio_url": "string",
+            "audio_url_id": "number",
+            "question": "string",
+            "question_id": "number"
+          },
           "delete_reasons": [
             {
               "id": "number",
@@ -108,36 +113,30 @@
           "has_concierge_subscription": "boolean",
           "has_voted": "boolean",
           "hide_first_name": "boolean",
-          "icebreakers": [
-            {
-              "answer": "string",
-              "answer_id": "number",
-              "hint": "string",
-              "question": "string",
-              "question_id": "number"
-            }
-          ],
+          "icebreakers": "null",
           "incognito_mode_active": "boolean",
           "incognito_mode_popup_text": {
             "button_text_1": "string",
             "description_text": "string",
             "header_text": "string"
           },
-          "introduction": {
-            "answer": "string",
-            "answer_id": "number",
-            "hint": "string",
-            "question": "string",
-            "question_id": "number"
-          },
+          "introduction": "null",
           "is_email_unsubscribed": "boolean",
           "is_sms_unsubscribed": "boolean",
           "last_seen": "string",
           "own_meetup": "null",
-          "partial_work": "null",
+          "partial_work": {
+            "college": "string",
+            "education": "string",
+            "graduation_year": "string",
+            "industry": "string",
+            "work": "string",
+            "work_title": "string"
+          },
           "percentage_profile_complete": "number",
           "photos": [
             {
+              "archive_reason": "string",
               "feedback_prompt": "null",
               "feedback_prompt_v2": "null",
               "feedback_prompt_v3": "null",
@@ -146,20 +145,10 @@
               "prompt": "null",
               "prompt_id": "null",
               "selected": "boolean",
-              "status": "string"
+              "status": "null"
             }
           ],
-          "preferences": [
-            {
-              "answer_id": "number",
-              "id": "number",
-              "preference_question": {
-                "first_choice": "string",
-                "second_choice": "string"
-              },
-              "value": "number"
-            }
-          ],
+          "preferences": [],
           "profile_complete_without_selfie": "number",
           "profile_sharing_enabled": "boolean",
           "profile_sharing_popup_text": {
@@ -343,7 +332,12 @@
             }
           ],
           "work": "null",
-          "work_v1": "null"
+          "work_v1": {
+            "college": "string",
+            "graduation_year": "string",
+            "industry": "string",
+            "work_title": "string"
+          }
         }
       },
       "piiKeys": [

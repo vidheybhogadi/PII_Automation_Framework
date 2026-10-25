@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-020-PARAM",
-  "recordedAt": "2026-10-24T15:16:06.249Z",
-  "runId": "qa-m2-20261024t151249-c728",
+  "recordedAt": "2026-10-25T16:33:54.030Z",
+  "runId": "qa-m2-20261025t162950-f4a2",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -30,12 +30,7 @@
             "faith_id": "number",
             "general_information": {
               "age": "number",
-              "cast": {
-                "faith_id": "number",
-                "id": "number",
-                "name": "string",
-                "position": "number"
-              },
+              "cast": "null",
               "date_of_birth": "string",
               "date_of_birth_v1": "string",
               "diet": {
@@ -63,11 +58,8 @@
               "first_name": "string",
               "gender": "string",
               "height": "number",
-              "home_town": "null",
-              "kid": {
-                "id": "number",
-                "name": "string"
-              },
+              "home_town": "string",
+              "kid": "null",
               "languages": [
                 {
                   "id": "number",
@@ -85,32 +77,16 @@
                 "name": "string",
                 "preference_only": "boolean"
               },
-              "mbti": {
-                "id": "number",
-                "mbti_type": "string",
-                "name": "string",
-                "preference_only": "boolean"
-              },
+              "mbti": "null",
               "mother_tongue": {
                 "id": "number",
                 "name": "string"
               },
               "mother_tongue_id": "number",
-              "pet": {
-                "id": "number",
-                "name": "string"
-              },
-              "politics": {
-                "id": "number",
-                "name": "string"
-              },
+              "pet": "null",
+              "politics": "null",
               "ref_id": "string",
-              "settle": {
-                "id": "number",
-                "name": "string",
-                "name_alias": "string",
-                "prefix": "string"
-              },
+              "settle": "null",
               "smoking_id": "number",
               "smoking_v1": {
                 "id": "number",
@@ -137,15 +113,7 @@
             "has_partial_work": "boolean",
             "has_received_like": "boolean",
             "has_sent_like": "boolean",
-            "icebreakers": [
-              {
-                "answer": "string",
-                "answer_id": "number",
-                "hint": "string",
-                "question": "string",
-                "question_id": "number"
-              }
-            ],
+            "icebreakers": "null",
             "image_url": "null",
             "invitation_type": "null",
             "is_connected": "boolean",
@@ -165,16 +133,16 @@
             ],
             "partial_work": {
               "education": "string",
-              "industry": "string",
-              "work": "string",
-              "work_title": "string",
-              "college": "string",
-              "graduation_year": "string",
               "new_qualification": {
                 "id": "number",
                 "name": "string",
                 "preference_only": "boolean"
-              }
+              },
+              "work": "string",
+              "college": "string",
+              "graduation_year": "string",
+              "industry": "string",
+              "work_title": "string"
             },
             "photos": [
               {
@@ -188,31 +156,8 @@
                 "status": "string"
               }
             ],
-            "preferences": [
-              {
-                "answer_id": "number",
-                "id": "number",
-                "preference_question": {
-                  "first_choice": "string",
-                  "second_choice": "string"
-                },
-                "value": "number"
-              }
-            ],
-            "profile_data_list": [
-              {
-                "invitation_type": "string",
-                "preferences": [
-                  {
-                    "answer": "string",
-                    "answer_id": "number",
-                    "first_choice": "string",
-                    "second_choice": "string"
-                  }
-                ],
-                "question": "string"
-              }
-            ],
+            "preferences": [],
+            "profile_data_list": [],
             "profile_sharing_enabled": "boolean",
             "relationship_goal": {
               "id": "number",
@@ -227,29 +172,11 @@
             "reply_message": "null",
             "show_concierge_badge": "boolean",
             "smoking_v2_id": "number",
-            "story": {
-              "about": "string",
-              "story_id": "number"
-            },
+            "story": "null",
             "user_id": "number",
             "user_interests": [],
-            "user_interests_v2": [
-              {
-                "common_interest": "string",
-                "id": "number",
-                "interest_id": "number",
-                "name": "string",
-                "order": "number"
-              }
-            ],
-            "user_traits": [
-              {
-                "id": "number",
-                "name": "string",
-                "order": "number",
-                "trait_id": "number"
-              }
-            ],
+            "user_interests_v2": [],
+            "user_traits": [],
             "verification_status": "string",
             "work": {
               "experience_v1": {
@@ -278,9 +205,7 @@
               "graduation_year": "string",
               "industry": "string",
               "work_title": "string"
-            },
-            "drinking_id": "number",
-            "smoking_id": "number"
+            }
           }
         ]
       },
@@ -314,12 +239,7 @@
             "faith_id": "number",
             "general_information": {
               "age": "number",
-              "cast": {
-                "faith_id": "number",
-                "id": "number",
-                "name": "string",
-                "position": "number"
-              },
+              "cast": "null",
               "date_of_birth": "string",
               "date_of_birth_v1": "string",
               "diet": {
@@ -347,11 +267,8 @@
               "first_name": "string",
               "gender": "string",
               "height": "number",
-              "home_town": "null",
-              "kid": {
-                "id": "number",
-                "name": "string"
-              },
+              "home_town": "string",
+              "kid": "null",
               "languages": [
                 {
                   "id": "number",
@@ -369,32 +286,16 @@
                 "name": "string",
                 "preference_only": "boolean"
               },
-              "mbti": {
-                "id": "number",
-                "mbti_type": "string",
-                "name": "string",
-                "preference_only": "boolean"
-              },
+              "mbti": "null",
               "mother_tongue": {
                 "id": "number",
                 "name": "string"
               },
               "mother_tongue_id": "number",
-              "pet": {
-                "id": "number",
-                "name": "string"
-              },
-              "politics": {
-                "id": "number",
-                "name": "string"
-              },
+              "pet": "null",
+              "politics": "null",
               "ref_id": "string",
-              "settle": {
-                "id": "number",
-                "name": "string",
-                "name_alias": "string",
-                "prefix": "string"
-              },
+              "settle": "null",
               "smoking_id": "number",
               "smoking_v1": {
                 "id": "number",
@@ -421,15 +322,7 @@
             "has_partial_work": "boolean",
             "has_received_like": "boolean",
             "has_sent_like": "boolean",
-            "icebreakers": [
-              {
-                "answer": "string",
-                "answer_id": "number",
-                "hint": "string",
-                "question": "string",
-                "question_id": "number"
-              }
-            ],
+            "icebreakers": "null",
             "image_url": "null",
             "invitation_type": "null",
             "is_connected": "boolean",
@@ -449,16 +342,16 @@
             ],
             "partial_work": {
               "education": "string",
-              "industry": "string",
-              "work": "string",
-              "work_title": "string",
-              "college": "string",
-              "graduation_year": "string",
               "new_qualification": {
                 "id": "number",
                 "name": "string",
                 "preference_only": "boolean"
-              }
+              },
+              "work": "string",
+              "college": "string",
+              "graduation_year": "string",
+              "industry": "string",
+              "work_title": "string"
             },
             "photos": [
               {
@@ -472,31 +365,8 @@
                 "status": "string"
               }
             ],
-            "preferences": [
-              {
-                "answer_id": "number",
-                "id": "number",
-                "preference_question": {
-                  "first_choice": "string",
-                  "second_choice": "string"
-                },
-                "value": "number"
-              }
-            ],
-            "profile_data_list": [
-              {
-                "invitation_type": "string",
-                "preferences": [
-                  {
-                    "answer": "string",
-                    "answer_id": "number",
-                    "first_choice": "string",
-                    "second_choice": "string"
-                  }
-                ],
-                "question": "string"
-              }
-            ],
+            "preferences": [],
+            "profile_data_list": [],
             "profile_sharing_enabled": "boolean",
             "relationship_goal": {
               "id": "number",
@@ -511,29 +381,11 @@
             "reply_message": "null",
             "show_concierge_badge": "boolean",
             "smoking_v2_id": "number",
-            "story": {
-              "about": "string",
-              "story_id": "number"
-            },
+            "story": "null",
             "user_id": "number",
             "user_interests": [],
-            "user_interests_v2": [
-              {
-                "common_interest": "string",
-                "id": "number",
-                "interest_id": "number",
-                "name": "string",
-                "order": "number"
-              }
-            ],
-            "user_traits": [
-              {
-                "id": "number",
-                "name": "string",
-                "order": "number",
-                "trait_id": "number"
-              }
-            ],
+            "user_interests_v2": [],
+            "user_traits": [],
             "verification_status": "string",
             "work": {
               "experience_v1": {
@@ -562,9 +414,7 @@
               "graduation_year": "string",
               "industry": "string",
               "work_title": "string"
-            },
-            "drinking_id": "number",
-            "smoking_id": "number"
+            }
           }
         ]
       },

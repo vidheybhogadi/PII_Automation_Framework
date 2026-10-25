@@ -1,7 +1,7 @@
 {
   "caseId": "M2-API-058-CONTRACT",
-  "recordedAt": "2026-10-24T15:15:33.975Z",
-  "runId": "qa-m2-20261024t151249-c728",
+  "recordedAt": "2026-10-25T16:33:10.785Z",
+  "runId": "qa-m2-20261025t162950-f4a2",
   "build": "unknown — deployed commit not confirmed (M2Q-01)",
   "note": "Staging recording for review. Approve with npm run m2:contracts:approve.",
   "variants": {
@@ -165,6 +165,7 @@
           "percentage_profile_complete": "number",
           "photos": [
             {
+              "archive_reason": "string",
               "feedback_prompt": "null",
               "feedback_prompt_v2": "null",
               "feedback_prompt_v3": "null",
@@ -173,20 +174,10 @@
               "prompt": "null",
               "prompt_id": "null",
               "selected": "boolean",
-              "status": "string"
+              "status": "null"
             }
           ],
-          "preferences": [
-            {
-              "answer_id": "number",
-              "id": "number",
-              "preference_question": {
-                "first_choice": "string",
-                "second_choice": "string"
-              },
-              "value": "number"
-            }
-          ],
+          "preferences": [],
           "profile_complete_without_selfie": "number",
           "profile_sharing_enabled": "boolean",
           "profile_sharing_popup_text": {
@@ -352,7 +343,14 @@
             "about": "string",
             "story_id": "number"
           },
-          "user_interests": [],
+          "user_interests": [
+            {
+              "id": "number",
+              "interest_id": "number",
+              "name": "string",
+              "value": "number"
+            }
+          ],
           "user_interests_v2": [
             {
               "common_interest": "string",

@@ -8,7 +8,13 @@
  * "same as master" for non-regression checks (needs the baseline, M2Q-24). Unknowns cite an M2Q question.
  */
 import { authLabel, FIELD_LABEL, groupOf, OBSERVED, type InventoryApi, type PiiField } from './m2-inventory';
-import { NO_OTHER_USER, OWN_PROFILE_BY_REF, ROUTE_STATE, suiteStateFor } from './m2-code-evidence';
+import {
+  IDOR_OTHER_TARGET,
+  NO_OTHER_USER,
+  OWN_PROFILE_BY_REF,
+  ROUTE_STATE,
+  suiteStateFor,
+} from './m2-code-evidence';
 import { placeholdersIn } from '../src/checks/request-builder';
 import { hasIdorTarget } from '../src/checks/verdicts';
 import { DB_ON_HOLD, READ_GATES_ON, statusFromDeps } from './m2-questions';
@@ -499,20 +505,20 @@ const RULES: Record<string, Rule> = {
       return { na: 'Admin route accesses any profile by design — role limits covered by EXPOSE.' };
     if (isWebhook(a)) return { na: 'No user identity on callback routes.' };
     if (isLogin(a)) return { na: 'Pre-login route — identity is number + OTP, covered by AUTH.' };
-    // Removed 2026-10-25 (user decision): a request that names no user / profile id cannot carry B's identifiers, so
-    // the case could only ever end Blocked "no target in request" — not generated. Routes whose access is still held
-    // by an open question keep their case until it is answered (then this rule drops them too). IDs never reused.
-    if (!hasIdorTarget(placeholdersIn(a)) && statusFromDeps(['M2Q-03', ...accessDeps(a)]) === 'NOT RUN')
-      return { na: NO_TARGET_NA };
+    // Removed 2026-10-25 (user decisions): a request that names no user / profile id cannot carry B's identifiers, so
+    // the case could only ever end Blocked "no target in request" — not generated, whatever open question still holds
+    // the route (an IDOR case without a target can never test cross-account access). Routes whose request names
+    // another member through another key (IDOR_OTHER_TARGET, from code) keep their case. IDs never reused.
+    if (!hasIdorTarget(placeholdersIn(a)) && !IDOR_OTHER_TARGET[a.id]) return { na: NO_TARGET_NA };
     return {
       pre: 'Two synthetic accounts A and B (M2Q-03).',
       data: 'B’s ref / user_id / conversation / record ids, added to A’s request (query, body or path).',
       steps: [`As A send ${req(a)} with B’s identifiers.`, 'Read B’s profile and PII before/after.'],
       validate:
-        'Request acts only for A (or is refused); B’s phone (national / full) and known fake email never returned; B’s own profile (all stable fields and the about text) never changed. A request that names no user / profile id cannot carry B’s identifiers → Blocked ("no target in request"), never a pass (such cases are not generated once the route is reachable — removed 2026-10-25).',
+        'Request acts only for A (or is refused); B’s phone (national / full) and known fake email never returned; B’s own profile (all stable fields and the about text) never changed. A request that names no user / profile id cannot carry B’s identifiers → Blocked ("no target in request"), never a pass (such cases are not generated — removed 2026-10-25; the few kept routes name the other member through another key, e.g. a public user name or a conversation id, and stay Blocked until the runner can send that key for B).',
       why: 'Classic IDOR on routes that now read and return PII.',
       expected: 'A can only read/change A’s own PII; B unchanged.',
-      evidence: 'Dev doc: email/phone only via own_general_information (owner).',
+      evidence: `Dev doc: email/phone only via own_general_information (owner).${IDOR_OTHER_TARGET[a.id] ? ` Target in request: ${IDOR_OTHER_TARGET[a.id]} — from code, confirm with Dev.` : ''}`,
       db: API_ONLY,
       priority: critical(a),
       deps: ['M2Q-03', ...accessDeps(a)],
