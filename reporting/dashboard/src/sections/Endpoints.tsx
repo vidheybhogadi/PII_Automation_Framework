@@ -1,11 +1,13 @@
-/** "How each endpoint did" — one tile per endpoint (method + path) with a ring; click to see its tests. */
-import { useMemo } from 'preact/hooks';
-import { ENDPOINT_GROUP_ORDER } from '../../../core/catalog';
+/**
+ * "How each endpoint did" — Milestone 1: one tile per endpoint (method + path) with a ring; click to see its tests.
+ * Milestone 2 (~200 APIs): one tile per API area (G1–G10); click an area to open its endpoint tiles.
+ */
+import { useMemo, useState } from 'preact/hooks';
 import type { Outcome } from '../../../core/analytics';
-import type { ReportTest } from '../../../core/types';
+import type { ApiArea, ReportTest } from '../../../core/types';
 import { Ring, Section } from '../components/ui';
 import { Icon } from '../icons';
-import { endpointOf, plainEndpoint } from '../plain';
+import { byEndpoint, plainEndpoint } from '../plain';
 import { outcomeOf, useApp } from '../store';
 import { plural } from '../utils';
 
@@ -24,10 +26,9 @@ export function balancedColumns(n: number, max = 5, min = 3): number {
   return best;
 }
 
-function EndpointCard({ endpoint, tests, index }: { endpoint: string; tests: ReportTest[]; index: number }) {
-  const { report, showTests } = useApp();
-  const p = plainEndpoint(endpoint, report.endpoints);
-  // The same outcome rule as the test list and the Excel sheet. Security findings count as failures here.
+/** Tile colour, ring and one-line result for a set of tests — the same outcome rule as the test list. */
+function tileStats(tests: readonly ReportTest[]) {
+  // Security findings count as failures here.
   const n = (o: Outcome) => tests.filter((t) => outcomeOf(t) === o).length;
   const pass = n('Pass');
   const failN = n('Fail');
@@ -35,21 +36,21 @@ function EndpointCard({ endpoint, tests, index }: { endpoint: string; tests: Rep
   const blocked = n('Blocked');
   const na = n('Not Applicable');
   const fail = failN + findings;
-  const c = { PASS: pass, FAIL: fail, total: tests.length };
+  const total = tests.length;
   const executed = pass + fail;
   // Not Applicable tests (feature confirmed unsupported) never make an endpoint "partly tested".
-  const waiting = c.total - executed - na;
+  const waiting = total - executed - na;
   const rate = executed ? pass / executed : null;
-  const state = c.FAIL > 0 ? 'fail' : executed === 0 ? 'muted' : waiting > 0 ? 'warn' : 'pass';
+  const state = fail > 0 ? 'fail' : executed === 0 ? 'muted' : waiting > 0 ? 'warn' : 'pass';
   const label =
-    c.FAIL > 0
+    fail > 0
       ? [failN && `${failN} failed`, findings && plural(findings, 'security finding')]
           .filter(Boolean)
           .join(' · ')
       : executed === 0
         ? blocked
           ? `${blocked} blocked`
-          : na === c.total
+          : na === total
             ? 'Not applicable'
             : 'Not tested'
         : waiting > 0
@@ -57,27 +58,34 @@ function EndpointCard({ endpoint, tests, index }: { endpoint: string; tests: Rep
             ? `Partly tested · ${blocked} blocked`
             : 'Partly tested'
           : 'All passed';
+  return { pass, fail, blocked, total, rate, state, label };
+}
+
+function TileBody({
+  icon,
+  name,
+  stats,
+  children,
+}: {
+  icon: string;
+  name: string;
+  stats: ReturnType<typeof tileStats>;
+  children?: preact.ComponentChildren;
+}) {
+  const { state, rate, label } = stats;
   return (
-    <button
-      class={`area glass glass--interactive area--${state}`}
-      style={{ '--i': index }}
-      onClick={() => showTests({ endpoint })}
-      aria-label={`${p.name}: ${label}. ${c.PASS} of ${c.total} passed. Show tests.`}
-    >
+    <>
       <span class="area__head">
         <span class="area__icon">
-          <Icon name={p.icon} size={20} />
+          <Icon name={icon} size={20} />
         </span>
         <span class="area__ring">
           <Ring value={rate} tone={state === 'fail' ? 'fail' : state === 'warn' ? 'warn' : 'pass'} />
           <span class="area__pct">{rate === null ? '—' : `${Math.round(rate * 100)}%`}</span>
         </span>
       </span>
-      <span class="area__name">{p.name}</span>
-      <span class="endpoint-path">
-        {p.method && <span class={`method method--${p.method}`}>{p.method}</span>}
-        <code>{p.path}</code>
-      </span>
+      <span class="area__name">{name}</span>
+      {children}
       <span class="area__foot">
         <span class={`status tone--${state}`}>
           <Icon
@@ -88,37 +96,182 @@ function EndpointCard({ endpoint, tests, index }: { endpoint: string; tests: Rep
           {label}
         </span>
         <span class="area__count">
-          {c.PASS}/{c.total}
+          {stats.pass}/{stats.total}
         </span>
       </span>
+    </>
+  );
+}
+
+function EndpointCard({
+  endpoint,
+  tests,
+  index,
+  area,
+}: {
+  endpoint: string;
+  tests: ReportTest[];
+  index: number;
+  /** Milestone 2: the area the tile sits in (clicking keeps the area filter too). */
+  area?: string;
+}) {
+  const { endpointList, showTests } = useApp();
+  const p = plainEndpoint(endpoint, endpointList);
+  const stats = tileStats(tests);
+  return (
+    <button
+      class={`area glass glass--interactive area--${stats.state}`}
+      style={{ '--i': index }}
+      onClick={() => showTests(area ? { area, endpoint } : { endpoint })}
+      aria-label={`${p.name}: ${stats.label}. ${stats.pass} of ${stats.total} passed. Show tests.`}
+    >
+      <TileBody icon={p.icon} name={p.name} stats={stats}>
+        <span class="endpoint-path">
+          {p.method && <span class={`method method--${p.method}`}>{p.method}</span>}
+          <code>{p.path}</code>
+        </span>
+      </TileBody>
     </button>
   );
 }
 
-export function Endpoints() {
-  const { all } = useApp();
+/** Tests without an area (should not happen for M2) are kept under one extra tile so nothing is hidden. */
+const OTHER: ApiArea = { key: '', name: 'Other tests', endpoints: [] };
+
+function AreaCard({
+  area,
+  tests,
+  index,
+  expanded,
+  onToggle,
+}: {
+  area: ApiArea;
+  tests: ReportTest[];
+  index: number;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const stats = tileStats(tests);
+  const endpoints = new Set(tests.map((t) => t.api ?? '')).size;
+  const blocked = stats.blocked ? ` · ${stats.blocked} blocked` : '';
+  return (
+    <button
+      class={`area glass glass--interactive area--${stats.state}`}
+      style={{ '--i': index }}
+      aria-expanded={expanded}
+      aria-controls="area-detail"
+      onClick={onToggle}
+      aria-label={`${area.key ? `${area.key} ` : ''}${area.name}: ${stats.label}. ${stats.pass} passed · ${stats.fail} failed${blocked} of ${stats.total}. ${expanded ? 'Hide' : 'Show'} its endpoints.`}
+    >
+      <TileBody icon="layers" name={area.name} stats={stats}>
+        <span class="endpoint-path">
+          {area.key && <span class="method area__key">{area.key}</span>}
+          <code>{plural(endpoints, 'endpoint')}</code>
+        </span>
+        <span class="area__split tabular">
+          {stats.pass} passed · {stats.fail} failed{stats.blocked ? ` · ${stats.blocked} blocked` : ''}
+        </span>
+      </TileBody>
+    </button>
+  );
+}
+
+function AreaTiles({ areas, all }: { areas: ApiArea[]; all: ReportTest[] }) {
+  const { showTests, isPrint } = useApp();
+  const [open, setOpen] = useState<string | null>(null);
   const groups = useMemo(() => {
-    const by = new Map<string, ReportTest[]>();
-    for (const t of all) by.set(endpointOf(t), [...(by.get(endpointOf(t)) ?? []), t]);
-    // Known endpoints in the guide's order, then any new endpoint found in the tests (so new tests always show).
-    const known = (ENDPOINT_GROUP_ORDER as readonly string[]).filter((k) => by.has(k));
-    const extra = [...by.keys()].filter((k) => !known.includes(k)).sort();
-    return [...known, ...extra].map((k) => ({ endpoint: k, tests: by.get(k) as ReportTest[] }));
-  }, [all]);
+    const out = areas.map((a) => ({ area: a, tests: all.filter((t) => t.apiArea === a.key) }));
+    const known = new Set(areas.map((a) => a.key));
+    const other = all.filter((t) => !t.apiArea || !known.has(t.apiArea));
+    if (other.length) out.push({ area: OTHER, tests: other });
+    return out.filter((g) => g.tests.length > 0);
+  }, [areas, all]);
+  const current = open === null ? undefined : groups.find((g) => g.area.key === open);
+  const endpoints = useMemo(() => (current ? byEndpoint(current.tests) : []), [current]);
+  return (
+    <>
+      <div class="area-grid" style={{ '--cols': balancedColumns(groups.length) }}>
+        {groups.map((g, i) => (
+          <AreaCard
+            key={g.area.key || '__other'}
+            area={g.area}
+            tests={g.tests}
+            index={i}
+            expanded={!isPrint && open === g.area.key}
+            onToggle={() => setOpen((o) => (o === g.area.key ? null : g.area.key))}
+          />
+        ))}
+      </div>
+      {current && !isPrint && (
+        <div
+          class="area-detail glass glass--pad no-print"
+          id="area-detail"
+          role="region"
+          aria-label={`${current.area.name} endpoints`}
+        >
+          <div class="area-detail__head">
+            <h3 class="area-detail__title">
+              {current.area.key && <span class="method area__key">{current.area.key}</span>}
+              {current.area.name}
+              <span class="small muted">
+                {' '}
+                · {plural(endpoints.length, 'endpoint')} · {plural(current.tests.length, 'test')}
+              </span>
+            </h3>
+            <div class="row">
+              {current.area.key && (
+                <button class="btn btn--sm" onClick={() => showTests({ area: current.area.key })}>
+                  <Icon name="filter" size={14} /> Show this area&apos;s tests
+                </button>
+              )}
+              <button class="btn btn--sm" onClick={() => setOpen(null)} aria-label="Close area">
+                <Icon name="x" size={14} />
+              </button>
+            </div>
+          </div>
+          <div class="area-grid" style={{ '--cols': balancedColumns(endpoints.length) }}>
+            {endpoints.map((g, i) => (
+              <EndpointCard
+                key={g.endpoint}
+                endpoint={g.endpoint}
+                tests={g.tests}
+                index={i}
+                area={current.area.key || undefined}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+export function Endpoints() {
+  const { all, areas } = useApp();
+  const groups = useMemo(() => byEndpoint(all), [all]);
   if (groups.length === 0) return null;
+  const byArea = areas.length > 0;
   return (
     <Section
       id="endpoints"
       num="02"
       eyebrow="Endpoints"
       title="How each endpoint did"
-      sub="One tile per endpoint. Click a tile to see its test cases."
+      sub={
+        byArea
+          ? `One tile per API area (${groups.length} endpoints in ${areas.length} areas). Click an area to see its endpoints, then an endpoint to see its test cases.`
+          : 'One tile per endpoint. Click a tile to see its test cases.'
+      }
     >
-      <div class="area-grid" style={{ '--cols': balancedColumns(groups.length) }}>
-        {groups.map((g, i) => (
-          <EndpointCard key={g.endpoint} endpoint={g.endpoint} tests={g.tests} index={i} />
-        ))}
-      </div>
+      {byArea ? (
+        <AreaTiles areas={areas} all={all} />
+      ) : (
+        <div class="area-grid" style={{ '--cols': balancedColumns(groups.length) }}>
+          {groups.map((g, i) => (
+            <EndpointCard key={g.endpoint} endpoint={g.endpoint} tests={g.tests} index={i} />
+          ))}
+        </div>
+      )}
     </Section>
   );
 }

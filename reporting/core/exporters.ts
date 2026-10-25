@@ -15,7 +15,7 @@ import {
   SEVERITY_RANK,
   testOutcome,
 } from './analytics';
-import { endpointOfTest, moduleOf } from './test-case';
+import { endpointOfTest, moduleOf, testTypeOf } from './test-case';
 import type { ReportData, ReportTest } from './types';
 
 const CSV_COLUMNS: [string, (t: ReportTest) => string | number][] = [
@@ -28,7 +28,7 @@ const CSV_COLUMNS: [string, (t: ReportTest) => string | number][] = [
   ['why_it_matters', (t) => t.info?.why ?? ''],
   ['steps', (t) => (t.info?.steps ?? []).map((s, i) => `${i + 1}. ${s}`).join(' ')],
   ['expected_result', (t) => t.info?.expected ?? ''],
-  ['test_type', (t) => t.info?.type ?? ''],
+  ['test_type', (t) => testTypeOf(t)],
   ['suite', (t) => suiteOf(t.tags)],
   ['priority', (t) => t.info?.priority ?? ''],
   ['preconditions', (t) => t.info?.preconditions ?? ''],

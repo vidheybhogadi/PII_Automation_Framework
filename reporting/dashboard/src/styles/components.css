@@ -2505,3 +2505,195 @@ html[data-print='true'] .exchange__body {
   max-height: none;
   overflow: visible;
 }
+
+/* ---- Test-list pickers: Show / Area (native select) and the searchable endpoint combobox ------------- */
+.picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+.pickers {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+}
+.picker__select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: min(100%, 420px);
+  color: var(--muted);
+}
+.picker__select select {
+  appearance: none;
+  height: 34px;
+  width: 100%;
+  max-width: 100%;
+  padding: 0 32px 0 12px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  background: var(--glass-soft);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-weight: 560;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.picker__select select option {
+  background: var(--menu-bg);
+  color: var(--text);
+}
+.picker__select svg {
+  position: absolute;
+  right: 11px;
+  pointer-events: none;
+}
+.picker__select select:focus-visible,
+.combo__field:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+}
+.combo__field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  width: clamp(240px, 30vw, 420px);
+  max-width: 100%;
+  padding: 0 11px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  background: var(--glass-soft);
+  color: var(--muted);
+}
+.combo__field input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  outline: none;
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-weight: 560;
+  text-overflow: ellipsis;
+}
+.combo__field input::placeholder {
+  color: var(--text-2);
+}
+.popover.combo__list {
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  display: block;
+  min-width: 0;
+  max-height: 360px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+}
+.combo__opt {
+  display: grid;
+  gap: 3px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+.combo__opt[aria-selected='true'] {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+.combo__opt[data-current='true'] {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.combo__main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.combo__path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+.combo__sub {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.combo__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.combo__tally {
+  margin-left: auto;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.view-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: -4px 0 12px;
+}
+@media (max-width: 560px) {
+  .picker,
+  .pickers,
+  .combo__field {
+    width: 100%;
+  }
+  .picker__select {
+    flex: 1;
+  }
+  .picker__select select {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+/* ---- Milestone 2: API-area tiles and the endpoints of the open area ---------------------------------- */
+.area__key {
+  flex: none;
+}
+.area__split {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--muted);
+}
+.area-detail {
+  margin-top: 16px;
+}
+.area-detail__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.area-detail__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-md);
+}

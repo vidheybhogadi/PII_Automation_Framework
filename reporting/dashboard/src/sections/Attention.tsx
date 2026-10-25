@@ -21,7 +21,7 @@ import { NOT_RUN, OUTCOME_FILTER, outcomeOf, useApp } from '../store';
 import { plural } from '../utils';
 
 export function Attention() {
-  const { report, service, all, openTest, showTests } = useApp();
+  const { service, all, openTest, showTests, endpointList } = useApp();
   const [showAll, setShowAll] = useState(false);
   const preflight = useMemo(() => preflightFailures(service), [service]);
   // Automation failures only; known security findings get their own card.
@@ -188,7 +188,7 @@ export function Attention() {
           )}
 
           {shown.map((f) => {
-            const ep = plainEndpoint(endpointOf(f.test), report.endpoints);
+            const ep = plainEndpoint(endpointOf(f.test), endpointList);
             return (
               <button
                 key={f.test.key}

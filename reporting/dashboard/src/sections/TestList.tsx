@@ -5,19 +5,28 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { formatDuration, OUTCOMES, testOutcome, type Outcome } from '../../../core/analytics';
 import { suiteOf } from '../../../core/catalog';
+import { testsToCsv } from '../../../core/exporters';
+import type { ReportTest } from '../../../core/types';
+import { EndpointCombobox, TallySelect, type EndpointOption, type ValueOption } from '../components/Pickers';
 import { EmptyState, OUTCOME_META, OutcomeBadge, Section } from '../components/ui';
 import { Icon } from '../icons';
-import { plainEndpoint, plainTitle } from '../plain';
+import { byEndpoint, plainEndpoint, plainTitle } from '../plain';
 import {
+  categoryOf,
   GROUP_BY_OPTIONS,
   groupKeyOf,
+  matches,
   OUTCOME_FILTER,
   outcomeMatches,
   outcomeOf,
+  SUITE_ORDER,
+  tally,
+  TYPE_ORDER,
+  typeOf,
   useApp,
   type GroupBy,
 } from '../store';
-import { isTypingTarget, type StatusFilter } from '../utils';
+import { download, isTypingTarget, type StatusFilter } from '../utils';
 
 const PAGE = 20;
 /** All · Fail · Security finding · Blocked · Skipped · Not Tested · Not Applicable · Pass (the OUTCOMES order). */
@@ -60,9 +69,153 @@ function groupHeading(
   return { name: key, icon: meta.icon, note: meta.note };
 }
 
+const groupTests = (tests: readonly ReportTest[], key: (t: ReportTest) => string) => {
+  const m = new Map<string, ReportTest[]>();
+  for (const t of tests) {
+    const k = key(t);
+    const l = m.get(k);
+    if (l) l.push(t);
+    else m.set(k, [t]);
+  }
+  return m;
+};
+
+/**
+ * The "Show" picker for the current Group by dimension. Type / Suite / Category: one list (All + each value).
+ * Endpoint: Milestone 2 has Area (G1–G10) then Endpoint (only that area's endpoints); Milestone 1 has one searchable
+ * endpoint list. Counts ignore the status tabs, so each option shows its full pass / fail / blocked split.
+ */
+function ShowPicker() {
+  const { all, filters, setFilters, groupBy, areas, endpointList } = useApp();
+
+  const values = useMemo((): ValueOption[] | null => {
+    if (groupBy !== 'type' && groupBy !== 'suite' && groupBy !== 'category') return null;
+    const base = all.filter((t) => matches(t, filters, groupBy, { statuses: true, show: true }));
+    const by = groupTests(base, (t) => groupKeyOf(t, groupBy));
+    const present = [...new Set(all.map((t) => groupKeyOf(t, groupBy)))];
+    let keys: string[];
+    if (groupBy === 'type')
+      keys = [...TYPE_ORDER, ...present.filter((k) => !TYPE_ORDER.includes(k as never))];
+    else if (groupBy === 'suite') keys = [...SUITE_ORDER];
+    else {
+      // Categories present in the suite, in Type order (like the M2 workbook), then by name.
+      const rank = new Map<string, number>();
+      for (const t of all)
+        if (!rank.has(categoryOf(t))) rank.set(categoryOf(t), TYPE_ORDER.indexOf(typeOf(t) as never));
+      keys = present.sort((a, b) => (rank.get(a) ?? 9) - (rank.get(b) ?? 9) || a.localeCompare(b));
+    }
+    if (filters.show && !keys.includes(filters.show)) keys.push(filters.show); // e.g. from an old shared link
+    return [
+      { value: '', label: 'All', tally: tally(base) },
+      ...keys.map((k) => ({ value: k, label: k, tally: tally(by.get(k) ?? []) })),
+    ];
+  }, [all, filters, groupBy]);
+
+  const endpointPicker = useMemo(() => {
+    if (groupBy !== 'endpoint') return null;
+    const areaOfEndpoint = (key: string) =>
+      areas.find((a) => a.endpoints.some((e) => e.key === key))?.key ?? '';
+    const forAreas = all.filter((t) =>
+      matches(t, filters, groupBy, { statuses: true, area: true, endpoint: true }),
+    );
+    const areaBy = groupTests(forAreas, (t) => t.apiArea ?? '');
+    const areaOptions: ValueOption[] = [
+      { value: '', label: 'All areas', tally: tally(forAreas) },
+      ...areas.map((a) => ({
+        value: a.key,
+        label: `${a.key} ${a.name}`,
+        tally: tally(areaBy.get(a.key) ?? []),
+      })),
+    ];
+    const forEndpoints = all.filter((t) => matches(t, filters, groupBy, { statuses: true, endpoint: true }));
+    const epBy = groupTests(forEndpoints, (t) => groupKeyOf(t, 'endpoint'));
+    const inArea = all.filter((t) => !filters.area || t.apiArea === filters.area);
+    const options: EndpointOption[] = byEndpoint(inArea).map(({ endpoint }) => {
+      const p = plainEndpoint(endpoint, endpointList);
+      return {
+        key: endpoint,
+        method: p.method,
+        path: p.path,
+        name: endpoint === p.name || !p.path.startsWith('/') ? p.name : `${p.name} · ${endpoint}`,
+        tally: tally(epBy.get(endpoint) ?? []),
+      };
+    });
+    const area = areas.find((a) => a.key === filters.area);
+    return {
+      areaOptions,
+      options,
+      allLabel: area ? `All in ${area.key} ${area.name}` : 'All endpoints',
+      allTally: tally(forEndpoints),
+      areaOfEndpoint,
+    };
+  }, [all, filters, groupBy, areas, endpointList]);
+
+  if (values)
+    return (
+      <TallySelect
+        label="Show"
+        value={filters.show}
+        options={values}
+        onChange={(v) => setFilters((f) => ({ ...f, show: v }))}
+      />
+    );
+  if (!endpointPicker) return null;
+  const ep = endpointPicker;
+  return (
+    <div class="pickers" role="group" aria-label="Show">
+      {areas.length > 0 && (
+        <TallySelect
+          label="Area"
+          value={filters.area}
+          options={ep.areaOptions}
+          onChange={(v) =>
+            setFilters((f) => ({
+              ...f,
+              area: v,
+              // An endpoint outside the newly chosen area no longer applies.
+              endpoint: v && f.endpoint && ep.areaOfEndpoint(f.endpoint) !== v ? '' : f.endpoint,
+            }))
+          }
+        />
+      )}
+      <EndpointCombobox
+        label="Endpoint"
+        allLabel={ep.allLabel}
+        allTally={ep.allTally}
+        value={filters.endpoint}
+        options={ep.options}
+        onChange={(key) =>
+          setFilters((f) => ({
+            ...f,
+            endpoint: key,
+            // Picking an endpoint under "All areas" narrows the area to the endpoint's own.
+            area: key && !f.area ? ep.areaOfEndpoint(key) : f.area,
+          }))
+        }
+      />
+    </div>
+  );
+}
+
 export function TestList() {
-  const { report, service, all, list, filters, setFilters, openTest, isPrint, ui, groupBy, setGroupBy } =
-    useApp();
+  const {
+    report,
+    service,
+    all,
+    list,
+    filters,
+    setFilters,
+    openTest,
+    isPrint,
+    ui,
+    groupBy,
+    setGroupBy,
+    areas,
+    endpointList,
+    filtered,
+    clearFilters,
+    toast,
+  } = useApp();
   const anyOverlay = ui.palette || ui.shortcuts || ui.guide || ui.methodology;
   // The page belongs to the current filters: new filters start at page 1 in the same render (no reset
   // effect that could race a quick ← / → key press).
@@ -134,7 +287,14 @@ export function TestList() {
   const tabs = TABS.map((t, i) => ({ ...t, i, n: count(t.statuses) })).filter(
     (t) => ALWAYS.includes(t.outcome) || t.n > 0 || t.i === activeTab,
   );
-  const endpointName = filters.endpoint ? plainEndpoint(filters.endpoint).name : '';
+  const endpointName = filters.endpoint ? plainEndpoint(filters.endpoint, endpointList).name : '';
+  const area = groupBy !== 'endpoint' ? areas.find((a) => a.key === filters.area) : undefined;
+  const exportView = () => {
+    const base = `pii-report-${report.run.runId}-view`.replace(/[^a-z0-9-]+/gi, '-');
+    // The same columns as results.csv (already-sanitized report data), only the tests in the current view.
+    download(`${base}.csv`, testsToCsv(list), 'text/csv');
+    toast(`Exported ${list.length} test${list.length === 1 ? '' : 's'} (current view)`);
+  };
   // Longest executed test — scales the small time bars.
   const slowest = useMemo(
     () =>
@@ -167,7 +327,10 @@ export function TestList() {
               ))}
             </div>
           </div>
-          <div class="seg" role="group" aria-label="Show">
+          <ShowPicker />
+        </div>
+        <div class="list-tools no-print">
+          <div class="seg" role="group" aria-label="Status">
             {tabs.map((t) => (
               <button
                 key={t.label}
@@ -178,6 +341,16 @@ export function TestList() {
               </button>
             ))}
           </div>
+          {area && (
+            <button
+              class="chip"
+              aria-pressed="true"
+              onClick={() => setFilters((f) => ({ ...f, area: '' }))}
+              aria-label={`Remove area filter ${area.key} ${area.name}`}
+            >
+              {area.key} {area.name} <Icon name="x" size={12} />
+            </button>
+          )}
           {endpointName && (
             <button
               class="chip"
@@ -200,6 +373,20 @@ export function TestList() {
             />
           </label>
         </div>
+        <div class="view-bar no-print">
+          <span class="small muted" role="status">
+            Showing <strong class="tabular">{list.length}</strong> of{' '}
+            <span class="tabular">{all.length}</span> tests
+          </span>
+          <div class="row">
+            <button class="btn btn--sm" disabled={!filtered} onClick={clearFilters}>
+              <Icon name="x" size={14} /> Clear filters
+            </button>
+            <button class="btn btn--sm" disabled={list.length === 0} onClick={exportView}>
+              <Icon name="csv" size={14} /> Export current view (CSV)
+            </button>
+          </div>
+        </div>
 
         {rows.length === 0 ? (
           <EmptyState icon="search" title="No tests match">
@@ -218,7 +405,7 @@ export function TestList() {
                 </tr>
               </thead>
               {groups.map((g) => {
-                const head = groupHeading(g.endpoint, groupBy, report.endpoints);
+                const head = groupHeading(g.endpoint, groupBy, endpointList);
                 const n = totalFor.get(g.endpoint) ?? 0;
                 return (
                   <tbody key={`${g.endpoint}-${g.tests[0]?.key}`}>

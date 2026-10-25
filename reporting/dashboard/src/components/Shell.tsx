@@ -102,7 +102,7 @@ function ThemeMenu() {
 }
 
 function ExportMenu() {
-  const { report, service, all, list, filters, toast } = useApp();
+  const { report, service, all, list, filtered, toast } = useApp();
   const [open, setOpen] = useState(false);
   const ref = useOutside(open, () => setOpen(false));
   useEffect(() => {
@@ -110,7 +110,6 @@ function ExportMenu() {
     window.addEventListener('pii:open-export', on);
     return () => window.removeEventListener('pii:open-export', on);
   }, []);
-  const filtered = Boolean(filters.q || filters.endpoint || filters.statuses.length);
   const rows = filtered ? list : service;
   const base = `pii-report-${report.run.runId}${filtered ? '-filtered' : ''}`.replace(/[^a-z0-9-]+/gi, '-');
   const act = (fn: () => void) => () => {

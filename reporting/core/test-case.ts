@@ -25,6 +25,17 @@ export function endpointOfTest(endpoints: readonly string[]): { key: string; met
     : { key, method: key === CROSS_ENDPOINT ? 'several' : '', path: 'several endpoints' };
 }
 
+/** The five test types, in report order. */
+export const TEST_TYPES = ['Positive', 'Negative', 'Security', 'Database', 'Contract'] as const;
+
+/**
+ * A test's type: its description's type, else its @positive / @negative / @security / @database / @contract tag
+ * (Milestone 2 per-API tests without a workbook row carry the tag only), else ''.
+ */
+export function testTypeOf(t: { info?: { type?: string }; tags: readonly string[] }): string {
+  return t.info?.type ?? TEST_TYPES.find((ty) => t.tags.includes(`@${ty.toLowerCase()}`)) ?? '';
+}
+
 /** A catalog `request` value, tolerant of entries that do not have one yet. */
 export function requestOf(info: { request?: unknown } | undefined): string {
   return typeof info?.request === 'string' ? info.request.trim() : '';

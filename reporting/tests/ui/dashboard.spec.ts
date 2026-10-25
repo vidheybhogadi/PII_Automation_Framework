@@ -317,7 +317,7 @@ test.describe('REPORT UI — statuses', () => {
 
     // Test list: tabs in order, each row labelled with its status.
     const tests = page.locator('#tests');
-    const tabs = tests.getByRole('group', { name: 'Show' }).getByRole('button');
+    const tabs = tests.getByRole('group', { name: 'Status' }).getByRole('button');
     await expect(tabs).toHaveText([
       /^All/,
       /^Fail/,

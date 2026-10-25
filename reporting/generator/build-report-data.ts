@@ -14,7 +14,7 @@ import type {
 } from '../core/types';
 import { testCaseInfo } from '../../m1/tests/catalog';
 import type { InventoryTest } from './inventory';
-import { isM2Id, m2TestInfo } from './m2-catalog';
+import { isM2Id, m2ApiAreas, m2ApiOf, m2TestInfo } from './m2-catalog';
 import { knownSecrets, maskKnownSecrets } from './secrets';
 import type { ApiExchange } from '../core/types';
 
@@ -97,6 +97,7 @@ export function enrichTests(run: CollectedRun): ReportTest[] {
       kind: area === 'framework' || t.project === 'unit' ? 'unit' : 'integration',
       milestone: milestoneOf(t.project),
       ...describe(t.id),
+      ...m2ApiOf(t.id, t.title, t.tags),
     };
   });
 }
@@ -194,6 +195,7 @@ export function notRunTests(inventory: readonly InventoryTest[], ran: readonly R
         milestone: milestoneOf(t.project),
         notRun: true,
         ...describe(t.id),
+        ...m2ApiOf(t.id, t.title, t.tags),
       };
     });
 }
@@ -261,6 +263,7 @@ export function buildReportData(
     environment: run.environment,
     tests,
     endpoints: endpointInventory(),
+    ...(tests.some((t) => t.apiArea) ? { apiAreas: m2ApiAreas(tests) } : {}),
     config,
     history: history.filter((h) => h.runId !== run.run.runId && h.dataSource === run.dataSource),
     diagnostics: diagnose(run, ran),

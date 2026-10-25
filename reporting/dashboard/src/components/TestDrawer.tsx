@@ -24,7 +24,7 @@ const IMPORTANCE: Record<string, string> = {
 };
 
 export function TestDrawer() {
-  const { report, ui, byKey, list, openTest, setUi, toast } = useApp();
+  const { ui, byKey, list, openTest, setUi, toast, endpointList } = useApp();
   const test = ui.drawer ? byKey.get(ui.drawer) : undefined;
   const ref = useRef<HTMLDivElement>(null);
   const idx = useMemo(() => (test ? list.findIndex((t) => t.key === test.key) : -1), [test, list]);
@@ -72,7 +72,7 @@ export function TestDrawer() {
   const failure = test.status === 'FAIL' ? analyzeFailure(test) : null;
   const preflight = test.annotations.find((a) => a.type === 'preflight');
   const waiting = test.annotations.filter((a) => ['blocked', 'fixme', 'skip'].includes(a.type));
-  const ep = plainEndpoint(endpointOf(test), report.endpoints);
+  const ep = plainEndpoint(endpointOf(test), endpointList);
   const calls = test.apiCalls.filter((c) => c.phase !== 'preflight');
   // The response the test judged: the last call made in the "test" phase that has a captured exchange.
   const actualCall = [...calls].reverse().find((c) => (c.phase ?? 'test') === 'test' && c.exchange);

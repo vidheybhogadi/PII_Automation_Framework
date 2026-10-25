@@ -190,6 +190,18 @@ export interface EndpointInfo {
   /** Legacy (direct PII-service era): kept optional so older report data still loads. */
   permission?: string;
   noStore?: boolean;
+  /** Short display name (Milestone 2: the controller action from the Dev inventory, e.g. read_first_name). */
+  name?: string;
+}
+
+/**
+ * An API area: a Milestone 2 QA test-strategy group (G1–G10, m2/scripts/m2-inventory.ts GROUPS) with the endpoints
+ * that have tests in this report. Kept apart from ReportData.endpoints so health and coverage stay M1-defined.
+ */
+export interface ApiArea {
+  key: string;
+  name: string;
+  endpoints: EndpointInfo[];
 }
 
 /** A reference to tests: exact IDs ("PII-WR-001") or prefix patterns ending in "*" ("PII-NRM-*"). */
@@ -292,6 +304,10 @@ export interface ReportTest extends CollectedTest {
   info?: TestDescription;
   /** True for tests that exist in the suite but were not part of this run (shown as "Not Tested"). */
   notRun?: boolean;
+  /** Milestone 2: the API the test mainly exercises (inventory ID, e.g. API-001). The report's endpoint for it. */
+  api?: string;
+  /** Milestone 2: the API area (G1–G10) the test belongs to (see ReportData.apiAreas). */
+  apiArea?: string;
 }
 
 export interface ReportData {
@@ -310,6 +326,8 @@ export interface ReportData {
   environment: EnvironmentInfo;
   tests: ReportTest[];
   endpoints: EndpointInfo[];
+  /** Milestone 2 API areas with their endpoints (absent when the report has no Milestone 2 tests). */
+  apiAreas?: ApiArea[];
   config: ReportConfig;
   history: HistoryEntry[];
   diagnostics: string[];

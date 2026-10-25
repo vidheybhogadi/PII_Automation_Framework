@@ -2,12 +2,14 @@
 import { createContext, type ComponentChildren } from 'preact';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { catalogTests, OUTCOMES, scopeTests, testOutcome, type Outcome } from '../../core/analytics';
-import { ENDPOINT_GROUP_ORDER, suiteOf } from '../../core/catalog';
+import { CROSS_ENDPOINT, ENDPOINT_GROUP_ORDER, suiteOf } from '../../core/catalog';
+import { TEST_TYPES, testTypeOf } from '../../core/test-case';
 import { endpointOf, plainEndpoint } from './plain';
-import type { ReportData, ReportTest } from '../../core/types';
+import type { ApiArea, EndpointInfo, ReportData, ReportTest } from '../../core/types';
 import {
   buildHash,
   EMPTY_FILTERS,
+  hasFilters,
   parseHash,
   prefersReducedMotion,
   storage,
@@ -44,7 +46,9 @@ export function outcomeMatches(o: Outcome, statuses: readonly StatusFilter[]): b
   return statuses.some((s) => s === OUTCOME_FILTER[o] || LEGACY_FILTER[s] === o);
 }
 
+/** Known M1 endpoints in the guide's order, then other endpoints (M2 APIs), then "Across endpoints". */
 const GROUP_RANK = (key: string): number => {
+  if (key === CROSS_ENDPOINT) return ENDPOINT_GROUP_ORDER.length + 1;
   const i = (ENDPOINT_GROUP_ORDER as readonly string[]).indexOf(key);
   return i < 0 ? ENDPOINT_GROUP_ORDER.length : i;
 };
@@ -62,32 +66,92 @@ export const GROUP_BY_OPTIONS: { value: GroupBy; label: string }[] = [
   { value: 'suite', label: 'Suite' },
   { value: 'none', label: 'None' },
 ];
-const categoryOf = (t: ReportTest): string => t.info?.category ?? 'Not categorised';
-export const TYPE_ORDER = ['Positive', 'Negative', 'Security', 'Database', 'Contract'] as const;
+export const NOT_CATEGORISED = 'Not categorised';
+export const categoryOf = (t: ReportTest): string => t.info?.category ?? NOT_CATEGORISED;
+export const TYPE_ORDER = TEST_TYPES;
+export const SUITE_ORDER = ['Smoke', 'Regression'] as const;
+/** The test type: its description's type, else its @positive / @negative / … tag (M2 per-API tests), else none. */
+export const typeOf = (t: ReportTest): string => testTypeOf(t) || NOT_CATEGORISED;
 const typeRank = (t: ReportTest): number => {
-  const i = (TYPE_ORDER as readonly string[]).indexOf(t.info?.type ?? '');
+  const i = (TYPE_ORDER as readonly string[]).indexOf(typeOf(t));
   return i < 0 ? TYPE_ORDER.length : i;
 };
 
 /** The heading a test is listed under for the chosen grouping ('' = no heading). */
 export function groupKeyOf(t: ReportTest, groupBy: GroupBy): string {
   if (groupBy === 'endpoint') return endpointOf(t);
-  if (groupBy === 'type') return t.info?.type ?? 'Not categorised';
+  if (groupBy === 'type') return typeOf(t);
   if (groupBy === 'category') return categoryOf(t);
   if (groupBy === 'suite') return suiteOf(t.tags);
   return '';
 }
 
+/** Group-by dimensions whose "Show" picker is a plain list of values (Endpoint has its own area/endpoint picker). */
+export const VALUE_DIMENSIONS: readonly GroupBy[] = ['type', 'suite', 'category'];
+
+/** Which filters to leave out — used to count the options of a picker without the picker's own choice. */
+export interface Ignore {
+  statuses?: boolean;
+  show?: boolean;
+  endpoint?: boolean;
+  area?: boolean;
+}
+
+/** True when a test passes the test-list filters (status, area, endpoint, Show value for `groupBy`, search). */
+export function matches(t: ReportTest, f: Filters, groupBy: GroupBy, ignore: Ignore = {}): boolean {
+  if (!ignore.statuses && !outcomeMatches(outcomeOf(t), f.statuses)) return false;
+  if (!ignore.area && f.area && t.apiArea !== f.area) return false;
+  if (!ignore.endpoint && f.endpoint && endpointOf(t) !== f.endpoint) return false;
+  if (!ignore.show && f.show && VALUE_DIMENSIONS.includes(groupBy) && groupKeyOf(t, groupBy) !== f.show)
+    return false;
+  if (f.q) {
+    const ep = t.api ? '' : plainEndpoint(endpointOf(t)).name;
+    const hay =
+      `${t.id} ${t.title} ${t.info?.what ?? ''} ${ep} ${t.api ?? ''} ${t.endpoints.join(' ')} ${outcomeOf(t)} ${t.apiCalls.map((c) => c.errorCode ?? '').join(' ')}`.toLowerCase();
+    if (
+      !f.q
+        .toLowerCase()
+        .split(/\s+/)
+        .every((token) => hay.includes(token))
+    )
+      return false;
+  }
+  return true;
+}
+
+/** Pass / fail (incl. security findings) / blocked tallies shown beside every picker option. */
+export interface Tally {
+  total: number;
+  pass: number;
+  fail: number;
+  blocked: number;
+}
+export function tally(tests: readonly ReportTest[]): Tally {
+  const out: Tally = { total: tests.length, pass: 0, fail: 0, blocked: 0 };
+  for (const t of tests) {
+    const o = outcomeOf(t);
+    if (o === 'Pass') out.pass += 1;
+    else if (o === 'Fail' || o === 'Security finding') out.fail += 1;
+    else if (o === 'Blocked') out.blocked += 1;
+  }
+  return out;
+}
+/** "(412) · 380 ✓ · 20 ✗ · 12 ⛔" — blocked only when there are some. */
+export const tallyText = (c: Tally): string =>
+  `(${c.total}) · ${c.pass} ✓ · ${c.fail} ✗${c.blocked ? ` · ${c.blocked} ⛔` : ''}`;
+
 const byId = (a: ReportTest, b: ReportTest) =>
   a.id.localeCompare(b.id, undefined, { numeric: true }) || a.title.localeCompare(b.title);
 
 /** One order for the table, the details panel and J/K: grouped headings first, then by outcome (OUTCOMES order: Fail first, Pass last), then ID. */
-function compareFor(groupBy: GroupBy) {
+function compareFor(groupBy: GroupBy, areaRank: (t: ReportTest) => number) {
   return (a: ReportTest, b: ReportTest): number => {
     if (groupBy === 'none') return byId(a, b);
     const group =
       groupBy === 'endpoint'
-        ? GROUP_RANK(endpointOf(a)) - GROUP_RANK(endpointOf(b)) || endpointOf(a).localeCompare(endpointOf(b))
+        ? areaRank(a) - areaRank(b) ||
+          GROUP_RANK(endpointOf(a)) - GROUP_RANK(endpointOf(b)) ||
+          endpointOf(a).localeCompare(endpointOf(b), undefined, { numeric: true })
         : groupBy === 'type'
           ? typeRank(a) - typeRank(b)
           : groupBy === 'category'
@@ -120,7 +184,15 @@ export interface AppState {
   /** Every service test in the suite, including ones not part of this run (Not Tested). */
   all: ReportTest[];
   groupBy: GroupBy;
+  /** Changing the dimension clears its Show value (the values belong to the dimension). */
   setGroupBy: (g: GroupBy) => void;
+  /** Milestone 2 API areas (G1–G10) with their endpoints; empty for Milestone 1. */
+  areas: ApiArea[];
+  /** Every endpoint the report knows: the M1 inventory plus the M2 area endpoints. */
+  endpointList: EndpointInfo[];
+  /** True when any test-list filter is set. */
+  filtered: boolean;
+  clearFilters: () => void;
   /** All service tests after the test-list filters, grouped by endpoint (OUTCOMES order inside each). */
   list: ReportTest[];
   byKey: Map<string, ReportTest>;
@@ -148,23 +220,6 @@ export function useApp(): AppState {
   const v = useContext(Ctx);
   if (!v) throw new Error('useApp outside provider');
   return v;
-}
-
-function matches(t: ReportTest, f: Filters): boolean {
-  if (!outcomeMatches(outcomeOf(t), f.statuses)) return false;
-  if (f.endpoint && endpointOf(t) !== f.endpoint) return false;
-  if (f.q) {
-    const hay =
-      `${t.id} ${t.title} ${t.info?.what ?? ''} ${plainEndpoint(endpointOf(t)).name} ${t.endpoints.join(' ')} ${outcomeOf(t)} ${t.apiCalls.map((c) => c.errorCode ?? '').join(' ')}`.toLowerCase();
-    if (
-      !f.q
-        .toLowerCase()
-        .split(/\s+/)
-        .every((token) => hay.includes(token))
-    )
-      return false;
-  }
-  return true;
 }
 
 export function AppProvider({
@@ -220,25 +275,38 @@ export function AppProvider({
     return report.tests.filter((t) => !t.notRun && !inScope.has(t));
   }, [report, service, all]);
   const byKey = useMemo(() => new Map(report.tests.map((t) => [t.key, t])), [report]);
+  // Group by: a shared link (#by=…) wins over the reader's remembered choice; print always uses endpoints.
   const [groupBy, setGroupByState] = useState<GroupBy>(() => {
-    const saved = storage.get('groupBy') as GroupBy | null;
-    return !isPrint && saved && GROUP_BY_OPTIONS.some((o) => o.value === saved) ? saved : 'endpoint';
+    const valid = (g: string | null): g is GroupBy => GROUP_BY_OPTIONS.some((o) => o.value === g);
+    if (isPrint) return 'endpoint';
+    if (valid(initial.by)) return initial.by;
+    // An area / endpoint link without `by` belongs to the endpoint pickers.
+    if (initial.filters.area || initial.filters.endpoint) return 'endpoint';
+    const saved = storage.get('groupBy');
+    return valid(saved) ? saved : 'endpoint';
   });
   const setGroupBy = (g: GroupBy) => {
     setGroupByState(g);
     storage.set('groupBy', g);
+    setFilters((f) => (f.show ? { ...f, show: '' } : f));
   };
-  const list = useMemo(
-    () => all.filter((t) => matches(t, filters)).sort(compareFor(groupBy)),
-    [all, filters, groupBy],
+  const areas = useMemo(() => report.apiAreas ?? [], [report]);
+  const endpointList = useMemo(
+    () => [...report.endpoints, ...areas.flatMap((a) => a.endpoints)],
+    [report, areas],
   );
+  const list = useMemo(() => {
+    const rank = new Map(areas.map((a, i) => [a.key, i]));
+    const areaRank = (t: ReportTest) => (t.apiArea ? (rank.get(t.apiArea) ?? areas.length) : -1);
+    return all.filter((t) => matches(t, filters, groupBy)).sort(compareFor(groupBy, areaRank));
+  }, [all, filters, groupBy, areas]);
 
-  // Shareable URL: #status=FAIL&q=…&endpoint=…&test=<key>
+  // Shareable URL: #by=type&show=Positive&area=…&endpoint=…&status=FAIL&q=…&test=<key>
   useEffect(() => {
     if (isPrint) return;
-    const h = buildHash(filters, ui.drawer);
+    const h = buildHash(filters, ui.drawer, groupBy);
     if (h !== location.hash) history.replaceState(null, '', h || location.pathname + location.search);
-  }, [filters, ui.drawer, isPrint]);
+  }, [filters, ui.drawer, groupBy, isPrint]);
 
   const setUi = useCallback((patch: Partial<UiState>) => setUiState((u) => ({ ...u, ...patch })), []);
   const toastId = useRef(0);
@@ -254,6 +322,10 @@ export function AppProvider({
     all,
     groupBy,
     setGroupBy,
+    areas,
+    endpointList,
+    filtered: hasFilters(filters),
+    clearFilters: () => setFilters(EMPTY_FILTERS),
     selfTests,
     list,
     byKey,

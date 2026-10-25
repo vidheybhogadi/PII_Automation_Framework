@@ -63,28 +63,43 @@ export type StatusFilter = TestStatus | 'FINDING' | 'NOT_TESTED' | 'NOT_APPLICAB
 /** Test-list filters. */
 export interface Filters {
   statuses: StatusFilter[];
-  /** Endpoint key, e.g. "writePii" ('' = all endpoints). */
+  /** Endpoint key, e.g. "writePii" or a Milestone 2 API ID "API-001" ('' = all endpoints). */
   endpoint: string;
+  /** Milestone 2 API area, e.g. "G3" ('' = all areas). */
+  area: string;
+  /** The "Show" value for the current Group by dimension, e.g. "Positive" for Type ('' = All). */
+  show: string;
   q: string;
 }
 
-export const EMPTY_FILTERS: Filters = { statuses: [], endpoint: '', q: '' };
+export const EMPTY_FILTERS: Filters = { statuses: [], endpoint: '', area: '', show: '', q: '' };
 
-/** Hash format: #status=FAIL,BLOCKED&endpoint=writePii&q=…&test=<key> */
-export function parseHash(hash: string): { filters: Filters; test: string | null } {
+/** True when any test-list filter is set (status, endpoint, area, Show value or search). */
+export const hasFilters = (f: Filters): boolean =>
+  Boolean(f.statuses.length || f.endpoint || f.area || f.show || f.q);
+
+/** Hash format: #by=type&show=Positive&area=G3&endpoint=API-011&status=FAIL,BLOCKED&q=…&test=<key> */
+export function parseHash(hash: string): { filters: Filters; test: string | null; by: string | null } {
   const p = new URLSearchParams(hash.replace(/^#/, ''));
   return {
     test: p.get('test'),
+    by: p.get('by'),
     filters: {
       statuses: (p.get('status') ?? '').split(',').filter(Boolean) as StatusFilter[],
       endpoint: p.get('endpoint') ?? '',
+      area: p.get('area') ?? '',
+      show: p.get('show') ?? '',
       q: p.get('q') ?? '',
     },
   };
 }
 
-export function buildHash(f: Filters, test: string | null): string {
+/** `by` (the Group by choice) is written whenever it is not the default or a filter is set, so links restore exactly. */
+export function buildHash(f: Filters, test: string | null, by = 'endpoint'): string {
   const p = new URLSearchParams();
+  if (by !== 'endpoint' || hasFilters(f)) p.set('by', by);
+  if (f.show) p.set('show', f.show);
+  if (f.area) p.set('area', f.area);
   if (f.statuses.length) p.set('status', f.statuses.join(','));
   if (f.endpoint) p.set('endpoint', f.endpoint);
   if (f.q) p.set('q', f.q);

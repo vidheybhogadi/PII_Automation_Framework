@@ -4,8 +4,10 @@
  */
 import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import type { CollectedRun, CollectedTest } from '../core/types';
+import type { CollectedRun, CollectedTest, TestStatus } from '../core/types';
 import { generate, PATHS, ROOT } from '../generator/generate';
+import { buildDesign } from '../../m2/scripts/m2-all-cases';
+import { GROUPS } from '../../m2/scripts/m2-inventory';
 
 export const FIXTURE_ROOT = path.join(ROOT, 'reports/.report-tests');
 export const FIXTURES = {
@@ -18,7 +20,65 @@ export const FIXTURES = {
   preflight: path.join(FIXTURE_ROOT, 'preflight'),
   selfOnly: path.join(FIXTURE_ROOT, 'self-only'),
   statuses: path.join(FIXTURE_ROOT, 'statuses'),
+  m2: path.join(FIXTURE_ROOT, 'm2'),
 };
+
+/** A per-API M2 test with no workbook row: its API comes from its ID / title (API-004 → area G5). */
+export const M2_EXTRA = {
+  id: 'M2-API-004-UNMIG',
+  title: 'M2-API-004-UNMIG API-004 POST /V1/invites/send_request_to_profile — Unmigrated data',
+  tags: ['@m2', '@g5', '@negative', '@unmigrated-data', '@regression', '@name'],
+};
+
+/**
+ * A SYNTHETIC Milestone 2 run (dataSource DEMO, made-up results): for each area G1–G10, up to 4 APIs × 3 of their
+ * workbook cases (real IDs, names and tags from m2/scripts), plus one per-API test without a workbook row.
+ */
+export function m2Run(): CollectedRun {
+  const base = demoRun();
+  const cases = buildDesign(ROOT).cases;
+  const picked: { id: string; title: string; tags: string[] }[] = [];
+  for (const g of GROUPS.filter((x) => /^G\d+$/.test(x.key))) {
+    const byApi = new Map<string, typeof cases>();
+    for (const c of cases)
+      if (c.apis[0] && g.ids.includes(c.apis[0])) byApi.set(c.apis[0], [...(byApi.get(c.apis[0]) ?? []), c]);
+    for (const list of [...byApi.values()].slice(0, 4))
+      for (const c of list.slice(0, 3)) picked.push({ id: c.id, title: `${c.id} ${c.name}`, tags: c.tags });
+  }
+  picked.push(M2_EXTRA);
+  const STATUS: TestStatus[] = ['PASS', 'PASS', 'FAIL', 'PASS', 'BLOCKED', 'PASS', 'PASS'];
+  const tests: CollectedTest[] = picked.map((p, i) => {
+    const status = STATUS[i % STATUS.length] as TestStatus;
+    return {
+      key: `m2-api::m2/tests/per-api/demo.spec.ts::${p.title}`,
+      id: p.id,
+      title: p.title,
+      suite: 'Milestone 2 (synthetic fixture)',
+      file: 'm2/tests/per-api/demo.spec.ts',
+      line: i + 1,
+      project: 'm2-api',
+      tags: p.tags,
+      status,
+      rawStatus: status === 'PASS' ? 'passed' : status === 'FAIL' ? 'failed' : 'skipped',
+      outcome: status === 'PASS' ? 'expected' : status === 'FAIL' ? 'unexpected' : 'skipped',
+      durationMs: status === 'BLOCKED' ? 0 : 40 + (i % 9) * 15,
+      startedAt: status === 'BLOCKED' ? null : base.run.startedAt,
+      workerIndex: 0,
+      parallelIndex: 0,
+      retries: 0,
+      annotations:
+        status === 'BLOCKED' ? [{ type: 'blocked', description: 'M2Q-36: synthetic blocker' }] : [],
+      errors: status === 'FAIL' ? [{ message: 'Error: expected 200, received 500 (synthetic)' }] : [],
+      steps: [],
+      apiCalls: [],
+    };
+  });
+  return {
+    ...base,
+    run: { ...base.run, runId: 'demo-m2', label: 'DEMO Milestone 2', projects: ['m2-api'] },
+    tests,
+  };
+}
 
 /** Synthetic annotations for the "statuses" fixture (a known security finding, a blocker, a plain skip). */
 export const STATUS_FIXTURE = {
@@ -241,6 +301,8 @@ export async function buildFixtures(): Promise<void> {
     history: false,
     quiet: true,
   });
+
+  await generate({ input: writeRun('m2', m2Run()), out: FIXTURES.m2, history: false, quiet: true });
 
   cpSync(FIXTURES.demo, FIXTURES.malformed, { recursive: true });
   writeFileSync(
