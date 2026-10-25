@@ -12,10 +12,19 @@
  * value never reaches a file, report, artifact or email.
  */
 import type { CallPhase } from './phase';
-import { maskSecretsOnly as maskRegistered, maskTokens, REDACTED, TOKEN_KEY_PATTERN } from './redaction';
+import {
+  maskForeignEmails,
+  maskSecretsOnly as maskRegistered,
+  maskTokens,
+  REDACTED,
+  TOKEN_KEY_PATTERN,
+} from './redaction';
 
-/** Registered secrets → placeholders, then any other token (JWTs, token-key values) → [REDACTED]. */
-const maskSecretsOnly = (text: string): string => maskTokens(maskRegistered(text));
+/**
+ * Registered secrets → placeholders, then any other token (JWTs, token-key values) → [REDACTED], then any e-mail
+ * that is not a synthetic @example… address → [REDACTED_EMAIL] (other members' free text in staging lists).
+ */
+const maskSecretsOnly = (text: string): string => maskForeignEmails(maskTokens(maskRegistered(text)));
 
 /**
  * Bodies longer than this are cut (with a note) to keep the report small. 256 KB (was 16 KB until 2026-10-25: the

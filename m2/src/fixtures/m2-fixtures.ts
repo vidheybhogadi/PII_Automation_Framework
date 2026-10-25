@@ -172,7 +172,7 @@ const WAITING_TEXT: Record<string, string> = {
 };
 
 /**
- * The case cannot occur on this environment (confirmed answer, e.g. M2Q-05: all staging profiles are migrated).
+ * The case cannot occur on this environment (confirmed by the cited answer).
  * Annotation `not-applicable` → report status "Not Applicable" (left out of the pass rate); never a pass, failure or
  * blocked.
  */

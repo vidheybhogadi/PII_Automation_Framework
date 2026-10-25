@@ -956,10 +956,10 @@ export class Accounts {
   }
 
   /**
-   * A Dev-provided account in a special state (M2Q-32): M2_ACCOUNT_UNMIGRATED, M2_ACCOUNT_HIDDEN_NAME,
+   * A Dev-provided account in a special state (M2Q-32): M2_ACCOUNT_HIDDEN_NAME,
    * M2_ACCOUNT_DEACTIVATED (one synthetic number each). Without it the test is Blocked.
    */
-  async special(state: 'UNMIGRATED' | 'HIDDEN_NAME' | 'DEACTIVATED'): Promise<Profile> {
+  async special(state: 'HIDDEN_NAME' | 'DEACTIVATED'): Promise<Profile> {
     const number = process.env[`M2_ACCOUNT_${state}`]?.trim();
     if (!number) blockPrereq(PREREQ.states.id, `${PREREQ.states.reason} — set M2_ACCOUNT_${state}`);
     return this.profileFor(number, `special-${state}`);

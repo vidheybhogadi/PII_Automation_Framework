@@ -17,7 +17,7 @@ import { normalizeFirstName } from '../../scripts/m2-code-evidence';
 import type { UserSession } from '../auth/session';
 import type { PiiDb } from '../db/pii-db';
 import { snapshotSummary } from '../db/pii-db';
-import { notApplicable, noteEvidence } from '../fixtures/m2-fixtures';
+import { noteEvidence } from '../fixtures/m2-fixtures';
 import { blockPrereq, PREREQ } from '../prereq';
 import { requireBaseline, withBaseline, type Variant } from '../baseline/baseline';
 import { apiById } from '../design';
@@ -740,16 +740,6 @@ function deleteKey(body: unknown, key: string): void {
     if (k === key) delete (body as Record<string, unknown>)[k];
     else deleteKey(v, key);
   }
-}
-
-// ---- UNMIG — unmigrated profile with the read gate on ---------------------------------------------------------
-/**
- * NOT APPLICABLE on staging: every staging profile is migrated and new QA accounts write to PII at creation
- * (M2Q-05, QA lead 2026-10-24). The design marks every UNMIG case NOT APPLICABLE, so blockIfOpen skips it before
- * this runs; the runner only repeats that reason if a case ever reaches it.
- */
-export async function runUnmig(c: AnyCase): Promise<void> {
-  notApplicable(c.na?.question ?? 'M2Q-05', c.na?.reason ?? 'Unmigrated profiles cannot occur on staging');
 }
 
 // ---- HIDDEN — hidden first name respected -------------------------------------------------------------------

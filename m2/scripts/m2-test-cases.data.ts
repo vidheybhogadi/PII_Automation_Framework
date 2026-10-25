@@ -60,11 +60,6 @@ const ACC2 =
 const GATE_OFF =
   'Read gates are OFF on staging (M2Q-02 answered): writes go to the PII service, reads come from the app database.';
 const GATE_ON_WAIT = 'Gate-ON part: waiting for Dev to enable the read gates (M2Q-43).';
-const UNMIG_NA = {
-  question: 'M2Q-05',
-  reason:
-    'All staging profiles are migrated and new QA accounts write to PII at creation, so an unmigrated profile cannot occur on staging (QA lead, 2026-10-24).',
-};
 const CMS = 'CMS admin JWT with webcms + OTP and the required permission (M2Q-04).';
 const NAME_A = 'Unique synthetic first name per run, e.g. "Qa" + run suffix (letters only).';
 const API_ONLY = 'API-level only.';
@@ -615,33 +610,6 @@ export const CASES: M2Case[] = [
     related: 'FN-SAN-002, FN-SAN-003',
   },
   {
-    id: 'M2-FNAME-014',
-    module: 'First name — migration state',
-    apis: ['API-013', 'API-021', 'API-014', 'API-048'],
-    fields: ['NAME'],
-    name: 'Unmigrated profile with the gate on: what the app shows',
-    category: 'Unmigrated data',
-    priority: 'Critical',
-    pre: 'Confirmed NOT-migrated profile with the read gate on — cannot occur on staging (M2Q-05).',
-    data: 'Local name exists; no PII record.',
-    steps: [
-      'Read the profile via single reads and via a list where it appears.',
-      'Compare single vs list results.',
-    ],
-    validate: 'Response status (no 500); name value in each; consistency between single and batch.',
-    why: 'Doc says enabled reads do not fall back, but batch hydration keeps the cached name — users may see a name in lists and a blank on the profile.',
-    expected:
-      'NOT APPLICABLE on staging: no unmigrated profile exists (M2Q-05, QA lead 2026-10-24). For reference, code shows single reads return null for an unmigrated name and lists keep the cached name (M2Q-12).',
-    db: API_ONLY,
-    deps: ['M2Q-05', 'M2Q-12', 'M2Q-02', 'M2Q-03', 'M2Q-32'],
-    na: UNMIG_NA,
-    status: 'NOT APPLICABLE',
-    automation: 'NOT AUTOMATED',
-    mode: 'API automation',
-    evidence: `${DOC}: "do not automatically fall back"; "hydration leaves its existing cached name unchanged when the fetched name is nil"; FN-SAN-012/055.`,
-    related: 'FN-SAN-012, FN-SAN-055',
-  },
-  {
     id: 'M2-FNAME-015',
     module: 'First name — read gates',
     apis: ['API-013', 'API-021', 'API-014'],
@@ -1176,29 +1144,6 @@ export const CASES: M2Case[] = [
     automation: 'AUTOMATION BLOCKED',
     mode: 'API automation',
     evidence: `${DOC} API-060 note.`,
-  },
-  {
-    id: 'M2-PHONE-003',
-    module: 'Phone — migration gaps',
-    apis: ['API-060', 'API-021'],
-    fields: ['PHONE'],
-    name: 'Existing user with no PII phone logs in — phone with the gate on',
-    category: 'Unmigrated data',
-    priority: 'Critical',
-    pre: 'Pre-integration account with no PII PHONE record and the read gate on — cannot occur on staging (M2Q-05).',
-    data: '—',
-    steps: ['Log in.', 'Read owner profile phone.'],
-    validate: 'Phone shown to the owner; whether login resynced it.',
-    why: 'Doc: existing-user login does not resync — these users would show no phone once the gate is on.',
-    expected:
-      'NOT APPLICABLE on staging: no pre-integration (unmigrated) account exists (M2Q-05, QA lead 2026-10-24). For reference, code shows no PHONE resync on returning login (M2Q-08).',
-    db: 'See M2-DB-011.',
-    deps: ['M2Q-02', 'M2Q-08', 'M2Q-05', 'M2Q-03', 'M2Q-32'],
-    na: UNMIG_NA,
-    status: 'NOT APPLICABLE',
-    automation: 'NOT AUTOMATED',
-    mode: 'API automation',
-    evidence: `${DOC} "Existing-user login and admin phone edits do not resynchronize the PII value".`,
   },
   {
     id: 'M2-PHONE-004',
@@ -1793,29 +1738,6 @@ export const CASES: M2Case[] = [
     mode: 'Dev-assisted',
     evidence: 'FN-SAN-054.',
     related: 'FN-SAN-054',
-  },
-  {
-    id: 'M2-PAY-004',
-    module: 'Payments — requests',
-    apis: ['API-073', 'API-076', 'API-079'],
-    fields: ['NAME', 'EMAIL', 'PHONE'],
-    name: 'Payment request for a profile with blank PII (unmigrated, gate on)',
-    category: 'Unmigrated data',
-    priority: 'High',
-    pre: 'Unmigrated profile with the read gate on — cannot occur on staging (M2Q-05). Sandbox.',
-    data: '—',
-    steps: ['Create Cashfree / PayU / PhonePe requests.'],
-    validate: 'Response; provider payload; user-facing error.',
-    why: 'Gateways may reject blank customer details, blocking purchases for unmigrated users.',
-    expected: 'NOT APPLICABLE on staging: no unmigrated profile exists (M2Q-05, QA lead 2026-10-24).',
-    db: API_ONLY,
-    deps: ['M2Q-02', 'M2Q-17', 'M2Q-05', 'M2Q-32'],
-    na: UNMIG_NA,
-    status: 'NOT APPLICABLE',
-    automation: 'NOT AUTOMATED',
-    mode: 'Dev-assisted',
-    evidence: 'FN-SAN-048 (invoice null-name risk).',
-    related: 'FN-SAN-048',
   },
 
   // ======================================================================================================

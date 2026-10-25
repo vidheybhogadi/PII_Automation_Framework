@@ -93,7 +93,7 @@ test.describe('M2 scenarios — email', () => {
     );
   });
 
-  // Gate-OFF half (M2Q-02); gate-ON half waits for Dev (M2Q-43); the unmigrated variant is N/A on staging (M2Q-05).
+  // Gate-OFF half (M2Q-02); gate-ON half waits for Dev (M2Q-43).
   scenario('M2-EMAIL-007', async (fx) => {
     const email = testEmail(fx, 'email007');
     const p = await fx.accounts.onboardFresh({ firstName: fx.data.firstName(), email });

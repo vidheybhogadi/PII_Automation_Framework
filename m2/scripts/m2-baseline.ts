@@ -28,7 +28,6 @@ export const CHECKS: Check[] = [
   { code: 'BODY', title: 'Malformed body / wrong data types', category: 'Validation' },
   { code: 'IDOR', title: 'Cannot act on / read another user', category: 'Access control' },
   { code: 'EXPOSE', title: 'No unintended PII exposure', category: 'PII exposure' },
-  { code: 'UNMIG', title: 'Unmigrated profile with read gate on', category: 'Unmigrated data' },
   { code: 'HIDDEN', title: 'Hidden first name respected', category: 'Hidden name' },
   {
     code: 'GATE',
@@ -280,8 +279,6 @@ function accountPre(a: InventoryApi): string {
 /** Read gates are OFF on staging (QA lead, M2Q-02); the gate-ON half waits for Dev (M2Q-43). */
 const GATE_OFF_PRE =
   'Read gates are OFF on staging (M2Q-02 answered): writes go to the PII service, reads come from the app database. Gate-ON part waiting for Dev (M2Q-43).';
-const UNMIG_NA_REASON =
-  'All staging profiles are migrated and new QA accounts write to PII at creation, so an unmigrated profile cannot occur on staging (QA lead, 2026-10-24).';
 
 const ACCESS_PATH = (a: InventoryApi) => a.fields.map((f) => `${FIELD_LABEL[f]}: ${a.access[f]}`).join(' | ');
 
@@ -295,8 +292,6 @@ type Built = Pick<
   fields?: PiiField[];
   /** Parts waiting for a Dev environment change (not dependencies) — see M2Case.waiting. */
   waiting?: string[];
-  /** Cannot occur on staging → status NOT APPLICABLE (see M2Case.na; unlike `{ na }`, the case is still listed). */
-  naOnStaging?: { question: string; reason: string };
 };
 type Rule = (a: InventoryApi) => Built | { na: string };
 
@@ -564,30 +559,6 @@ const RULES: Record<string, Rule> = {
       db: API_ONLY,
       priority: 'Critical',
       deps: ['M2Q-03', ...accessDeps(a)],
-    };
-  },
-
-  UNMIG: (a) => {
-    if (isTestRoute(a))
-      return { na: 'Reads the PII service directly — "unmigrated" = no record, covered by M2-PIIR-003.' };
-    if (isWebhook(a) && a.id !== 'API-113' && a.id !== 'API-114')
-      return { na: 'Covered via the profile rebuild in POS; needs genuine callbacks only.' };
-    return {
-      pre: `Confirmed NOT-migrated synthetic profile involved in this request, read gates ON — cannot occur on staging (M2Q-05). ${accountPre(a)}`,
-      data: 'Profile with local values but no PII records.',
-      steps: [
-        `Send ${req(a)} involving the unmigrated profile.`,
-        'Check status, PII fields and any downstream payload.',
-      ],
-      validate: 'No 5xx; no other user’s value; field value per the agreed rule.',
-      why: 'Dev doc: enabled reads do not fall back to local values — unmigrated profiles may show blank PII here.',
-      expected:
-        'NOT APPLICABLE on staging: all profiles are migrated and new QA accounts write to PII at creation, so an unmigrated profile cannot occur (M2Q-05, QA lead 2026-10-24). For reference, code returns null for single reads (no local fallback) and keeps the cached name in lists.',
-      evidence: 'Dev doc "Field behavior"; ClickUp migration comment; QA lead answer M2Q-05.',
-      db: API_ONLY,
-      priority: ['G2', 'G3', 'G4', 'G7'].includes(g(a)) ? 'High' : 'Medium',
-      deps: ['M2Q-05'],
-      naOnStaging: { question: 'M2Q-05', reason: UNMIG_NA_REASON },
     };
   },
 
@@ -859,13 +830,6 @@ function withFreeText(code: string, a: InventoryApi, b: Built): Built {
         expected: `${b.expected} Only decrypted text of conversations/profiles B may see; field allow-list per M2Q-27.`,
         deps: add(['M2Q-27']),
       };
-    case 'UNMIG':
-      return {
-        ...b,
-        data: `${b.data} Also: messages / bio written before encryption (legacy plaintext).`,
-        expected: `${b.expected} Legacy free text: to be confirmed (M2Q-28).`,
-        deps: add(['M2Q-28']),
-      };
     case 'PIIDOWN':
       return {
         ...b,
@@ -934,9 +898,9 @@ export function buildBaseline(inventory: InventoryApi[]): Baseline {
       const text = `${built.pre} ${built.expected} ${built.db}`;
       const waiting = built.waiting ?? [];
       const deps = [...new Set([...built.deps, ...(text.match(/M2Q-\d+/g) ?? [])])]
-        .filter((d) => !waiting.includes(d) && (!built.naOnStaging || d === built.naOnStaging.question))
+        .filter((d) => !waiting.includes(d))
         .sort();
-      const status: Status = built.naOnStaging ? 'NOT APPLICABLE' : statusOf(deps);
+      const status: Status = statusOf(deps);
       const mode = built.mode ?? 'API automation';
       const automation: Automation =
         mode === 'Manual' ? 'NOT AUTOMATED' : status === 'BLOCKED' ? 'AUTOMATION BLOCKED' : 'NOT AUTOMATED';
@@ -963,7 +927,6 @@ export function buildBaseline(inventory: InventoryApi[]): Baseline {
         mode,
         evidence: built.evidence,
         ...(waiting.length ? { waiting } : {}),
-        ...(built.naOnStaging ? { na: built.naOnStaging } : {}),
       });
       row[check.code] = { kind: 'case', id };
     }

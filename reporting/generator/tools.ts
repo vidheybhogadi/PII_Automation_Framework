@@ -2,13 +2,13 @@
  * Small report utilities:
  *   tsx reporting/generator/tools.ts dev     # live-reloading dashboard dev server with DEMO data
  *   tsx reporting/generator/tools.ts build   # bundle dashboard assets only (sanity check)
- *   tsx reporting/generator/tools.ts open [--demo]
+ *   tsx reporting/generator/tools.ts open [--demo | --m2]
  *   tsx reporting/generator/tools.ts clean [--all]    (--all also removes run history)
  */
 import { existsSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { bundleDashboard, watchDashboard } from './bundle';
-import { generate, PATHS, ROOT } from './generate';
+import { generate, M2_PATHS, PATHS, ROOT } from './generate';
 import { openFile } from './open-file';
 
 async function main(): Promise<void> {
@@ -31,10 +31,14 @@ async function main(): Promise<void> {
       break;
     }
     case 'open': {
-      const file = path.join(rest.includes('--demo') ? PATHS.demoOut : PATHS.out, 'index.html');
+      const m2 = rest.includes('--m2');
+      const file = path.join(
+        rest.includes('--demo') ? PATHS.demoOut : m2 ? M2_PATHS.out : PATHS.out,
+        'index.html',
+      );
       if (!existsSync(file))
         throw new Error(
-          `${path.relative(ROOT, file)} does not exist — run npm run report${rest.includes('--demo') ? ':demo' : ''} first.`,
+          `${path.relative(ROOT, file)} does not exist — run npm run ${m2 ? 'm2:report' : rest.includes('--demo') ? 'report:demo' : 'report'} first.`,
         );
       openFile(file);
       console.log(`  Opened ${path.relative(ROOT, file)}`);

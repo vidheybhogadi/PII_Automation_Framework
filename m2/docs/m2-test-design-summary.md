@@ -4,7 +4,7 @@
 
 Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-pii-affected-apis.md](aisle-pii-affected-apis.md) (Dev inventory (saurabh/pii-changes @ ae838f4, 16-Oct-2026)).
 
-**2473 test cases** (111 scenario + 2362 per-API) over **212 inventory entries** (11 groups). PASS 623 · FAIL 337 · BLOCKED 1319 · NEED DEV CLARIFICATION 0 · WAITING 1 · NOT APPLICABLE 193 · NOT RUN 0. Nothing has been executed as an M2 test case yet.
+**2280 test cases** (108 scenario + 2172 per-API) over **212 inventory entries** (11 groups). PASS 623 · FAIL 337 · BLOCKED 1319 · NEED DEV CLARIFICATION 0 · WAITING 1 · NOT APPLICABLE 0 · NOT RUN 0. Nothing has been executed as an M2 test case yet.
 
 ## By type and category (same Type values as M1)
 
@@ -15,7 +15,7 @@ Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-p
 | Positive | Regression                | 3     | 0     |
 | Negative | Validation                | 318   | 0     |
 | Negative | Negative & edge case      | 10    | 1     |
-| Negative | Unmigrated data           | 195   | 0     |
+| Negative | Unmigrated data           | 2     | 0     |
 | Negative | State & idempotency       | 211   | 0     |
 | Negative | Resilience                | 204   | 0     |
 | Security | Authentication            | 390   | 31    |
@@ -30,15 +30,15 @@ Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-p
 | Group                                                    | APIs | Cases    | Strategy                                                                                                                                                                               |
 | -------------------------------------------------------- | ---- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | G1 PII integration routes (TEST_TOKEN)                   | 5    | 51       | Direct first-name read/write/batch routes on the app. Full functional + validation coverage; runnable now with the existing test token.                                                |
-| G2 PII writes & account lifecycle                        | 13   | 205      | Onboarding, profile edit, phone login, hide-name, delete and reset — the app paths that WRITE PII. Deepest coverage: functional, negative, DB, cross-field, failure handling.          |
-| G3 Single-profile reads                                  | 13   | 176      | Own and other-user profile responses. Migrated / unmigrated / hidden-name / read-gate states and owner-only exposure of email and phone.                                               |
-| G4 Multi-profile lists (batch name hydration)            | 21   | 281      | Lists that hydrate many names at once (hydrate_first_names!). Correct name per profile, mixed migration states, hidden names, cache behaviour, no email/phone leakage.                 |
-| G5 Interactions, chat, notifications & live audio        | 30   | 438      | Like / invite / accept / pass / report / connect / message / call / live-audio actions that read a name for the response, push or room. Representative deep checks + regression smoke. |
-| G6 Own-profile updates (serializer / cache side effects) | 36   | 419      | Non-PII profile updates that rebuild the profile response or cache (own_detailed_v1, fill_cache!, sync_profile_to_kafka). One deep check, then a parametrised regression smoke.        |
-| G7 Payment requests (PII sent to gateways / SMS)         | 12   | 150      | Requests that build provider customer payloads from PII (Cashfree, PayU, PhonePe, payment link, QR, SMS). Sandbox-only; correct values, no over-sharing.                               |
-| G8 Payment verification & subscription (cache rebuild)   | 11   | 132      | Successful payment / restore / freebie flows that rebuild the profile cache. Regression only: activation still works and the rebuilt profile keeps the right name.                     |
-| G9 Provider callbacks & webhooks (no user auth)          | 7    | 60       | PhonePe / Google Play / Apple / Pusher callbacks. Need genuine signed sandbox payloads — Dev-assisted. QA checks invalid signatures are refused without PII in the reply.              |
-| G10 CMS / admin                                          | 52   | 641      | Admin profile views, edits, search, curation, reviews, member activity, exports and the ActiveAdmin IRL page. Admin auth + permission checks; correct name/email/phone per profile.    |
+| G2 PII writes & account lifecycle                        | 13   | 191      | Onboarding, profile edit, phone login, hide-name, delete and reset — the app paths that WRITE PII. Deepest coverage: functional, negative, DB, cross-field, failure handling.          |
+| G3 Single-profile reads                                  | 13   | 161      | Own and other-user profile responses. Hidden-name and read-gate states and owner-only exposure of email and phone.                                                                     |
+| G4 Multi-profile lists (batch name hydration)            | 21   | 259      | Lists that hydrate many names at once (hydrate_first_names!). Correct name per profile, hidden names, cache behaviour, no email/phone leakage.                                         |
+| G5 Interactions, chat, notifications & live audio        | 30   | 408      | Like / invite / accept / pass / report / connect / message / call / live-audio actions that read a name for the response, push or room. Representative deep checks + regression smoke. |
+| G6 Own-profile updates (serializer / cache side effects) | 36   | 383      | Non-PII profile updates that rebuild the profile response or cache (own_detailed_v1, fill_cache!, sync_profile_to_kafka). One deep check, then a parametrised regression smoke.        |
+| G7 Payment requests (PII sent to gateways / SMS)         | 12   | 137      | Requests that build provider customer payloads from PII (Cashfree, PayU, PhonePe, payment link, QR, SMS). Sandbox-only; correct values, no over-sharing.                               |
+| G8 Payment verification & subscription (cache rebuild)   | 11   | 121      | Successful payment / restore / freebie flows that rebuild the profile cache. Regression only: activation still works and the rebuilt profile keeps the right name.                     |
+| G9 Provider callbacks & webhooks (no user auth)          | 7    | 58       | PhonePe / Google Play / Apple / Pusher callbacks. Need genuine signed sandbox payloads — Dev-assisted. QA checks invalid signatures are refused without PII in the reply.              |
+| G10 CMS / admin                                          | 52   | 589      | Admin profile views, edits, search, curation, reviews, member activity, exports and the ActiveAdmin IRL page. Admin auth + permission checks; correct name/email/phone per profile.    |
 | M1 PII facade proxy (covered by Milestone 1)             | 12   | M1 suite | The /V1/api/v1/pii-test/* proxy routes (incl. readiness and free-text keys). Already covered by the 109 Milestone 1 cases; not duplicated in M2.                                       |
 
 ## Runnable now (960 cases, no new access needed)
@@ -102,7 +102,6 @@ Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-p
 | BODY      | Malformed body / wrong data types                      | 122   | 3                   | 75  |
 | IDOR      | Cannot act on / read another user                      | 134   | 0                   | 66  |
 | EXPOSE    | No unintended PII exposure                             | 124   | 0                   | 76  |
-| UNMIG     | Unmigrated profile with read gate on                   | 190   | 0                   | 10  |
 | HIDDEN    | Hidden first name respected                            | 112   | 0                   | 88  |
 | GATE      | Read gate off: same value read back (gate on: waiting) | 200   | 0                   | 0   |
 | PIIDOWN   | PII service down / slow                                | 200   | 0                   | 0   |
@@ -128,7 +127,6 @@ Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-p
 | M2Q-43   | Read gates ON                             | Waiting for Dev (environment change) | 217   |
 | M2Q-10   | Best-effort writes                        | Access / environment                 | 206   |
 | M2Q-11   | PII read failures                         | Contract / expected behaviour        | 202   |
-| M2Q-05   | Unmigrated profiles                       | Contract / expected behaviour        | 197   |
 | M2Q-32   | Special account states                    | Access / environment                 | 145   |
 | M2Q-13   | Hide name                                 | Contract / expected behaviour        | 114   |
 | M2Q-45   | Dev-only ids and actions                  | Access / environment                 | 113   |
@@ -137,7 +135,7 @@ Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-p
 | M2Q-44   | DB verification on hold                   | Access / environment                 | 57    |
 | M2Q-14   | PII exposure rules                        | Contract / expected behaviour        | 53    |
 | M2Q-41   | Web token issuance                        | Access / environment                 | 26    |
-| M2Q-46   | Missing ref acts on an arbitrary member   | Possible defect — confirm            | 24    |
+| M2Q-46   | Missing ref acts on an arbitrary member   | Possible defect — confirm            | 22    |
 | M2Q-19   | Special auth routes                       | Access / environment                 | 19    |
 | M2Q-27   | Free-text contract                        | Contract / expected behaviour        | 19    |
 | M2Q-06   | First-name rules                          | Contract / expected behaviour        | 17    |
@@ -148,6 +146,7 @@ Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-p
 | M2Q-15   | Account deletion (DPDP erasure)           | Contract / expected behaviour        | 5     |
 | M2Q-18   | Notifications, email & SMS                | Access / environment                 | 5     |
 | M2Q-01   | Build under test                          | Contract / expected behaviour        | 4     |
+| M2Q-05   | Unmigrated profiles                       | Contract / expected behaviour        | 4     |
 | M2Q-30   | Free-text limits                          | Contract / expected behaviour        | 4     |
 | M2Q-21   | Admin search                              | Contract / expected behaviour        | 3     |
 | M2Q-22   | Test-data cleanup                         | Access / environment                 | 3     |

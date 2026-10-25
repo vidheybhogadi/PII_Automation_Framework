@@ -9,7 +9,7 @@ import { scanResponse } from '../../src/assertions/pii.assertions';
 import { testPhoneNumber } from '../../src/auth/test-phone';
 import { snapshotSummary } from '../../src/db/pii-db';
 import { blockPrereq, PREREQ } from '../../src/prereq';
-import { expect, notApplicable, noteEvidence, test } from '../../src/fixtures/m2-fixtures';
+import { expect, noteEvidence, test } from '../../src/fixtures/m2-fixtures';
 import { asUser, call, phoneOf, profileByRef, testEmail } from '../../src/scenarios/helpers';
 
 test.describe('M2 scenarios — phone', () => {
@@ -45,9 +45,6 @@ test.describe('M2 scenarios — phone', () => {
     ).toBeGreaterThan(0);
     expectUnchanged(before, after, ['PHONE'], 'returning login');
   });
-
-  // NOT APPLICABLE on staging: no pre-integration (unmigrated) account exists (M2Q-05).
-  scenario('M2-PHONE-003', async (_fx, c) => notApplicable(c.na!.question, c.na!.reason));
 
   scenario('M2-PHONE-004', async (fx) => {
     fx.accounts.admin();

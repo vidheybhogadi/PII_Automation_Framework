@@ -6,7 +6,7 @@
 import { isSuccess } from '../../src/assertions/pii.assertions';
 import { scenario } from '../../src/checks/define';
 import { blockPrereq, PREREQ } from '../../src/prereq';
-import { expect, notApplicable, noteEvidence, test } from '../../src/fixtures/m2-fixtures';
+import { expect, noteEvidence, test } from '../../src/fixtures/m2-fixtures';
 import {
   asUser,
   call,
@@ -247,9 +247,6 @@ test.describe('M2 scenarios — first name', () => {
       'API-011 (another user): name equals the PII first name',
     ).toBe(true);
   });
-
-  // NOT APPLICABLE on staging: no unmigrated profile exists (M2Q-05).
-  scenario('M2-FNAME-014', async (_fx, c) => notApplicable(c.na!.question, c.na!.reason));
 
   // Gate-OFF half (M2Q-02): own reads return the local (onboarding) name; gate-ON half waits for Dev (M2Q-43).
   scenario('M2-FNAME-015', async (fx) => {

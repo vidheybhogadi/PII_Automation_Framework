@@ -100,7 +100,7 @@ export const QUESTIONS: M2Question[] = [
     kind: 'Contract / expected behaviour',
     apis: ['API-013', 'API-021'],
     answer: {
-      text: 'ALL profiles on staging are migrated; no unmigrated profile exists, and new QA accounts write to PII at creation. Unmigrated-profile cases cannot occur on staging, so they are NOT APPLICABLE there. What production should show for an unmigrated profile with a gate on stays a Dev / Product decision (out of scope for staging QA).',
+      text: 'ALL profiles on staging are migrated; no unmigrated profile exists, and new QA accounts write to PII at creation. Unmigrated-profile cases cannot occur on staging, so they are NOT APPLICABLE there. What production should show for an unmigrated profile with a gate on stays a Dev / Product decision (out of scope for staging QA). The 193 unmigrated-profile cases (190 per-API UNMIG + M2-FNAME-014, M2-PHONE-003, M2-PAY-004) were removed from the design on 2026-10-25 (user decision); their IDs are not reused.',
       by: 'QA lead (2026-10-24)',
       on: '2026-10-24',
     },
@@ -269,7 +269,7 @@ export const QUESTIONS: M2Question[] = [
     id: 'M2Q-17',
     topic: 'Payment sandboxes',
     question:
-      'Which payment providers are in sandbox mode on testa2 (Cashfree, PayU, PhonePe, Razorpay, Paytm, Apple, Google Play)? How can QA inspect the outbound customer payload (name, email, phone) — sandbox dashboard, request log, or Dev-assisted? What happens when name/email/phone is blank (unmigrated + gate on)?',
+      'Which payment providers are in sandbox mode on testa2 (Cashfree, PayU, PhonePe, Razorpay, Paytm, Apple, Google Play)? How can QA inspect the outbound customer payload (name, email, phone) — sandbox dashboard, request log, or Dev-assisted?',
     why: 'G7/G8 cases must never touch live providers; QA needs a way to see what was sent.',
     evidence:
       'Dev doc API-073: "First name, email and full phone are read from the profile for the provider customer payload"; FN-SAN-039..043.',
@@ -472,7 +472,7 @@ export const QUESTIONS: M2Question[] = [
     id: 'M2Q-32',
     topic: 'Special account states',
     question:
-      'QA can now create accounts (10-prefixed numbers, OTP 1234). Some cases need states QA cannot create alone: (a) a verified selfie (hide-name eligibility) — may QA use /admin/images/mark_selfie_verified on its own accounts, or is there a test liveness response? (b) a pre-integration account with no PII records (unmigrated) — answered by the QA lead 2026-10-24: no unmigrated profile exists on staging (see M2Q-05), so (b) is not needed; (c) an approved / curated profile that appears in discovery. How should QA get (a) and (c) on staging?',
+      'QA can now create accounts (10-prefixed numbers, OTP 1234). Some cases need states QA cannot create alone: (a) a verified selfie (hide-name eligibility) — may QA use /admin/images/mark_selfie_verified on its own accounts, or is there a test liveness response? (b) a pre-integration account with no PII records (unmigrated) — answered by the QA lead 2026-10-24: no unmigrated profile exists on staging (see M2Q-05), so (b) is not needed and its cases were removed; (c) an approved / curated profile that appears in discovery. How should QA get (a) and (c) on staging?',
     why: 'Hide-name, unmigrated-data and discovery cases need these states.',
     evidence:
       'Dev doc API-031 (genuine liveness response needed), API-155 (admin selfie verification); M2Q-03 answer. Staging 2026-10-24: onboarded MALE synthetic accounts went pending_not_verified → approved within ~1–2 min in two runs (daily_requests_left 0 → 5–6); female approval not observed. Since 2026-10-24 the suite waits for this auto-approval (approved-state routes, its connected pair, invites) — up to 15 min from onboarding, since approval took 8–20 min in run qa-m2-20261024t134344; the accounts that need it are onboarded when a worker starts — and deactivates a throwaway account itself once it is approved (deactivated-state routes; profile.rb:4583-4589 deactivates only approved / pending / disapproved profiles, from code); it blocks with this question only when approval does not happen. Still open: (a) verified selfie; (c) a guaranteed way to get an approved / discoverable profile.',

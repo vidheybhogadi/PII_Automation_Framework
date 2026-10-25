@@ -89,6 +89,19 @@ export function maskTokens(text: string): string {
     .replace(JWT_PATTERN, REDACTED);
 }
 
+/** Any e-mail address that is not on the synthetic @example… test domain (or its sub-domains), in any letter case. */
+const FOREIGN_EMAIL_PATTERN =
+  /[A-Za-z0-9._%+-]+@(?!(?:[A-Za-z0-9-]+\.)*[Ee][Xx][Aa][Mm][Pp][Ll][Ee]\b)[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
+
+/**
+ * Replace every e-mail address that is not a synthetic @example… address with [REDACTED_EMAIL]. Staging replies
+ * (discover / concierge lists) carry OTHER members' free text, where people type their own e-mail; the recorder
+ * must never copy that into a report (2026-10-25). Synthetic test e-mails stay readable.
+ */
+export function maskForeignEmails(text: string): string {
+  return text.replace(FOREIGN_EMAIL_PATTERN, '[REDACTED_EMAIL]');
+}
+
 export function isSensitiveKey(key: string): boolean {
   return SENSITIVE_KEYS.has(key.toLowerCase());
 }

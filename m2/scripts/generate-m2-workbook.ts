@@ -461,7 +461,7 @@ function overviewSheet(wb: ExcelJS.Workbook, inventory: InventoryApi[]) {
   );
   kv(
     'NOT APPLICABLE',
-    'The case cannot occur on this environment, confirmed by the cited answer (e.g. M2Q-05: all staging profiles are migrated). Skipped with the reason; neither pass nor fail.',
+    'The case cannot occur on this environment, confirmed by the cited answer. Skipped with the reason; neither pass nor fail.',
   );
   kv('PASS / FAIL', 'Only after execution.');
 }

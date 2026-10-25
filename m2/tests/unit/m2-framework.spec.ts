@@ -132,16 +132,21 @@ test.describe('UNIT M2 framework', () => {
     expect(() => expectRefusedWithoutPii(res(401, '{"email":"qa@example.test"}'), 'leak')).toThrow();
   });
 
-  test('UT-M2-014 Status rule: read gates ON → WAITING, DB hold → BLOCKED, unmigrated cases NOT APPLICABLE', () => {
+  test('UT-M2-014 Status rule: read gates ON → WAITING, DB hold → BLOCKED, unmigrated-profile cases removed (M2Q-05)', () => {
     expect(statusFromDeps(['M2Q-02', 'M2Q-03'])).toBe('NOT RUN'); // M2Q-02 answered: gates OFF
     expect(statusFromDeps(['M2Q-43'])).toBe('WAITING');
     expect(statusFromDeps(['M2Q-43', 'M2Q-04'])).toBe('BLOCKED');
     expect(statusFromDeps(['M2Q-43', 'M2Q-25'])).toBe('NEED DEV CLARIFICATION');
     expect(statusFromDeps(['M2Q-16', 'M2Q-44'])).toBe('BLOCKED');
     const cases = design().cases;
-    const unmig = cases.filter((c) => c.check === 'UNMIG');
-    expect(unmig.length).toBeGreaterThan(0);
-    expect(unmig.every((c) => c.status === 'NOT APPLICABLE' && c.na?.question === 'M2Q-05')).toBe(true);
+    // Removed 2026-10-25 (M2Q-05: all staging profiles are migrated) — must not come back; IDs are never reused.
+    expect(cases.some((c) => c.check === 'UNMIG')).toBe(false);
+    for (const id of ['M2-FNAME-014', 'M2-PHONE-003', 'M2-PAY-004'])
+      expect(
+        cases.some((c) => c.id === id),
+        `${id} stays removed`,
+      ).toBe(false);
+    expect(cases.some((c) => c.status === 'NOT APPLICABLE')).toBe(false);
     const gate = cases.filter((c) => c.check === 'GATE');
     expect(gate.every((c) => c.waiting?.includes('M2Q-43') && c.mode === 'API automation')).toBe(true);
     expect(gate.some((c) => c.status === 'NOT RUN')).toBe(true);
@@ -712,7 +717,7 @@ test.describe('UNIT M2 account-state and triage fixes (2026-10-24)', () => {
     for (const id of ['M2-API-069-POS', 'M2-API-120-POS', 'M2-API-021-EXPOSE'])
       if (design().cases.some((c) => c.id === id && c.status === 'NOT RUN' && !c.na))
         expect(byCheck(id), `${id} runs late`).toBe(true);
-    for (const c of late) expect(['AUTH', 'TOKEN', 'UNMIG', 'HIDDEN']).not.toContain(c.check);
+    for (const c of late) expect(['AUTH', 'TOKEN', 'HIDDEN']).not.toContain(c.check);
     expect(late.some((c) => c.id === 'M2-API-013-POS')).toBe(false);
     // Which FILE declares each test (top-level suites of the JSON list are the spec files, in queue order).
     const list = JSON.parse(

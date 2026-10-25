@@ -77,14 +77,14 @@ export const GROUPS: ApiGroup[] = [
     key: 'G3',
     name: 'Single-profile reads',
     strategy:
-      'Own and other-user profile responses. Migrated / unmigrated / hidden-name / read-gate states and owner-only exposure of email and phone.',
+      'Own and other-user profile responses. Hidden-name and read-gate states and owner-only exposure of email and phone.',
     ids: ids(11, 12, 13, 16, 17, 18, 21, 86, 87, 88, 119, 120, 186),
   },
   {
     key: 'G4',
     name: 'Multi-profile lists (batch name hydration)',
     strategy:
-      'Lists that hydrate many names at once (hydrate_first_names!). Correct name per profile, mixed migration states, hidden names, cache behaviour, no email/phone leakage.',
+      'Lists that hydrate many names at once (hydrate_first_names!). Correct name per profile, hidden names, cache behaviour, no email/phone leakage.',
     ids: ids(5, 6, 7, 8, 14, 15, 19, 20, 47, 48, 49, 54, 63, 68, 69, 101, 106, 107, 116, 126, 191),
   },
   {
