@@ -28,10 +28,29 @@ agent (PROPOSE → approval → IMPLEMENT); see `CLAUDE.md`.
   pair's conversation id and each account's approval clock, so a restarted worker re-uses them. At worker start the
   accounts that need staging's approval are onboarded (`M2_PREONBOARD=false` switches it off); approval is waited for
   up to `M2_APPROVAL_WAIT_MS` (default 15 min) from onboarding, and the approval-dependent cases run last.
+  `M2_PREONBOARD_SENDERS` (default 2; 8 for `m2:contracts:record`) female invite senders / partners are onboarded
+  at worker start; each serves a receiver once (invite, like, pass), tracked in the run pool.
+- **Shared accounts stay consistent** (2026-10-25): cases that send invalid / oversized names (M2-PIIR-005 on its own
+  throwaway; M2-PIIR-006, M2-FNAME-008, FIELD / PARAM / BODY on name routes) put the previous first name back through
+  the G1 write route afterwards — a refused write can still change the PII name (256 characters → 500).
+- **Writer visible to the reader** (EXPOSE / CACHE, `m2/src/checks/visibility.ts`, 2026-10-25): the connected pair hides
+  A from likes / invite / discover lists, so each list route creates its own relationship first — a pending invite
+  (005, 116, 006–008), a like A → B (048, 126, 054), B's like (047) or pass (049), a chat message (069), a share link
+  (016 with `?ps=`), or an account already listed (014, 015, 019, 020). GET `/V1/users/:ref` and `/web/users/:ref`
+  answer the caller's own profile, so their CACHE case is own-profile. API-106 stays Blocked (M2Q-45).
+- **Removed for good** (user decision 2026-10-25, IDs never reused, UT-M2-034): 73 IDOR cases whose request names no
+  user / profile id, and 30 EXPOSE / CACHE cases on routes whose reply never contains another member (code references
+  in `m2/scripts/m2-code-evidence.ts` NO_OTHER_USER). The design rules in `m2/scripts/m2-baseline.ts` keep them out.
+- **Contract states** (item 4, 2026-10-25): send_request_to_profile (API-004) runs as an approved account with daily
+  requests left towards a fresh approved receiver; deactivate (API-029 / API-123) on an approved throwaway that is
+  re-activated for re-use; fetch_login_response (API-062) on a brand-new account per case; invite accept / pass routes
+  on a pending invite from a sender with no prior invite.
 - **Contracts**: `npm run m2:contracts:record` (explicit only) → `m2/contracts/recorded/` → `npm run m2:contracts:review`
   (`m2/contracts/REVIEW.md`) → `npm run m2:contracts:approve -- --by "<name>" <case…|all>` → asserted from
   `m2/contracts/approved/`. A 2xx to INVALID input (PARAM / BODY, STATE except "valid request") fails unless the
   approved file names the code reference in `acceptedBecause` (`--accept "<variant>=<code ref>"`, one case at a time).
+  A sent variant without an approved reference is checked by its invariants only and the case is then Blocked
+  (M2Q-24, "re-record and approve") — approved variants that are not sent now (safety) are not compared.
 - **No false passes** (audit fixes 2026-10-25): a refusal is a 4xx — a 5xx fails (M2Q-39); TOKEN sends a parseable
   credential of the wrong type (web JWT on app routes); "unchanged" compares the whole own profile minus volatile keys
   plus the about text (`m2/src/checks/own-view.ts`); STATE is decided by state; EXPOSE needs the writer in the reply

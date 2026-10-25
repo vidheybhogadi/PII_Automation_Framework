@@ -38,7 +38,8 @@ import {
   mentionsAccount,
   stateVerdict,
 } from '../../src/checks/verdicts';
-import { tryBuildRequest, questionFor } from '../../src/checks/request-builder';
+import { placeholdersIn, tryBuildRequest, questionFor } from '../../src/checks/request-builder';
+import { NO_OTHER_USER, OWN_PROFILE_BY_REF } from '../../scripts/m2-code-evidence';
 import {
   approvableVariants,
   invalidAcceptedProblem,
@@ -714,7 +715,7 @@ test.describe('UNIT M2 account-state and triage fixes (2026-10-24)', () => {
     const late = design().cases.filter((c) => runsLate(c));
     const byCheck = (id: string) => late.some((c) => c.id === id);
     // Conversation route, approved-state route and EXPOSE run last; AUTH / TOKEN and plain routes do not.
-    for (const id of ['M2-API-069-POS', 'M2-API-120-POS', 'M2-API-021-EXPOSE'])
+    for (const id of ['M2-API-069-POS', 'M2-API-120-POS', 'M2-API-005-EXPOSE', 'M2-API-029-STATE'])
       if (design().cases.some((c) => c.id === id && c.status === 'NOT RUN' && !c.na))
         expect(byCheck(id), `${id} runs late`).toBe(true);
     for (const c of late) expect(['AUTH', 'TOKEN', 'HIDDEN']).not.toContain(c.check);
@@ -969,6 +970,17 @@ test.describe('UNIT M2 audit fixes — no false passes (2026-10-25)', () => {
     expect(mentionsAccount({ data: [{ ref: 'FFFFFFFF' }] }, a)).toBe(false);
     expect(mentionsAccount({ status: true }, a)).toBe(false);
     expect(mentionsAccount({ ref: 'AB12CD34' }, {})).toBe(false);
+    // Item 2 (2026-10-25): A's ref inside a value (Agora channel name) and A's current first name in a message.
+    expect(mentionsAccount({ channel_name: 'channel_FFFFFFFF_AB12CD34' }, a)).toBe(true);
+    expect(
+      mentionsAccount({ video_call_message: 'Qaxyzb wants to video call' }, { firstName: 'Qaxyzb' }),
+    ).toBe(true);
+    expect(mentionsAccount({ video_call_message: 'Someone wants to call' }, { firstName: 'Qaxyzb' })).toBe(
+      false,
+    );
+    // User ids only exactly: an 8-digit id inside a longer number / timestamp is not A.
+    expect(mentionsAccount({ token: '1198499270000' }, { userId: '19849927' })).toBe(false);
+    expect(mentionsAccount({ x: 'ab' }, { firstName: 'ab' })).toBe(false);
     expect(hasIdorTarget(['REF'])).toBe(true);
     expect(hasIdorTarget(['OTHER_USER_ID'])).toBe(true);
     expect(hasIdorTarget(['USER_ID', 'PAGE'])).toBe(true);
@@ -978,5 +990,132 @@ test.describe('UNIT M2 audit fixes — no false passes (2026-10-25)', () => {
     expect(isStatusOnlyReply({ status: true, message: 'ok' })).toBe(true);
     expect(isStatusOnlyReply({ status: true, user: {} })).toBe(false);
     expect(isStatusOnlyReply([])).toBe(false);
+  });
+
+  test('UT-M2-034 Removed for good (2026-10-25): no-target IDOR, EXPOSE / CACHE on routes that never show another member', () => {
+    // User decision 2026-10-25: 103 cases that can never run in any environment. Their IDs are never reused.
+    const removed: Record<string, string[]> = {
+      IDOR: [
+        '005',
+        '006',
+        '007',
+        '008',
+        '009',
+        '010',
+        '013',
+        '014',
+        '015',
+        '016',
+        '017',
+        '019',
+        '020',
+        '022',
+        '024',
+        '025',
+        '026',
+        '027',
+        '028',
+        '029',
+        '030',
+        '032',
+        '033',
+        '034',
+        '035',
+        '036',
+        '037',
+        '038',
+        '039',
+        '040',
+        '041',
+        '042',
+        '043',
+        '044',
+        '045',
+        '047',
+        '048',
+        '049',
+        '054',
+        '057',
+        '058',
+        '059',
+        '063',
+        '066',
+        '067',
+        '068',
+        '069',
+        '085',
+        '086',
+        '087',
+        '088',
+        '089',
+        '091',
+        '097',
+        '099',
+        '100',
+        '106',
+        '107',
+        '108',
+        '116',
+        '117',
+        '118',
+        '121',
+        '122',
+        '123',
+        '124',
+        '126',
+        '129',
+        '130',
+        '131',
+        '134',
+        '191',
+        '198',
+      ],
+      EXPOSE: [
+        '004',
+        '009',
+        '010',
+        '017',
+        '018',
+        '021',
+        '046',
+        '050',
+        '051',
+        '052',
+        '053',
+        '055',
+        '056',
+        '064',
+        '107',
+        '108',
+        '117',
+        '118',
+        '120',
+        '125',
+        '127',
+        '128',
+        '132',
+        '187',
+        '188',
+        '191',
+      ],
+      CACHE: ['017', '018', '107', '191'],
+    };
+    const ids = Object.entries(removed).flatMap(([check, apis]) => apis.map((a) => `M2-API-${a}-${check}`));
+    expect(ids.length).toBe(103);
+    const cases = design().cases;
+    for (const id of ids)
+      expect(
+        cases.some((c) => c.id === id),
+        `${id} stays removed`,
+      ).toBe(false);
+    // The rules that removed them still hold for every generated case.
+    for (const c of cases.filter((x) => x.check === 'IDOR' && x.status === 'NOT RUN'))
+      expect(hasIdorTarget(placeholdersIn(apiById(c.apis[0]!))), `${c.id} names a target id`).toBe(true);
+    for (const c of cases.filter((x) => x.check === 'EXPOSE'))
+      expect(NO_OTHER_USER[c.apis[0]!], `${c.id}: route can show another member`).toBeUndefined();
+    for (const c of cases.filter((x) => x.check === 'CACHE' && NO_OTHER_USER[x.apis[0]!]))
+      expect(OWN_PROFILE_BY_REF, `${c.id}: only own-profile routes keep a CACHE case`).toContain(c.apis[0]);
+    // Every removal reason cites the Aisle code.
+    for (const why of Object.values(NO_OTHER_USER)) expect(why).toMatch(/\.rb:\d+/);
   });
 });

@@ -10,7 +10,13 @@ import type { InventoryApi } from '../../scripts/m2-inventory';
 import { groupOf } from '../../scripts/m2-inventory';
 import { PAUSED_APIS } from '../../scripts/m2-all-cases';
 import { isWebRoute, NEW_USER_OK } from '../../scripts/m2-baseline';
-import { ROUTE_STATE, suiteStateFor } from '../../scripts/m2-code-evidence';
+import {
+  APPROVED_FIRST,
+  DEACTIVATING,
+  FRESH_ACCOUNT,
+  ROUTE_STATE,
+  suiteStateFor,
+} from '../../scripts/m2-code-evidence';
 import {
   DEACTIVATION_KEY,
   DELETING_APIS,
@@ -221,9 +227,13 @@ async function userFor(
   const state = suiteStateFor(api.id);
   const key = role === 'A' ? api.id : `${api.id}:B`;
   if (DESTRUCTIVE.includes(api.id)) {
-    const p = await fx.accounts.throwaway(key);
-    return state === 'approved' ? fx.accounts.waitApproved(p, key) : p;
+    // Deactivating routes re-activate and re-use their throwaway; it must be approved first (APPROVED_FIRST, item 4).
+    const reactivate = DEACTIVATING.includes(api.id);
+    const p = await fx.accounts.throwaway(key, { reactivate });
+    return state === 'approved' || APPROVED_FIRST[api.id] ? fx.accounts.waitApproved(p, key) : p;
   }
+  // Invite sending (item 4): an approved caller with daily requests left (its receiver: inviteReceiver below).
+  if (api.id === 'API-004') return fx.accounts.approvedWithRequestsLeft(role === 'A' ? [0, 2] : [2, 0]);
   // One shared deactivation throwaway per role (pre-onboarded by warmUp so its approval clock starts early).
   if (state === 'deactivated')
     return fx.accounts.deactivated(role === 'A' ? DEACTIVATION_KEY : `${DEACTIVATION_KEY}:B`);
@@ -234,6 +244,30 @@ async function userFor(
   if (state === 'approved') return fx.accounts.approved(role === 'A' ? 0 : 2);
   return fx.accounts.onboarded(role === 'A' ? 0 : 1);
 }
+
+/** Per test case: the fresh invite receiver of API-004 and the fresh pre-login account of FRESH_ACCOUNT routes. */
+const perTest = new Map<string, Promise<UserSession | Profile>>();
+function memoPerTest<T extends UserSession | Profile>(key: string, make: () => Promise<T>): Promise<T> {
+  const k = `${test.info().testId}:${key}`;
+  let p = perTest.get(k);
+  if (!p) {
+    p = make();
+    perTest.set(k, p);
+    const pending = p;
+    pending.catch(() => {
+      if (perTest.get(k) === pending) perTest.delete(k);
+    });
+  }
+  return p as Promise<T>;
+}
+
+const inviteReceiver = (fx: CheckFixtures, sender: Profile) =>
+  memoPerTest(`invite-receiver:${sender.mobileNumber}`, () =>
+    fx.accounts.partner(sender, 'invite receiver (API-004)'),
+  );
+
+const freshPerTest = (fx: CheckFixtures, role: string) =>
+  memoPerTest(`fresh:${role}`, () => fx.accounts.freshUser());
 
 /**
  * The account that calls `api` in role A (or B). New-user routes use a new account; routes that need a finished
@@ -259,12 +293,16 @@ export async function callerFor(
     );
   if (api.auth.includes('USER_TOKEN')) {
     const s = await userFor(api, fx, role);
+    // Invite sending (item 4): the receiver is a fresh approved account of the opposite gender with no invite, like or
+    // connection with the caller — one per test case, so its valid request really creates an invite.
+    const receiver =
+      api.id === 'API-004' && role === 'A' && isProfile(s) ? await inviteReceiver(fx, s) : undefined;
     return {
       label: `user ${role}`,
       auth: AUTH.user(s.token),
       device: s.device,
       session: s,
-      values: await completeValues(api, fx, s, valuesFor(fx.m2Config, s)),
+      values: await completeValues(api, fx, s, valuesFor(fx.m2Config, s, receiver)),
     };
   }
   if (api.auth.includes('TEST_TOKEN')) {
@@ -294,8 +332,9 @@ export async function callerFor(
     };
   }
   if (groupOf(api.id).key === 'G9') return blockPrereq(PREREQ.provider.id, PREREQ.provider.reason);
-  // Pre-login routes (no credential): a new account's number / user id.
-  const s = await fx.accounts.newUser(role);
+  // Pre-login routes (no credential): a new account's number / user id — a brand-new one per case for the login
+  // response route (FRESH_ACCOUNT, item 4: the is_new_user flow on an account never reset or reused).
+  const s = FRESH_ACCOUNT.includes(api.id) ? await freshPerTest(fx, role) : await fx.accounts.newUser(role);
   return {
     label: 'no credential (pre-login)',
     auth: AUTH.none,
@@ -327,6 +366,31 @@ function assertSafe(
   const input = { apiId: api.id, ...req, phoneCodeId };
   const where = [...missingProtectedIn(api, input), ...unsafeIdsIn(input, fx.accounts.suiteIds(), catalogue)];
   if (where.length) throw new UnsafeRequestError(api.id, where, UNSAFE_QUESTION);
+}
+
+/**
+ * Put an account's first name back after a case that sent invalid / oversized names to it (fix 2026-10-25): a write
+ * the app refused can still have reached the PII service (staging 2026-10-24/25: 256 characters → HTTP 500 while the
+ * PII name changed), which left the shared onboarded account with app name ≠ PII name and failed later cases. The G1
+ * test write route POST /V1/pii_integration/first_name (TEST_TOKEN) writes the PII service AND the app profile (M2Q-35
+ * answer, from code — confirm with Dev), so both stores hold `name` again. Never fails the case: the outcome is noted.
+ */
+export async function restoreFirstName(
+  fx: CheckFixtures,
+  account: { userId?: string | undefined } | undefined,
+  name: unknown,
+): Promise<void> {
+  const note = (description: string) => test.info().annotations.push({ type: 'observed', description });
+  if (!account?.userId || typeof name !== 'string' || !name.trim() || !fx.m2Config.testToken) {
+    note('First-name restore skipped (no user id, no previous name or no TEST_TOKEN).');
+    return;
+  }
+  const res = await fx.m2.call('API-002', {
+    auth: AUTH.testToken(requireTestToken(fx.m2Config)),
+    body: { user_id: account.userId, first_name: name },
+    retry: false,
+  });
+  fx.observe('restore the previous first name (API-002)', res);
 }
 
 /**

@@ -13,16 +13,22 @@ export const hasIdorTarget = (placeholders: readonly string[]) =>
 
 /**
  * EXPOSE: whether a reply shows the account at all — its ref or app user id as a value (string or number) or as a
- * key of an id-keyed map. Without it, "A's email / phone not in the reply" proves nothing.
+ * key of an id-keyed map; its ref INSIDE a text value (item 2, 2026-10-25: generate_agora_token's channel_name
+ * "channel_<B ref>_<A ref>"); or its current first name inside a text value (video_call_message names A). Without
+ * it, "A's email / phone not in the reply" proves nothing. User ids are matched exactly (digits occur in many values).
  */
 export function mentionsAccount(
   body: unknown,
-  p: { ref?: string | undefined; userId?: string | undefined },
+  p: { ref?: string | undefined; userId?: string | undefined; firstName?: string | undefined },
 ): boolean {
   const ids = [p.ref, p.userId].filter((x): x is string => Boolean(x));
-  if (!ids.length) return false;
+  const inText = [p.ref, p.firstName].filter(
+    (x): x is string => typeof x === 'string' && x.trim().length >= 3,
+  );
+  if (!ids.length && !inText.length) return false;
   const walk = (v: unknown): boolean => {
-    if (typeof v === 'string' || typeof v === 'number') return ids.includes(String(v));
+    if (typeof v === 'number') return ids.includes(String(v));
+    if (typeof v === 'string') return ids.includes(v) || inText.some((t) => v.includes(t));
     if (Array.isArray(v)) return v.some(walk);
     if (v && typeof v === 'object')
       return Object.entries(v as Record<string, unknown>).some(([k, x]) => ids.includes(k) || walk(x));

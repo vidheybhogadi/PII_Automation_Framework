@@ -19,7 +19,16 @@ import type { M2Client } from '../../src/clients/m2-client';
 import { scenario } from '../../src/checks/define';
 import { caseById, titleOf } from '../../src/design';
 import { blockIfOpen, expect, noteEvidence, test } from '../../src/fixtures/m2-fixtures';
-import { asTestToken, call, expectOk, nameOf, ownProfile, piiFirstName } from '../../src/scenarios/helpers';
+import { restoreFirstName } from '../../src/checks/context';
+import {
+  asTestToken,
+  call,
+  expectOk,
+  nameOf,
+  ownProfile,
+  piiFirstName,
+  type Fx,
+} from '../../src/scenarios/helpers';
 
 const READ = 'API-001';
 const WRITE = 'API-002';
@@ -195,44 +204,68 @@ test.describe('M2 G1 — PII integration routes (TEST_TOKEN)', () => {
 test.describe('M2 G1 — PII integration routes: validation, batches, profiles', () => {
   scenario('M2-PIIR-005', async (fx) => {
     const tt = asTestToken(fx);
-    const userId = (await fx.accounts.onboarded(0)).userId!;
+    // Its own throwaway account (fix 2026-10-25): the 256-character write answers 500 but still changes the PII name
+    // (real defect, asserted below). On the shared onboarded account 0 that left app name ≠ PII name and failed ten
+    // later "own first name equals its PII first name" checks. The seed name is also put back at the end.
+    const p = await fx.accounts.throwaway('M2-PIIR-005');
+    const userId = p.userId!;
     const seed = fx.data.firstName();
     expectOk(
       await call(fx, WRITE, tt, { body: { user_id: userId, first_name: seed }, retry: false }),
       'seed write',
     );
-    for (const [label, value] of [
-      ['null', null],
-      ['empty', ''],
-      ['whitespace', '   '],
-    ] as const) {
-      const res = await call(fx, WRITE, tt, { body: { user_id: userId, first_name: value }, retry: false });
-      expect(res.status, `${label}: 400 "Missing required parameter: first_name" (from code)`).toBe(400);
-      expect((await piiFirstName(fx, userId)) === seed, `${label}: the stored name is unchanged`).toBe(true);
+    try {
+      for (const [label, value] of [
+        ['null', null],
+        ['empty', ''],
+        ['whitespace', '   '],
+      ] as const) {
+        const res = await call(fx, WRITE, tt, { body: { user_id: userId, first_name: value }, retry: false });
+        expect(res.status, `${label}: 400 "Missing required parameter: first_name" (from code)`).toBe(400);
+        expect((await piiFirstName(fx, userId)) === seed, `${label}: the stored name is unchanged`).toBe(
+          true,
+        );
+      }
+      // Code: no maximum length (profile validates presence only). Staging 2026-10-24: 256 characters → 500, which
+      // wins over the code reading — the evidenced requirement is "no server error on input" (possible defect).
+      const long = 'Q'.repeat(256);
+      const res = await call(fx, WRITE, tt, { body: { user_id: userId, first_name: long }, retry: false });
+      expect(res.status < 500, `256 characters: ${res.summary()} — no server error`).toBe(true);
+      if (res.status === 200)
+        expect((await piiFirstName(fx, userId)) === long, '256 characters: stored in full').toBe(true);
+      else
+        expect((await piiFirstName(fx, userId)) === seed, '256 characters refused: name unchanged').toBe(
+          true,
+        );
+      for (const [_label, value] of [
+        ['number', 123],
+        ['array', ['a']],
+        ['object', { a: 1 }],
+      ] as const)
+        await call(fx, WRITE, tt, { body: { user_id: userId, first_name: value }, retry: false });
+      noteEvidence(
+        'Numbers / arrays / objects are converted to text by the app (from code) — recorded, not asserted.',
+      );
+    } finally {
+      await restoreFirstName(fx, p, seed);
     }
-    // Code: no maximum length (profile validates presence only). Staging 2026-10-24: 256 characters → 500, which
-    // wins over the code reading — the evidenced requirement is "no server error on input" (possible defect).
-    const long = 'Q'.repeat(256);
-    const res = await call(fx, WRITE, tt, { body: { user_id: userId, first_name: long }, retry: false });
-    expect(res.status < 500, `256 characters: ${res.summary()} — no server error`).toBe(true);
-    if (res.status === 200)
-      expect((await piiFirstName(fx, userId)) === long, '256 characters: stored in full').toBe(true);
-    else
-      expect((await piiFirstName(fx, userId)) === seed, '256 characters refused: name unchanged').toBe(true);
-    for (const [_label, value] of [
-      ['number', 123],
-      ['array', ['a']],
-      ['object', { a: 1 }],
-    ] as const)
-      await call(fx, WRITE, tt, { body: { user_id: userId, first_name: value }, retry: false });
-    noteEvidence(
-      'Numbers / arrays / objects are converted to text by the app (from code) — recorded, not asserted.',
-    );
   });
 
   scenario('M2-PIIR-006', async (fx) => {
     const tt = asTestToken(fx);
-    const userId = (await fx.accounts.onboarded(0)).userId!;
+    const p = await fx.accounts.onboarded(0);
+    const userId = p.userId!;
+    // Shared onboarded account 0: its name is put back at the end (fix 2026-10-25), so a lossy / partial write never
+    // leaves app name ≠ PII name for later cases.
+    const previous = await piiFirstName(fx, userId);
+    try {
+      await piir006(fx, tt, userId);
+    } finally {
+      await restoreFirstName(fx, p, previous);
+    }
+  });
+
+  async function piir006(fx: Fx, tt: ReturnType<typeof asTestToken>, userId: string): Promise<void> {
     // Asserted: values the normalisation keeps intact. Recorded: lossy ones (possible defect, see report).
     for (const value of ['  Qa  ', 'qa', 'QA', 'देवा', 'தமிழ்']) {
       expectOk(
@@ -251,7 +284,7 @@ test.describe('M2 G1 — PII integration routes: validation, batches, profiles',
         `Lossy normalisation (possible defect): a ${value.length}-character input was stored as ${String(stored).length} characters (expected by code: ${normalizeFirstName(value)?.length}).`,
       );
     }
-  });
+  }
 
   scenario('M2-PIIR-008', async (fx) => {
     const tt = asTestToken(fx);

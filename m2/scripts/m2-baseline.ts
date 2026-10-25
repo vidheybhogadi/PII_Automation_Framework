@@ -8,7 +8,9 @@
  * "same as master" for non-regression checks (needs the baseline, M2Q-24). Unknowns cite an M2Q question.
  */
 import { authLabel, FIELD_LABEL, groupOf, OBSERVED, type InventoryApi, type PiiField } from './m2-inventory';
-import { ROUTE_STATE, suiteStateFor } from './m2-code-evidence';
+import { NO_OTHER_USER, OWN_PROFILE_BY_REF, ROUTE_STATE, suiteStateFor } from './m2-code-evidence';
+import { placeholdersIn } from '../src/checks/request-builder';
+import { hasIdorTarget } from '../src/checks/verdicts';
 import { DB_ON_HOLD, READ_GATES_ON, statusFromDeps } from './m2-questions';
 import type { Category } from './m2-grouping';
 import type { Automation, M2Case, Mode, Priority, Status } from './m2-test-cases.data';
@@ -297,6 +299,11 @@ type Rule = (a: InventoryApi) => Built | { na: string };
 
 const critical = (a: InventoryApi): Priority => (['G1', 'G2', 'G3'].includes(g(a)) ? 'Critical' : 'High');
 const API_ONLY = 'API-level only.';
+/** Matrix reasons of the cases removed 2026-10-25 (user decision; IDs never reused — UT-M2-034). */
+export const NO_TARGET_NA =
+  'Removed 2026-10-25: the request names no user / profile id (REF, USER_ID, OTHER_*), so B’s identifiers cannot be sent — an IDOR case could only ever be Blocked.';
+export const NO_OTHER_USER_NA =
+  'Removed 2026-10-25: the reply never contains another member by design (from code — confirm with Dev):';
 
 const RULES: Record<string, Rule> = {
   POS: (a) => ({
@@ -492,12 +499,17 @@ const RULES: Record<string, Rule> = {
       return { na: 'Admin route accesses any profile by design — role limits covered by EXPOSE.' };
     if (isWebhook(a)) return { na: 'No user identity on callback routes.' };
     if (isLogin(a)) return { na: 'Pre-login route — identity is number + OTP, covered by AUTH.' };
+    // Removed 2026-10-25 (user decision): a request that names no user / profile id cannot carry B's identifiers, so
+    // the case could only ever end Blocked "no target in request" — not generated. Routes whose access is still held
+    // by an open question keep their case until it is answered (then this rule drops them too). IDs never reused.
+    if (!hasIdorTarget(placeholdersIn(a)) && statusFromDeps(['M2Q-03', ...accessDeps(a)]) === 'NOT RUN')
+      return { na: NO_TARGET_NA };
     return {
       pre: 'Two synthetic accounts A and B (M2Q-03).',
       data: 'B’s ref / user_id / conversation / record ids, added to A’s request (query, body or path).',
       steps: [`As A send ${req(a)} with B’s identifiers.`, 'Read B’s profile and PII before/after.'],
       validate:
-        'Request acts only for A (or is refused); B’s phone (national / full) and known fake email never returned; B’s own profile (all stable fields and the about text) never changed. A request that names no user / profile id cannot carry B’s identifiers → Blocked ("no target in request"), never a pass.',
+        'Request acts only for A (or is refused); B’s phone (national / full) and known fake email never returned; B’s own profile (all stable fields and the about text) never changed. A request that names no user / profile id cannot carry B’s identifiers → Blocked ("no target in request"), never a pass (such cases are not generated once the route is reachable — removed 2026-10-25).',
       why: 'Classic IDOR on routes that now read and return PII.',
       expected: 'A can only read/change A’s own PII; B unchanged.',
       evidence: 'Dev doc: email/phone only via own_general_information (owner).',
@@ -542,16 +554,20 @@ const RULES: Record<string, Rule> = {
       };
     if (!returnsOthers(a))
       return { na: 'Returns only the caller’s own data (own_detailed_v1 / own records) — covered by IDOR.' };
+    // Removed 2026-10-25 (user decision): the reply never contains another member by design (from code) — "A’s
+    // data not in B’s reply" can never be checked. IDs never reused.
+    if (NO_OTHER_USER[a.id]) return { na: `${NO_OTHER_USER_NA} ${NO_OTHER_USER[a.id]}.` };
     return {
       pre: 'A visible to B in this response (like / invite / match / connection / room / event) (M2Q-03).',
       data: 'A’s known fake email and phone (national and full) as search strings.',
       steps: [
+        'Make A visible to B for this route first (a pending invite or a like from A to B, B’s like / pass of A, a chat message, a share link for A — otherwise an account that already appears in B’s list).',
         `As B send ${req(a)}.`,
         'Deep-search the whole JSON body for A’s email and phone.',
-        'Check that A is in the reply at all (A’s ref or user id).',
+        'Check that A is in the reply at all (A’s ref or user id, A’s ref inside a value such as a channel name, or A’s current first name).',
       ],
       validate:
-        'No match in any field — and A must appear in the reply (ref / user id); otherwise there is nothing to check and the case is Blocked ("A not in reply", needs A visible to B — M2Q-32), never a pass.',
+        'No match in any field — and A must appear in the reply (ref / user id, ref inside a value, or A’s current first name); otherwise there is nothing to check and the case is Blocked ("A not in reply", needs A visible to B — M2Q-32), never a pass.',
       why: 'Email and phone are owner-only; a match is a leak.',
       expected:
         'No other member’s email or phone (Dev doc API-063/068: phone is not added to other members’ fields).',
@@ -637,6 +653,10 @@ const RULES: Record<string, Rule> = {
   CACHE: (a) => {
     if (!isRead(a) && !(isTestRoute(a) && a.method === 'GET') && a.id !== 'API-190' && a.id !== 'API-003')
       return { na: 'Not a read API — write/action outcome covered by POS and the read APIs’ CACHE checks.' };
+    // Removed 2026-10-25 (user decision): read routes that never show another member and do not carry the caller’s
+    // own profile — no writer can ever be surfaced to the reader. IDs never reused.
+    if (NO_OTHER_USER[a.id] && !OWN_PROFILE_BY_REF.includes(a.id))
+      return { na: `${NO_OTHER_USER_NA} ${NO_OTHER_USER[a.id]}.` };
     return {
       pre: `Profile in this response; supported PII change path (app edit / admin edit). ${accountPre(a)}`,
       data: 'Name N1 → N2 (and email/phone where a supported change path exists).',
@@ -646,7 +666,7 @@ const RULES: Record<string, Rule> = {
         'Re-send until the new value appears or the window expires.',
       ],
       validate:
-        'The warm read must show the writer (name or ref) — otherwise Blocked (M2Q-32), not polled. Own-profile routes are read by the writer, TEST_TOKEN routes with the TEST_TOKEN. New value within 45 s; no reversion afterwards.',
+        'The warm read must show the writer (name or ref) — otherwise Blocked (M2Q-32), not polled. The writer is made visible to the reader first (pending invite, like, pass, chat message, share link, or an account already in the reader’s list). Own-profile routes (including GET /V1/users/:ref and /web/users/:ref, which answer the caller’s own profile) are read by the writer, TEST_TOKEN routes with the TEST_TOKEN. New value within 45 s; no reversion afterwards.',
       why: 'Profile and FieldStore caches can keep stale PII.',
       expected:
         'From code (M2Q-12): the writer’s own PII cache is updated at once, so the writer’s own reads and the test routes must show the new name within 45 s (else a failure); other users’ lists keep the cached profile name until the profile cache is rebuilt (no fixed window) — the time is recorded, and not seen within 45 s is Blocked with that reason; a reversion after the new value appeared is a failure.',

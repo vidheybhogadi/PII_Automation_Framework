@@ -4,7 +4,7 @@
 
 **109 test cases** — Fail 13 · Blocked 8 · Pass 88
 
-Last run: 2026-10-23 17:55 UTC · environment staging · projects=api · took 360.5s
+Last run: 2026-10-25 14:58 UTC · environment staging · projects=api · took 356.6s
 
 Status is from the last run only (the same rule as the HTML report). **Not Applicable** = Dev confirmed the
 feature is intentionally unsupported; it is neither a pass nor a failure. Dependency/Blocker shows the BQ

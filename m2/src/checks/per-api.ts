@@ -19,13 +19,14 @@ import type { PiiDb } from '../db/pii-db';
 import { snapshotSummary } from '../db/pii-db';
 import { noteEvidence } from '../fixtures/m2-fixtures';
 import { blockPrereq, PREREQ } from '../prereq';
-import { requireBaseline, withBaseline, type Variant } from '../baseline/baseline';
+import { blockUnapproved, requireBaseline, withBaseline, type Variant } from '../baseline/baseline';
 import { apiById } from '../design';
 import {
   callerFor,
   DESTRUCTIVE,
   FRESH_PER_VARIANT,
   KEPT_BLOCKED,
+  restoreFirstName,
   SUBMIT_PROFILE,
   send,
   syntheticFor,
@@ -37,10 +38,11 @@ import { requireTestToken } from '../config/m2-config';
 import type { Synthetic } from './request-builder';
 import { buildRequest, placeholdersIn } from './request-builder';
 import { variantSafety, wrongTypeValue } from './safety';
-import { suiteStateFor } from '../../scripts/m2-code-evidence';
+import { OWN_PROFILE_BY_REF, suiteStateFor } from '../../scripts/m2-code-evidence';
 import { DB_FIELD, expectUnchanged, piiUserIdFor } from './db';
 import { aboutOf, ABOUT_KEY, normalizeValue, stableView, viewDiff, type OwnView } from './own-view';
 import { combineViews, hasIdorTarget, isStatusOnlyReply, mentionsAccount, stateVerdict } from './verdicts';
+import { visiblePair, type Visible, type Writer } from './visibility';
 
 export const apiOf = (c: AnyCase) => apiById(c.apis[0]!);
 
@@ -227,7 +229,10 @@ function expectSameView(
 }
 
 /** Phone forms and the known fake email of a suite account — the values another user must never see. */
-function ownPiiOf(fx: CheckFixtures, s: UserSession | Profile): string[] {
+function ownPiiOf(
+  fx: CheckFixtures,
+  s: { mobileNumber: string; known?: { email: string } | undefined },
+): string[] {
   const email =
     ('known' in s ? s.known?.email : undefined) ?? fx.m2Config.values[`EMAIL_${s.mobileNumber}`] ?? undefined;
   return [...phoneForms(s.mobileNumber), ...(email ? [email] : [])];
@@ -300,16 +305,19 @@ export async function runExpose(c: AnyCase, fx: CheckFixtures): Promise<void> {
   const api = apiOf(c);
   if (groupOf(api.id).key === 'G10') fx.accounts.admin();
   if (groupOf(api.id).key === 'G7') blockPrereq(PREREQ.provider.id, PREREQ.provider.reason);
-  // A is visible to B in this response (connected pair); B calls the route.
-  const [a, b] = await fx.accounts.connectedPair();
+  // A is made visible to B for this route first (visibility.ts: invite, like, pass, chat message, share link, an
+  // account already listed — or the connected pair); B calls the route.
+  const v = await visiblePair(api, fx, false);
+  const { a, b } = v;
+  noteEvidence(`${api.id}: ${v.how}.`);
   const viewer: Caller = {
     label: 'user B',
     auth: AUTH.user(b.token),
     device: b.device,
     session: b,
-    values: valuesFor(fx.m2Config, b, a),
+    values: writerValues(fx, b, a),
   };
-  const res = await send(api, fx, viewer);
+  const res = await v.read(viewer);
   fx.observe(`${api.id} as B (A visible)`, res);
   // A's phone forms and A's known fake email (onboarding values; M2_VALUE_EMAIL_<number> for Dev-provided accounts).
   const leaks = scanResponse(res, { allowKeys: PII_KEYS, known: ownPiiOf(fx, a) }).filter(
@@ -319,16 +327,48 @@ export async function runExpose(c: AnyCase, fx: CheckFixtures): Promise<void> {
     leaks,
     `${api.id}: A’s phone (national / full) and email never appear in B’s reply (locations only)`,
   ).toEqual([]);
-  // Audit fix 2026-10-25: "A's data is not in the reply" proves nothing unless A is in the reply at all.
-  if (!mentionsAccount(res.isJson ? res.json() : undefined, { ref: a.ref, userId: a.userId }))
+  // Audit fix 2026-10-25: "A's data is not in the reply" proves nothing unless A is in the reply at all — by ref /
+  // user id, A's ref inside a value (e.g. an Agora channel name) or A's current first name (e.g. a call message).
+  const firstName = await writerName(fx, a);
+  if (
+    !mentionsAccount(res.isJson ? res.json() : undefined, {
+      ref: a.ref,
+      userId: a.userId,
+      ...(firstName ? { firstName } : {}),
+    })
+  )
     blockPrereq(
       'M2Q-32',
-      `${api.id}: A not in reply — nothing to check (HTTP ${res.status}; A’s ref / user id not in B’s reply — needs A visible to B in this route)`,
+      `${api.id}: A not in reply — nothing to check (HTTP ${res.status}; A’s ref / user id / first name not in B’s reply after: ${v.how})`,
     );
-  if (!('known' in a && a.known?.email) && !fx.m2Config.values[`EMAIL_${a.mobileNumber}`])
+  if (!a.known?.email && !fx.m2Config.values[`EMAIL_${a.mobileNumber}`])
     noteEvidence(
       'A’s email unknown (Dev-provided account without M2_VALUE_EMAIL_<number>) — phone forms searched only.',
     );
+}
+
+/** B's placeholder values with A as the other account (OTHER_REF / OTHER_USER_ID). */
+function writerValues(fx: CheckFixtures, b: Profile, a: Writer) {
+  return {
+    ...valuesFor(fx.m2Config, b),
+    ...(a.ref ? { OTHER_REF: a.ref } : {}),
+    ...(a.userId ? { OTHER_USER_ID: a.userId } : {}),
+  };
+}
+
+/** A's current first name (own profile) when the suite holds A's session, else its known fake name. */
+async function writerName(fx: CheckFixtures, a: Writer): Promise<string | undefined> {
+  if ('token' in a && a.token) {
+    const own: Caller = {
+      label: 'user A',
+      auth: AUTH.user(a.token),
+      device: a.device,
+      session: a,
+      values: valuesFor(fx.m2Config, a),
+    };
+    return (await currentName(fx, own)).firstName ?? a.known?.firstName;
+  }
+  return a.known?.firstName;
 }
 
 // ---- Baseline-backed checks (M2Q-24: approved staging recordings) -----------------------------------------
@@ -380,6 +420,29 @@ async function currentName(fx: CheckFixtures, caller: Caller): Promise<Partial<S
   const name =
     res.status === 200 ? (res.json() as { first_name?: unknown } | undefined)?.first_name : undefined;
   return typeof name === 'string' && name.trim() ? { firstName: name } : {};
+}
+
+/**
+ * Run `fn` and then put the caller's previous first name back (fix 2026-10-25) when the route carries first_name and
+ * the caller is a pooled / shared account: invalid or oversized names may still reach the PII service when the app
+ * refuses them, which would leave app name ≠ PII name for later cases (restoreFirstName).
+ */
+async function withNameRestore(
+  api: ReturnType<typeof apiOf>,
+  fx: CheckFixtures,
+  caller: Caller,
+  fn: () => Promise<void>,
+): Promise<void> {
+  const writesName =
+    api.requestKeys.includes('first_name') &&
+    Boolean(caller.session?.userId) &&
+    !FRESH_PER_VARIANT.includes(api.id);
+  const previous = writesName ? (await currentName(fx, caller)).firstName : undefined;
+  try {
+    await fn();
+  } finally {
+    if (writesName) await restoreFirstName(fx, caller.session, previous);
+  }
 }
 
 /** Synthetic marker values a request carries (to detect echo). */
@@ -440,8 +503,9 @@ export async function runContract(c: AnyCase, fx: CheckFixtures): Promise<void> 
   const caller = await callerFor(api, fx);
   // A baseline of a VALID request must be a valid reply: a server error is never recorded as the contract.
   let sent = false;
+  let missing: string[] = [];
   try {
-    await withBaseline(
+    missing = await withBaseline(
       c.id,
       ctxOf(fx),
       [
@@ -460,6 +524,7 @@ export async function runContract(c: AnyCase, fx: CheckFixtures): Promise<void> 
     // Toggle routes (audit fix 2026-10-25): sent a second time so the account is left as it was.
     if (sent && TOGGLES.includes(api.id)) fx.observe(`${api.id} restore`, await send(api, fx, caller));
   }
+  blockUnapproved(c.id, missing);
 }
 
 export async function runParam(c: AnyCase, fx: CheckFixtures): Promise<void> {
@@ -503,15 +568,25 @@ export async function runParam(c: AnyCase, fx: CheckFixtures): Promise<void> {
           synthetic,
         }),
     });
-  const run = () =>
-    withBaseline(c.id, ctxOf(fx), variants, (l, r) => (noServerError(l, r), noEcho(MARKERS(fx))(l, r)));
+  let missing: string[] = [];
+  const run = async () => {
+    missing = await withBaseline(
+      c.id,
+      ctxOf(fx),
+      variants,
+      (l, r) => (noServerError(l, r), noEcho(MARKERS(fx))(l, r)),
+    );
+  };
   if (fresh) {
     await run();
     expectGone(gone);
   } else
-    await unchangedAround(fx, caller, run, 'missing / invalid parameters', api.id, () =>
-      send(api, fx, caller, { synthetic, retry: false }),
+    await withNameRestore(api, fx, caller, () =>
+      unchangedAround(fx, caller, run, 'missing / invalid parameters', api.id, () =>
+        send(api, fx, caller, { synthetic, retry: false }),
+      ),
     );
+  blockUnapproved(c.id, missing);
 }
 
 export async function runBody(c: AnyCase, fx: CheckFixtures): Promise<void> {
@@ -583,25 +658,25 @@ export async function runBody(c: AnyCase, fx: CheckFixtures): Promise<void> {
       },
     });
   }
-  const run = () =>
-    withBaseline(
+  let missing: string[] = [];
+  const run = async () => {
+    missing = await withBaseline(
       c.id,
       ctxOf(fx),
       variants,
       (l, r) => (noServerError(l, r), noEcho([marker, ...MARKERS(fx)])(l, r)),
     );
+  };
   if (fresh) {
     await run();
     expectGone(gone);
   } else
-    await unchangedAround(
-      fx,
-      caller,
-      run,
-      'malformed bodies (no PII written via unexpected keys)',
-      api.id,
-      () => send(api, fx, caller, { synthetic: synth, retry: false }),
+    await withNameRestore(api, fx, caller, () =>
+      unchangedAround(fx, caller, run, 'malformed bodies (no PII written via unexpected keys)', api.id, () =>
+        send(api, fx, caller, { synthetic: synth, retry: false }),
+      ),
     );
+  blockUnapproved(c.id, missing);
 }
 
 export async function runState(c: AnyCase, fx: CheckFixtures): Promise<void> {
@@ -654,8 +729,9 @@ export async function runState(c: AnyCase, fx: CheckFixtures): Promise<void> {
       `${api.id}: the request names no id, so "wrong target" is the same request sent a third time.`,
     );
   const others = fx.accounts.numbersExcept(caller.session);
+  let missing: string[] = [];
   try {
-    await withBaseline(c.id, ctxOf(fx), variants, (l, r) => {
+    missing = await withBaseline(c.id, ctxOf(fx), variants, (l, r) => {
       noServerError(l, r);
       if (isSuccess(r.status)) return;
       const leaks = scanResponse(r, { known: others }).filter((f) => f.kind === 'known test value');
@@ -665,7 +741,7 @@ export async function runState(c: AnyCase, fx: CheckFixtures): Promise<void> {
     // A toggle sent an odd number of times (valid, again, and the target-less "wrong target") is flipped back.
     if (toggle && targetless && seen.wrong) fx.observe(`${api.id} restore`, await send(api, fx, caller));
   }
-  if (!seen.valid || !seen.again || !seen.wrong) return; // record mode skipped / a variant was not sent
+  if (!seen.valid || !seen.again || !seen.wrong) return blockUnapproved(c.id, missing); // record mode / not sent
   const verdict = stateVerdict(
     { before, afterValid: seen.valid, afterAgain: seen.again, afterWrong: seen.wrong },
     statuses,
@@ -674,6 +750,7 @@ export async function runState(c: AnyCase, fx: CheckFixtures): Promise<void> {
   );
   noteEvidence(`${api.id}: observable effect of the valid request: ${verdict.effect.join(', ') || 'none'}.`);
   expect(verdict.failures, `${api.id}: state after each variant (changed keys only)`).toEqual([]);
+  blockUnapproved(c.id, missing);
   if (verdict.nonDiscriminating) {
     for (const v of variants.slice(1))
       test.info().annotations.push({
@@ -717,7 +794,7 @@ export async function runRepeat(c: AnyCase, fx: CheckFixtures): Promise<void> {
     },
   ];
   // A repeated request is still a valid request: a server error is never recorded or accepted as the contract.
-  await withBaseline(c.id, ctxOf(fx), variants, noServerError);
+  const missing = await withBaseline(c.id, ctxOf(fx), variants, noServerError);
   const parallel = await Promise.all([again(), again()]);
   parallel.forEach((r, i) => fx.observe(`${api.id} parallel #${i + 1}`, r));
   parallel.forEach((r, i) => noServerError(`parallel #${i + 1}`, r));
@@ -728,9 +805,10 @@ export async function runRepeat(c: AnyCase, fx: CheckFixtures): Promise<void> {
       noteEvidence(`${api.id}: the two parallel toggles did not cancel out — sent once more to restore.`);
       fx.observe(`${api.id} restore`, await again());
     }
-    return;
+    return blockUnapproved(c.id, missing);
   }
   expectSameView(afterFirst, await view(), `${api.id}: repeats change nothing after the first request`);
+  blockUnapproved(c.id, missing);
 }
 
 /** Delete a key anywhere in a body. */
@@ -784,8 +862,9 @@ export const readsOwnProfile = (api: ReturnType<typeof apiOf>) =>
 
 /**
  * CACHE (2026-10-25 fix): warm read → name change by A → re-read up to CACHE_WINDOW_MS.
- * - Own-profile routes are read by A itself; routes about other members by B (TEST_TOKEN routes outside G1, e.g.
- *   API-191 test_profile_list, with the TEST_TOKEN — Dev doc API-191).
+ * - Own-profile routes (incl. GET /V1/users/:ref and /web/users/:ref, which answer the caller's own profile) are read by
+ *   A itself; routes about other members by B after A was made visible to B (visibility.ts); TEST_TOKEN routes outside
+ *   G1 with the TEST_TOKEN.
  * - The warm read must show A (A's current name or ref); a route that does not surface the writer to the reader is
  *   Blocked (M2Q-32), never polled.
  * - The writer's own reads and the G1 test routes must show the new name within the window: app writes update the
@@ -819,9 +898,23 @@ export async function runCache(c: AnyCase, fx: CheckFixtures): Promise<void> {
     change = () =>
       fx.m2.call('API-002', { auth: tt.auth, body: { user_id: userId, first_name: n2 }, retry: false });
   } else {
-    const own = readsOwnProfile(api);
-    // Own-profile routes need no second account: A (suite account 0) writes and reads.
-    const [a, b] = own ? [await fx.accounts.onboarded(0), undefined] : await fx.accounts.connectedPair();
+    // Own-profile routes (incl. GET /V1/users/:ref and /web/users/:ref, which answer the CALLER's own profile —
+    // users_controller.rb:113-120, web/users_controller.rb:14-17, from code) need no second account: A writes, A reads.
+    const ownByRef = OWN_PROFILE_BY_REF.includes(api.id);
+    const own = readsOwnProfile(api) || ownByRef;
+    let a: Profile;
+    let visible: Visible | undefined;
+    if (own)
+      a =
+        suiteStateFor(api.id) === 'approved' ? await fx.accounts.approved(0) : await fx.accounts.onboarded(0);
+    else if (api.auth.includes('USER_TOKEN')) {
+      // A is made visible to B for this route first (visibility.ts) and must be able to change its own name.
+      visible = await visiblePair(api, fx, true);
+      if (!('token' in visible.a && visible.a.token))
+        blockPrereq(PREREQ.connected.id, `${api.id}: the writer A has no session in this worker`);
+      a = visible.a as Profile;
+      noteEvidence(`${api.id}: ${visible.how}.`);
+    } else a = (await fx.accounts.connectedPair())[0];
     const writer: Caller = {
       label: 'user A',
       auth: AUTH.user(a.token),
@@ -833,19 +926,25 @@ export async function runCache(c: AnyCase, fx: CheckFixtures): Promise<void> {
     if (own) {
       mode = 'own profile';
       reader = { ...writer, label: 'user A (own profile)' };
+      read = () => send(api, fx, reader, ownByRef ? { values: { REF: a.ref } } : {});
     } else {
       mode = 'other user';
-      reader = api.auth.includes('USER_TOKEN')
-        ? {
-            label: 'user B',
-            auth: AUTH.user(b!.token),
-            device: b!.device,
-            session: b!,
-            values: valuesFor(fx.m2Config, b!, a),
-          }
-        : await callerFor(api, fx); // the credential the route needs (e.g. API-191: TEST_TOKEN, Dev doc API-191)
+      if (visible) {
+        const b = visible.b;
+        reader = {
+          label: 'user B',
+          auth: AUTH.user(b.token),
+          device: b.device,
+          session: b,
+          values: writerValues(fx, b, a),
+        };
+        const v = visible;
+        read = () => v.read(reader);
+      } else {
+        reader = await callerFor(api, fx); // the credential the route needs (e.g. TEST_TOKEN)
+        read = () => send(api, fx, reader, { values: { REF: a.ref, OTHER_REF: a.ref } });
+      }
     }
-    read = () => send(api, fx, reader, own ? {} : { values: { REF: a.ref, OTHER_REF: a.ref } });
     change = () => send(apiById('API-058'), fx, writer, { synthetic: { firstName: n2 } });
     const n1 = (await currentName(fx, writer)).firstName;
     showsWriter = (res) => {
@@ -952,33 +1051,37 @@ export async function runField(c: AnyCase, fx: CheckFixtures): Promise<void> {
     return;
   }
   const caller = await callerFor(api, fx);
-  for (const key of Object.keys(FIELD_VALUES).filter((k) => api.requestKeys.includes(k))) {
-    for (const [label, value] of FIELD_VALUES[key]!) {
-      const before = caller.session ? await selfView(fx, caller.session) : undefined;
-      const body = structuredClone(
-        buildRequest(api, caller.values, syntheticFor(fx, caller.session)).body ?? {},
-      );
-      setKey(body, key, value);
-      const res = await send(api, fx, caller, { body, retry: false });
-      fx.observe(`${key} ${label}`, res);
-      const after = caller.session ? await selfView(fx, caller.session) : undefined;
-      if (!isSuccess(res.status) && caller.session)
-        expectSameView(before, after, `${key} ${label}: a refused value changes nothing`);
-      // From code (M2Q-06): blank names are ignored; others are stored normalised (lossy cases only recorded).
-      if (key === 'first_name' && caller.session && isSuccess(res.status)) {
-        const stored = after?.view.first_name;
-        const want = typeof value === 'string' ? normalizeFirstName(value) : undefined;
-        if (value === null || want === undefined)
-          expect(
-            before?.view.first_name === stored,
-            `${key} ${label}: a blank name leaves the name unchanged`,
-          ).toBe(true);
-        else if (/^[A-Za-z\s]*$/.test(value as string) || !/[A-Za-z]/.test(value as string))
-          expect(stored === want, `${key} ${label}: stored as the normalised value`).toBe(true);
-        else noteEvidence(`${key} ${label}: lossy normalisation recorded (possible defect, M2Q-06).`);
+  // Invalid / oversized names may still reach the PII service when the app refuses them (2026-10-24/25: 256
+  // characters → HTTP 500, PII name changed): the caller's previous name is put back at the end (fix 2026-10-25).
+  await withNameRestore(api, fx, caller, async () => {
+    for (const key of Object.keys(FIELD_VALUES).filter((k) => api.requestKeys.includes(k))) {
+      for (const [label, value] of FIELD_VALUES[key]!) {
+        const before = caller.session ? await selfView(fx, caller.session) : undefined;
+        const body = structuredClone(
+          buildRequest(api, caller.values, syntheticFor(fx, caller.session)).body ?? {},
+        );
+        setKey(body, key, value);
+        const res = await send(api, fx, caller, { body, retry: false });
+        fx.observe(`${key} ${label}`, res);
+        const after = caller.session ? await selfView(fx, caller.session) : undefined;
+        if (!isSuccess(res.status) && caller.session)
+          expectSameView(before, after, `${key} ${label}: a refused value changes nothing`);
+        // From code (M2Q-06): blank names are ignored; others are stored normalised (lossy cases only recorded).
+        if (key === 'first_name' && caller.session && isSuccess(res.status)) {
+          const stored = after?.view.first_name;
+          const want = typeof value === 'string' ? normalizeFirstName(value) : undefined;
+          if (value === null || want === undefined)
+            expect(
+              before?.view.first_name === stored,
+              `${key} ${label}: a blank name leaves the name unchanged`,
+            ).toBe(true);
+          else if (/^[A-Za-z\s]*$/.test(value as string) || !/[A-Za-z]/.test(value as string))
+            expect(stored === want, `${key} ${label}: stored as the normalised value`).toBe(true);
+          else noteEvidence(`${key} ${label}: lossy normalisation recorded (possible defect, M2Q-06).`);
+        }
       }
     }
-  }
+  });
 }
 
 function setKey(body: unknown, key: string, value: unknown): void {

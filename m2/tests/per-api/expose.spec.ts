@@ -1,6 +1,7 @@
 /**
  * Per-API EXPOSE checks (No unintended PII exposure), generated from the M2 design.
- * User B calls a route in which user A is visible (connected pair). Pass = A's phone (national and full) and known
+ * User B calls a route in which user A was made visible first (m2/src/checks/visibility.ts: invite, like, pass, chat
+ * message, share link, an account already listed, or the connected pair). Pass = A's phone (national and full) and known
  * fake email never appear anywhere in B's reply AND A is in the reply (ref / user id) — without A there is nothing to
  * check: Blocked (M2Q-32), never a pass (audit fix 2026-10-25). CMS views (role allow-list, M2Q-14) and payment
  * payloads (sandbox, M2Q-17) follow their design status.

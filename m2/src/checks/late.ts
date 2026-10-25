@@ -6,7 +6,7 @@
  * Only the ORDER changes: the case IDs, titles, runners and assertions are the same.
  */
 import type { AnyCase } from '../../scripts/m2-all-cases';
-import { suiteStateFor } from '../../scripts/m2-code-evidence';
+import { APPROVED_FIRST, suiteStateFor } from '../../scripts/m2-code-evidence';
 import { groupOf } from '../../scripts/m2-inventory';
 import { apiById } from '../design';
 import { placeholdersIn } from './request-builder';
@@ -43,6 +43,6 @@ export function runsLate(c: AnyCase): boolean {
   if (c.check === 'CACHE') return group !== 'G1'; // connected pair
   if (!CALLER_CHECKS.includes(c.check ?? '')) return false;
   const state = suiteStateFor(api.id);
-  if (state === 'approved' || state === 'deactivated') return true;
+  if (state === 'approved' || state === 'deactivated' || APPROVED_FIRST[api.id]) return true;
   return placeholdersIn(api).some((p) => APPROVAL_PLACEHOLDERS.includes(p));
 }

@@ -313,16 +313,43 @@ export interface Variant {
 }
 
 /**
+ * Sent variants the approved file has no reference for (fix 2026-10-25, M2-API-004-PARAM / M2-API-042-PARAM): a
+ * variant that was not sendable when the case was approved (an older safety rule) or whose recording was a server
+ * error (never approved). Approved variants that are NOT sent now (notSent / unsafe) are simply not compared.
+ */
+export function unapprovedVariants(
+  approved: Pick<BaselineFile, 'variants'> | undefined,
+  sent: readonly string[],
+): string[] {
+  return sent.filter((label) => approved?.variants[label] === undefined);
+}
+
+/**
+ * After a case's own checks: Blocked (M2Q-24) when a sent variant had no approved reference to compare with — never
+ * a pass, never a failure of the case for the missing approval. Invariants (no 5xx, no echo, invalid input not
+ * accepted, own profile unchanged) were still asserted for that variant before this point.
+ */
+export function blockUnapproved(caseId: string, labels: readonly string[]): void {
+  if (!labels.length) return;
+  blockPrereq(
+    PREREQ.baseline.id,
+    `${caseId}: no approved reference for ${labels.map((l) => `"${l}"`).join(', ')} — record again and approve (npm run m2:contracts:record, review, approve); its invariants were checked`,
+  );
+}
+
+/**
  * Run the variants of a baseline-backed case. Record mode writes the recording and marks the test "recorded";
  * otherwise each variant must match the approved file: same status, same shape, no new or missing PII keys.
  * `check` runs the case's own invariants on every reply (e.g. no 5xx, no echoed PII) in both modes.
+ * Returns the sent variants without an approved reference (compared by invariants only — the caller blocks with
+ * blockUnapproved after its remaining checks).
  */
 export async function withBaseline(
   caseId: string,
   ctx: { runId: string; record: boolean },
   variants: Variant[],
   check: (label: string, res: ApiResponse) => void = () => {},
-): Promise<void> {
+): Promise<string[]> {
   const approved = existsSync(approvedFile(caseId))
     ? (JSON.parse(readFileSync(approvedFile(caseId), 'utf8')) as BaselineFile)
     : undefined;
@@ -356,8 +383,6 @@ export async function withBaseline(
       }
     } else check(v.label, res);
     if (!ctx.record) {
-      const want = approved!.variants[v.label];
-      expect(want !== undefined, `${v.label}: variant exists in the approved baseline`).toBe(true);
       const accepted = invalidAcceptedProblem(caseId, v.label, res.status, approved);
       expect(accepted === undefined, `${v.label}: ${accepted ?? 'ok'}`).toBe(true);
       if (isInvalidVariant(caseId, v.label) && approved!.acceptedBecause?.[v.label])
@@ -365,12 +390,20 @@ export async function withBaseline(
           type: 'assumption',
           description: `${v.label}: 2xx accepted — ${approved!.acceptedBecause[v.label]}`,
         });
-      expect(res.status, `${v.label}: status as in the approved baseline`).toBe(want!.status);
+      const want = approved!.variants[v.label];
+      if (want === undefined) {
+        test.info().annotations.push({
+          type: 'blocked-variant',
+          description: `${v.label}: no approved reference (sent; invariants checked, status / shape not compared) — re-record and approve (M2Q-24)`,
+        });
+        continue;
+      }
+      expect(res.status, `${v.label}: status as in the approved baseline`).toBe(want.status);
       expect(
-        shapeDiff(want!.shape, seen[v.label]!.shape),
+        shapeDiff(want.shape, seen[v.label]!.shape),
         `${v.label}: same keys and types as the baseline`,
       ).toEqual([]);
-      const pii = piiKeyDiff(want!, seen[v.label]!);
+      const pii = piiKeyDiff(want, seen[v.label]!);
       for (const n of pii.notes)
         test.info().annotations.push({ type: 'assumption', description: `${v.label}: ${n}` });
       expect(pii.failures, `${v.label}: no new PII key, none missing outside lists (names only)`).toEqual([]);
@@ -396,4 +429,8 @@ export async function withBaseline(
     if (broken.length) throw broken[0]!.error;
     test.skip(true, `RECORDED baseline for ${caseId} (review and approve before it is asserted)`);
   }
+  return unapprovedVariants(
+    approved,
+    toSend.map((v) => v.label),
+  );
 }

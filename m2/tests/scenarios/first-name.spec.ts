@@ -4,6 +4,7 @@
  * special account states, Dev windows). Expected results are asserted only where the design evidences them.
  */
 import { isSuccess } from '../../src/assertions/pii.assertions';
+import { restoreFirstName } from '../../src/checks/context';
 import { scenario } from '../../src/checks/define';
 import { blockPrereq, PREREQ } from '../../src/prereq';
 import { expect, noteEvidence, test } from '../../src/fixtures/m2-fixtures';
@@ -164,19 +165,26 @@ test.describe('M2 scenarios — first name', () => {
 
   scenario('M2-FNAME-008', async (fx) => {
     const p = await fx.accounts.onboarded(0);
-    for (const value of ['  Qa  Name ', 'José', 'देवा', "D'Souza", 'Anne-Marie']) {
-      const res = await editFirstName(fx, p, value);
-      if (isSuccess(res.status)) {
-        const now = await names(fx, p);
-        expect(now.app === now.pii, 'app read and PII read are identical').toBe(true);
-        // From code (M2Q-06): the normalised value; lossy results are recorded as a possible defect.
-        if (/^[A-Za-z\s]+$/.test(value) || !/[A-Za-z]/.test(value))
-          expect(now.app === normalizeFirstName(value), 'stored as the normalised value').toBe(true);
-        else
-          noteEvidence(
-            `Lossy normalisation for a ${value.length}-character input (possible defect, M2Q-06).`,
-          );
+    // Shared onboarded account 0: its previous name is put back at the end (fix 2026-10-25), so a lossy or partial
+    // write never leaves app name ≠ PII name for later cases.
+    const previous = (await names(fx, p)).app;
+    try {
+      for (const value of ['  Qa  Name ', 'José', 'देवा', "D'Souza", 'Anne-Marie']) {
+        const res = await editFirstName(fx, p, value);
+        if (isSuccess(res.status)) {
+          const now = await names(fx, p);
+          expect(now.app === now.pii, 'app read and PII read are identical').toBe(true);
+          // From code (M2Q-06): the normalised value; lossy results are recorded as a possible defect.
+          if (/^[A-Za-z\s]+$/.test(value) || !/[A-Za-z]/.test(value))
+            expect(now.app === normalizeFirstName(value), 'stored as the normalised value').toBe(true);
+          else
+            noteEvidence(
+              `Lossy normalisation for a ${value.length}-character input (possible defect, M2Q-06).`,
+            );
+        }
       }
+    } finally {
+      await restoreFirstName(fx, p, previous);
     }
   });
 

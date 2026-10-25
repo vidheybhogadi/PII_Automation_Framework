@@ -30,7 +30,7 @@
     "m2:test:list": "playwright test --list --project=m2-api",
     "m2:report": "tsx reporting/generator/generate.ts --milestone m2",
     "m2:report:open": "tsx reporting/generator/tools.ts open --m2",
-    "m2:contracts:record": "M2_CONTRACTS_RECORD=true REPORTS_DIR=reports/m2-record playwright test --project=m2-api --workers=2 --grep \"-(CONTRACT|PARAM|BODY|STATE|REPEAT) \" ; tsx m2/scripts/m2-contracts-review.ts",
+    "m2:contracts:record": "M2_CONTRACTS_RECORD=true M2_PREONBOARD_SENDERS=8 REPORTS_DIR=reports/m2-record playwright test --project=m2-api --workers=2 --grep \"-(CONTRACT|PARAM|BODY|STATE|REPEAT) \" ; tsx m2/scripts/m2-contracts-review.ts",
     "m2:contracts:review": "tsx m2/scripts/m2-contracts-review.ts",
     "m2:accounts:cleanup": "tsx m2/scripts/m2-accounts-cleanup.ts",
     "m2:contracts:approve": "tsx m2/scripts/m2-contracts-approve.ts",

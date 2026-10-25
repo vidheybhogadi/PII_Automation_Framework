@@ -177,6 +177,12 @@ function itemsWith(
   return out;
 }
 
+/** How many female invite senders / partners the worker-start warm-up keeps ready (M2_PREONBOARD_SENDERS, 0…20). */
+export function preonboardSenders(env: NodeJS.ProcessEnv = process.env): number {
+  const n = Number(env.M2_PREONBOARD_SENDERS ?? 2);
+  return Number.isInteger(n) && n >= 0 ? Math.min(n, 20) : 2;
+}
+
 /**
  * The fake first name and email a suite-onboarded account i gets (deterministic per run, so a worker restarted in
  * the same run knows them too). Dev-provided accounts (M2_ONBOARDED_ACCOUNTS) have no known values.
@@ -404,7 +410,10 @@ export class Accounts {
    * it is still a normal active profile; once a case consumed it (deleted, reset or deactivated) a new one is made.
    * `keepDeactivated` re-uses a deactivated one (deactivated-state routes).
    */
-  async throwaway(key: string, opts: { keepDeactivated?: boolean } = {}): Promise<Profile> {
+  async throwaway(
+    key: string,
+    opts: { keepDeactivated?: boolean; reactivate?: boolean } = {},
+  ): Promise<Profile> {
     const usable = (st: { status: number; profileState: string | undefined }) =>
       st.status === 200 &&
       !(st.profileState && UNUSABLE_STATES.includes(st.profileState)) &&
@@ -412,7 +421,23 @@ export class Accounts {
     const poolKey = `${this.slot}:${key}`;
     const cached = this.throwaways.get(key) ?? (await this.pooledThrowaway(key));
     if (cached) {
-      const st = await ownState(this.sessions, cached);
+      let st = await ownState(this.sessions, cached);
+      // Deactivating routes (item 4, 2026-10-25): their throwaway is re-activated with activate_user, which restores
+      // the state it had before (approved — app/models/profile.rb:4591-4603, from code), instead of a new account.
+      if (opts.reactivate && st.status === 200 && st.profileState === 'deactivated') {
+        const act = await this.sessions.client.call('API-030', {
+          auth: AUTH.user(cached.token),
+          device: cached.device,
+          retry: false,
+        });
+        st = await ownState(this.sessions, cached);
+        const entry = this.ledger.find((e) => e.mobileNumber === cached.mobileNumber);
+        if (entry) {
+          entry.note =
+            `${entry.note ?? ''} (re-activated for re-use: HTTP ${act.status}, now ${st.profileState ?? `HTTP ${st.status}`})`.trim();
+          this.flush();
+        }
+      }
       if (usable(st)) {
         this.throwaways.set(key, cached);
         return cached;
@@ -538,6 +563,26 @@ export class Accounts {
         `${key}: ${PREREQ.approval.reason} (profile_state ${state ?? 'unknown'} ${Math.round((Date.now() - since) / 60_000)} min after the approval clock started)`,
       );
     return p;
+  }
+
+  /**
+   * An approved suite account (index 0, else 2 — both male) that still has daily invite requests left
+   * (fetch_own_info daily_requests_left; send_request does nothing without one — app/models/chat/request.rb:188-189,
+   * account/timer.rb:375-378, from code). None left → Blocked M2Q-32 with the counts seen (item 4, 2026-10-25).
+   */
+  async approvedWithRequestsLeft(order: number[] = [0, 2]): Promise<Profile> {
+    const seen: string[] = [];
+    for (const i of order) {
+      const p = await this.approved(i);
+      const own = await this.sessions.client.call('API-013', { auth: AUTH.user(p.token), device: p.device });
+      const left = Number(field(own.json(), 'daily_requests_left'));
+      if (Number.isFinite(left) && left > 0) return p;
+      seen.push(`account ${i}: ${Number.isFinite(left) ? left : 'unknown'}`);
+    }
+    return blockPrereq(
+      PREREQ.approval.id,
+      `No approved suite account with daily invite requests left (${seen.join(', ')}) — send_request would be a silent no-op`,
+    );
   }
 
   /** Onboarded account i once staging approved it (see waitApproved). */
@@ -683,6 +728,23 @@ export class Accounts {
    * Not possible → Blocked M2Q-32.
    */
   async requestId(receiver: Profile): Promise<string> {
+    const { requestId, how, key } = await this.pendingInvite(receiver);
+    test.info().annotations.push({
+      type: 'assumption',
+      description: `REQUEST_ID read from the receiver's all_requests entry for a suite sender account (key "${key}", ${how}).`,
+    });
+    return requestId;
+  }
+
+  /**
+   * A pending invite to `receiver` and the suite account that sent it (see requestId for the rules). Item 2 of
+   * 2026-10-25: the invite lists (all_requests, list_comments_*, list_request_and_likes) show the SENDER to the
+   * receiver — so the sender is the writer "A" those EXPOSE / CACHE cases need (chat/request.rb:182-192, 782-816,
+   * 885-888, develop_new 944f76a — from code, confirm with Dev; reply_message is never empty).
+   */
+  async pendingInvite(
+    receiver: Profile,
+  ): Promise<{ sender: Profile; requestId: string; how: string; key: string }> {
     await this.waitApproved(receiver, 'invite receiver');
     const gender: 'Male' | 'Female' = receiver.gender === 'Female' ? 'Male' : 'Female';
     const readList = async () =>
@@ -696,19 +758,16 @@ export class Accounts {
       const k = item && ['request_id', 'invite_id', 'invitation_id', 'id'].find((x) => item[x] != null);
       return item && k ? { id: String(item[k]), key: k } : undefined;
     };
-    const found = (id: { id: string; key: string }, how: string) => {
-      test.info().annotations.push({
-        type: 'assumption',
-        description: `REQUEST_ID read from the receiver's all_requests entry for a suite sender account (key "${id.key}", ${how}).`,
-      });
-      this.ownedIds.add(id.id);
-      return id.id;
-    };
     // 1. A request a known sender already sent that is still pending (not consumed) → re-use it.
     let list = await readList();
     for (const s of this.sendersOf(gender)) {
       const pending = idIn(list.json(), s.ref);
-      if (pending) return found(pending, 'pending request re-used');
+      if (pending) {
+        this.ownedIds.add(pending.id);
+        const sender = await this.loginSender(s, gender);
+        if (sender)
+          return { sender, requestId: pending.id, how: 'pending request re-used', key: pending.key };
+      }
     }
     // 2. A sender that never invited this receiver (pre-onboarded by warmUp, or a new one) sends a request.
     const sender = await this.inviteSender(gender, receiver.ref);
@@ -719,10 +778,7 @@ export class Accounts {
       body: { ref: receiver.ref, invitation_type: 'story', reply_message: 'QA synthetic request' },
       retry: false,
     });
-    writeRunPool(this.config.runId, (pool) => {
-      const x = (pool.senders[String(this.slot)] ?? []).find((y) => y.mobileNumber === sender.mobileNumber);
-      if (x && receiver.ref && !x.usedFor.includes(receiver.ref)) x.usedFor.push(receiver.ref);
-    });
+    this.markUsed(sender, receiver.ref);
     let id: { id: string; key: string } | undefined;
     for (let i = 0; i < 3 && !id; i++) {
       if (i) await new Promise((r) => setTimeout(r, 2_000));
@@ -734,11 +790,123 @@ export class Accounts {
         PREREQ.connected.id,
         `No invite from a suite sender account (send_request_to_profile HTTP ${sent.status}, all_requests HTTP ${list.status}, entry not listed or without an id)`,
       );
-    return found(id, 'new request');
+    this.ownedIds.add(id.id);
+    return { sender, requestId: id.id, how: 'new request', key: id.key };
+  }
+
+  /**
+   * An APPROVED suite account of the opposite gender to `other` that has had no interaction with it yet (no invite,
+   * like, pass or connection recorded in the run pool): a pooled sender, or a newly onboarded one. The interaction the
+   * caller is about to create is recorded at once (usedFor), so the account is never handed out for `other` again.
+   * Not approved in time → Blocked M2Q-32 (waitApproved). Item 2 / item 4 of 2026-10-25.
+   */
+  async partner(other: Profile, purpose: string): Promise<Profile> {
+    await this.waitApproved(other, `${purpose}: other side`);
+    const gender: 'Male' | 'Female' = other.gender === 'Female' ? 'Male' : 'Female';
+    const p = await this.inviteSender(gender, other.ref);
+    await this.waitApproved(p, `${purpose}: fresh partner`);
+    this.markUsed(p, other.ref);
+    return p;
+  }
+
+  /** Record that pooled sender `p` now has an interaction with the account `ref` (never handed out for it again). */
+  markUsed(p: { mobileNumber: string }, ref: string | undefined): void {
+    if (!ref) return;
+    writeRunPool(this.config.runId, (pool) => {
+      for (const list of Object.values(pool.senders)) {
+        const x = list.find((y) => y.mobileNumber === p.mobileNumber);
+        if (x && !x.usedFor.includes(ref)) x.usedFor.push(ref);
+      }
+    });
+  }
+
+  /** An id the suite's own accounts created (e.g. a share-link token) — allowed in later requests. */
+  addOwnedId(id: string): void {
+    this.ownedIds.add(id);
+  }
+
+  /**
+   * Every suite account of this RUN that the run pool knows by ref (onboarded, throwaways, senders — all slots), with
+   * its known fake values where the suite created it. `slot` tells whether it belongs to this worker's slot. Used to
+   * find which suite account already appears in a list another account reads (item 2, 2026-10-25).
+   */
+  poolAccounts(): {
+    mobileNumber: string;
+    deviceId: string;
+    ref: string;
+    known?: { firstName: string; email: string };
+    ownSlot: boolean;
+    label: string;
+  }[] {
+    const pool = readRunPool(this.config.runId);
+    const out = new Map<string, ReturnType<Accounts['poolAccounts']>[number]>();
+    const add = (
+      e: { mobileNumber: string; deviceId: string; ref: string | undefined; consumed?: boolean },
+      slot: string,
+      label: string,
+      known?: { firstName: string; email: string },
+    ) => {
+      if (!e.ref || e.consumed || deletedInRun(this.config.runId, e.mobileNumber)) return;
+      out.set(e.mobileNumber, {
+        mobileNumber: e.mobileNumber,
+        deviceId: e.deviceId,
+        ref: e.ref,
+        ...(known ? { known } : {}),
+        ownSlot: slot === String(this.slot),
+        label,
+      });
+    };
+    for (const [k, e] of Object.entries(pool.onboarded)) {
+      const [slot, i] = k.split(':');
+      // The GATE account (3) stays untouched by other checks; Dev-provided numbers are never in the pool.
+      if (Number(i) === 3) continue;
+      add(e, slot!, `onboarded ${i}`, onboardingValues(this.config.runId, Number(i)));
+    }
+    for (const [k, e] of Object.entries(pool.throwaways))
+      add(e, k.split(':')[0]!, `throwaway ${k.split(':').slice(1).join(':')}`, e.known);
+    for (const [slot, list] of Object.entries(pool.senders))
+      for (const e of list) add(e, slot, 'invite sender', e.known);
+    return [...out.values()];
+  }
+
+  /** Log into a run-pool account again (same number and device); undefined when it no longer has its profile. */
+  async loginPoolAccount(e: {
+    mobileNumber: string;
+    deviceId: string;
+    ref: string;
+    known?: { firstName: string; email: string };
+  }): Promise<Profile | undefined> {
+    const cached = [...this.profiles.values(), ...this.throwaways.values()].find(
+      (p) => p.mobileNumber === e.mobileNumber,
+    );
+    if (cached) return cached;
+    if (deletedInRun(this.config.runId, e.mobileNumber)) return undefined;
+    const s = await this.sessions.loginWithNumber(e.mobileNumber, e.deviceId);
+    if (s.applicationStage !== 'completed') {
+      const entry = this.record({
+        mobileNumber: e.mobileNumber,
+        deviceId: e.deviceId,
+        note: 're-login to a pooled account created a new account',
+      });
+      Object.assign(entry, { userId: s.userId, ref: s.ref, applicationStage: s.applicationStage });
+      this.own.set(s.mobileNumber, s);
+      this.flush();
+      return undefined;
+    }
+    const own = await this.sessions.client.call('API-013', { auth: AUTH.user(s.token), device: s.device });
+    const g = field(own.json(), 'gender');
+    const p: Profile = {
+      ...s,
+      ref: s.ref ?? e.ref,
+      gender: g === 'Male' || g === 'Female' ? g : undefined,
+      ...(e.known ? { known: e.known } : {}),
+    };
+    this.profiles.set(`pool-${e.mobileNumber}`, p);
+    return p;
   }
 
   /** Senders of `gender` this slot knows (run pool), logged in when first used. */
-  private sendersOf(gender: 'Male' | 'Female'): { ref: string | undefined; mobileNumber: string }[] {
+  private sendersOf(gender: 'Male' | 'Female'): (PooledAccount & { usedFor: string[] })[] {
     return (readRunPool(this.config.runId).senders[String(this.slot)] ?? []).filter(
       (s) => s.gender === gender && !s.consumed,
     );
@@ -754,29 +922,55 @@ export class Accounts {
         !deletedInRun(this.config.runId, s.mobileNumber),
     );
     if (pooled) {
-      const cached = this.profiles.get(`sender-${pooled.mobileNumber}`);
-      if (cached) return cached;
-      const s = await this.sessions.loginWithNumber(pooled.mobileNumber, pooled.deviceId);
-      if (s.applicationStage === 'completed') {
-        const p: Profile = { ...s, ref: s.ref ?? pooled.ref, gender, known: pooled.known };
-        this.profiles.set(`sender-${pooled.mobileNumber}`, p);
-        await this.requireActive(p, 'invite sender');
-        return p;
-      }
-      // The number no longer has its account (a login created a new one): track it and use a new sender.
-      const entry = this.record({
-        mobileNumber: pooled.mobileNumber,
-        deviceId: pooled.deviceId,
-        note: 're-login to a lost invite sender created a new account',
-      });
-      Object.assign(entry, { userId: s.userId, ref: s.ref, applicationStage: s.applicationStage });
-      this.flush();
-      writeRunPool(this.config.runId, (pool) => {
-        const x = (pool.senders[String(this.slot)] ?? []).find((y) => y.mobileNumber === pooled.mobileNumber);
-        if (x) x.consumed = true;
-      });
+      const p = await this.loginSender(pooled, gender);
+      if (p) return p;
     }
     return this.newSender(gender);
+  }
+
+  /**
+   * Log into a pooled sender again. When the number no longer has its account (a login created a new one): the new
+   * account is tracked, the sender is marked consumed and undefined is returned.
+   */
+  private async loginSender(
+    pooled: {
+      mobileNumber: string;
+      deviceId?: string;
+      ref: string | undefined;
+      known?: { firstName: string; email: string };
+    },
+    gender: 'Male' | 'Female',
+  ): Promise<Profile | undefined> {
+    const cached = this.profiles.get(`sender-${pooled.mobileNumber}`);
+    if (cached) return cached;
+    const deviceId =
+      pooled.deviceId ??
+      Object.values(readRunPool(this.config.runId).senders)
+        .flat()
+        .find((y) => y.mobileNumber === pooled.mobileNumber)?.deviceId;
+    if (!deviceId || deletedInRun(this.config.runId, pooled.mobileNumber)) return undefined;
+    const s = await this.sessions.loginWithNumber(pooled.mobileNumber, deviceId);
+    if (s.applicationStage === 'completed') {
+      const p: Profile = { ...s, ref: s.ref ?? pooled.ref, gender, known: pooled.known };
+      this.profiles.set(`sender-${pooled.mobileNumber}`, p);
+      await this.requireActive(p, 'invite sender');
+      return p;
+    }
+    // The number no longer has its account (a login created a new one): track it and use a new sender.
+    const entry = this.record({
+      mobileNumber: pooled.mobileNumber,
+      deviceId,
+      note: 're-login to a lost invite sender created a new account',
+    });
+    Object.assign(entry, { userId: s.userId, ref: s.ref, applicationStage: s.applicationStage });
+    this.flush();
+    writeRunPool(this.config.runId, (pool) => {
+      for (const list of Object.values(pool.senders)) {
+        const x = list.find((y) => y.mobileNumber === pooled.mobileNumber);
+        if (x) x.consumed = true;
+      }
+    });
+    return undefined;
   }
 
   /** Onboard a new invite sender of `gender` (its own gender's photo set) and keep it in the run pool. */
@@ -812,8 +1006,8 @@ export class Accounts {
   /**
    * Worker start (M2_CREATE_ACCOUNTS=true): onboard — once per slot and run — every account that needs staging's
    * approval, so the approval clock starts early and runs while other tests execute: pair accounts 0 (male) and
-   * 1 (female), account 2 (approved routes, role B), the GATE account 3, a female invite sender and the deactivation
-   * throwaway. Accounts already in the run pool are not touched (no request at all). Never throws; returns counts.
+   * 1 (female), account 2 (approved routes, role B), the GATE account 3, M2_PREONBOARD_SENDERS female invite senders
+   * (default 2) and the deactivation throwaway. Accounts already in the run pool are not touched (no request at all). Never throws; returns counts.
    * Off with M2_PREONBOARD=false.
    */
   async warmUp(): Promise<{ created: number; failed: number }> {
@@ -833,10 +1027,12 @@ export class Accounts {
       await run(!this.config.onboardedNumbers[i] && !pool.onboarded[`${this.slot}:${i}`], () =>
         this.ownOnboarded(i),
       );
-    await run(
-      !(pool.senders[String(this.slot)] ?? []).some((s) => s.gender === 'Female' && !s.consumed),
-      () => this.newSender('Female'),
-    );
+    // Female invite senders / partners for the male receivers 0 and 2 (invites, likes, passes — item 2 / item 4 of
+    // 2026-10-25): each one serves a receiver once, so M2_PREONBOARD_SENDERS (default 2; the contract recording run
+    // sets more) are onboarded early to start their approval clocks.
+    const want = preonboardSenders();
+    const have = (pool.senders[String(this.slot)] ?? []).filter((s) => s.gender === 'Female' && !s.consumed);
+    for (let n = have.length; n < want; n++) await run(true, () => this.newSender('Female'));
     await run(!pool.throwaways[`${this.slot}:${DEACTIVATION_KEY}`], () => this.throwaway(DEACTIVATION_KEY));
     if (r.created + r.failed) this.log.info('Pre-onboarded synthetic accounts', r);
     return r;

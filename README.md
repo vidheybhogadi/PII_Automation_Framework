@@ -86,7 +86,8 @@ PII_Automation_Framework/
 │   └── docs/                        backend-open-questions.md, coverage matrix, DB guides, test-cases.xlsx …
 │
 ├── m2/                            MILESTONE 2 — Aisle business APIs (user / web / CMS JWT, TEST_TOKEN)
-│   ├── tests/                       M2 specs (Playwright project m2-api, tag @m2) — none yet
+│   ├── tests/                       M2 specs (Playwright project m2-api, tag @m2) — 2,174 tests for 2,177 design cases
+│   ├── src/                         M2 client, accounts, per-API check runners (checks/), baselines
 │   ├── scripts/                     M2 design workbook generator + data
 │   └── docs/                        Dev API inventory (verbatim), m2-test-cases.xlsx, design summary
 │
