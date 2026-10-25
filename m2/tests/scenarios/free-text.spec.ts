@@ -145,9 +145,8 @@ test.describe('M2 scenarios — free text', () => {
     // C asks for the A–B conversation BY ITS ID (taken from the pair — an IDOR-style read), after the message is
     // readable by B; without the pair's id this part cannot be sent.
     const has = (body: string) => body.includes(t);
-    noteEvidence(
-      `B (a member) ${has(await readChatUntil(fx, b, a, has)) ? 'reads' : 'does not read (yet)'} the text before C asks.`,
-    );
+    const seenByB = has(await readChatUntil(fx, b, a, has));
+    noteEvidence(`B (a member) ${seenByB ? 'reads' : 'does not read (yet)'} the text before C asks.`);
     const conversationId = await fx.accounts.pairConversationId();
     if (!conversationId)
       blockPrereq(
@@ -156,10 +155,33 @@ test.describe('M2 scenarios — free text', () => {
       );
     for (const res of [await chat(fx, c, a, 1, conversationId), await call(fx, 'API-063', asUser(fx, c))])
       expect(res.rawText().includes(t), 'C never sees the A–B text').toBe(false);
-    const post = await sendMessage(fx, c, b, text(fx, 'intruder'));
-    expect(post.status >= 200 && post.status < 300, 'C cannot post to a ref it is not connected to').toBe(
-      false,
+    // messages/send always answers 200 {status:true} (messages_controller.rb:29-32); for a ref the sender is not
+    // connected to, send_message returns without storing anything (chat/conversation.rb:290) — develop_new 944f76a,
+    // from code, confirm with Dev (design question M2Q-48). So the status is recorded, and the check is that the
+    // intruder text never reaches B.
+    const intruder = text(fx, 'intruder');
+    const post = await sendMessage(fx, c, b, intruder);
+    noteEvidence(
+      `C → B (not connected): messages/send answered HTTP ${post.status} — recorded, not asserted (M2Q-48).`,
     );
+    const hasIntruder = (body: string) => body.includes(intruder);
+    // B's conversation list carries each conversation's last message, written at send time
+    // (update_message_info!, chat/conversation.rb:1100-1112, from code).
+    const list = await call(fx, 'API-063', asUser(fx, b, a));
+    expect(hasIntruder(list.rawText()), 'B’s conversation list never shows C’s intruder text').toBe(false);
+    noteEvidence(
+      `B’s conversation list ${list.rawText().includes(t) ? 'shows' : 'does not show'} A’s last message (shows the list carries last-message text).`,
+    );
+    // chat_messages is only a usable check when it shows sent messages at all (see M2-FT-001 / M2-FT-004).
+    if (seenByB)
+      expect(
+        hasIntruder(await readChatUntil(fx, b, a, hasIntruder)),
+        'B’s chat messages never contain C’s intruder text',
+      ).toBe(false);
+    else
+      noteEvidence(
+        'chat_messages showed no sent message (as in M2-FT-001 / M2-FT-004), so only the conversation list was checked.',
+      );
   });
 
   scenario('M2-FT-008', async (fx) => {

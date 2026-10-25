@@ -734,6 +734,18 @@ export const QUESTIONS: M2Question[] = [
     kind: 'Access / environment',
     apis: ['API-057', 'API-059'],
   },
+  {
+    id: 'M2Q-48',
+    topic: 'Chat send to an unconnected member',
+    question:
+      'POST /V1/messages/send answers 200 {status:true} even when the sender is not connected to the ref (seen on staging 2026-10-25, M2-FT-007). From code, send_message returns without storing anything when there is no conversation (or it is inactive), and the controller always renders {status:true}. Is a silent 200 the intended design, or should an unconnected / unknown ref be refused (e.g. 403 / 404)?',
+    why: 'A silent success hides refused sends from the client and from monitoring; QA can only check that the text never reaches the other member.',
+    evidence:
+      'Staging run 2026-10-25 (M2-FT-007: C → B not connected, HTTP 200). Aisle codebase (develop_new 944f76a, app/controllers/v1/messages_controller.rb:29-32; app/models/chat/conversation.rb:281-298) — from code, confirm with Dev.',
+    decision: 'Intended status for a send to an unconnected / unknown ref.',
+    kind: 'Contract / expected behaviour',
+    apis: ['API-187'],
+  },
 ];
 
 /**

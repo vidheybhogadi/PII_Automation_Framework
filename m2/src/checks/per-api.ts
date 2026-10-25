@@ -9,7 +9,7 @@ import type { ApiResponse } from '../../../core/http/api-response';
 import type { AnyCase } from '../../scripts/m2-all-cases';
 import { PII_INPUT, returnsOthers } from '../../scripts/m2-baseline';
 import { groupOf } from '../../scripts/m2-inventory';
-import { onboardingValues, type Profile } from '../accounts/accounts';
+import { extendTestTimeout, onboardingValues, type Profile } from '../accounts/accounts';
 import { isSuccess, PII_KEYS, scanResponse, unlistedPii } from '../assertions/pii.assertions';
 import { AUTH } from '../auth/credentials';
 import { testPhoneNumber } from '../auth/test-phone';
@@ -250,6 +250,40 @@ async function variantCaller(
   return FRESH_PER_VARIANT.includes(api.id) ? callerFor(api, fx) : caller;
 }
 
+/**
+ * Delete / reset routes (FRESH_PER_VARIANT): a 2xx variant legitimately consumes its own throwaway account — delete
+ * masks and deletes the user (user.rb:649-673), a reset deletes the user and moves the profile to a new one
+ * (user.rb:537-591; a refused reset answers 406, sessions_controller.rb:38-45) — develop_new 944f76a, from code,
+ * confirm with Dev. So "own profile unchanged" does not apply; instead each 2xx variant's account must be gone
+ * afterwards: its own profile read answers 401 (seen on staging after delete / reset, GATE runs 2026-10-25).
+ */
+interface GoneCheck {
+  label: string;
+  status: number;
+}
+
+/** After a 2xx reply of a delete / reset variant: the own-profile status of that variant's account (asserted later). */
+async function recordGone(
+  fx: CheckFixtures,
+  who: Caller,
+  res: ApiResponse,
+  label: string,
+  out: GoneCheck[],
+): Promise<void> {
+  if (!isSuccess(res.status) || !who.session) return;
+  const own = await fx.m2.call('API-013', { auth: AUTH.user(who.session.token), device: who.session.device });
+  fx.observe(`${label}: own profile afterwards`, own);
+  out.push({ label, status: own.status });
+}
+
+function expectGone(out: GoneCheck[]): void {
+  for (const g of out)
+    expect(
+      g.status,
+      `${g.label}: the successful delete / reset left that variant’s account gone (own profile 401)`,
+    ).toBe(401);
+}
+
 /** Top-level-or-nested request keys of the Dev example, without duplicates. */
 const keysOf = (c: AnyCase) => [...new Set(apiOf(c).requestKeys)];
 
@@ -275,6 +309,8 @@ export async function runParam(c: AnyCase, fx: CheckFixtures): Promise<void> {
   // name that write is a no-op — so "own profile unchanged" still proves that no variant changed anything else.
   const synthetic = { ...syntheticFor(fx, caller.session), ...(await currentName(fx, caller)) };
   const request = buildRequest(api, caller.values, synthetic);
+  const fresh = FRESH_PER_VARIANT.includes(api.id);
+  const gone: GoneCheck[] = [];
   const variants: Variant[] = keysOf(c).map((key) => ({
     label: `without ${key}`,
     // Safety (M2Q-46): a target / phone / login-OTP key is never removed — the variant is Blocked, not sent.
@@ -287,11 +323,13 @@ export async function runParam(c: AnyCase, fx: CheckFixtures): Promise<void> {
       const query = req.query
         ? Object.fromEntries(Object.entries(req.query).filter(([k]) => k !== key))
         : undefined;
-      return send(api, fx, who, {
+      const res = await send(api, fx, who, {
         ...(body !== undefined ? { body } : {}),
         ...(query ? { query } : {}),
         retry: false,
       });
+      if (fresh) await recordGone(fx, who, res, `without ${key}`, gone);
+      return res;
     },
   }));
   if (/:ref|:user_id/.test(api.path))
@@ -303,12 +341,12 @@ export async function runParam(c: AnyCase, fx: CheckFixtures): Promise<void> {
           synthetic,
         }),
     });
-  await unchangedAround(
-    fx,
-    caller,
-    () => withBaseline(c.id, ctxOf(fx), variants, (l, r) => (noServerError(l, r), noEcho(MARKERS(fx))(l, r))),
-    'missing / invalid parameters',
-  );
+  const run = () =>
+    withBaseline(c.id, ctxOf(fx), variants, (l, r) => (noServerError(l, r), noEcho(MARKERS(fx))(l, r)));
+  if (fresh) {
+    await run();
+    expectGone(gone);
+  } else await unchangedAround(fx, caller, run, 'missing / invalid parameters');
 }
 
 export async function runBody(c: AnyCase, fx: CheckFixtures): Promise<void> {
@@ -318,6 +356,14 @@ export async function runBody(c: AnyCase, fx: CheckFixtures): Promise<void> {
   const request = buildRequest(api, caller.values, syntheticFor(fx, caller.session));
   const base = (request.body ?? {}) as Record<string, unknown>;
   const marker = `QaBody${fx.data.firstName()}`;
+  const fresh = FRESH_PER_VARIANT.includes(api.id);
+  const gone: GoneCheck[] = [];
+  /** Send one variant as `who`; for delete / reset routes, record whether a 2xx left that account gone. */
+  const sendAs = async (who: Caller, label: string, opts: Parameters<typeof send>[3]) => {
+    const res = await send(api, fx, who, opts);
+    if (fresh) await recordGone(fx, who, res, label, gone);
+    return res;
+  };
   /** The variant's caller and its Dev body (rebuilt for a fresh throwaway account). */
   const target = async () => {
     const who = await variantCaller(api, fx, caller);
@@ -334,7 +380,7 @@ export async function runBody(c: AnyCase, fx: CheckFixtures): Promise<void> {
     {
       label: 'invalid JSON',
       send: async () =>
-        send(api, fx, (await target()).who, {
+        sendAs((await target()).who, 'invalid JSON', {
           rawBody: Buffer.from('{"broken": ', 'utf8'),
           retry: false,
         }),
@@ -343,7 +389,7 @@ export async function runBody(c: AnyCase, fx: CheckFixtures): Promise<void> {
       label: 'extra keys user_id / tenant_id / first_name',
       send: async () => {
         const t = await target();
-        return send(api, fx, t.who, {
+        return sendAs(t.who, 'extra keys user_id / tenant_id / first_name', {
           body: {
             ...t.body,
             user_id: `${fx.m2Config.runId}-other`,
@@ -364,25 +410,24 @@ export async function runBody(c: AnyCase, fx: CheckFixtures): Promise<void> {
       ...(unsafe ? { notSent: unsafe } : {}),
       send: async () => {
         const t = await target();
-        return send(api, fx, t.who, {
+        return sendAs(t.who, `${key} with the wrong type`, {
           body: { ...t.body, [key]: wrongTypeValue(key, t.body[key]) },
           retry: false,
         });
       },
     });
   }
-  await unchangedAround(
-    fx,
-    caller,
-    () =>
-      withBaseline(
-        c.id,
-        ctxOf(fx),
-        variants,
-        (l, r) => (noServerError(l, r), noEcho([marker, ...MARKERS(fx)])(l, r)),
-      ),
-    'malformed bodies (no PII written via unexpected keys)',
-  );
+  const run = () =>
+    withBaseline(
+      c.id,
+      ctxOf(fx),
+      variants,
+      (l, r) => (noServerError(l, r), noEcho([marker, ...MARKERS(fx)])(l, r)),
+    );
+  if (fresh) {
+    await run();
+    expectGone(gone);
+  } else await unchangedAround(fx, caller, run, 'malformed bodies (no PII written via unexpected keys)');
 }
 
 export async function runState(c: AnyCase, fx: CheckFixtures): Promise<void> {
@@ -493,11 +538,38 @@ export async function runHidden(c: AnyCase, fx: CheckFixtures): Promise<void> {
 }
 
 // ---- CACHE — PII change reflected in later reads ------------------------------------------------------------
+/** How long a CACHE case re-reads for the new name (≤ 45 s), the pause between reads, and the test-time margin. */
+export const CACHE_WINDOW_MS = 45_000;
+const CACHE_POLL_MS = 5_000;
+const CACHE_MARGIN_MS = 20_000;
+
+/**
+ * Routes that return the CALLER's own profile (no other member in the reply, no ref in the request), e.g.
+ * fetch_own_info, verify_user: the writer reads them itself — read by another user they would show that user.
+ */
+export const readsOwnProfile = (api: ReturnType<typeof apiOf>) =>
+  !returnsOthers(api) && !placeholdersIn(api).some((n) => n === 'REF' || n === 'OTHER_REF');
+
+/**
+ * CACHE (2026-10-25 fix): warm read → name change by A → re-read up to CACHE_WINDOW_MS.
+ * - Own-profile routes are read by A itself; routes about other members by B (TEST_TOKEN routes outside G1, e.g.
+ *   API-191 test_profile_list, with the TEST_TOKEN — Dev doc API-191).
+ * - The warm read must show A (A's current name or ref); a route that does not surface the writer to the reader is
+ *   Blocked (M2Q-32), never polled.
+ * - The writer's own reads and the G1 test routes must show the new name within the window: app writes update the
+ *   writer's PII cache at once, and the test write clears the caches (M2Q-12 answer, from code — confirm with Dev).
+ * - Another user's view has no propagation window in code (profile cache without TTL, M2Q-12 answer): the time is
+ *   recorded; not seen within the window → Blocked with that reason, never a silent pass.
+ * - Once seen, two more reads must still show it (no reversion).
+ */
 export async function runCache(c: AnyCase, fx: CheckFixtures): Promise<void> {
   const api = apiOf(c);
   const n2 = fx.data.firstName();
   let read: () => Promise<ApiResponse>;
   let change: () => Promise<ApiResponse>;
+  /** Whether the reply shows the writer A at all (checked on the warm read). */
+  let showsWriter: (res: ApiResponse) => boolean = () => true;
+  let mode: 'test route' | 'own profile' | 'other user' = 'test route';
   if (groupOf(api.id).key === 'G1') {
     const tt = await callerFor(api, fx);
     // The test-route write needs an existing app user (M2Q-40, from code): a suite-created onboarded account.
@@ -515,45 +587,78 @@ export async function runCache(c: AnyCase, fx: CheckFixtures): Promise<void> {
     change = () =>
       fx.m2.call('API-002', { auth: tt.auth, body: { user_id: userId, first_name: n2 }, retry: false });
   } else {
-    const [a, b] = await fx.accounts.connectedPair();
-    const viewer: Caller = {
-      label: 'user B',
-      auth: AUTH.user(b.token),
-      device: b.device,
-      session: b,
-      values: valuesFor(fx.m2Config, b, a),
+    const own = readsOwnProfile(api);
+    // Own-profile routes need no second account: A (suite account 0) writes and reads.
+    const [a, b] = own ? [await fx.accounts.onboarded(0), undefined] : await fx.accounts.connectedPair();
+    const writer: Caller = {
+      label: 'user A',
+      auth: AUTH.user(a.token),
+      device: a.device,
+      session: a,
+      values: valuesFor(fx.m2Config, a),
     };
-    read = () => send(api, fx, viewer, { values: { REF: a.ref } });
-    change = () =>
-      send(
-        apiById('API-058'),
-        fx,
-        {
-          label: 'user A',
-          auth: AUTH.user(a.token),
-          device: a.device,
-          session: a,
-          values: valuesFor(fx.m2Config, a),
-        },
-        { synthetic: { firstName: n2 } },
-      );
+    let reader: Caller;
+    if (own) {
+      mode = 'own profile';
+      reader = { ...writer, label: 'user A (own profile)' };
+    } else {
+      mode = 'other user';
+      reader = api.auth.includes('USER_TOKEN')
+        ? {
+            label: 'user B',
+            auth: AUTH.user(b!.token),
+            device: b!.device,
+            session: b!,
+            values: valuesFor(fx.m2Config, b!, a),
+          }
+        : await callerFor(api, fx); // the credential the route needs (e.g. API-191: TEST_TOKEN, Dev doc API-191)
+    }
+    read = () => send(api, fx, reader, own ? {} : { values: { REF: a.ref, OTHER_REF: a.ref } });
+    change = () => send(apiById('API-058'), fx, writer, { synthetic: { firstName: n2 } });
+    const n1 = (await currentName(fx, writer)).firstName;
+    showsWriter = (res) => {
+      const raw = res.rawText();
+      return Boolean((n1 && raw.includes(n1)) || (!own && a.ref && raw.includes(a.ref)));
+    };
   }
-  fx.observe(`${api.id} warm read`, await read());
+  const warm = await read();
+  fx.observe(`${api.id} warm read`, warm);
+  if (mode === 'own profile' && !(isSuccess(warm.status) && showsWriter(warm)))
+    blockPrereq(
+      'M2Q-12',
+      `${api.id}: the own-profile reply (HTTP ${warm.status}) does not carry the account’s current first name — nothing to compare`,
+    );
+  if (mode === 'other user' && !(isSuccess(warm.status) && showsWriter(warm)))
+    blockPrereq(
+      PREREQ.states.id,
+      `${api.id}: route does not surface the writer to the reader (warm read HTTP ${warm.status}, writer’s name / ref not in the reply) — needs connected / discoverable accounts (M2Q-32)`,
+    );
   const w = await change();
   fx.observe('name change', w);
   expect(isSuccess(w.status), `name change: ${w.summary()}`).toBe(true);
+  // The re-reads get their own time on top of the test's (window + margin), so the poll never hits the test timeout.
+  extendTestTimeout(CACHE_WINDOW_MS + CACHE_MARGIN_MS);
   const start = Date.now();
   let seenAt: number | undefined;
-  while (seenAt === undefined && Date.now() - start < 60_000) {
+  while (seenAt === undefined && Date.now() - start < CACHE_WINDOW_MS) {
     if ((await read()).rawText().includes(n2)) seenAt = Date.now() - start;
-    else await new Promise((r) => setTimeout(r, 5_000));
+    else await new Promise((r) => setTimeout(r, CACHE_POLL_MS));
   }
+  const window = `${CACHE_WINDOW_MS / 1000} s`;
   noteEvidence(
-    `New name ${seenAt === undefined ? 'not seen within 60 s' : `seen after ${Math.round(seenAt / 1000)} s`} (window: M2Q-12).`,
+    `${mode}: new name ${seenAt === undefined ? `not seen within ${window}` : `seen after ${Math.round(seenAt / 1000)} s`} (window: M2Q-12).`,
   );
-  if (seenAt !== undefined)
-    for (let i = 0; i < 2; i++)
-      expect((await read()).rawText().includes(n2), 'no reversion afterwards').toBe(true);
+  if (seenAt === undefined && mode === 'other user')
+    blockPrereq(
+      'M2Q-12',
+      `${api.id}: another user’s view did not show the new name within ${window}; from code the profile cache has no propagation window (M2Q-12 answer — confirm the expected time with Dev)`,
+    );
+  expect(
+    seenAt !== undefined,
+    `${api.id}: the new name is shown within ${window} (${mode}: updated at once per M2Q-12, from code)`,
+  ).toBe(true);
+  for (let i = 0; i < 2; i++)
+    expect((await read()).rawText().includes(n2), 'no reversion afterwards').toBe(true);
 }
 
 // ---- FIELD — PII input validation & normalisation -------------------------------------------------------------

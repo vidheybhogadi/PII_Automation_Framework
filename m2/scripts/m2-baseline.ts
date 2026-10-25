@@ -637,10 +637,11 @@ const RULES: Record<string, Rule> = {
         'Change the PII value through the app path.',
         'Re-send until the new value appears or the window expires.',
       ],
-      validate: 'New value within the agreed window; no reversion afterwards.',
+      validate:
+        'The warm read must show the writer (name or ref) — otherwise Blocked (M2Q-32), not polled. Own-profile routes are read by the writer, TEST_TOKEN routes with the TEST_TOKEN. New value within 45 s; no reversion afterwards.',
       why: 'Profile and FieldStore caches can keep stale PII.',
       expected:
-        'From code (M2Q-12): the writer’s own PII cache is updated at once; other users’ lists keep the cached profile name until the profile cache is rebuilt (no fixed window) — the time is recorded; a reversion after the new value appeared is a failure.',
+        'From code (M2Q-12): the writer’s own PII cache is updated at once, so the writer’s own reads and the test routes must show the new name within 45 s (else a failure); other users’ lists keep the cached profile name until the profile cache is rebuilt (no fixed window) — the time is recorded, and not seen within 45 s is Blocked with that reason; a reversion after the new value appeared is a failure.',
       evidence:
         'Dev doc cache notes (hydration keeps cached name when nil; proxy writes bypass invalidation).',
       db: API_ONLY,

@@ -2152,15 +2152,18 @@ export const CASES: M2Case[] = [
       'As C: messages/send with a ref C is not connected to.',
       'As C: list_connected_profiles.',
     ],
-    validate: 'C gets no A–B text (refused or empty); C cannot inject a message; C’s list has no A–B data.',
+    validate:
+      'C gets no A–B text (refused or empty); C’s list has no A–B data; C’s message to B never reaches B (B’s conversation list, and B’s chat messages when they show sent messages at all). The status of C’s send is recorded, not asserted (open design question on API-187 in the Dev Review sheet).',
     why: 'Chat content is the most sensitive free text; conversation ids are guessable numbers ("1" in Dev’s example).',
-    expected: 'Refused / empty for C, as on master; no A–B text.',
+    expected:
+      'Refused / empty for C, as on master; no A–B text. messages/send answers 200 {status:true} even for an unconnected ref and stores nothing (messages_controller.rb:29-32, chat/conversation.rb:290 — from code, confirm with Dev; open design question on API-187): C’s text never appears for B.',
     db: API_ONLY,
     deps: ['M2Q-03'],
     status: 'BLOCKED',
     automation: 'AUTOMATION BLOCKED',
     mode: 'API automation',
-    evidence: 'Access-control requirement; Dev example uses conversation_id "1".',
+    evidence:
+      'Access-control requirement; Dev example uses conversation_id "1". Staging 2026-10-25: C’s send to B (not connected) answered 200. Aisle codebase (develop_new 944f76a, messages_controller.rb:29-32; chat/conversation.rb:290, 1100-1112) — from code, confirm with Dev.',
   },
   {
     id: 'M2-FT-008',
