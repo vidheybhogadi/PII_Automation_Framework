@@ -9,23 +9,33 @@ and never contains personal data.
 
 The top bar links straight to each part (Summary · Problems · Endpoints · Tests · About) and highlights where you are.
 
-| Block                          | What it tells you                                                                                                                                                                                                                                                                                                                                      |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Summary**                    | A coloured banner: a status pill (“Needs attention”, “All clear”, “Service unreachable”, “Service not tested”), one plain sentence with the answer, four big numbers (Pass · Fail · Not Tested · Total) for **every** test case, one bar, “vs last run” and the **health score** speedometer (0–100%).                                                 |
-| **01 · What needs attention**  | One card per failure showing the endpoint (name, method, path), whether it is critical, and **Expected → Got** side by side. Below that, one card saying how many tests were **not tested** and why (not part of this run, waiting on Dev, skipped). If the service was unreachable you see **one** clear message instead of dozens of failures.       |
-| **02 · How each endpoint did** | Milestone 1: one tile per API endpoint (name, method and path) with a ring and a pass percentage, plus “Across endpoints”. Milestone 2: one tile per **API area** (G1–G10) with ring and passed / failed / blocked; click an area to open its endpoint tiles, then an endpoint (or “Show this area's tests”) to filter the list.                       |
-| **03 · All tests**             | The full list, **grouped under a heading per endpoint**: tabs (All · Fail · Not Tested · Pass), a one-line description under each test, search, a coloured edge on failed rows, and a small bar showing each test’s duration. Click any row to see **what the test does, why it matters, its steps and expected result**, then the result of this run. |
-| **04 · About this run**        | Environment, time, duration, typical response time, framework self-test result, leftover test data and commit.                                                                                                                                                                                                                                         |
+| Block                          | What it tells you                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Summary**                    | A coloured banner: a status pill (“Needs attention”, “All clear”, “Service unreachable”, “Service not tested”), one plain sentence with the answer, four big numbers (Pass · Fail · Not Tested · Total) for **every** test case, one bar, “vs last run” and the **health score** speedometer (0–100%).                                                                    |
+| **01 · What needs attention**  | One card per failure showing the endpoint (name, method, path), whether it is critical, and **Expected → Got** side by side. Below that, one card saying how many tests were **not tested** and why (not part of this run, waiting on Dev, skipped). If the service was unreachable you see **one** clear message instead of dozens of failures.                          |
+| **02 · How each endpoint did** | Milestone 1: one tile per API endpoint (name, method and path) with a ring and a pass percentage, plus “Across endpoints”. Milestone 2: one tile per **API area** (G1–G10) with ring and passed / failed / blocked. Names and paths are never cropped. Clicking a tile opens the **side panel** (see below).                                                              |
+| **03 · All tests**             | The full list, **grouped under a heading per endpoint** (or type / category / suite), with the filter bar described below, a one-line description under each test, a coloured edge on failed rows, and a small bar showing each test’s duration. Click any row to see **what the test does, why it matters, its steps and expected result**, then the result of this run. |
+| **04 · About this run**        | Environment, time, duration, typical response time, framework self-test result, leftover test data and commit.                                                                                                                                                                                                                                                            |
 
-**Filtering the test list.** _Group by_ `Endpoint | Type | Suite | Category | None` comes with a dependent _Show_
-picker that always starts with **All**: Type → Positive / Negative / Security / Database / Contract; Suite → Smoke /
-Regression; Category → the categories present (Milestone 2). For Endpoint, Milestone 2 has **Area** (G1–G10, names
-from `m2/scripts/m2-inventory.ts`) then a searchable **Endpoint** list of only that area's APIs (type method, path or
-action name); Milestone 1 has one searchable endpoint list. Every option shows its count and pass ✓ / fail ✗ / blocked ⛔
-(counts ignore the status tabs). Picking a value shows only that group; it combines with the status tabs and search.
-“Showing X of Y tests”, **Clear filters** and **Export current view (CSV)** (same columns as `results.csv`, only the
-shown tests) sit under the toolbar. The choice is kept in the URL hash (`#by=type&show=Positive`,
-`#area=G3&endpoint=API-011`, plus `status`, `q`, `test`), so a copied link opens the same view.
+**Filtering the test list.** Row 1 is one line on a desktop: **Group by** (`Endpoint | Type | Category | Suite |
+None`) · **Show** (only for Type / Suite / Category: All, then Positive / Negative / … ; Smoke / Regression; the
+categories present) · **Status** (All · Pass · Fail · Security finding · Blocked · Skipped · Not tested, plus Not
+applicable only when some test has it) · **Area** (Milestone 2, G1–G10, names from `m2/scripts/m2-inventory.ts`) ·
+**Endpoint** (only when Group by = Endpoint; searchable on method, path or action name, limited to the chosen area) ·
+search · **Export CSV** (same columns as `results.csv`, only the shown tests). Every option shows its name and count,
+e.g. “Positive (412)”; counts follow the other filters. Row 2 appears only while a filter is set: one removable chip
+per filter (“Type: Positive ✕”, “Status: Fail ✕”, “Area: G4 … ✕”, “Endpoint: POST /V1/like ✕”, “Search: “like” ✕”),
+“Showing X of Y tests” and **Clear all**. Long values end in “…” with the full text as a tooltip; the bar wraps on
+narrow screens. The view is kept in the URL hash (`#by=type&show=Positive`, `#area=G3&endpoint=API-011`, plus
+`status`, `q`, `test`), so a copied link opens the same view.
+
+**Side panel (endpoint explorer).** Clicking an area tile opens the right-side panel (same panel as test details):
+level 1 lists the area's endpoints (method, full path, action name, a small pass / fail / blocked bar, test count)
+with a “Filter endpoints…” box; level 2 shows one endpoint's tests grouped by type with a status dot; level 3 is the
+usual test details. A breadcrumb (“Area › Endpoint › Test”) and the back arrow go up one level; Escape closes the
+panel; focus stays inside it. **Show in test list** (levels 1 and 2) applies that area / endpoint as a chip on the main
+list and closes the panel. Milestone 1 (no areas) opens straight at level 2. The panel state is in the URL hash
+(`#panelArea=G3&panelEndpoint=API-011&test=…`), so it reopens on reload.
 
 Also on the page: light, dark and auto themes; six accent colours; a floating quick-action bar whose last button
 folds it away (back-to-top only appears once you scroll); and Export (PDF, Excel, raw CSV, JSON, Slack/ClickUp summary). The Excel file is built by the same code as

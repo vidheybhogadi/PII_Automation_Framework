@@ -14,6 +14,7 @@ import {
   prefersReducedMotion,
   storage,
   type Filters,
+  type Panel,
   type StatusFilter,
 } from './utils';
 
@@ -119,7 +120,7 @@ export function matches(t: ReportTest, f: Filters, groupBy: GroupBy, ignore: Ign
   return true;
 }
 
-/** Pass / fail (incl. security findings) / blocked tallies shown beside every picker option. */
+/** Pass / fail (incl. security findings) / blocked tallies (endpoint explorer bars). */
 export interface Tally {
   total: number;
   pass: number;
@@ -136,9 +137,6 @@ export function tally(tests: readonly ReportTest[]): Tally {
   }
   return out;
 }
-/** "(412) · 380 ✓ · 20 ✗ · 12 ⛔" — blocked only when there are some. */
-export const tallyText = (c: Tally): string =>
-  `(${c.total}) · ${c.pass} ✓ · ${c.fail} ✗${c.blocked ? ` · ${c.blocked} ⛔` : ''}`;
 
 const byId = (a: ReportTest, b: ReportTest) =>
   a.id.localeCompare(b.id, undefined, { numeric: true }) || a.title.localeCompare(b.title);
@@ -171,9 +169,19 @@ interface UiState {
   shortcuts: boolean;
   guide: boolean;
   methodology: boolean;
+  /** The test shown in the side panel (level 3 of the endpoint explorer when `panel` is set too). */
   drawer: string | null;
+  /** The endpoint explorer in the side panel: an area (level 1) or one endpoint (level 2). */
+  panel: Panel | null;
 }
-const CLOSED: UiState = { palette: false, shortcuts: false, guide: false, methodology: false, drawer: null };
+const CLOSED: UiState = {
+  palette: false,
+  shortcuts: false,
+  guide: false,
+  methodology: false,
+  drawer: null,
+  panel: null,
+};
 
 export interface AppState {
   report: ReportData;
@@ -207,7 +215,10 @@ export interface AppState {
   ui: UiState;
   setUi: (patch: Partial<UiState>) => void;
   closeTop: () => void;
+  /** Opens a test's details on its own (closes the endpoint explorer). */
   openTest: (key: string) => void;
+  /** Opens the endpoint explorer at an area (level 1) or an endpoint (level 2). */
+  openPanel: (panel: Panel) => void;
   toast: (text: string) => void;
   toasts: Toast[];
   isPrint: boolean;
@@ -235,7 +246,11 @@ export function AppProvider({
   const [filters, setFilters] = useState<Filters>(isPrint ? EMPTY_FILTERS : initial.filters);
   const [mode, setModeState] = useState<ThemeMode>(() => (storage.get('theme') as ThemeMode) || 'system');
   const [accent, setAccentState] = useState<Accent>(() => (storage.get('accent') as Accent) || 'azure');
-  const [ui, setUiState] = useState<UiState>({ ...CLOSED, drawer: isPrint ? null : initial.test });
+  const [ui, setUiState] = useState<UiState>({
+    ...CLOSED,
+    drawer: isPrint ? null : initial.test,
+    panel: isPrint ? null : initial.panel,
+  });
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [systemDark, setSystemDark] = useState(() => matchMedia('(prefers-color-scheme: dark)').matches);
   const resolvedTheme: 'light' | 'dark' = isPrint
@@ -301,12 +316,12 @@ export function AppProvider({
     return all.filter((t) => matches(t, filters, groupBy)).sort(compareFor(groupBy, areaRank));
   }, [all, filters, groupBy, areas]);
 
-  // Shareable URL: #by=type&show=Positive&area=…&endpoint=…&status=FAIL&q=…&test=<key>
+  // Shareable URL: #by=type&show=Positive&area=…&endpoint=…&status=FAIL&q=…&panelArea=…&panelEndpoint=…&test=<key>
   useEffect(() => {
     if (isPrint) return;
-    const h = buildHash(filters, ui.drawer, groupBy);
+    const h = buildHash(filters, ui.drawer, groupBy, ui.panel);
     if (h !== location.hash) history.replaceState(null, '', h || location.pathname + location.search);
-  }, [filters, ui.drawer, groupBy, isPrint]);
+  }, [filters, ui.drawer, ui.panel, groupBy, isPrint]);
 
   const setUi = useCallback((patch: Partial<UiState>) => setUiState((u) => ({ ...u, ...patch })), []);
   const toastId = useRef(0);
@@ -353,9 +368,12 @@ export function AppProvider({
     // Escape closes the top-most overlay only.
     closeTop: () =>
       setUiState((u) =>
-        u.palette || u.shortcuts || u.guide || u.methodology ? { ...CLOSED, drawer: u.drawer } : CLOSED,
+        u.palette || u.shortcuts || u.guide || u.methodology
+          ? { ...CLOSED, drawer: u.drawer, panel: u.panel }
+          : CLOSED,
       ),
-    openTest: (key) => setUiState((u) => ({ ...u, drawer: key, palette: false })),
+    openTest: (key) => setUiState((u) => ({ ...u, drawer: key, panel: null, palette: false })),
+    openPanel: (panel) => setUiState((u) => ({ ...u, panel, drawer: null, palette: false })),
     toast,
     toasts,
     isPrint,

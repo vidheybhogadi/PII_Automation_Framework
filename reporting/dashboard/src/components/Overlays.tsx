@@ -262,7 +262,9 @@ export function ShortcutsModal() {
 }
 
 export function GuideModal() {
-  const { setUi, isDemo } = useApp();
+  const { setUi, isDemo, all } = useApp();
+  // Not Applicable is explained only when some test has it (the M2 design has none).
+  const legend = OUTCOMES.filter((o) => o !== 'Not Applicable' || all.some((t) => outcomeOf(t) === o));
   return (
     <Modal title="How to read this report" icon="help" onClose={() => setUi({ guide: false })}>
       <div class="stack">
@@ -287,14 +289,15 @@ export function GuideModal() {
             <b>What needs attention</b> lists anything that failed or couldn’t run — start there.
           </li>
           <li>
-            <b>How each endpoint did</b> has one tile per API endpoint. Click a tile to see its test cases.
+            <b>How each endpoint did</b> has one tile per API endpoint (or API area). Click a tile to explore
+            its endpoints and test cases in the side panel.
           </li>
           <li>
             <b>All tests</b> is the full list, grouped under each endpoint. Click any test for details.
           </li>
         </ol>
         <ul class="outcome-legend">
-          {OUTCOMES.map((o) => (
+          {legend.map((o) => (
             <li key={o}>
               <OutcomeBadge outcome={o} />
               <span class="small">{OUTCOME_META[o].help}</span>

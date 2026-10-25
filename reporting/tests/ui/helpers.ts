@@ -9,7 +9,10 @@ export async function openReport(page: Page, dir: string, suffix = ''): Promise<
   page.on('console', (m) => {
     if (m.type() === 'error') errors.push(`console: ${m.text()}`);
   });
-  await page.goto(`${pathToFileURL(path.join(dir, 'index.html')).href}${suffix}`);
+  const url = pathToFileURL(path.join(dir, 'index.html')).href;
+  // Same page with another hash would only fire hashchange: start from a blank page so the report loads afresh.
+  if (page.url().split('#')[0] === url) await page.goto('about:blank');
+  await page.goto(`${url}${suffix}`);
   await page.waitForFunction(
     () => (globalThis as { __PII_READY__?: boolean }).__PII_READY__ === true,
     undefined,

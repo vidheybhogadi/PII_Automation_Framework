@@ -27,3 +27,5 @@ reporting/dashboard/dist/
 
 # Claude Code local lock file
 .claude/scheduled_tasks.lock
+# Claude Code temporary agent worktrees (full repo copies — never commit, never type-check)
+.claude/worktrees/

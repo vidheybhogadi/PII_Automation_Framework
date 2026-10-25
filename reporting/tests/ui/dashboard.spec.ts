@@ -40,6 +40,15 @@ test.describe('REPORT UI — at a glance', () => {
     await expect(page.getByRole('button', { name: /^Security finding: / })).toHaveCount(0);
     await expect(page.getByRole('button', { name: /^Not Applicable: / })).toHaveCount(0);
     await expect(page.locator('#attention .alert-card--na')).toHaveCount(0);
+    // No Not Applicable test → no Not applicable status option, chip or legend entry anywhere.
+    const status = page.locator('#tests').getByRole('combobox', { name: 'Status' });
+    await expect(status.locator('option[value="NOT_APPLICABLE"]')).toHaveCount(0);
+    await expect(page.locator('#attention .count-pill__item--na')).toHaveCount(0);
+    await page.getByRole('button', { name: 'How to read this report' }).click();
+    const guide = page.getByRole('dialog', { name: 'How to read this report' });
+    await expect(guide.locator('.outcome-legend .outcome--pass')).toHaveCount(1);
+    await expect(guide.locator('.outcome-legend .outcome--not-applicable')).toHaveCount(0);
+    await page.keyboard.press('Escape');
     await expect(page.getByRole('button', { name: `Total: ${c.total}` })).toBeVisible();
     await expect(page.getByRole('img', { name: /Test health \d+% out of 100%/ })).toBeVisible();
     for (const title of ['What needs attention', 'How each endpoint did', 'All tests', 'About this run']) {
@@ -88,8 +97,15 @@ test.describe('REPORT UI — at a glance', () => {
     await expect(tiles).toHaveCount(12); // 11 endpoints + "Across endpoints"
     await expect(page.locator('#endpoints')).toContainText('/api/v1/pii-test/read');
     await expect(page.locator('#endpoints')).not.toContainText('Security checks');
+    // The tile opens the side panel at the endpoint (Milestone 1 has no areas); "Show in test list" filters the list.
     await page.getByRole('button', { name: /^Read PII:/ }).click();
-    await expect(page.getByRole('button', { name: 'Remove endpoint filter Read PII' })).toBeVisible();
+    const panel = page.getByRole('dialog', { name: 'Read PII' });
+    await expect(panel).toBeVisible();
+    await panel.getByRole('button', { name: 'Show in test list' }).click();
+    await expect(panel).toBeHidden();
+    await expect(
+      page.getByRole('button', { name: 'Remove filter Endpoint: POST /api/v1/pii-test/read' }),
+    ).toBeVisible();
     const headings = page.locator('#tests tr.group-row');
     await expect(headings).toHaveCount(1);
     await expect(headings.first()).toContainText('Read PII');
@@ -111,10 +127,10 @@ test.describe('REPORT UI — at a glance', () => {
     await openReport(page, FIXTURES.demo);
     const tests = page.locator('#tests');
     const heads = tests.locator('tr.group-row');
-    const groupBy = (name: string) =>
-      tests.getByRole('group', { name: 'Group by' }).getByRole('button', { name, exact: true });
+    const select = tests.getByRole('combobox', { name: 'Group by' });
+    const groupBy = (label: string) => ({ click: () => select.selectOption({ label }) });
 
-    await expect(groupBy('Endpoint')).toHaveAttribute('aria-pressed', 'true'); // default
+    await expect(select).toHaveValue('endpoint'); // default
     await expect(heads.first()).toContainText('Health check');
 
     await groupBy('Type').click();
@@ -133,7 +149,7 @@ test.describe('REPORT UI — at a glance', () => {
     await page.waitForFunction(
       () => (window as unknown as { __PII_READY__?: boolean }).__PII_READY__ === true,
     );
-    await expect(groupBy('None')).toHaveAttribute('aria-pressed', 'true'); // remembered
+    await expect(select).toHaveValue('none'); // remembered
   });
 
   test('RPT-UI-004 test list: tabs, search, pagination, open details', async ({ page }) => {
@@ -143,9 +159,10 @@ test.describe('REPORT UI — at a glance', () => {
     await tests.scrollIntoViewIfNeeded();
     await expect(tests.locator('tbody tr[data-status]')).toHaveCount(20);
     await expect(tests.locator('.pagination')).toContainText(`1–20 of ${c.total}`);
-    await tests.getByRole('button', { name: /^Fail/ }).click();
+    const status = tests.getByRole('combobox', { name: 'Status' });
+    await status.selectOption('FAIL');
     await expect(tests.locator('tbody tr[data-status]')).toHaveCount(c.fail);
-    await tests.getByRole('button', { name: /^All/ }).click();
+    await status.selectOption('');
     await tests.getByRole('searchbox', { name: 'Search tests' }).fill('AUTH-018');
     await expect(tests.locator('tbody tr[data-status]')).toHaveCount(1);
     await tests.locator('tbody tr[data-status]').first().click();
@@ -315,33 +332,38 @@ test.describe('REPORT UI — statuses', () => {
     await expect(attention.locator('.alert-card--warn')).not.toContainText('BQ-05');
     await expect(attention.locator('.count-pill')).toContainText('1 not applicable');
 
-    // Test list: tabs in order, each row labelled with its status.
+    // Test list: the Status dropdown lists every status (Not applicable only because one test has it).
     const tests = page.locator('#tests');
-    const tabs = tests.getByRole('group', { name: 'Status' }).getByRole('button');
-    await expect(tabs).toHaveText([
-      /^All/,
-      /^Fail/,
-      /^Security finding/,
-      /^Blocked/,
-      /^Skipped/,
-      /^Not Applicable/,
-      /^Pass/,
+    const status = tests.getByRole('combobox', { name: 'Status' });
+    const labels = await status
+      .locator('option')
+      .evaluateAll((os) => os.map((o) => (o.textContent ?? '').replace(/ \(\d+\)$/, '')));
+    expect(labels).toEqual([
+      'All',
+      'Pass',
+      'Fail',
+      'Security finding',
+      'Blocked',
+      'Skipped',
+      'Not tested',
+      'Not applicable',
     ]);
-    await tabs.filter({ hasText: /^Security finding/ }).click();
+    const tabs = { pick: (value: string) => status.selectOption(value) };
+    await tabs.pick('FINDING');
     const rows = tests.locator('tbody tr[data-status]');
     await expect(rows).toHaveCount(1);
     await expect(rows.first()).toHaveAttribute('data-status', 'FINDING');
     await expect(rows.first().locator('.outcome--finding')).toHaveText('Security finding');
     await expect(rows.first()).toContainText('SECURITY FINDING (expected until Dev fixes it) — BQ-08');
-    await tabs.filter({ hasText: /^Skipped/ }).click();
+    await tabs.pick('SKIPPED');
     await expect(rows).toHaveCount(1);
     await expect(rows.first()).toContainText(sf.skipped.description);
-    await tabs.filter({ hasText: /^Blocked/ }).click();
+    await tabs.pick('BLOCKED');
     await expect(
       tests.locator('tbody tr[data-status="BLOCKED"]').filter({ hasText: sf.blocked.id }),
     ).toHaveCount(1);
     await expect(rows.filter({ hasText: sf.blocked.id })).toContainText('BLOCKED — BQ-01');
-    await tabs.filter({ hasText: /^Not Applicable/ }).click();
+    await tabs.pick('NOT_APPLICABLE');
     await expect(rows).toHaveCount(1);
     await expect(rows.first()).toHaveAttribute('data-status', 'NOT_APPLICABLE');
     await expect(rows.first().locator('.outcome--not-applicable')).toHaveText('Not Applicable');
@@ -351,7 +373,7 @@ test.describe('REPORT UI — statuses', () => {
     await page.keyboard.press('Escape');
 
     // Details panel: the finding is explained, not presented as an automation failure.
-    await tabs.filter({ hasText: /^Security finding/ }).click();
+    await tabs.pick('FINDING');
     await rows.first().click();
     const drawer = page.locator('.drawer');
     await expect(drawer).toContainText('Known security finding — expected to fail until Dev fixes it.');

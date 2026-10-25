@@ -1,13 +1,13 @@
 /**
- * "All tests" — every test in the suite, grouped by endpoint: Pass / Fail / Security finding / Blocked / Skipped /
- * Not Tested / Not Applicable (tab shown only when present), a one-line description, search.
+ * "All tests" — every test in the suite, grouped by endpoint (or type / category / suite), with a one-line filter
+ * bar (Group by · Show · Status · Area · Endpoint · search · Export CSV) and removable chips for the active filters.
  */
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { formatDuration, OUTCOMES, testOutcome, type Outcome } from '../../../core/analytics';
+import { formatDuration, testOutcome, type Outcome } from '../../../core/analytics';
 import { suiteOf } from '../../../core/catalog';
 import { testsToCsv } from '../../../core/exporters';
 import type { ReportTest } from '../../../core/types';
-import { EndpointCombobox, TallySelect, type EndpointOption, type ValueOption } from '../components/Pickers';
+import { EndpointCombobox, FilterSelect, type EndpointOption, type ValueOption } from '../components/Pickers';
 import { EmptyState, OUTCOME_META, OutcomeBadge, Section } from '../components/ui';
 import { Icon } from '../icons';
 import { byEndpoint, plainEndpoint, plainTitle } from '../plain';
@@ -20,24 +20,17 @@ import {
   outcomeMatches,
   outcomeOf,
   SUITE_ORDER,
-  tally,
   TYPE_ORDER,
   typeOf,
   useApp,
+  VALUE_DIMENSIONS,
   type GroupBy,
 } from '../store';
-import { download, isTypingTarget, type StatusFilter } from '../utils';
+import { download, isTypingTarget, type Filters, type StatusFilter } from '../utils';
 
 const PAGE = 20;
-/** All · Fail · Security finding · Blocked · Skipped · Not Tested · Not Applicable · Pass (the OUTCOMES order). */
-const TABS: { label: string; outcome: Outcome | null; statuses: StatusFilter[] }[] = [
-  { label: 'All', outcome: null, statuses: [] },
-  ...OUTCOMES.map((o) => ({ label: o, outcome: o, statuses: [OUTCOME_FILTER[o]] })),
-];
 /** Outcomes of tests that really ran (they have a meaningful duration). */
 const RAN: readonly Outcome[] = ['Pass', 'Fail', 'Security finding'];
-/** Tabs always shown; the others appear only when some test has that status. */
-const ALWAYS: readonly (Outcome | null)[] = [null, 'Fail', 'Pass'];
 
 const TYPE_HEAD: Record<string, { icon: string; note: string }> = {
   Positive: { icon: 'check', note: 'Normal use works as expected' },
@@ -80,17 +73,79 @@ const groupTests = (tests: readonly ReportTest[], key: (t: ReportTest) => string
   return m;
 };
 
-/**
- * The "Show" picker for the current Group by dimension. Type / Suite / Category: one list (All + each value).
- * Endpoint: Milestone 2 has Area (G1–G10) then Endpoint (only that area's endpoints); Milestone 1 has one searchable
- * endpoint list. Counts ignore the status tabs, so each option shows its full pass / fail / blocked split.
- */
-function ShowPicker() {
-  const { all, filters, setFilters, groupBy, areas, endpointList } = useApp();
+/** The Status dropdown, in reading order. Not applicable is listed only when some test has it. */
+const STATUS_ORDER: readonly Outcome[] = [
+  'Pass',
+  'Fail',
+  'Security finding',
+  'Blocked',
+  'Skipped',
+  'Not Tested',
+  'Not Applicable',
+];
+const STATUS_LABEL: Record<Outcome, string> = {
+  Pass: 'Pass',
+  Fail: 'Fail',
+  'Security finding': 'Security finding',
+  Blocked: 'Blocked',
+  Skipped: 'Skipped',
+  'Not Tested': 'Not tested',
+  'Not Applicable': 'Not applicable',
+};
+const OUTCOME_OF_TOKEN = Object.fromEntries(
+  Object.entries(OUTCOME_FILTER).map(([o, token]) => [token, o]),
+) as Record<string, Outcome>;
+/** "Fail", or "Fail + Blocked" for an older multi-status link. */
+const statusLabel = (statuses: readonly StatusFilter[]): string =>
+  statuses
+    .map((s) => {
+      const o = OUTCOME_OF_TOKEN[s] ?? (s === 'FIXME' ? 'Blocked' : s === 'UNKNOWN' ? 'Not Tested' : null);
+      return o ? STATUS_LABEL[o] : s;
+    })
+    .join(' + ');
+const DIMENSION_LABEL: Record<GroupBy, string> = {
+  endpoint: 'Endpoint',
+  type: 'Type',
+  category: 'Category',
+  suite: 'Suite',
+  none: 'None',
+};
 
-  const values = useMemo((): ValueOption[] | null => {
-    if (groupBy !== 'type' && groupBy !== 'suite' && groupBy !== 'category') return null;
-    const base = all.filter((t) => matches(t, filters, groupBy, { statuses: true, show: true }));
+interface Chip {
+  key: string;
+  label: string;
+  value: string;
+  remove: (f: Filters) => Filters;
+}
+
+/**
+ * Row 1: Group by · Show (Type / Suite / Category values) · Status · Area (Milestone 2) · Endpoint (Group by =
+ * Endpoint) · search · Export CSV. Row 2 (only while a filter is set): one removable chip per filter, "Showing X of
+ * Y" and Clear all. Every count respects the other filters, never the picker's own choice.
+ */
+function FilterBar({ searchRef }: { searchRef: preact.RefObject<HTMLInputElement> }) {
+  const {
+    all,
+    list,
+    filters,
+    setFilters,
+    groupBy,
+    setGroupBy,
+    areas,
+    endpointList,
+    clearFilters,
+    report,
+    toast,
+  } = useApp();
+  const valueDim = VALUE_DIMENSIONS.includes(groupBy);
+
+  const groupOptions: ValueOption[] = GROUP_BY_OPTIONS.filter(
+    (o) => o.value !== 'category' || all.some((t) => t.info?.category),
+  ).map((o) => ({ value: o.value, label: o.label }));
+
+  const showOptions = useMemo((): ValueOption[] | null => {
+    if (!valueDim) return null;
+    const base = all.filter((t) => matches(t, filters, groupBy, { show: true }));
     const by = groupTests(base, (t) => groupKeyOf(t, groupBy));
     const present = [...new Set(all.map((t) => groupKeyOf(t, groupBy)))];
     let keys: string[];
@@ -106,29 +161,47 @@ function ShowPicker() {
     }
     if (filters.show && !keys.includes(filters.show)) keys.push(filters.show); // e.g. from an old shared link
     return [
-      { value: '', label: 'All', tally: tally(base) },
-      ...keys.map((k) => ({ value: k, label: k, tally: tally(by.get(k) ?? []) })),
+      { value: '', label: 'All', count: base.length },
+      ...keys.map((k) => ({ value: k, label: k, count: by.get(k)?.length ?? 0 })),
     ];
+  }, [all, filters, groupBy, valueDim]);
+
+  const statusOptions = useMemo((): ValueOption[] => {
+    const base = all.filter((t) => matches(t, filters, groupBy, { statuses: true }));
+    const n = (o: Outcome) => base.filter((t) => outcomeOf(t) === o).length;
+    const naInSuite = all.some((t) => outcomeOf(t) === 'Not Applicable');
+    const opts: ValueOption[] = [
+      { value: '', label: 'All', count: base.length },
+      ...STATUS_ORDER.filter(
+        (o) => o !== 'Not Applicable' || naInSuite || filters.statuses.includes(OUTCOME_FILTER[o]),
+      ).map((o) => ({ value: OUTCOME_FILTER[o], label: STATUS_LABEL[o], count: n(o) })),
+    ];
+    const current = filters.statuses.join(',');
+    if (current && !opts.some((o) => o.value === current))
+      opts.push({
+        value: current,
+        label: statusLabel(filters.statuses),
+        count: base.filter((t) => outcomeMatches(outcomeOf(t), filters.statuses)).length,
+      });
+    return opts;
   }, [all, filters, groupBy]);
+
+  const areaOfEndpoint = (key: string) =>
+    areas.find((a) => a.endpoints.some((e) => e.key === key))?.key ?? '';
+  const areaOptions = useMemo((): ValueOption[] => {
+    if (!areas.length) return [];
+    const base = all.filter((t) => matches(t, filters, groupBy, { area: true, endpoint: true }));
+    const by = groupTests(base, (t) => t.apiArea ?? '');
+    return [
+      { value: '', label: 'All areas', count: base.length },
+      ...areas.map((a) => ({ value: a.key, label: `${a.key} ${a.name}`, count: by.get(a.key)?.length ?? 0 })),
+    ];
+  }, [all, filters, groupBy, areas]);
 
   const endpointPicker = useMemo(() => {
     if (groupBy !== 'endpoint') return null;
-    const areaOfEndpoint = (key: string) =>
-      areas.find((a) => a.endpoints.some((e) => e.key === key))?.key ?? '';
-    const forAreas = all.filter((t) =>
-      matches(t, filters, groupBy, { statuses: true, area: true, endpoint: true }),
-    );
-    const areaBy = groupTests(forAreas, (t) => t.apiArea ?? '');
-    const areaOptions: ValueOption[] = [
-      { value: '', label: 'All areas', tally: tally(forAreas) },
-      ...areas.map((a) => ({
-        value: a.key,
-        label: `${a.key} ${a.name}`,
-        tally: tally(areaBy.get(a.key) ?? []),
-      })),
-    ];
-    const forEndpoints = all.filter((t) => matches(t, filters, groupBy, { statuses: true, endpoint: true }));
-    const epBy = groupTests(forEndpoints, (t) => groupKeyOf(t, 'endpoint'));
+    const base = all.filter((t) => matches(t, filters, groupBy, { endpoint: true }));
+    const by = groupTests(base, (t) => groupKeyOf(t, 'endpoint'));
     const inArea = all.filter((t) => !filters.area || t.apiArea === filters.area);
     const options: EndpointOption[] = byEndpoint(inArea).map(({ endpoint }) => {
       const p = plainEndpoint(endpoint, endpointList);
@@ -137,85 +210,176 @@ function ShowPicker() {
         method: p.method,
         path: p.path,
         name: endpoint === p.name || !p.path.startsWith('/') ? p.name : `${p.name} · ${endpoint}`,
-        tally: tally(epBy.get(endpoint) ?? []),
+        count: by.get(endpoint)?.length ?? 0,
       };
     });
     const area = areas.find((a) => a.key === filters.area);
     return {
-      areaOptions,
       options,
       allLabel: area ? `All in ${area.key} ${area.name}` : 'All endpoints',
-      allTally: tally(forEndpoints),
-      areaOfEndpoint,
+      allCount: base.length,
     };
   }, [all, filters, groupBy, areas, endpointList]);
 
-  if (values)
-    return (
-      <TallySelect
-        label="Show"
-        value={filters.show}
-        options={values}
-        onChange={(v) => setFilters((f) => ({ ...f, show: v }))}
-      />
-    );
-  if (!endpointPicker) return null;
-  const ep = endpointPicker;
+  const chips = useMemo((): Chip[] => {
+    const out: Chip[] = [];
+    if (filters.show && valueDim)
+      out.push({
+        key: 'show',
+        label: DIMENSION_LABEL[groupBy],
+        value: filters.show,
+        remove: (f) => ({ ...f, show: '' }),
+      });
+    if (filters.statuses.length)
+      out.push({
+        key: 'status',
+        label: 'Status',
+        value: statusLabel(filters.statuses),
+        remove: (f) => ({ ...f, statuses: [] }),
+      });
+    if (filters.area) {
+      const a = areas.find((x) => x.key === filters.area);
+      out.push({
+        key: 'area',
+        label: 'Area',
+        value: a ? `${a.key} ${a.name}` : filters.area,
+        remove: (f) => ({ ...f, area: '' }),
+      });
+    }
+    if (filters.endpoint) {
+      const p = plainEndpoint(filters.endpoint, endpointList);
+      out.push({
+        key: 'endpoint',
+        label: 'Endpoint',
+        value: p.path.startsWith('/') ? `${p.method} ${p.path}` : p.name,
+        remove: (f) => ({ ...f, endpoint: '' }),
+      });
+    }
+    if (filters.q)
+      out.push({ key: 'q', label: 'Search', value: `“${filters.q}”`, remove: (f) => ({ ...f, q: '' }) });
+    return out;
+  }, [filters, groupBy, valueDim, areas, endpointList]);
+
+  const exportView = () => {
+    const base = `pii-report-${report.run.runId}-view`.replace(/[^a-z0-9-]+/gi, '-');
+    // The same columns as results.csv (already-sanitized report data), only the tests in the current view.
+    download(`${base}.csv`, testsToCsv(list), 'text/csv');
+    toast(`Exported ${list.length} test${list.length === 1 ? '' : 's'} (current view)`);
+  };
+
   return (
-    <div class="pickers" role="group" aria-label="Show">
-      {areas.length > 0 && (
-        <TallySelect
-          label="Area"
-          value={filters.area}
-          options={ep.areaOptions}
+    <div class="filters no-print">
+      <div class="filter-bar" role="group" aria-label="Test filters">
+        <FilterSelect
+          label="Group by"
+          value={groupBy}
+          options={groupOptions}
+          onChange={(v) => setGroupBy(v as GroupBy)}
+        />
+        {showOptions && (
+          <FilterSelect
+            label="Show"
+            value={filters.show}
+            options={showOptions}
+            onChange={(v) => setFilters((f) => ({ ...f, show: v }))}
+          />
+        )}
+        <FilterSelect
+          label="Status"
+          value={filters.statuses.join(',')}
+          options={statusOptions}
           onChange={(v) =>
-            setFilters((f) => ({
-              ...f,
-              area: v,
-              // An endpoint outside the newly chosen area no longer applies.
-              endpoint: v && f.endpoint && ep.areaOfEndpoint(f.endpoint) !== v ? '' : f.endpoint,
-            }))
+            setFilters((f) => ({ ...f, statuses: v.split(',').filter(Boolean) as StatusFilter[] }))
           }
         />
+        {areas.length > 0 && (
+          <FilterSelect
+            label="Area"
+            wide
+            value={filters.area}
+            options={areaOptions}
+            onChange={(v) =>
+              setFilters((f) => ({
+                ...f,
+                area: v,
+                // An endpoint outside the newly chosen area no longer applies.
+                endpoint: v && f.endpoint && areaOfEndpoint(f.endpoint) !== v ? '' : f.endpoint,
+              }))
+            }
+          />
+        )}
+        {endpointPicker && (
+          <EndpointCombobox
+            label="Endpoint"
+            allLabel={endpointPicker.allLabel}
+            allCount={endpointPicker.allCount}
+            value={filters.endpoint}
+            options={endpointPicker.options}
+            onChange={(key) =>
+              setFilters((f) => ({
+                ...f,
+                endpoint: key,
+                // Picking an endpoint under "All areas" narrows the area to the endpoint's own.
+                area: key && !f.area ? areaOfEndpoint(key) : f.area,
+              }))
+            }
+          />
+        )}
+        <label class="search">
+          <Icon name="search" size={16} />
+          <input
+            ref={searchRef}
+            type="search"
+            placeholder="Search tests…  ( / )"
+            aria-label="Search tests"
+            value={filters.q}
+            onInput={(e) => setFilters((f) => ({ ...f, q: (e.target as HTMLInputElement).value }))}
+          />
+        </label>
+        {chips.length === 0 && (
+          <span class="filter-count small muted" role="status">
+            <strong class="tabular">{all.length}</strong> tests
+          </span>
+        )}
+        <button
+          class="btn btn--sm filter-bar__export"
+          disabled={list.length === 0}
+          onClick={exportView}
+          title="Download the tests in the current view as CSV"
+        >
+          <Icon name="csv" size={14} /> Export CSV
+        </button>
+      </div>
+      {chips.length > 0 && (
+        <div class="filter-chips" role="group" aria-label="Active filters">
+          {chips.map((c) => (
+            <button
+              key={c.key}
+              class="chip filter-chip"
+              aria-label={`Remove filter ${c.label}: ${c.value}`}
+              title={`${c.label}: ${c.value} — click to remove`}
+              onClick={() => setFilters(c.remove)}
+            >
+              <span class="filter-chip__label">{c.label}:</span>
+              <span class="filter-chip__value">{c.value}</span>
+              <Icon name="x" size={12} />
+            </button>
+          ))}
+          <span class="filter-count small muted" role="status">
+            Showing <strong class="tabular">{list.length}</strong> of{' '}
+            <span class="tabular">{all.length}</span> tests
+          </span>
+          <button class="btn btn--sm btn--ghost" onClick={clearFilters}>
+            <Icon name="x" size={14} /> Clear all
+          </button>
+        </div>
       )}
-      <EndpointCombobox
-        label="Endpoint"
-        allLabel={ep.allLabel}
-        allTally={ep.allTally}
-        value={filters.endpoint}
-        options={ep.options}
-        onChange={(key) =>
-          setFilters((f) => ({
-            ...f,
-            endpoint: key,
-            // Picking an endpoint under "All areas" narrows the area to the endpoint's own.
-            area: key && !f.area ? ep.areaOfEndpoint(key) : f.area,
-          }))
-        }
-      />
     </div>
   );
 }
 
 export function TestList() {
-  const {
-    report,
-    service,
-    all,
-    list,
-    filters,
-    setFilters,
-    openTest,
-    isPrint,
-    ui,
-    groupBy,
-    setGroupBy,
-    areas,
-    endpointList,
-    filtered,
-    clearFilters,
-    toast,
-  } = useApp();
+  const { service, all, list, filters, openTest, isPrint, ui, groupBy, endpointList } = useApp();
   const anyOverlay = ui.palette || ui.shortcuts || ui.guide || ui.methodology;
   // The page belongs to the current filters: new filters start at page 1 in the same render (no reset
   // effect that could race a quick ← / → key press).
@@ -224,7 +388,7 @@ export function TestList() {
   // Always read the latest filters / page count, even from a key listener registered one render ago.
   const latest = useRef({ filters, pages: 1, blocked: false });
   latest.current.filters = filters;
-  latest.current.blocked = Boolean(ui.drawer) || anyOverlay;
+  latest.current.blocked = Boolean(ui.drawer || ui.panel) || anyOverlay;
   const setPage = (next: (p: number) => number) =>
     setPaging((cur) => {
       const f = latest.current.filters;
@@ -254,7 +418,6 @@ export function TestList() {
   }, []);
 
   const sorted = list;
-  // PDF: every non-passing test plus up to 150 passing ones (the full list is in results.csv).
   // PDF: every non-passing test plus up to 150 passing ones, still grouped by endpoint (full list: results.csv).
   const rows = useMemo(() => {
     if (!isPrint) return sorted.slice(page * PAGE, page * PAGE + PAGE);
@@ -282,19 +445,6 @@ export function TestList() {
     for (const t of sorted) m.set(groupKeyOf(t, groupBy), (m.get(groupKeyOf(t, groupBy)) ?? 0) + 1);
     return m;
   }, [sorted, groupBy]);
-  const count = (st: StatusFilter[]) => all.filter((t) => outcomeMatches(outcomeOf(t), st)).length;
-  const activeTab = TABS.findIndex((t) => t.statuses.join() === filters.statuses.join());
-  const tabs = TABS.map((t, i) => ({ ...t, i, n: count(t.statuses) })).filter(
-    (t) => ALWAYS.includes(t.outcome) || t.n > 0 || t.i === activeTab,
-  );
-  const endpointName = filters.endpoint ? plainEndpoint(filters.endpoint, endpointList).name : '';
-  const area = groupBy !== 'endpoint' ? areas.find((a) => a.key === filters.area) : undefined;
-  const exportView = () => {
-    const base = `pii-report-${report.run.runId}-view`.replace(/[^a-z0-9-]+/gi, '-');
-    // The same columns as results.csv (already-sanitized report data), only the tests in the current view.
-    download(`${base}.csv`, testsToCsv(list), 'text/csv');
-    toast(`Exported ${list.length} test${list.length === 1 ? '' : 's'} (current view)`);
-  };
   // Longest executed test — scales the small time bars.
   const slowest = useMemo(
     () =>
@@ -314,79 +464,7 @@ export function TestList() {
       sub={`${all.length} test cases${groupBy === 'none' ? ', sorted by ID' : `, grouped by ${groupBy === 'type' ? 'test type' : groupBy}`}. Click any row to see what it does and why.`}
     >
       <div class="glass glass--pad test-card">
-        <div class="list-tools no-print">
-          <div class="groupby" role="group" aria-label="Group by">
-            <span class="groupby__label">Group by</span>
-            <div class="seg">
-              {GROUP_BY_OPTIONS.filter(
-                (o) => o.value !== 'category' || all.some((t) => t.info?.category),
-              ).map((o) => (
-                <button key={o.value} aria-pressed={groupBy === o.value} onClick={() => setGroupBy(o.value)}>
-                  {o.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <ShowPicker />
-        </div>
-        <div class="list-tools no-print">
-          <div class="seg" role="group" aria-label="Status">
-            {tabs.map((t) => (
-              <button
-                key={t.label}
-                aria-pressed={activeTab === t.i}
-                onClick={() => setFilters((f) => ({ ...f, statuses: t.statuses }))}
-              >
-                {t.label} <span class="seg__count">{t.n}</span>
-              </button>
-            ))}
-          </div>
-          {area && (
-            <button
-              class="chip"
-              aria-pressed="true"
-              onClick={() => setFilters((f) => ({ ...f, area: '' }))}
-              aria-label={`Remove area filter ${area.key} ${area.name}`}
-            >
-              {area.key} {area.name} <Icon name="x" size={12} />
-            </button>
-          )}
-          {endpointName && (
-            <button
-              class="chip"
-              aria-pressed="true"
-              onClick={() => setFilters((f) => ({ ...f, endpoint: '' }))}
-              aria-label={`Remove endpoint filter ${endpointName}`}
-            >
-              {endpointName} <Icon name="x" size={12} />
-            </button>
-          )}
-          <label class="search">
-            <Icon name="search" size={16} />
-            <input
-              ref={searchRef}
-              type="search"
-              placeholder="Search tests…  ( / )"
-              aria-label="Search tests"
-              value={filters.q}
-              onInput={(e) => setFilters((f) => ({ ...f, q: (e.target as HTMLInputElement).value }))}
-            />
-          </label>
-        </div>
-        <div class="view-bar no-print">
-          <span class="small muted" role="status">
-            Showing <strong class="tabular">{list.length}</strong> of{' '}
-            <span class="tabular">{all.length}</span> tests
-          </span>
-          <div class="row">
-            <button class="btn btn--sm" disabled={!filtered} onClick={clearFilters}>
-              <Icon name="x" size={14} /> Clear filters
-            </button>
-            <button class="btn btn--sm" disabled={list.length === 0} onClick={exportView}>
-              <Icon name="csv" size={14} /> Export current view (CSV)
-            </button>
-          </div>
-        </div>
+        <FilterBar searchRef={searchRef} />
 
         {rows.length === 0 ? (
           <EmptyState icon="search" title="No tests match">

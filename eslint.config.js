@@ -12,6 +12,7 @@ module.exports = tseslint.config(
       'test-results/',
       'playwright-report/',
       'reporting/dashboard/dist/',
+      '.claude/worktrees/',
     ],
   },
   js.configs.recommended,

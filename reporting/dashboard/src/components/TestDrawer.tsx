@@ -1,5 +1,10 @@
-/** Test details — plain language first, technical detail below. Only sanitized metadata is ever shown. */
+/**
+ * The right-side panel: test details (plain language first, technical detail below — only sanitized metadata is ever
+ * shown) or the endpoint explorer (area → endpoint → test, see EndpointExplorer). One dialog with a focus trap;
+ * Escape closes it, the back arrow goes up one level.
+ */
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'preact/hooks';
+import type { ReportTest } from '../../../core/types';
 import {
   analyzeFailure,
   FAILURE_PATTERNS,
@@ -14,6 +19,14 @@ import { endpointOf, plainEndpoint, plainTitle } from '../plain';
 import { useApp } from '../store';
 import { copyText, fmtDateTime, isTypingTarget } from '../utils';
 import { CopyButton, KV, Method, OutcomeBadge, RequestId } from './ui';
+import {
+  areaLabel,
+  Crumbs,
+  endpointLabel,
+  ExplorerLevel,
+  useExplorer,
+  type ExplorerContext,
+} from './EndpointExplorer';
 import type { ApiExchange } from '../../../core/types';
 
 const IMPORTANCE: Record<string, string> = {
@@ -23,37 +36,96 @@ const IMPORTANCE: Record<string, string> = {
   low: 'Low',
 };
 
+const FOCUSABLE =
+  'button:not([disabled]), [href], input, select, textarea, summary, [tabindex]:not([tabindex="-1"])';
+
 export function TestDrawer() {
-  const { ui, byKey, list, openTest, setUi, toast, endpointList } = useApp();
+  const { ui, byKey, setUi } = useApp();
   const test = ui.drawer ? byKey.get(ui.drawer) : undefined;
-  const ref = useRef<HTMLDivElement>(null);
-  const idx = useMemo(() => (test ? list.findIndex((t) => t.key === test.key) : -1), [test, list]);
+  const ctx = useExplorer(ui.panel);
+  const ref = useRef<HTMLElement>(null);
+  const open = Boolean(test || ctx);
+  // 1 = area, 2 = endpoint, 3 = a test inside the explorer, 0 = a test on its own.
+  const level = test ? (ctx ? 3 : 0) : ctx?.endpoint ? 2 : 1;
+
+  // Focus returns to whatever opened the panel (without scrolling the page back to it).
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.activeElement as HTMLElement | null;
+    return () => prev?.focus?.({ preventScroll: true });
+  }, [open]);
+  // Each level starts on its back arrow (or Close).
+  useEffect(() => {
+    if (!open) return;
+    const el = ref.current;
+    (
+      el?.querySelector<HTMLElement>('[data-autofocus]') ??
+      el?.querySelector<HTMLElement>('[data-autofocus-fallback]')
+    )?.focus();
+    el?.querySelector('.drawer__body')?.scrollTo({ top: 0 });
+  }, [open, level, ctx?.endpoint]);
+  // Focus trap: Tab / Shift+Tab stay inside the panel.
+  useEffect(() => {
+    if (!open) return;
+    const el = ref.current;
+    const trap = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab' || !el) return;
+      const f = [...el.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((x) => x.offsetParent !== null);
+      const first = f[0];
+      const last = f[f.length - 1];
+      if (!first || !last) return;
+      if (e.shiftKey && (document.activeElement === first || document.activeElement === el)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    el?.addEventListener('keydown', trap);
+    return () => el?.removeEventListener('keydown', trap);
+  }, [open]);
+
+  if (!open) return null;
+  return (
+    <>
+      <div class="scrim" onClick={() => setUi({ drawer: null, panel: null })} aria-hidden="true" />
+      <aside
+        ref={ref}
+        class={`drawer glass glass--strong${test ? '' : ' drawer--explorer'}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="drawer-title"
+        tabIndex={-1}
+        data-level={level}
+      >
+        {test ? <TestDetails test={test} trail={ctx} /> : ctx && <ExplorerLevel ctx={ctx} />}
+      </aside>
+    </>
+  );
+}
+
+/** One test's details; inside the explorer (`trail`) with an "Area › Endpoint › Test" breadcrumb. */
+function TestDetails({ test, trail }: { test: ReportTest; trail: ExplorerContext | null }) {
+  const { list, setUi, toast, endpointList } = useApp();
+  const nav = trail ? trail.ordered : list;
+  const idx = useMemo(() => nav.findIndex((t) => t.key === test.key), [test, nav]);
   // The key listener reads the current test through this ref, so a fast J/K right after opening or
   // moving never acts on the previous position.
-  const current = useRef({ key: test?.key, list });
-  current.current = { key: test?.key, list };
+  const current = useRef({ key: test.key, list: nav });
+  current.current = { key: test.key, list: nav };
   const go = (d: number) => {
     const { key, list: rows } = current.current;
     const i = rows.findIndex((t) => t.key === key);
     const next = i < 0 ? undefined : rows[i + d];
     if (next) {
       current.current = { key: next.key, list: rows };
-      openTest(next.key);
+      setUi({ drawer: next.key });
     }
   };
 
-  // Focus handling runs when the panel opens and closes.
-  const open = Boolean(test);
-  useEffect(() => {
-    if (!open) return;
-    const prev = document.activeElement as HTMLElement | null;
-    ref.current?.querySelector<HTMLElement>('[data-autofocus]')?.focus();
-    return () => prev?.focus?.();
-  }, [open]);
-
   // Layout effect: the listener is live as soon as the panel renders, so an immediate J/K is not lost.
   useLayoutEffect(() => {
-    if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey || isTypingTarget(e.target)) return;
       if (['ArrowDown', 'j', ']'].includes(e.key)) {
@@ -66,9 +138,13 @@ export function TestDrawer() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open]);
+  }, []);
 
-  if (!test) return null;
+  const toEndpoint = trail ? () => setUi({ drawer: null }) : undefined;
+  const toArea =
+    trail?.area && trail.panel.area
+      ? () => setUi({ drawer: null, panel: { area: trail.panel.area, endpoint: null } })
+      : undefined;
   const failure = test.status === 'FAIL' ? analyzeFailure(test) : null;
   const preflight = test.annotations.find((a) => a.type === 'preflight');
   const waiting = test.annotations.filter((a) => ['blocked', 'fixme', 'skip'].includes(a.type));
@@ -85,335 +161,333 @@ export function TestDrawer() {
 
   return (
     <>
-      <div class="scrim" onClick={() => setUi({ drawer: null })} aria-hidden="true" />
-      <aside
-        ref={ref}
-        class="drawer glass glass--strong"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="drawer-title"
-      >
-        <div class="drawer__head">
-          <div class="row row--between">
-            <OutcomeBadge outcome={outcome.outcome} large />
-            <div class="row" style={{ gap: 4 }}>
-              <button
-                class="btn btn--icon btn--ghost"
-                aria-label="Previous test"
-                title="Previous test (K or ↑)"
-                disabled={idx <= 0}
-                onClick={() => go(-1)}
-              >
-                <Icon name="chevronLeft" />
-              </button>
-              <button
-                class="btn btn--icon btn--ghost"
-                aria-label="Next test"
-                title="Next test (J or ↓)"
-                disabled={idx < 0 || idx >= list.length - 1}
-                onClick={() => go(1)}
-              >
-                <Icon name="chevronRight" />
-              </button>
-              <button
-                class="btn btn--icon btn--ghost"
-                aria-label="Copy link to this test"
-                onClick={async () => toast((await copyText(location.href)) ? 'Link copied' : 'Copy failed')}
-              >
-                <Icon name="link" />
-              </button>
-              <button
-                class="btn btn--icon btn--ghost"
-                aria-label="Close"
-                data-autofocus
-                onClick={() => setUi({ drawer: null })}
-              >
-                <Icon name="x" />
-              </button>
-            </div>
-          </div>
-          <h3 id="drawer-title" class="drawer__title">
-            {plainTitle(test.title)}
-          </h3>
-          <div class="row row--wrap" style={{ gap: 6 }}>
-            <span class="tag">
-              <Icon name={ep.icon} size={12} /> {ep.name}
-            </span>
-            {ep.method && <span class={`method method--${ep.method}`}>{ep.method}</span>}
-            <span class="tag tag--mono">{ep.path}</span>
-            <span class="tag tag--mono">{test.id}</span>
+      <div class="drawer__head">
+        {trail && (
+          <Crumbs
+            items={[
+              ...(trail.area ? [{ label: areaLabel(trail.area), onClick: toArea }] : []),
+              { label: endpointLabel(trail.endpoint ?? '', endpointList), onClick: toEndpoint },
+              { label: test.id },
+            ]}
+            onBack={toEndpoint}
+            backLabel={`Back to ${endpointLabel(trail.endpoint ?? '', endpointList)}`}
+          />
+        )}
+        <div class="row row--between">
+          <OutcomeBadge outcome={outcome.outcome} large />
+          <div class="row" style={{ gap: 4 }}>
+            <button
+              class="btn btn--icon btn--ghost"
+              aria-label="Previous test"
+              title="Previous test (K or ↑)"
+              disabled={idx <= 0}
+              onClick={() => go(-1)}
+            >
+              <Icon name="chevronLeft" />
+            </button>
+            <button
+              class="btn btn--icon btn--ghost"
+              aria-label="Next test"
+              title="Next test (J or ↓)"
+              disabled={idx < 0 || idx >= nav.length - 1}
+              onClick={() => go(1)}
+            >
+              <Icon name="chevronRight" />
+            </button>
+            <button
+              class="btn btn--icon btn--ghost"
+              aria-label="Copy link to this test"
+              onClick={async () => toast((await copyText(location.href)) ? 'Link copied' : 'Copy failed')}
+            >
+              <Icon name="link" />
+            </button>
+            <button
+              class="btn btn--icon btn--ghost"
+              aria-label="Close"
+              data-autofocus-fallback
+              onClick={() => setUi({ drawer: null, panel: null })}
+            >
+              <Icon name="x" />
+            </button>
           </div>
         </div>
+        <h3 id="drawer-title" class="drawer__title">
+          {plainTitle(test.title)}
+        </h3>
+        <div class="row row--wrap" style={{ gap: 6 }}>
+          <span class="tag">
+            <Icon name={ep.icon} size={12} /> {ep.name}
+          </span>
+          {ep.method && <span class={`method method--${ep.method}`}>{ep.method}</span>}
+          <span class="tag tag--mono">{ep.path}</span>
+          <span class="tag tag--mono">{test.id}</span>
+        </div>
+      </div>
 
-        <div class="drawer__body">
-          <section class="about-test" aria-label="About this test">
-            {info ? (
-              <>
-                <div class="about-test__block">
-                  <div class="subhead">What this test does</div>
-                  <p>{info.what}</p>
-                </div>
-                <div class="about-test__block about-test__block--why">
-                  <div class="subhead">Why it matters</div>
-                  <p>{info.why}</p>
-                </div>
-                <div class="about-test__block">
-                  <div class="subhead">Steps</div>
-                  <ol class="about-test__steps">
-                    {info.steps.map((step, i) => (
-                      <li key={i}>{step}</li>
-                    ))}
-                  </ol>
-                </div>
-                {info.request && (
-                  <div class="about-test__block">
-                    <div class="subhead">Request</div>
-                    <pre class="about-test__request">
-                      <code>{info.request}</code>
-                    </pre>
-                  </div>
-                )}
-                <div class="about-test__block about-test__block--expected">
-                  <div class="subhead">Expected result</div>
-                  <p>{info.expected}</p>
-                </div>
-                {info.validation && info.validation.length > 0 && (
-                  <div class="about-test__block">
-                    <div class="subhead">Validation (what is checked)</div>
-                    <ul class="about-test__checks">
-                      {info.validation.map((v, i) => (
-                        <li key={i}>{v}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                <div class="about-test__chips">
-                  <span class="tag">{info.type}</span>
-                  <span class={`suite suite--${suiteOf(test.tags)}`}>{suiteOf(test.tags)}</span>
-                  <span class={`prio prio--${info.priority}`}>{info.priority} priority</span>
-                </div>
-                {info.preconditions && (
-                  <div class="about-test__pre">
-                    <Icon name="info" size={16} />
-                    <span>
-                      <b>Needs: </b>
-                      {info.preconditions}
-                    </span>
-                  </div>
-                )}
-              </>
-            ) : (
-              <p class="muted small">No description has been written for this test yet (tests/catalog).</p>
-            )}
-          </section>
-
-          <section class={`result-box result-box--${outcome.outcome.replace(' ', '-')}`} aria-label="Result">
-            <div class="subhead">Result of this run</div>
-            <div class="row row--wrap" style={{ gap: 10 }}>
-              <OutcomeBadge outcome={outcome.outcome} />
-              <span class="small">
-                {outcome.outcome === 'Pass' ? 'Everything was as expected.' : outcome.remark}
-              </span>
-            </div>
-          </section>
-
-          {outcome.outcome === 'Security finding' && (
-            <div class="banner banner--finding">
-              <Icon name="shield" />
-              <div>
-                <b>Known security finding — expected to fail until Dev fixes it.</b>
-                <div class="small">
-                  Reported to Dev; still counted as a failure. It is listed separately from automation
-                  failures.
-                </div>
+      <div class="drawer__body" tabIndex={0} role="region" aria-label="Test details">
+        <section class="about-test" aria-label="About this test">
+          {info ? (
+            <>
+              <div class="about-test__block">
+                <div class="subhead">What this test does</div>
+                <p>{info.what}</p>
               </div>
-            </div>
-          )}
-
-          {notApplicable.length > 0 && (
-            <div class="banner banner--na">
-              <Icon name="ban" />
-              <div>
-                <b>Not applicable — Dev confirmed this feature is intentionally not supported.</b>
-                <ul>
-                  {notApplicable.map((a, i) => (
-                    <li key={i}>{a.description}</li>
+              <div class="about-test__block about-test__block--why">
+                <div class="subhead">Why it matters</div>
+                <p>{info.why}</p>
+              </div>
+              <div class="about-test__block">
+                <div class="subhead">Steps</div>
+                <ol class="about-test__steps">
+                  {info.steps.map((step, i) => (
+                    <li key={i}>{step}</li>
                   ))}
-                </ul>
-                <div class="small">Neither a pass nor a failure; not counted in the pass rate or gates.</div>
+                </ol>
               </div>
-            </div>
-          )}
-
-          {preflight && (
-            <div class="banner banner--fail">
-              <Icon name="server" />
-              <div>
-                <b>This check could not run — the Aisle PII facade was not reachable.</b>
-                <div class="small">{preflight.description}</div>
-              </div>
-            </div>
-          )}
-
-          {failure && !preflight && (
-            <section class="stack" aria-label="What went wrong">
-              <div class="subhead">What went wrong</div>
-              <div class="diff">
-                <div class="diff__box diff__box--exp">
-                  <div class="xsmall muted">Expected</div>
-                  <code>{failure.expected ?? 'see error below'}</code>
-                </div>
-                <div class="diff__box diff__box--rec">
-                  <div class="xsmall muted">Got</div>
-                  <code>{failure.received ?? FAILURE_PATTERNS[failure.pattern].label}</code>
-                </div>
-              </div>
-              <div class="glass glass--soft glass--pad">
-                <div class="subhead">Where to look first</div>
-                <ul class="checklist">
-                  {FAILURE_PATTERNS[failure.pattern].investigate.map((i) => (
-                    <li key={i}>
-                      <Icon name="chevronRight" size={16} /> {i}
-                    </li>
-                  ))}
-                </ul>
-                <div class="xsmall muted" style={{ marginTop: 8 }}>
-                  Suggestions based on the kind of failure — a starting point, not a diagnosis.
-                </div>
-              </div>
-              {failure.requestId && (
-                <div class="small row">
-                  Request ID for backend logs: <RequestId id={failure.requestId} />
+              {info.request && (
+                <div class="about-test__block">
+                  <div class="subhead">Request</div>
+                  <pre class="about-test__request">
+                    <code>{info.request}</code>
+                  </pre>
                 </div>
               )}
-            </section>
-          )}
-
-          {waiting.length > 0 && !test.notRun && outcome.outcome !== 'Not Applicable' && (
-            <div class="banner banner--warn">
-              <Icon name="pause" />
-              <div>
-                <b>
-                  {outcome.outcome === 'Blocked'
-                    ? 'Why this test is blocked'
-                    : outcome.outcome === 'Skipped'
-                      ? 'Why this test was skipped'
-                      : 'Why this test was not tested'}
-                </b>
-                <ul>
-                  {waiting
-                    .filter((a) => a.description)
-                    .map((a, i) => (
-                      <li key={i}>{a.description}</li>
+              <div class="about-test__block about-test__block--expected">
+                <div class="subhead">Expected result</div>
+                <p>{info.expected}</p>
+              </div>
+              {info.validation && info.validation.length > 0 && (
+                <div class="about-test__block">
+                  <div class="subhead">Validation (what is checked)</div>
+                  <ul class="about-test__checks">
+                    {info.validation.map((v, i) => (
+                      <li key={i}>{v}</li>
                     ))}
-                </ul>
+                  </ul>
+                </div>
+              )}
+              <div class="about-test__chips">
+                <span class="tag">{info.type}</span>
+                <span class={`suite suite--${suiteOf(test.tags)}`}>{suiteOf(test.tags)}</span>
+                <span class={`prio prio--${info.priority}`}>{info.priority} priority</span>
+              </div>
+              {info.preconditions && (
+                <div class="about-test__pre">
+                  <Icon name="info" size={16} />
+                  <span>
+                    <b>Needs: </b>
+                    {info.preconditions}
+                  </span>
+                </div>
+              )}
+            </>
+          ) : (
+            <p class="muted small">No description has been written for this test yet (tests/catalog).</p>
+          )}
+        </section>
+
+        <section class={`result-box result-box--${outcome.outcome.replace(' ', '-')}`} aria-label="Result">
+          <div class="subhead">Result of this run</div>
+          <div class="row row--wrap" style={{ gap: 10 }}>
+            <OutcomeBadge outcome={outcome.outcome} />
+            <span class="small">
+              {outcome.outcome === 'Pass' ? 'Everything was as expected.' : outcome.remark}
+            </span>
+          </div>
+        </section>
+
+        {outcome.outcome === 'Security finding' && (
+          <div class="banner banner--finding">
+            <Icon name="shield" />
+            <div>
+              <b>Known security finding — expected to fail until Dev fixes it.</b>
+              <div class="small">
+                Reported to Dev; still counted as a failure. It is listed separately from automation failures.
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {(outcome.outcome === 'Fail' || outcome.outcome === 'Security finding') && actualCall?.exchange && (
-            <section class="stack" aria-label="Expected and actual response">
-              <div class="subhead">Expected vs actual response</div>
-              <div class="diff diff--stack">
-                <div class="diff__box diff__box--exp">
-                  <div class="xsmall muted">Expected</div>
-                  <div class="small">{info?.expected ?? 'See the failure message above.'}</div>
-                </div>
-                <div class="diff__box diff__box--got">
-                  <div class="xsmall muted">
-                    Actual — {actualCall.method} {actualCall.path} → HTTP {actualCall.status ?? 'no reply'}
-                    {actualCall.exchange.responseContentType
-                      ? ` (${actualCall.exchange.responseContentType})`
-                      : ''}
-                  </div>
-                  <pre class="exchange__body">{prettyBody(actualCall.exchange.responseBody)}</pre>
-                </div>
+        {notApplicable.length > 0 && (
+          <div class="banner banner--na">
+            <Icon name="ban" />
+            <div>
+              <b>Not applicable — Dev confirmed this feature is intentionally not supported.</b>
+              <ul>
+                {notApplicable.map((a, i) => (
+                  <li key={i}>{a.description}</li>
+                ))}
+              </ul>
+              <div class="small">Neither a pass nor a failure; not counted in the pass rate or gates.</div>
+            </div>
+          </div>
+        )}
+
+        {preflight && (
+          <div class="banner banner--fail">
+            <Icon name="server" />
+            <div>
+              <b>This check could not run — the Aisle PII facade was not reachable.</b>
+              <div class="small">{preflight.description}</div>
+            </div>
+          </div>
+        )}
+
+        {failure && !preflight && (
+          <section class="stack" aria-label="What went wrong">
+            <div class="subhead">What went wrong</div>
+            <div class="diff">
+              <div class="diff__box diff__box--exp">
+                <div class="xsmall muted">Expected</div>
+                <code>{failure.expected ?? 'see error below'}</code>
               </div>
-            </section>
-          )}
-
-          <section aria-label="Details">
-            <div class="subhead">Details</div>
-            <KV
-              items={[
-                ['Endpoint', `${ep.name} — ${ep.means}`],
-                ['Priority', info?.priority ?? IMPORTANCE[test.severity] ?? test.severity],
-                [
-                  'Duration',
-                  test.status === 'PASS' || test.status === 'FAIL' ? formatDuration(test.durationMs) : '—',
-                ],
-                ['Started', fmtDateTime(test.startedAt)],
-                ['Retries', String(test.retries)],
-                ['Source', <code>{`${test.file}:${test.line}`}</code>],
-              ]}
-            />
-          </section>
-
-          {calls.length > 0 && (
-            <section aria-label="Requests made">
-              <div class="subhead">Requests made ({calls.length})</div>
-              <ul class="calls">
-                {calls.map((c, i) => (
-                  <li key={i} class="call">
-                    <Method method={c.method} />
-                    <code class="call__path ellipsis">{c.path}</code>
-                    {c.phase && c.phase !== 'test' && (
-                      <span
-                        class="tag"
-                        title={c.phase === 'setup' ? 'Preparing test data' : 'Follow-up check'}
-                      >
-                        {c.phase === 'setup' ? 'prep' : 'check'}
-                      </span>
-                    )}
-                    <span
-                      class={`status ${c.status === null || c.status >= 500 ? 'status--FAIL' : c.status >= 400 ? 'status--BLOCKED' : 'status--PASS'}`}
-                    >
-                      {c.status ?? 'no reply'}
-                      {c.errorCode ? ` ${c.errorCode}` : ''}
-                    </span>
-                    <span class="xsmall muted tabular nowrap">
-                      {c.status === null ? '' : `${Math.round(c.durationMs)} ms`}
-                    </span>
-                    <RequestId id={c.requestId} />
-                    {c.exchange && <ExchangeDetails exchange={c.exchange} status={c.status} />}
+              <div class="diff__box diff__box--rec">
+                <div class="xsmall muted">Got</div>
+                <code>{failure.received ?? FAILURE_PATTERNS[failure.pattern].label}</code>
+              </div>
+            </div>
+            <div class="glass glass--soft glass--pad">
+              <div class="subhead">Where to look first</div>
+              <ul class="checklist">
+                {FAILURE_PATTERNS[failure.pattern].investigate.map((i) => (
+                  <li key={i}>
+                    <Icon name="chevronRight" size={16} /> {i}
                   </li>
                 ))}
               </ul>
-            </section>
-          )}
+              <div class="xsmall muted" style={{ marginTop: 8 }}>
+                Suggestions based on the kind of failure — a starting point, not a diagnosis.
+              </div>
+            </div>
+            {failure.requestId && (
+              <div class="small row">
+                Request ID for backend logs: <RequestId id={failure.requestId} />
+              </div>
+            )}
+          </section>
+        )}
 
-          {test.steps.length > 0 && (
-            <section aria-label="Execution log">
-              <div class="subhead">What happened (execution log)</div>
-              <ol class="checklist">
-                {test.steps.map((s, i) => (
-                  <li key={i}>
-                    <Icon name={s.failed ? 'x' : 'check'} size={16} />
-                    <span class="grow">{s.title}</span>
-                    <span class="xsmall faint tabular">{formatDuration(s.durationMs)}</span>
-                  </li>
-                ))}
-              </ol>
-            </section>
-          )}
+        {waiting.length > 0 && !test.notRun && outcome.outcome !== 'Not Applicable' && (
+          <div class="banner banner--warn">
+            <Icon name="pause" />
+            <div>
+              <b>
+                {outcome.outcome === 'Blocked'
+                  ? 'Why this test is blocked'
+                  : outcome.outcome === 'Skipped'
+                    ? 'Why this test was skipped'
+                    : 'Why this test was not tested'}
+              </b>
+              <ul>
+                {waiting
+                  .filter((a) => a.description)
+                  .map((a, i) => (
+                    <li key={i}>{a.description}</li>
+                  ))}
+              </ul>
+            </div>
+          </div>
+        )}
 
-          {test.errors.length > 0 && (
-            <details class="raw">
-              <summary>Technical error message</summary>
-              {test.errors.map((e, i) => (
-                <div key={i} class="codebox">
-                  {sanitizeText(e.message)}
+        {(outcome.outcome === 'Fail' || outcome.outcome === 'Security finding') && actualCall?.exchange && (
+          <section class="stack" aria-label="Expected and actual response">
+            <div class="subhead">Expected vs actual response</div>
+            <div class="diff diff--stack">
+              <div class="diff__box diff__box--exp">
+                <div class="xsmall muted">Expected</div>
+                <div class="small">{info?.expected ?? 'See the failure message above.'}</div>
+              </div>
+              <div class="diff__box diff__box--got">
+                <div class="xsmall muted">
+                  Actual — {actualCall.method} {actualCall.path} → HTTP {actualCall.status ?? 'no reply'}
+                  {actualCall.exchange.responseContentType
+                    ? ` (${actualCall.exchange.responseContentType})`
+                    : ''}
                 </div>
-              ))}
-            </details>
-          )}
+                <pre class="exchange__body">{prettyBody(actualCall.exchange.responseBody)}</pre>
+              </div>
+            </div>
+          </section>
+        )}
 
-          <p class="xsmall faint">
-            <Icon name="eyeOff" size={12} /> Requests and responses are shown in full — all test data is fake.
-            The Aisle token is never recorded: it appears as <code>$AISLE_TEST_TOKEN</code>.
-          </p>
-        </div>
-      </aside>
+        <section aria-label="Details">
+          <div class="subhead">Details</div>
+          <KV
+            items={[
+              ['Endpoint', `${ep.name} — ${ep.means}`],
+              ['Priority', info?.priority ?? IMPORTANCE[test.severity] ?? test.severity],
+              [
+                'Duration',
+                test.status === 'PASS' || test.status === 'FAIL' ? formatDuration(test.durationMs) : '—',
+              ],
+              ['Started', fmtDateTime(test.startedAt)],
+              ['Retries', String(test.retries)],
+              ['Source', <code>{`${test.file}:${test.line}`}</code>],
+            ]}
+          />
+        </section>
+
+        {calls.length > 0 && (
+          <section aria-label="Requests made">
+            <div class="subhead">Requests made ({calls.length})</div>
+            <ul class="calls">
+              {calls.map((c, i) => (
+                <li key={i} class="call">
+                  <Method method={c.method} />
+                  <code class="call__path ellipsis">{c.path}</code>
+                  {c.phase && c.phase !== 'test' && (
+                    <span class="tag" title={c.phase === 'setup' ? 'Preparing test data' : 'Follow-up check'}>
+                      {c.phase === 'setup' ? 'prep' : 'check'}
+                    </span>
+                  )}
+                  <span
+                    class={`status ${c.status === null || c.status >= 500 ? 'status--FAIL' : c.status >= 400 ? 'status--BLOCKED' : 'status--PASS'}`}
+                  >
+                    {c.status ?? 'no reply'}
+                    {c.errorCode ? ` ${c.errorCode}` : ''}
+                  </span>
+                  <span class="xsmall muted tabular nowrap">
+                    {c.status === null ? '' : `${Math.round(c.durationMs)} ms`}
+                  </span>
+                  <RequestId id={c.requestId} />
+                  {c.exchange && <ExchangeDetails exchange={c.exchange} status={c.status} />}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {test.steps.length > 0 && (
+          <section aria-label="Execution log">
+            <div class="subhead">What happened (execution log)</div>
+            <ol class="checklist">
+              {test.steps.map((s, i) => (
+                <li key={i}>
+                  <Icon name={s.failed ? 'x' : 'check'} size={16} />
+                  <span class="grow">{s.title}</span>
+                  <span class="xsmall faint tabular">{formatDuration(s.durationMs)}</span>
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
+
+        {test.errors.length > 0 && (
+          <details class="raw">
+            <summary>Technical error message</summary>
+            {test.errors.map((e, i) => (
+              <div key={i} class="codebox">
+                {sanitizeText(e.message)}
+              </div>
+            ))}
+          </details>
+        )}
+
+        <p class="xsmall faint">
+          <Icon name="eyeOff" size={12} /> Requests and responses are shown in full — all test data is fake.
+          The Aisle token is never recorded: it appears as <code>$AISLE_TEST_TOKEN</code>.
+        </p>
+      </div>
     </>
   );
 }

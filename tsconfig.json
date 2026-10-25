@@ -24,5 +24,5 @@
     "reporting/**/*.ts",
     "playwright.config.ts"
   ],
-  "exclude": ["reporting/dashboard/**", "reporting/tests/**"]
+  "exclude": ["reporting/dashboard/**", "reporting/tests/**", ".claude/**"]
 }

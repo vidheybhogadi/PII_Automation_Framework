@@ -19,3 +19,6 @@ m2/contracts/recorded/
 m2/contracts/approved/
 m2/contracts/REVIEW.md
 m2/contracts/SAFE-TO-APPROVE.txt
+
+# Claude Code temporary agent worktrees
+.claude/worktrees/

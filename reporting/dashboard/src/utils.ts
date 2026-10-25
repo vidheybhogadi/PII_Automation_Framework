@@ -78,12 +78,32 @@ export const EMPTY_FILTERS: Filters = { statuses: [], endpoint: '', area: '', sh
 export const hasFilters = (f: Filters): boolean =>
   Boolean(f.statuses.length || f.endpoint || f.area || f.show || f.q);
 
-/** Hash format: #by=type&show=Positive&area=G3&endpoint=API-011&status=FAIL,BLOCKED&q=…&test=<key> */
-export function parseHash(hash: string): { filters: Filters; test: string | null; by: string | null } {
+/**
+ * The endpoint explorer in the side panel ("How each endpoint did"): an API area (level 1), one endpoint (level 2)
+ * and — with `test` in the hash — one of its tests (level 3). `area` is null for Milestone 1 (no areas).
+ */
+export interface Panel {
+  area: string | null;
+  endpoint: string | null;
+}
+
+/**
+ * Hash format: #by=type&show=Positive&area=G3&endpoint=API-011&status=FAIL,BLOCKED&q=…
+ *   &panelArea=G3&panelEndpoint=API-011&test=<key>
+ */
+export function parseHash(hash: string): {
+  filters: Filters;
+  test: string | null;
+  by: string | null;
+  panel: Panel | null;
+} {
   const p = new URLSearchParams(hash.replace(/^#/, ''));
+  const panelArea = p.get('panelArea');
+  const panelEndpoint = p.get('panelEndpoint');
   return {
     test: p.get('test'),
     by: p.get('by'),
+    panel: panelArea || panelEndpoint ? { area: panelArea || null, endpoint: panelEndpoint || null } : null,
     filters: {
       statuses: (p.get('status') ?? '').split(',').filter(Boolean) as StatusFilter[],
       endpoint: p.get('endpoint') ?? '',
@@ -95,7 +115,12 @@ export function parseHash(hash: string): { filters: Filters; test: string | null
 }
 
 /** `by` (the Group by choice) is written whenever it is not the default or a filter is set, so links restore exactly. */
-export function buildHash(f: Filters, test: string | null, by = 'endpoint'): string {
+export function buildHash(
+  f: Filters,
+  test: string | null,
+  by = 'endpoint',
+  panel: Panel | null = null,
+): string {
   const p = new URLSearchParams();
   if (by !== 'endpoint' || hasFilters(f)) p.set('by', by);
   if (f.show) p.set('show', f.show);
@@ -103,6 +128,8 @@ export function buildHash(f: Filters, test: string | null, by = 'endpoint'): str
   if (f.statuses.length) p.set('status', f.statuses.join(','));
   if (f.endpoint) p.set('endpoint', f.endpoint);
   if (f.q) p.set('q', f.q);
+  if (panel?.area) p.set('panelArea', panel.area);
+  if (panel?.endpoint) p.set('panelEndpoint', panel.endpoint);
   if (test) p.set('test', test);
   const q = p.toString();
   return q ? `#${q}` : '';

@@ -103,7 +103,7 @@ export function App() {
     onPalette: () => setUi({ palette: !ui.palette }),
     onEscape: closeTop,
     onKey: (key, e) => {
-      if (ui.drawer || ui.palette) return;
+      if (ui.drawer || ui.panel || ui.palette) return;
       const k = key.toLowerCase();
       const section = SECTION_KEYS[key];
       if (key === '?') {
