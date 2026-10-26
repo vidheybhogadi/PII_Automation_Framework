@@ -1,13 +1,26 @@
 {
   "$comment": [
     "Milestone 2 read-only SELECT catalog for the staging PII DB (pii, PostgreSQL via PgBouncer). Same table as M1 (user_pii_field_value, live schema 2026-10-19).",
-    "Only counts, field names and md5 hashes of the ciphertext are selected — never the ciphertext, nonce, tag or any key material. Every query runs inside BEGIN READ ONLY (core/db)."
+    "Only counts, field names and md5 hashes of the ciphertext are selected — never the ciphertext, nonce, tag or any key material. Every query runs inside BEGIN READ ONLY (core/db).",
+    "aislewebQueries: the Aisle app DB (aisleweb — same server and read-only credentials as the PII DB, database name from M2_APP_DB_NAME, default aisleweb; M2Q-33 answer). Tables / columns from the Aisle code (db/schema.rb, develop_new 944f76a) — from code, confirm with Dev. Every query MUST be filtered by the suite's own user ids ($1 = suite_user_ids, WHERE <alias>.user_id = ANY($1::bigint[]), AND only); m2/src/db/app-db.ts refuses any other query and any id that is not a suite-created account's. Only booleans and counts are selected — synthetic values are bound as parameters for comparison and never read back."
   ],
   "engine": "postgres",
   "queries": {
     "piiRecordsForUser": {
       "sql": "SELECT tenant_id, user_id, field_name AS field, md5(ciphertext::text) AS ciphertext_hash, updated_at FROM user_pii_field_value WHERE tenant_id = $1 AND user_id = $2 ORDER BY field_name",
       "params": ["tenant_id", "user_id"]
+    }
+  },
+  "aislewebQueries": {
+    "localCompatibilityColumns": {
+      "$comment": "M2-DB-004. profiles.first_name (Profile#assign_first_name still sets it, profile.rb:3137-3143), account_emails.name via profiles.email_id, sms_notification_phone_numbers.number via users.phone_number_id (profile.rb:406).",
+      "sql": "SELECT p.user_id::text AS user_id, (p.first_name IS NOT NULL AND btrim(p.first_name) <> '') AS first_name_filled, (lower(btrim(p.first_name)) = lower(btrim($2::text))) AS first_name_is_current_value, (lower(btrim(p.first_name)) = lower(btrim($3::text))) AS first_name_is_previous_value, (p.email_id IS NOT NULL) AS email_linked, (e.name IS NOT NULL AND btrim(e.name) <> '') AS email_filled, (lower(btrim(e.name)) = lower(btrim($4::text))) AS email_is_value, (e.encrypted_name IS NOT NULL) AS email_pgcrypto_filled, (u.phone_number_id IS NOT NULL) AS phone_linked, (n.number IS NOT NULL AND btrim(n.number) <> '') AS phone_filled, (n.number = $5::text) AS phone_is_value FROM profiles p JOIN users u ON u.id = p.user_id LEFT JOIN account_emails e ON e.id = p.email_id LEFT JOIN sms_notification_phone_numbers n ON n.id = u.phone_number_id WHERE p.user_id = ANY($1::bigint[])",
+      "params": ["suite_user_ids", "first_name", "previous_first_name", "email", "mobile_number"]
+    },
+    "chatMessageStorage": {
+      "$comment": "M2-DB-015. chat_messages.content / previous_message (legacy plaintext) and encrypted_free_text_content / encrypted_free_text_previous_message (JSON envelope with free_text_key_id — Pii::FreeTextEncryption, chat/message.rb:351-391). Rows of the suite pair's conversation written by the pair since the test started.",
+      "sql": "SELECT count(*)::int AS messages, (count(*) FILTER (WHERE m.encrypted_free_text_content IS NOT NULL AND m.encrypted_free_text_content <> ''))::int AS with_ciphertext, (count(*) FILTER (WHERE m.encrypted_free_text_content LIKE '%\"free_text_key_id\"%'))::int AS with_key_id, (count(DISTINCT md5(m.encrypted_free_text_content)))::int AS distinct_ciphertexts, (count(*) FILTER (WHERE strpos(m.encrypted_free_text_content, $4::text) > 0))::int AS marker_in_ciphertext, (count(*) FILTER (WHERE m.content IS NOT NULL AND m.content <> ''))::int AS content_filled, (count(*) FILTER (WHERE strpos(m.content, $4::text) > 0))::int AS marker_in_content, (count(*) FILTER (WHERE m.previous_message IS NOT NULL AND m.previous_message <> ''))::int AS previous_message_filled, (count(*) FILTER (WHERE strpos(m.previous_message, $4::text) > 0))::int AS marker_in_previous_message, (count(*) FILTER (WHERE m.encrypted_free_text_previous_message IS NOT NULL AND m.encrypted_free_text_previous_message <> ''))::int AS previous_with_ciphertext FROM chat_messages m WHERE m.user_id = ANY($1::bigint[]) AND m.conversation_id = $2::int AND m.created_at >= $3::timestamp",
+      "params": ["suite_user_ids", "conversation_id", "since_utc", "marker"]
     }
   }
 }

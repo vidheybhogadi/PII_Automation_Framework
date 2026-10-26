@@ -123,14 +123,21 @@ export async function editFirstName(
   return call(fx, apiId, asUser(fx, p, undefined, 'owner'), { synthetic: { firstName: name } });
 }
 
-/** Onboard (submit_profile) with a given name / email — needs the onboarding catalogue (M2Q-36). */
+/**
+ * Onboard (submit_profile) with a given name / email — needs the onboarding catalogue (M2Q-36). Its photo
+ * placeholders (PHOTO_URL_1 / _2) are filled exactly like the per-API path (completeValues: the hosted photo set of
+ * the caller's gender, ONBOARDING_PHOTOS): a brand-new account (a login session without a declared gender) is
+ * submitted as Male — the onboarding default (onboarding.ts) — so its body gender and photos always match.
+ */
 export async function submitProfile(
   fx: Fx,
   p: UserSession | Profile,
   values: Partial<Synthetic>,
   apiId = 'API-057',
 ): Promise<ApiResponse> {
-  return call(fx, apiId, asUser(fx, p, undefined, 'owner'), { synthetic: values });
+  const gender = ('gender' in p && p.gender) || values.gender || 'Male';
+  const self: Profile = { ...p, ref: p.ref, gender };
+  return call(fx, apiId, asUser(fx, self, undefined, 'owner'), { synthetic: { gender, ...values } });
 }
 
 export const nameOf = (res: ApiResponse) => deepFind(res.json(), 'first_name');

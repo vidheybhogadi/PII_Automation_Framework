@@ -12,6 +12,8 @@
  * - `accountWarmUp` (worker, auto) onboards the accounts that need staging's approval at worker start (once per
  *              slot and run), so approval runs while other tests execute.
  * - `piiDb`    (worker) read-only PII DB, or a Blocked test when it is not configured here (M2Q-16).
+ * - `appDb`    (worker) read-only Aisle app DB (aisleweb, same server and credentials — M2Q-33), guarded so it only
+ *              ever reads the suite's own accounts (m2/src/db/app-db.ts); Blocked like `piiDb` when not configured.
  */
 import { test as base, expect } from '@playwright/test';
 import type { ApiResponse } from '../../../core/http/api-response';
@@ -25,6 +27,7 @@ import type { SessionHelper } from '../auth/session';
 import { M2Client } from '../clients/m2-client';
 import { loadM2Config, type M2Config } from '../config/m2-config';
 import { M2Data } from '../data';
+import { AppDb } from '../db/app-db';
 import { PiiDb } from '../db/pii-db';
 import { openDeps } from '../design';
 import { blockPrereq, PREREQ } from '../prereq';
@@ -39,11 +42,14 @@ export interface M2TestFixtures {
   data: M2Data;
   /** Read-only PII DB; blocks the test (M2Q-16) when it is not configured. */
   piiDb: PiiDb;
+  /** Read-only aisleweb, suite accounts only; blocks the test (M2Q-16) when it is not configured / reachable. */
+  appDb: AppDb;
 }
 export interface M2WorkerFixtures {
   m2Config: M2Config;
   accounts: Accounts;
   piiDbWorker: PiiDb | undefined;
+  appDbWorker: AppDb | undefined;
   /** Auto: onboards the accounts that need approval when a worker starts (Accounts.warmUp). */
   accountWarmUp: void;
 }
@@ -86,6 +92,22 @@ export const test = base.extend<M2TestFixtures, M2WorkerFixtures>({
     },
     { scope: 'worker' },
   ],
+
+  appDbWorker: [
+    async ({ m2Config }, use) => {
+      const db = AppDb.open(m2Config);
+      await use(db);
+      await db?.close();
+    },
+    { scope: 'worker' },
+  ],
+
+  appDb: async ({ appDbWorker }, use) => {
+    if (!appDbWorker) blockPrereq(PREREQ.db.id, PREREQ.db.reason);
+    if (!(await appDbWorker.reachable()))
+      blockPrereq(PREREQ.appDbUnreachable.id, PREREQ.appDbUnreachable.reason);
+    await use(appDbWorker);
+  },
 
   piiDb: async ({ piiDbWorker }, use) => {
     if (!piiDbWorker) blockPrereq(PREREQ.db.id, PREREQ.db.reason);

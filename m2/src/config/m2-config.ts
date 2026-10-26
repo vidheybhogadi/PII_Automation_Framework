@@ -41,6 +41,11 @@ export interface M2Config {
   /** Read-only PII DB (same DB_* settings as M1) and the M2 SELECT catalog. */
   readonly db: DbSettings & { queriesFile: string };
   /**
+   * Database name of the Aisle app DB (aisleweb) on the same server, with the same read-only credentials (M2Q-33
+   * answer). Queried only for the suite's own accounts (m2/src/db/app-db.ts).
+   */
+  readonly appDbName: string;
+  /**
    * Dev test windows (Dev-assisted cases). Read gates are OFF on testa2 and QA cannot switch them (M2Q-02, QA lead
    * 2026-10-24) — gate-ON parts wait for Dev (M2Q-43), so there is no gate window setting.
    */
@@ -220,6 +225,7 @@ export function loadM2Config(env: NodeJS.ProcessEnv = process.env): M2Config {
       connectTimeoutMs: int(e.DB_CONNECT_TIMEOUT_MS, 10_000),
       queriesFile: e.M2_DB_QUERIES_FILE?.trim() || 'm2/config/db-queries.json',
     },
+    appDbName: e.M2_APP_DB_NAME?.trim() || 'aisleweb',
     windows: {
       piiOutage: e.M2_PII_OUTAGE_WINDOW === 'true',
     },

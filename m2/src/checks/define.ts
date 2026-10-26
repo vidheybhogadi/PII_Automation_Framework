@@ -5,6 +5,7 @@
  * check's own spec in m2/tests/per-api/.
  */
 import type { AnyCase } from '../../scripts/m2-all-cases';
+import type { AppDb } from '../db/app-db';
 import type { PiiDb } from '../db/pii-db';
 import { caseById, casesFor, titleOf } from '../design';
 import { blockIfOpen, test } from '../fixtures/m2-fixtures';
@@ -76,5 +77,21 @@ export function dbScenario(
   test(titleOf(c), { tag: c.tags }, async ({ m2, m2Config, accounts, data, observe, piiDb }) => {
     blockIfOpen(c);
     await run({ m2, m2Config, accounts, data, observe }, piiDb, c);
+  });
+}
+
+/**
+ * A scenario case that reads the PII DB AND the app DB (aisleweb, suite accounts only — M2Q-33); blocks with M2Q-16
+ * when either is not configured or reachable.
+ */
+export function appDbScenario(
+  id: string,
+  run: (fx: CheckFixtures, db: PiiDb, app: AppDb, c: AnyCase) => Promise<void>,
+): void {
+  const c = caseById(id);
+  if (!automatable(c)) return;
+  test(titleOf(c), { tag: c.tags }, async ({ m2, m2Config, accounts, data, observe, piiDb, appDb }) => {
+    blockIfOpen(c);
+    await run({ m2, m2Config, accounts, data, observe }, piiDb, appDb, c);
   });
 }

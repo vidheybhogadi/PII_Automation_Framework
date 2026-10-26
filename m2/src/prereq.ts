@@ -75,6 +75,21 @@ export const PREREQ = {
     reason:
       'The PII DB is configured but not reachable from this machine (a read-only SELECT 1 failed) — check VPN / network',
   },
+  appDbUnreachable: {
+    id: 'M2Q-16',
+    reason:
+      'The app DB (aisleweb, same server and read-only credentials as the PII DB — M2Q-33) is configured but not reachable from this machine (a read-only SELECT 1 failed) — check VPN / network and M2_APP_DB_NAME',
+  },
+  cohortAggregate: {
+    id: 'M2Q-33',
+    reason:
+      'Needs a Dev-run aggregate (real users’ data): the migrated cohort is real staging users, and QA’s aisleweb access is limited to the suite’s own synthetic accounts — which are all created after the integration, so they are not part of any migrated cohort',
+  },
+  ownPair: {
+    id: 'M2Q-32',
+    reason:
+      'Needs the suite’s OWN connected pair (M2_CREATE_ACCOUNTS=true, no M2_CONNECTED_ACCOUNTS): aisleweb is read only for accounts the suite created',
+  },
   states: {
     id: 'M2Q-32',
     reason:

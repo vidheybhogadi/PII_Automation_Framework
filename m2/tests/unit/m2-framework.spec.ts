@@ -73,6 +73,7 @@ import path from 'node:path';
 import { submitProfileBody } from '../../src/accounts/onboarding';
 import { SessionHelper } from '../../src/auth/session';
 import { CaptureServer } from './helpers/capture-server';
+import { AppDbGuardError, assertSuiteFiltered, assertSuiteIds, type AppQuery } from '../../src/db/app-db';
 
 /** Synthetic token — NOT a real credential. */
 const FAKE_TOKEN = 'fedcba9876543210fedcba9876543210';
@@ -1161,5 +1162,60 @@ test.describe('UNIT M2 audit fixes — no false passes (2026-10-25)', () => {
       expect(OWN_PROFILE_BY_REF, `${c.id}: only own-profile routes keep a CACHE case`).toContain(c.apis[0]);
     // Every removal reason cites the Aisle code.
     for (const why of Object.values(NO_OTHER_USER)) expect(why).toMatch(/\.rb:\d+/);
+  });
+});
+
+test.describe('UNIT M2 app DB guard', () => {
+  test('UT-M2-035 aisleweb queries are refused without the suite-id filter or with an id that is not a suite account’s', () => {
+    const catalog = JSON.parse(
+      readFileSync(path.resolve(__dirname, '../../config/db-queries.json'), 'utf8'),
+    ) as {
+      aislewebQueries: Record<string, AppQuery>;
+    };
+    // Every catalog query passes the static guard and selects no plaintext column on its own.
+    expect(Object.keys(catalog.aislewebQueries).sort()).toEqual([
+      'chatMessageStorage',
+      'localCompatibilityColumns',
+    ]);
+    for (const [name, q] of Object.entries(catalog.aislewebQueries)) {
+      expect(() => assertSuiteFiltered(name, q)).not.toThrow();
+      const select = q.sql.slice(0, q.sql.search(/\bFROM\b/));
+      expect(select, `${name}: no bare column is read back`).not.toMatch(/,\s*[a-z]\.[a-z_]+\s+AS\s/i);
+    }
+    const ok: AppQuery = {
+      sql: 'SELECT count(*) AS n FROM chat_messages m WHERE m.user_id = ANY($1::bigint[]) AND m.conversation_id = $2::int',
+      params: ['suite_user_ids', 'conversation_id'],
+    };
+    const bad: Record<string, AppQuery> = {
+      noFilter: { sql: 'SELECT count(*) AS n FROM profiles p', params: ['suite_user_ids'] },
+      orWidens: {
+        sql: 'SELECT count(*) AS n FROM profiles p WHERE p.user_id = ANY($1::bigint[]) OR p.id > 0',
+        params: ['suite_user_ids'],
+      },
+      filterOnlyInAggregate: {
+        sql: 'SELECT count(*) FILTER (WHERE p.user_id = ANY($1::bigint[])) AS n FROM profiles p',
+        params: ['suite_user_ids'],
+      },
+      union: {
+        sql: 'SELECT 1 AS n FROM profiles p UNION SELECT 1 AS n FROM profiles q WHERE q.user_id = ANY($1::bigint[])',
+        params: ['suite_user_ids'],
+      },
+      wrongFirstParam: { sql: ok.sql, params: ['user_ids', 'conversation_id'] },
+    };
+    for (const [name, q] of Object.entries(bad))
+      expect(() => assertSuiteFiltered(name, q), name).toThrow(AppDbGuardError);
+    expect(() => assertSuiteFiltered('ok', ok)).not.toThrow();
+    // Runtime: only suite-created user ids and the suite's own conversation.
+    const own = { userIds: new Set(['101', '102']), ownedIds: new Set(['555']) };
+    expect(() => assertSuiteIds('ok', ok, [['101', '102'], '555'], own)).not.toThrow();
+    for (const args of [
+      [[], '555'],
+      [['101', '999'], '555'],
+      [[101], '555'],
+      ['101', '555'],
+      [['101'], '556'],
+      [['101']],
+    ])
+      expect(() => assertSuiteIds('ok', ok, args, own), JSON.stringify(args)).toThrow(AppDbGuardError);
   });
 });

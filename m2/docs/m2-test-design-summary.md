@@ -4,7 +4,7 @@
 
 Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-pii-affected-apis.md](aisle-pii-affected-apis.md) (Dev inventory (saurabh/pii-changes @ ae838f4, 16-Oct-2026)).
 
-**2148 test cases** (108 scenario + 2040 per-API) over **212 inventory entries** (11 groups). PASS 649 · FAIL 348 · BLOCKED 1150 · NEED DEV CLARIFICATION 0 · WAITING 1 · NOT APPLICABLE 0 · NOT RUN 0. Nothing has been executed as an M2 test case yet.
+**2148 test cases** (108 scenario + 2040 per-API) over **212 inventory entries** (11 groups). PASS 651 · FAIL 350 · BLOCKED 1146 · NEED DEV CLARIFICATION 0 · WAITING 1 · NOT APPLICABLE 0 · NOT RUN 0. Nothing has been executed as an M2 test case yet.
 
 ## By type and category (same Type values as M1)
 
@@ -41,7 +41,7 @@ Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-p
 | G10 CMS / admin                                          | 52   | 589      | Admin profile views, edits, search, curation, reviews, member activity, exports and the ActiveAdmin IRL page. Admin auth + permission checks; correct name/email/phone per profile.    |
 | M1 PII facade proxy (covered by Milestone 1)             | 12   | M1 suite | The /V1/api/v1/pii-test/* proxy routes (incl. readiness and free-text keys). Already covered by the 109 Milestone 1 cases; not duplicated in M2.                                       |
 
-## Runnable now (997 cases, no new access needed)
+## Runnable now (1001 cases, no new access needed)
 
 - `M2-PIIR-001` Write a first name with the test route, then read it back
 - `M2-PIIR-002` Writing a new first name replaces the old one
@@ -77,9 +77,12 @@ Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-p
 - `M2-FT-004` Many messages in one conversation: order, pagination and the created_at cursor still work
 - `M2-FT-007` A third user cannot read or post into another pair’s conversation
 - `M2-DB-001` New-user phone login creates one encrypted PHONE record for that user
+- `M2-DB-002` Onboarding creates NAME and EMAIL records for the right user
+- `M2-DB-004` Local compatibility columns: what is still stored in plaintext in aisleweb
 - `M2-DB-005` Single-field updates do not touch other fields’ records
 - `M2-DB-006` Refused or unauthorised requests write nothing
 - `M2-DB-007` User isolation at storage level
+- `M2-DB-015` Chat messages are stored as ciphertext + key_id — no plaintext text or previous_message
 - POS (Valid request succeeds with correct PII): 92 APIs
 - CONTRACT (Response contract unchanged): 94 APIs
 - AUTH (Missing / invalid credential refused): 190 APIs
@@ -94,7 +97,7 @@ Workbook: [m2-test-cases.xlsx](m2-test-cases.xlsx) · Inventory source: [aisle-p
 - REPEAT (Repeated / double request): 61 APIs
 - FIELD (PII input validation & normalisation): 1 APIs
 - DB-REFUSE (DB: refused request writes nothing): 6 APIs
-- DB-ISOL (DB: other fields and users untouched): 9 APIs
+- DB-ISOL (DB: other fields and users untouched): 10 APIs
 
 ## Per-API checks
 

@@ -42,7 +42,7 @@ import { isAllowedTestNumber } from '../auth/test-phone';
 import type { M2Config } from '../config/m2-config';
 import { ROOT } from '../design';
 import { blockPrereq, PREREQ } from '../prereq';
-import { onboard, ownState, UNUSABLE_STATES } from './onboarding';
+import { onboard, ownState, UNUSABLE_STATES, type Onboarded } from './onboarding';
 
 export interface Profile extends UserSession {
   /** Profile ref (from the verify reply or the own-profile read). */
@@ -97,6 +97,19 @@ export function extendTestTimeout(ms: number): void {
     if (info.timeout > 0) info.setTimeout(info.timeout + ms);
   } catch {
     // not inside a test (e.g. global teardown)
+  }
+}
+
+/** True for the onboarding failure "submit_profile refused: HTTP 500" (retried once — Accounts.onboardNew). */
+export const isSubmitProfile500 = (e: unknown) =>
+  /\bsubmit_profile refused: HTTP 500\b/.test(String((e as Error | undefined)?.message ?? ''));
+
+/** An "observed" annotation on the running test (no-op outside a test, e.g. the worker-start warm-up). */
+function noteObserved(description: string): void {
+  try {
+    test.info().annotations.push({ type: 'observed', description });
+  } catch {
+    // not inside a test: the ledger note and the log keep it
   }
 }
 
@@ -377,19 +390,7 @@ export class Accounts {
     values: { firstName: string; email: string },
     gender: 'Male' | 'Female' = 'Male',
   ): Promise<Profile> {
-    const fresh = await this.freshUser();
-    const entry = this.ledger.find((e) => e.mobileNumber === fresh.mobileNumber)!;
-    let done;
-    try {
-      done = await onboard(this.sessions, this.config, fresh, { ...values, gender });
-    } catch (e) {
-      Object.assign(entry, { note: `onboarding failed: ${(e as Error).message}` });
-      this.flush();
-      return blockPrereq(
-        PREREQ.onboarding.id,
-        `Onboarding a synthetic account failed — ${(e as Error).message}`,
-      );
-    }
+    const { fresh, entry, done } = await this.onboardNew(values, gender, 'onboarded-fresh');
     this.own.set(fresh.mobileNumber, done.session);
     const p: Profile = { ...done.session, ref: done.ref ?? fresh.ref, gender, known: values };
     Object.assign(entry, {
@@ -1093,6 +1094,22 @@ export class Accounts {
     return ids;
   }
 
+  /**
+   * App user ids of the accounts the SUITE created (never Dev-provided M2_ONBOARDED / M2_CONNECTED accounts) and the
+   * ids those accounts made — the only ids an aisleweb query may name (m2/src/db/app-db.ts, M2Q-33).
+   */
+  ownDbIds(): { userIds: Set<string>; ownedIds: Set<string> } {
+    const dev = new Set([...this.config.onboardedNumbers, ...this.config.connectedNumbers]);
+    const userIds = new Set<string>();
+    const add = (s: { userId?: string | undefined; mobileNumber: string }) => {
+      if (s.userId && !dev.has(s.mobileNumber)) userIds.add(String(s.userId));
+    };
+    for (const s of [...this.pool.values(), ...this.profiles.values(), ...this.own.values()]) add(s);
+    for (const p of this.throwaways.values()) add(p);
+    for (const e of this.ledger) add(e);
+    return { userIds, ownedIds: new Set(this.ownedIds) };
+  }
+
   /** Two matched profiles (M2_CONNECTED_ACCOUNTS) — matching needs approved, discoverable profiles (M2Q-32). */
   async connectedPair(): Promise<[Profile, Profile]> {
     const [a, b] = this.config.connectedNumbers;
@@ -1203,22 +1220,12 @@ export class Accounts {
       this.profiles.set(key, p);
       return p;
     }
-    const fresh = await this.freshUser();
-    const entry = this.ledger.find((e) => e.mobileNumber === fresh.mobileNumber)!;
-    let done;
-    try {
-      done = await onboard(this.sessions, this.config, fresh, {
-        ...onboardingValues(this.config.runId, i),
-        gender: genderOf(i), // photos always match the declared gender (Female set for account 1)
-      });
-    } catch (e) {
-      Object.assign(entry, { note: `onboarding failed: ${(e as Error).message}` });
-      this.flush();
-      return blockPrereq(
-        PREREQ.onboarding.id,
-        `Onboarding a synthetic account failed — ${(e as Error).message}`,
-      );
-    }
+    // Photos always match the declared gender (Female set for account 1).
+    const { fresh, entry, done } = await this.onboardNew(
+      onboardingValues(this.config.runId, i),
+      genderOf(i),
+      `onboarded-${i}`,
+    );
     this.own.set(fresh.mobileNumber, done.session);
     const p: Profile = {
       ...done.session,
@@ -1243,6 +1250,51 @@ export class Accounts {
     });
     this.profiles.set(key, p);
     return p;
+  }
+
+  /**
+   * A NEW account (freshUser) onboarded with `values`. submit_profile answered HTTP 500 for a new synthetic account in
+   * the DB run of 2026-10-26 (M2-API-149/151-DB-SAVE) — an app defect when it happens, so it is recorded as an
+   * "observed" annotation (and in the ledger), and onboarding is retried ONCE with another fresh account (same fake
+   * values). Any other failure, or a second 500, blocks (M2Q-36) with the reason — never a pass, never a failure. The
+   * failed account stays in the ledger and is cleaned up at the end like every account the suite creates.
+   */
+  private async onboardNew(
+    values: { firstName: string; email: string },
+    gender: 'Male' | 'Female',
+    label: string,
+  ): Promise<{ fresh: UserSession; entry: LedgerEntry; done: Onboarded }> {
+    for (let attempt = 0; ; attempt++) {
+      const fresh = await this.freshUser();
+      const entry = this.ledger.find((e) => e.mobileNumber === fresh.mobileNumber)!;
+      try {
+        const done = await onboard(this.sessions, this.config, fresh, { ...values, gender });
+        return { fresh, entry, done };
+      } catch (e) {
+        const message = (e as Error).message;
+        const http500 = isSubmitProfile500(e);
+        Object.assign(entry, {
+          note: `onboarding failed: ${message}${http500 ? ' (app defect: submit_profile 500)' : ''}`,
+        });
+        this.flush();
+        if (http500) {
+          noteObserved(
+            `API-057 submit_profile (${label}, onboarding a new synthetic account): HTTP 500 — an app defect when it happens; ${attempt === 0 ? 'retried once with a fresh account' : 'again on the one retry'}`,
+          );
+          this.log.warn('submit_profile answered HTTP 500 while onboarding a synthetic account', {
+            attempt: attempt + 1,
+          });
+        }
+        if (http500 && attempt === 0) {
+          extendTestTimeout(THROWAWAY_TIMEOUT_MS); // the retry onboards one more account
+          continue;
+        }
+        return blockPrereq(
+          PREREQ.onboarding.id,
+          `Onboarding a synthetic account failed — ${message}${attempt > 0 ? ' (also on the one retry with a fresh account)' : ''}`,
+        );
+      }
+    }
   }
 
   /** Re-check profile_state; image_inappropriate / disabled → Blocked (moderation, open part of M2Q-36). */
