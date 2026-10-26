@@ -117,6 +117,8 @@ jobs:
       AISLE_BASE_URL: ${{ vars.AISLE_BASE_URL || 'https://testa2.aisle.co/V1' }}
       # The Aisle test token is a secret: GitHub masks it, and the framework never prints it.
       AISLE_TEST_TOKEN: ${{ secrets.AISLE_TEST_TOKEN }}
+      # Cloudflare bypass key (header X-QA-Automation-Key) agreed with AppSec; masked like the token.
+      QA_AUTOMATION_KEY: ${{ secrets.QA_AUTOMATION_KEY }}
       AISLE_TEST_EMAIL_DOMAIN: ${{ vars.AISLE_TEST_EMAIL_DOMAIN || 'example.test' }}
       AISLE_TEST_PHONES: ${{ secrets.AISLE_TEST_PHONES }}
       DB_ENGINE: ${{ vars.DB_ENGINE || 'none' }}

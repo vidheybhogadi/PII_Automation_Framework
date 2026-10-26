@@ -19,6 +19,7 @@ import { performance } from 'node:perf_hooks';
 import type { ExchangeRecorder } from '../utils/exchange-recorder';
 import type { Logger } from '../utils/logger';
 import { currentPhase } from '../utils/phase';
+import { registerSecretValue } from '../utils/redaction';
 import { newRequestId } from '../utils/request-id';
 import { withRetry, type RetryPolicy } from '../utils/retry';
 import type { Secret } from '../utils/secret';
@@ -47,7 +48,16 @@ export const HEADER = {
   CONTENT_TYPE: 'Content-Type',
   /** Correlation ID for our own logs; Aisle may ignore it. */
   REQUEST_ID: 'X-Request-Id',
+  /** Cloudflare bypass key agreed with AppSec (2026-10-26); sent on every call when QA_AUTOMATION_KEY is set. */
+  QA_AUTOMATION_KEY: 'X-QA-Automation-Key',
 } as const;
+
+/** The Cloudflare bypass key from the environment, registered as a secret so logs/reports show a placeholder. */
+function qaAutomationKey(): string | undefined {
+  const key = process.env.QA_AUTOMATION_KEY?.trim();
+  if (key) registerSecretValue(key, '$QA_AUTOMATION_KEY');
+  return key || undefined;
+}
 
 export const JSON_CONTENT_TYPE = 'application/json';
 
@@ -139,6 +149,8 @@ export class BaseApiClient {
     const bodyBytes = tamper.bodyBytes ?? (payload === undefined ? undefined : serializeBody(payload));
 
     const headers: Record<string, string> = { ...callOptions.headers, [HEADER.REQUEST_ID]: requestId };
+    const bypassKey = qaAutomationKey();
+    if (bypassKey) headers[HEADER.QA_AUTOMATION_KEY] = bypassKey;
     if (bodyBytes !== undefined && !tamper.omitContentType) headers[HEADER.CONTENT_TYPE] = JSON_CONTENT_TYPE;
 
     let auth: PreparedRequest['auth'] = 'none';
