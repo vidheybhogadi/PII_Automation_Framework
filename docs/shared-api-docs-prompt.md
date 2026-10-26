@@ -1,4 +1,3 @@
-
 # Shared Aisle API documentation — standing instructions for this project
 
 ## Purpose
@@ -162,6 +161,7 @@ Always re-read the LATEST `content/api-data.json` from `main` immediately before
    - there are no duplicate keys (§4.1)
    - the content contains no secret-looking values (JWTs `eyJ…`, `Bearer …`, long hex or base64 blobs) and no
      non-synthetic emails or phone numbers
+
 3. Commit both files to `main` in ONE commit using the GitHub Git Data API:
 
    1. get the head commit of `main`
@@ -173,6 +173,7 @@ Always re-read the LATEST `content/api-data.json` from `main` immediately before
    If the ref update is rejected because `main` moved, re-read the latest files, merge again (§4) and retry.
    (Simpler alternative if needed: the contents API per file, `PUT repos/vidheybhogadi/API_Guide/contents/<path>`
    with the file's current `sha`; on a 409/422 sha mismatch, re-read, merge and retry.)
+
 4. Never force-push, never rewrite history, never delete other teams' content.
 5. Check the deploy: wait for the Netlify deploy of your commit (commit status / checks on that commit) and confirm
    it succeeded. If it failed, read the failure and fix it forward with a new commit. If you cannot fix it, tell me
