@@ -49,7 +49,7 @@ export const HEADER = {
   /** Correlation ID for our own logs; Aisle may ignore it. */
   REQUEST_ID: 'X-Request-Id',
   /** Cloudflare bypass key agreed with AppSec (2026-10-26); sent on every call when QA_AUTOMATION_KEY is set. */
-  QA_AUTOMATION_KEY: 'X-QA-Automation-Key',
+  QA_AUTOMATION_KEY: 'x-qa-automation-key',
 } as const;
 
 /** The Cloudflare bypass key from the environment, registered as a secret so logs/reports show a placeholder. */
