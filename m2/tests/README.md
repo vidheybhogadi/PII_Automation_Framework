@@ -20,7 +20,7 @@ agent (PROPOSE → approval → IMPLEMENT); see `CLAUDE.md`.
 - **Read gates / special statuses** (QA lead, 2026-10-24): read gates are OFF on testa2 and QA cannot switch them
   (M2Q-02), so tests check gate-OFF behaviour; a gate-ON part is recorded as a `waiting` annotation, and a case that
   is gate-ON only is **WAITING** (M2Q-43, skipped with the reason). Unmigrated-profile cases were **removed**:
-  all staging profiles are migrated (M2Q-05, QA lead 2026-10-24). All DB cases are **on hold** (M2Q-44).
+  all staging profiles are migrated (M2Q-05, QA lead 2026-10-24). DB cases run read-only on the suite’s own synthetic accounts (hold lifted 2026-10-26, M2Q-44; needs the VPN).
 - **Accounts**: `m2/src/accounts/accounts.ts` + `m2/src/auth/session.ts` (phone login, +91 10… never 106…, OTP
   1234). Created accounts go to the git-ignored ledger `reports/m2/accounts/` and are deleted where staging allows.
   Delete / reset / deactivate / report routes never run for Dev-provided accounts.

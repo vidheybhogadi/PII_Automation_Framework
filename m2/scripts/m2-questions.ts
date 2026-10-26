@@ -658,7 +658,11 @@ export const QUESTIONS: M2Question[] = [
     decision: 'Lift the hold (date / scope).',
     kind: 'Access / environment',
     apis: [],
-    deferred: 'On hold by QA lead 2026-10-24 — all DB cases wait until the hold is lifted.',
+    answer: {
+      text: 'Hold lifted 2026-10-26: VPN connected; the read-only DB cases may run on the suite’s own synthetic accounts (PII DB and aisleweb, same configured server, BEGIN READ ONLY per query).',
+      by: 'QA lead (2026-10-26)',
+      on: '2026-10-26',
+    },
   },
   {
     id: 'M2Q-45',

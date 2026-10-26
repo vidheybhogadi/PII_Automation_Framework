@@ -133,12 +133,13 @@ test.describe('UNIT M2 framework', () => {
     expect(() => expectRefusedWithoutPii(res(401, '{"email":"qa@example.test"}'), 'leak')).toThrow();
   });
 
-  test('UT-M2-014 Status rule: read gates ON → WAITING, DB hold → BLOCKED, unmigrated-profile cases removed (M2Q-05)', () => {
+  test('UT-M2-014 Status rule: read gates ON → WAITING, DB hold lifted (M2Q-44), unmigrated-profile cases removed (M2Q-05)', () => {
     expect(statusFromDeps(['M2Q-02', 'M2Q-03'])).toBe('NOT RUN'); // M2Q-02 answered: gates OFF
     expect(statusFromDeps(['M2Q-43'])).toBe('WAITING');
     expect(statusFromDeps(['M2Q-43', 'M2Q-04'])).toBe('BLOCKED');
     expect(statusFromDeps(['M2Q-43', 'M2Q-25'])).toBe('NEED DEV CLARIFICATION');
-    expect(statusFromDeps(['M2Q-16', 'M2Q-44'])).toBe('BLOCKED');
+    // DB hold lifted by the QA lead on 2026-10-26 (VPN connected): M2Q-44 no longer blocks.
+    expect(statusFromDeps(['M2Q-16', 'M2Q-44'])).toBe('NOT RUN');
     const cases = design().cases;
     // Removed 2026-10-25 (M2Q-05: all staging profiles are migrated) — must not come back; IDs are never reused.
     expect(cases.some((c) => c.check === 'UNMIG')).toBe(false);
@@ -152,7 +153,8 @@ test.describe('UNIT M2 framework', () => {
     expect(gate.every((c) => c.waiting?.includes('M2Q-43') && c.mode === 'API automation')).toBe(true);
     expect(gate.some((c) => c.status === 'NOT RUN')).toBe(true);
     const db = cases.filter((c) => c.id.startsWith('M2-DB-') || (c.check ?? '').startsWith('DB-'));
-    expect(db.every((c) => c.deps.includes('M2Q-44') && c.status !== 'NOT RUN')).toBe(true);
+    expect(db.every((c) => c.deps.includes('M2Q-44'))).toBe(true);
+    expect(db.some((c) => c.status === 'NOT RUN')).toBe(true);
     expect(caseById('M2-FNAME-013').status).toBe('WAITING');
     expect(caseById('M2-FNAME-001').status).toBe('NOT RUN');
   });
