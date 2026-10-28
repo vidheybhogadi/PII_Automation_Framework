@@ -1,0 +1,68 @@
+# API docs check — a non-blocking safety net for the shared API documentation rule.
+# On every pull request: if files that define or describe APIs changed but docs/API-Documentation.md did not, post ONE
+# comment (updated in place on later pushes, found by a hidden marker). The job always succeeds — it only warns.
+# Independent of the M1 test workflow (no secrets, no staging calls, no DB).
+name: API docs check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  api-docs-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            // Files that define or describe APIs in this repo.
+            const API_FILES = [
+              /^m2\/docs\/[^/]*api[^/]*\.md$/i,
+              /^m2\/docs\/free-text-apis\.md$/,
+              /^m2\/scripts\/m2-inventory\.ts$/,
+              /^m1\/src\/(.*\/)?clients\//,
+              /\.postman_collection\.json$/i,
+              /(^|\/)openapi[^/]*\.ya?ml$/i,
+            ];
+            // This repo's API documentation file(s).
+            const DOC_FILES = [/^docs\/API-Documentation\.md$/];
+            const MESSAGE =
+              'API files changed but the API docs were not updated — run `npm run m2:docs` and `npm run docs:api:publish` (see `docs/shared-api-docs-prompt.md`).';
+
+            const MARKER = '<!-- api-docs-check -->';
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            try {
+              const files = await github.paginate(github.rest.pulls.listFiles, {
+                owner, repo, pull_number: issue_number, per_page: 100,
+              });
+              const names = files.flatMap((f) => [f.filename, f.previous_filename].filter(Boolean));
+              const apiChanged = names.filter((n) => API_FILES.some((re) => re.test(n)));
+              const docsChanged = names.some((n) => DOC_FILES.some((re) => re.test(n)));
+
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner, repo, issue_number, per_page: 100,
+              });
+              const existing = comments.find((c) => c.body && c.body.includes(MARKER));
+
+              if (apiChanged.length && !docsChanged) {
+                const list = [...new Set(apiChanged)].slice(0, 30).map((n) => `- \`${n}\``).join('\n');
+                const body = `${MARKER}\n**API docs check:** ${MESSAGE}\n\nAPI files changed in this PR:\n${list}`;
+                core.warning(MESSAGE);
+                if (existing) await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+                else await github.rest.issues.createComment({ owner, repo, issue_number, body });
+              } else if (existing) {
+                const body = `${MARKER}\n**API docs check:** ✅ the API docs are updated in this PR (or no API files changed any more).`;
+                await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+              } else {
+                core.info(apiChanged.length ? 'API files and API docs both changed.' : 'No API files changed.');
+              }
+            } catch (err) {
+              // Never fail the PR (e.g. fork PRs get a read-only token and cannot comment).
+              core.warning(`API docs check could not complete: ${err.message}`);
+            }

@@ -11,7 +11,8 @@ repo is used by several teams and frameworks:
   stores it touches, and what is good to know.
 
 You will (1) do a one-time FIRST RUN that documents every existing API in this project, and (2) install a STANDING
-RULE so every new or changed API is documented automatically from then on.
+RULE — machine-wide for every coding agent on this computer, in this repo, and as a CI check — so every new or changed
+API is documented automatically from then on, whichever agent is used.
 
 Work directly on `main` through the GitHub API. Do NOT clone the repo, create branches or open pull requests.
 
@@ -193,33 +194,202 @@ Reply with:
 
 ---
 
-## 8. STANDING RULE — install it now
+## 8. STANDING RULE — install it now (every agent, this repo, CI)
 
-Add this rule to this project's agent instructions (`CLAUDE.md`, or the equivalent file your agent reads at every
-start), then show me the diff:
+Goal: from now on, EVERY coding agent on this computer (Claude Code, Codex, Gemini CLI, Windsurf, Cursor, Copilot …)
+keeps API_Guide up to date, not only the one running this prompt. Install it in three layers. Every step is
+**idempotent**: running this prompt again updates what is there instead of adding a second copy.
 
-> **Shared API documentation (always, without being asked).**
-> Whenever an API is added, changed or removed in this project — in code, an API client, a route, a test, a
-> collection, or an API document shared with you — update the shared API_Guide repo
-> (https://github.com/vidheybhogadi/API_Guide, branch `main`) by following the "Shared Aisle API documentation"
-> instructions:
->
-> - read the existing format from `main` via the GitHub API (no clone)
-> - document the endpoint with facts only (unknowns: "Unknown — confirm with Dev")
-> - check duplicates by METHOD + normalised path, and merge instead of duplicating
-> - no secrets, no test/QA content, synthetic data only
-> - one commit straight to `main` (no force), confirm the Netlify deploy
-> - report what was added, merged and conflicting
->
-> For a removed API, do not delete the entry. Mark it "Deprecated / removed in <framework></framework>" and tell me, so the owner
-> can decide.
+### 8.1 The rule line (same text everywhere)
+
+Wherever these instructions say "add the rule", insert exactly this block. If the two markers already exist in the
+file, replace everything between them (markers included) with this block; otherwise append it at the end of the file,
+after one blank line. Never change any other content of the file.
+
+```markdown
+<!-- api-guide-rule:start -->
+
+Shared API documentation (always, without being asked): whenever an API is added, changed or removed in any project,
+follow the api-guide-docs skill (~/.config/api-guide/SKILL.md) to update https://github.com/vidheybhogadi/API_Guide
+(branch main).
+
+<!-- api-guide-rule:end -->
+```
+
+### 8.2 Layer 1 — machine-wide (all agents on this computer)
+
+**a) Write ONE master skill file** at `~/.config/api-guide/SKILL.md` (create the folder if needed; on Windows
+`%USERPROFILE%\.config\api-guide\SKILL.md`). It must be self-contained, so it works in any project without this
+prompt. Use the Agent Skills format:
+
+```markdown
+---
+name: api-guide-docs
+description: Use whenever an API, endpoint, route, API client or API document is added, changed or removed in any project — document it in the shared Aisle API_Guide repo (vidheybhogadi/API_Guide, branch main).
+---
+
+# Shared Aisle API documentation (api-guide-docs)
+
+<body — see below>
+```
+
+The body is the full operating instructions, copied **verbatim** from this prompt:
+
+1. the Purpose bullets (repo, branch `main`, audience) and "Work directly on `main` through the GitHub API …"
+2. §1 Prerequisites
+3. §2 Learn the existing format
+4. §3.3 Collect the facts and §3.4 Facts only — applied to the endpoints that were added or changed (not the whole
+   project; the one-time discovery of §3.1–3.2 is NOT part of the skill)
+5. §4 No duplicates, §5 Content rules, §6 Publish directly to `main` (including the Netlify deploy check), §7 Report
+6. **Removed APIs:** "For a removed API, do not delete the entry. Mark it `Deprecated / removed in <framework>`
+   and tell the user, so the owner can decide."
+7. §10 Stop and ask
+
+If the file already exists, overwrite it with the new content (it is generated from this prompt; nothing else lives
+there).
+
+**b) Detect the agents and install for each one that exists.** Check each home folder; if it does not exist, skip
+that agent and say so in the summary (do not create folders for agents that are not installed).
+
+| Agent       | Detect                          | Install                                                                                                                   |
+| ----------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Claude Code | `~/.claude/`                    | symlink `~/.claude/skills/api-guide-docs/SKILL.md` → master; add the rule (§8.1) to `~/.claude/CLAUDE.md`                 |
+| Codex CLI   | `$CODEX_HOME`, else `~/.codex/` | symlink `<codex home>/skills/api-guide-docs/SKILL.md` → master; add the rule to `<codex home>/AGENTS.md`                  |
+| Gemini CLI  | `~/.gemini/`                    | add the rule to `~/.gemini/GEMINI.md`, followed inside the markers by: "Read ~/.config/api-guide/SKILL.md before acting." |
+| Windsurf    | `~/.codeium/windsurf/`          | add the rule to `~/.codeium/windsurf/memories/global_rules.md` (create `memories/` if needed)                             |
+
+- Symlinks: `ln -sfn ~/.config/api-guide/SKILL.md <target>` (create the `skills/api-guide-docs/` folder first). If an
+  existing target is a regular file, replace it with the symlink. If symlinks are not possible (e.g. Windows without
+  developer mode), COPY the master file instead and say in the summary that the copy must be refreshed when this
+  prompt is run again.
+- Create a missing `CLAUDE.md` / `AGENTS.md` / `GEMINI.md` / `global_rules.md` with only the rule block.
+- Agents that keep global rules only in their settings UI (e.g. Cursor "User Rules", ChatGPT, claude.ai) cannot be
+  written to from here: list them in the summary and tell me to paste the rule line (§8.1) myself; for web chats see §9.
+
+**c) Show a summary** of every file created, changed, symlinked, copied or skipped (path + action), plus the diff
+of each changed instruction file. Never touch anything outside the files named above.
+
+### 8.3 Layer 2 — this repo (any agent that opens it)
+
+Add the rule (§8.1) to each of these files in the current repo, creating the file if it is missing:
+
+- `AGENTS.md` (Codex, Cursor, Copilot agents and others read it)
+- `CLAUDE.md` (Claude Code)
+- `.github/copilot-instructions.md` (GitHub Copilot)
+- `.cursor/rules/api-guide.mdc` (Cursor). If you create it, start it with this frontmatter, then the rule block:
+
+  ```markdown
+  ---
+  description: Shared API documentation rule (API_Guide)
+  alwaysApply: true
+  ---
+  ```
+
+Show me the diff and **commit only after my approval** (message: `chore: add shared API documentation rule`). Do
+not push unless I ask.
+
+### 8.4 Layer 3 — CI safety net (catches what every agent missed)
+
+Add `.github/workflows/api-docs-check.yml` to the current repo — **with my approval**, and show it to me first. On
+every pull request it lists the changed files; if API source files changed but this repo's API documentation file was
+not changed in the same PR, it posts ONE pull-request comment (updated in place on later pushes, found by a hidden
+marker) saying the API docs were not updated. It is a warning only: the job always succeeds.
+
+Template (the QA automation repo uses the same file with its own paths). Adapt only the lines marked `ADAPT`:
+
+```yaml
+name: API docs check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  api-docs-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            // ADAPT: files that define or describe APIs in this repo
+            const API_FILES = [
+              /^src\/(.*\/)?(routes|controllers|clients)\//,
+              /\.postman_collection\.json$/i,
+              /(^|\/)openapi[^/]*\.ya?ml$/i,
+            ];
+            // ADAPT: this repo's API documentation file(s), if it keeps any; otherwise use the note below
+            const DOC_FILES = [/^docs\/API-Documentation\.md$/];
+            const MESSAGE =
+              'API files changed but the API docs were not updated — update API_Guide (https://github.com/vidheybhogadi/API_Guide) with the api-guide-docs skill.';
+
+            const MARKER = '<!-- api-docs-check -->';
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            try {
+              const files = await github.paginate(github.rest.pulls.listFiles, {
+                owner, repo, pull_number: issue_number, per_page: 100,
+              });
+              const names = files.flatMap((f) => [f.filename, f.previous_filename].filter(Boolean));
+              const apiChanged = names.filter((n) => API_FILES.some((re) => re.test(n)));
+              const docsChanged = names.some((n) => DOC_FILES.some((re) => re.test(n)));
+
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner, repo, issue_number, per_page: 100,
+              });
+              const existing = comments.find((c) => c.body && c.body.includes(MARKER));
+
+              if (apiChanged.length && !docsChanged) {
+                const list = [...new Set(apiChanged)].slice(0, 30).map((n) => `- \`${n}\``).join('\n');
+                const body = `${MARKER}\n**API docs check:** ${MESSAGE}\n\nAPI files changed in this PR:\n${list}`;
+                core.warning(MESSAGE);
+                if (existing) await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+                else await github.rest.issues.createComment({ owner, repo, issue_number, body });
+              } else if (existing) {
+                const body = `${MARKER}\n**API docs check:** ✅ the API docs are updated in this PR (or no API files changed any more).`;
+                await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+              } else {
+                core.info(apiChanged.length ? 'API files and API docs both changed.' : 'No API files changed.');
+              }
+            } catch (err) {
+              // Never fail the PR (e.g. fork PRs get a read-only token and cannot comment).
+              core.warning(`API docs check could not complete: ${err.message}`);
+            }
+```
+
+If the repo keeps no API documentation file of its own, keep `DOC_FILES` pointing at a file that does not exist
+there — the comment then appears on every PR that changes API files, as a reminder to update API_Guide. Use only
+`actions/checkout` / `actions/github-script` pinned to an exact major version, keep the minimal permissions above, and
+never add secrets to this workflow.
 
 ---
 
-## 9. Stop and ask me when
+## 9. Web chats (ChatGPT, claude.ai)
+
+Web chats cannot run commands or push to GitHub, so they cannot follow this prompt. Tell me to paste this instruction
+into **ChatGPT → Settings → Personalization → Custom instructions**, or into a **claude.ai Project → Project
+instructions** (it is also on the API_Guide website: Overview → "Using ChatGPT or Claude on the web?" → Copy web-chat
+instruction):
+
+<!-- web-chat-instruction:start -->
+
+```text
+When I share or describe an API (an endpoint, route, API client or API document), draft its entry for the shared Aisle API documentation (https://github.com/vidheybhogadi/API_Guide, branch main). You cannot push to GitHub, so: follow the existing format of content/api-data.json and API-Documentation.md in that repo (ask me to paste them if you cannot read them); write facts only (unknowns: "Unknown — confirm with Dev"); no secrets, tokens or real personal data, synthetic examples only; no test cases or QA status; check whether an entry with the same METHOD + normalised path already exists and merge instead of duplicating. Then remind me to publish the draft with a coding agent (Claude Code, Codex, Cursor …) that has the api-guide-docs skill or the "Shared Aisle API documentation" prompt.
+```
+
+<!-- web-chat-instruction:end -->
+
+---
+
+## 10. Stop and ask me when
 
 - you lack write access, or the format is unclear
 - an endpoint's purpose or auth type cannot be found anywhere
 - a conflict with another team's entry appears
 - validation finds a possible secret or real personal data
 - the Netlify deploy fails and the fix is not obvious
+- an install step (§8) would overwrite content you did not write, or a symlink/copy fails
