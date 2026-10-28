@@ -4,11 +4,12 @@
  *
  *   API_DOCS_REPO_DIR=/path/to/API_Guide npm run docs:api:publish
  *
- * Exports the content (content/api-data.json + API-Documentation.md, plus content/shared-api-docs-prompt.md — the
- * standing documentation prompt from docs/shared-api-docs-prompt.md, offered by the site's "Copy prompt" button) into
- * the clone, checks that the site builds
- * there (node build.mjs), then commits and pushes only if the content changed. The website code (src/, build.mjs) is
- * owned by the API_Guide repo and is never touched here. API_DOCS_REPO_DIR can also be set in .env.
+ * Exports this repository's content — the Aisle app's — into the clone (content/apps/aisle/api-data.json +
+ * content/apps/aisle/API-Documentation.md, plus content/shared-api-docs-prompt.md — the standing documentation prompt
+ * from docs/shared-api-docs-prompt.md, offered by the site's "Copy prompt" button), checks that the site builds there
+ * (node build.mjs), then commits and pushes only if that content changed. Other apps' folders, the app registry
+ * (content/apps.json) and the website code (src/, build.mjs) are owned by the API_Guide repo and never touched here.
+ * API_DOCS_REPO_DIR can also be set in .env.
  */
 import { execFileSync } from 'node:child_process';
 import { copyFileSync, existsSync } from 'node:fs';
@@ -29,6 +30,8 @@ function main() {
   if (!existsSync(path.join(repo, '.git'))) throw new Error(`${repo} is not a git clone.`);
   if (!existsSync(path.join(repo, 'build.mjs')))
     throw new Error(`${repo} has no build.mjs — is it the API_Guide repo?`);
+  if (!existsSync(path.join(repo, 'content/apps.json')))
+    throw new Error(`${repo} has no content/apps.json — pull the multi-app API_Guide first.`);
   if (path.resolve(repo) === ROOT) throw new Error('API_DOCS_REPO_DIR points at this automation repository.');
 
   git('pull', '--ff-only');
@@ -40,12 +43,17 @@ function main() {
   if (existsSync(prompt)) copyFileSync(prompt, path.join(repo, 'content/shared-api-docs-prompt.md'));
   execFileSync('node', ['build.mjs'], { cwd: repo, stdio: 'inherit' });
 
-  if (!git('status', '--porcelain', '--', 'content', 'API-Documentation.md')) {
+  const paths = ['content/apps/aisle', 'content/shared-api-docs-prompt.md'];
+  if (!git('status', '--porcelain', '--', ...paths)) {
     console.log('API docs: no content changes to publish.');
     return;
   }
-  git('add', '--', 'content', 'API-Documentation.md');
-  git('commit', '-m', `Update API documentation content (${new Date().toISOString().slice(0, 10)})`);
+  git('add', '--', ...paths);
+  git(
+    'commit',
+    '-m',
+    `docs(aisle): update API documentation content (${new Date().toISOString().slice(0, 10)})`,
+  );
   git('push', 'origin', 'HEAD:main');
   console.log(`API docs: pushed to ${git('remote', 'get-url', 'origin')} — Netlify will redeploy.`);
 }

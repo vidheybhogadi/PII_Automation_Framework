@@ -1,7 +1,8 @@
 <!-- api-guide-rule:start -->
 
-Shared API documentation (always, without being asked): whenever an API is added, changed or removed in any project,
-follow the api-guide-docs skill (~/.config/api-guide/SKILL.md) to update https://github.com/vidheybhogadi/API_Guide
-(branch main).
+Shared Aisle Network API documentation (always, without being asked): whenever an API of an Aisle Network app
+(Aisle, Arike, Neene, Neetho, Anbe, Jilebi, HeyDil) is added, changed or removed in any project, follow the
+api-guide-docs skill (~/.config/api-guide/SKILL.md) to file it under the right app in
+https://github.com/vidheybhogadi/API_Guide (branch main). Never document APIs of anything else.
 
 <!-- api-guide-rule:end -->

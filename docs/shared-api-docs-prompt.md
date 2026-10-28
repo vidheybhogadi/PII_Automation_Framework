@@ -1,9 +1,11 @@
-# Shared Aisle API documentation — standing instructions for this project
+# Shared Aisle Network API documentation — standing instructions for this project
 
 ## Purpose
 
-You maintain the SHARED Aisle API documentation for every API this project defines or calls. One documentation
-repo is used by several teams and frameworks:
+You maintain the SHARED API documentation of the **Aisle Network apps** — Aisle, Arike, Neene, Neetho, Anbe, Jilebi
+and HeyDil — for every API of those apps that this project defines or calls. Each API is filed under the app it
+belongs to (§2A). APIs of anything else (other companies, public APIs, personal projects) are never documented. One
+documentation repo is used by several teams and frameworks:
 
 - Repo: https://github.com/vidheybhogadi/API_Guide
 - Branch: `main` (the ONLY branch; Netlify builds and deploys it on every push)
@@ -33,19 +35,60 @@ Work directly on `main` through the GitHub API. Do NOT clone the repo, create br
 Read these files from `main` with the GitHub API (raw content):
 
 - `README.md` — how the site works and how content is structured
-- `build.mjs` — how `content/api-data.json` is turned into the site (field names, required fields, validation)
-- `content/api-data.json` — the data every page is built from (the source of truth for entries)
-- `API-Documentation.md` — the Markdown copy of the same content
+- `content/apps.json` — the app registry: every Aisle Network app, its family, backend and classification signals
+  (read it FIRST; §2A depends on it)
+- `build.mjs` — how the content folders are turned into the site (field names, required fields, validation)
+- `content/apps/<folder>/api-data.json` — the data of one folder (the source of truth for its entries). A folder is
+  an app id (`aisle`, `arike`, `neene`, `neetho`, `anbe`, `jilebi`, `heydil`), the vernacular family's shared folder
+  `vernac`, or `network` for network-wide routes. `content/apps/aisle/api-data.json` is the fullest example.
+- `content/apps/<folder>/API-Documentation.md` — the Markdown copy of the same folder
 - `netlify.toml` — build settings (so you know what Netlify runs)
 
 From these, write down for yourself:
 
-- the exact JSON shape of one endpoint entry (keys, types, which are required)
+- the exact JSON shape of one endpoint entry (keys, types, which are required), including the optional `apps` list
 - how endpoints are grouped (groups / features / sections) and how a group is named
-- how the Markdown file mirrors the JSON (order, headings, tables)
+- how each folder's Markdown file mirrors its JSON (order, headings, tables)
 
 Use exactly that structure. If a field you need does not exist, do NOT add new top-level fields. Put the information
 in the closest existing field, or stop and ask me. If anything is unclear, stop and ask me before writing.
+
+---
+
+## 2A. Which app does this API belong to? (decide BEFORE writing anything)
+
+Every entry is filed under exactly one folder of `content/apps/`. Classify each API with the signals in
+`content/apps.json` (read the latest from `main`), **in this order**; the first signal that decides wins:
+
+1. **Host** — e.g. `*.aisle.co` (`app.aisle.co`, `testa2.aisle.co`, `login.`/`notification.`/`socket.`/`graph.`/
+   `images.aisle.co`) → Aisle; `app.koode.co` / `testapp.koode.co` → the vernacular backend (go on to step 3 to find
+   the app); `prod.jalebi.social` / `test.lehapp.com` → Jilebi. Exception: a route that takes `app_name` and serves
+   several apps (e.g. `login.aisle.co/V1/external/*` OTP login) is network-wide, whatever its host — see step 3.
+2. **Path prefix and case** — uppercase `/V1/`, `/web/`, `/admin/`, `/api/` → Aisle; lowercase `/v1/` → the
+   vernacular backend.
+3. **`app_name` header / parameter** (or the user's `app_id`) — `Arike`, `Neene`, `Neetho`, `Anbe`, `HeyDil` select the
+   vernacular app; a route that takes `app_name` and serves several apps is network-wide.
+4. **Bundle / package ids, image hosts, PII tenant** — e.g. iOS `co.aisle.app` / Android `com.aisle.app` / PII
+   tenant `aisle` → Aisle; `app.aisle.co.arike` or `*.arike.in` → Arike; `co.neene.app` → Neene; `co.neetho.app` →
+   Neetho; `co.anbe.app` → Anbe.
+5. **Source repository / routes file** — `aisle_new` → Aisle; `aislenetwork/desiapp` → the vernacular backend (then
+   check whether the route branches per app, e.g. `is_arike?`).
+
+Outcomes:
+
+| Result                                                                                                                            | Where it goes                                                                                                                                                                                                                                                                                                         |
+| --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| One app                                                                                                                           | `content/apps/<app id>/` (no `apps` list needed)                                                                                                                                                                                                                                                                      |
+| A vernacular `/v1` route shared by the vernacular apps (the code does not branch per app)                                         | Document ONCE in `content/apps/vernac/` with `apps: ["arike", "neene", "neetho", "anbe", "heydil"]` (narrow the list only if the code says so)                                                                                                                                                                        |
+| A vernacular route the code branches for one app (e.g. `is_arike?`)                                                               | That app's folder, e.g. `content/apps/arike/`                                                                                                                                                                                                                                                                         |
+| Network-wide (serves several apps, takes `app_name`, e.g. `login.aisle.co/V1/external/*`, admin reports and sharings, aisle-cms)  | Document ONCE in `content/apps/network/` with `apps` listing every app it serves                                                                                                                                                                                                                                      |
+| Ambiguous (signals disagree or are missing)                                                                                       | **STOP and ask me.** Never guess the app.                                                                                                                                                                                                                                                                             |
+| NOT an Aisle Network app — e.g. Facebook / Google / Twitter APIs, any other company, personal projects, random public APIs        | **NEVER document it.** Report it as `skipped: not an Aisle Network app`.                                                                                                                                                                                                                                              |
+| A third-party provider or internal service an app calls (Razorpay, Paytm, the PII service itself, SMS / email / push providers …) | Never its own entry. Mention it only as a provider or data store on the app endpoint that calls it. Routes an app's **own backend** serves are that app's APIs, even when they front such a service (e.g. Aisle's `/V1/pii_integration/*` and `/V1/api/v1/pii-test` facade routes on testa2.aisle.co are Aisle APIs). |
+| An app that is not in `content/apps.json`                                                                                         | **STOP and ask me.** Only the owner adds apps; never create a new folder or app yourself.                                                                                                                                                                                                                             |
+
+Write only into `content/apps/<folder>/api-data.json` and `content/apps/<folder>/API-Documentation.md` of the folders
+chosen here. Never touch `content/apps.json`, `build.mjs`, `src/`, other folders or the root files.
 
 ---
 
@@ -66,16 +109,17 @@ Search the whole project for endpoints it defines or calls:
 
 Show me a table of everything you found, and wait for my "ok" before publishing anything:
 
-| # | Method | Path (normalised) | Feature / group | Auth type | Where found (file:line) |
+| # | App (folder, §2A) | Method | Path (normalised) | Feature / group | Auth type | Where found (file:line) |
 
-Mark endpoints you are unsure about, and say why.
+Mark endpoints you are unsure about, and say why. List APIs that are not Aisle Network APIs separately as
+`skipped: not an Aisle Network app` — they are never published.
 
 ### 3.3 Collect the facts for each endpoint
 
 For every endpoint, collect:
 
-- **Identity:** method; full path; normalised path (see §4); base URL (use the staging base URL; replace placeholders
-  such as `{{base_url}}` with the real staging URL)
+- **Identity:** app (§2A); method; full path; normalised path (see §4); base URL (use the app's staging base URL
+  from `content/apps.json`; replace placeholders such as `{{base_url}}` with the real staging URL)
 - **Purpose:** what it does, in one or two plain sentences
 - **Auth:** type only, e.g. "user JWT (Bearer)", "web JWT", "test token", "CMS admin JWT", "none". Never the value.
 - **Request:**
@@ -111,20 +155,28 @@ status codes.
 
 ### 4.1 Unique key
 
-Each entry's key is `METHOD + normalised path`:
+Each entry's key is `app + METHOD + normalised path`. A shared endpoint (vernacular `/v1` route, network-wide route)
+is ONE entry whose `apps` list names every app it serves — never one copy per app.
 
 - method upper-case (`GET`, `POST` …)
-- path: keep the version prefix as written (e.g. `/V1`, `/web`); remove the base URL, query string and trailing slash
+- path: keep the version prefix as written (e.g. `/V1`, `/web`, `/v1` — the case tells Aisle and the vernacular
+  backend apart); remove the base URL, query string and trailing slash
 - path parameters as `:name`, e.g. `/V1/users/12345` and `/V1/users/{ref}` both become `/V1/users/:ref`
-- compare keys case-insensitively
+- compare keys case-insensitively, except the version prefix (`/V1` is Aisle, `/v1` is the vernacular backend)
+- `slug` is unique within its folder; follow the folder's existing pattern (`api-001`, `api-002` …)
 
 ### 4.2 Before writing
 
-Always re-read the LATEST `content/api-data.json` from `main` immediately before you change it (other teams push too).
+Always re-read the LATEST `content/apps.json` and the `content/apps/<folder>/api-data.json` files you will change from
+`main` immediately before you change them (other teams push too). Also look for the same METHOD + path in the shared
+folders (`vernac`, `network`) and in the other folders of the same family, so a shared route is never filed twice.
 
 ### 4.3 Rules
 
-- **Key not present:** add a new entry in the existing format, in the right group.
+- **Key not present:** add a new entry in the existing format, in the right folder (§2A) and group.
+- **Same route already filed for another app of the family** (e.g. it is in `content/apps/arike/` and you found it
+  for Neene too): do NOT add a copy. Add your app to that entry's `apps` list (merge), or stop and ask whether it
+  should move to the shared folder.
 - **Key present:** do NOT add a second entry and do NOT rewrite other people's text. MERGE:
   - add only facts that are missing (a new field, status code, example or data store)
   - if the existing format has a place for it, note which framework/team also uses the endpoint
@@ -153,22 +205,25 @@ Always re-read the LATEST `content/api-data.json` from `main` immediately before
 
 ## 6. Publish directly to `main` (no clone, no branch, no PR)
 
-1. Build the new versions of `content/api-data.json` and `API-Documentation.md` in memory, in the existing format.
-   Keep them in step: every JSON entry has its Markdown counterpart.
+1. Build the new versions of `content/apps/<folder>/api-data.json` and `content/apps/<folder>/API-Documentation.md`
+   (only the folders chosen in §2A) in memory, in the existing format. Keep them in step: every JSON entry has its
+   Markdown counterpart.
 2. Validate before pushing:
 
    - the JSON parses
    - every entry has the fields `build.mjs` requires
-   - there are no duplicate keys (§4.1)
+   - there are no duplicate keys (§4.1), and every entry in `vernac` / `network` has an `apps` list of ids from
+     `content/apps.json`
+   - nothing outside `content/apps/<folder>/` changed
    - the content contains no secret-looking values (JWTs `eyJ…`, `Bearer …`, long hex or base64 blobs) and no
      non-synthetic emails or phone numbers
 
-3. Commit both files to `main` in ONE commit using the GitHub Git Data API:
+3. Commit the changed files to `main` in ONE commit using the GitHub Git Data API:
 
    1. get the head commit of `main`
-   2. create blobs for both files
+   2. create a blob for each changed file
    3. create a tree based on the head tree
-   4. create a commit with message `docs: add/update <N> endpoints from <framework name>`
+   4. create a commit with message `docs(<app or folder>): add/update <N> endpoints from <framework name>`
    5. update `refs/heads/main` without force
 
    If the ref update is rejected because `main` moved, re-read the latest files, merge again (§4) and retry.
@@ -186,10 +241,10 @@ Always re-read the LATEST `content/api-data.json` from `main` immediately before
 
 Reply with:
 
-- Added: N endpoints (method + path)
+- Added: N endpoints (app + method + path)
 - Merged: N endpoints (what was added to each)
 - Conflicts: list (endpoint, existing vs yours, evidence)
-- Skipped / unsure: list with reasons
+- Skipped / unsure: list with reasons — including every `skipped: not an Aisle Network app`
 - Commit SHA and Netlify deploy result
 
 ---
@@ -209,9 +264,10 @@ after one blank line. Never change any other content of the file.
 ```markdown
 <!-- api-guide-rule:start -->
 
-Shared API documentation (always, without being asked): whenever an API is added, changed or removed in any project,
-follow the api-guide-docs skill (~/.config/api-guide/SKILL.md) to update https://github.com/vidheybhogadi/API_Guide
-(branch main).
+Shared Aisle Network API documentation (always, without being asked): whenever an API of an Aisle Network app
+(Aisle, Arike, Neene, Neetho, Anbe, Jilebi, HeyDil) is added, changed or removed in any project, follow the
+api-guide-docs skill (~/.config/api-guide/SKILL.md) to file it under the right app in
+https://github.com/vidheybhogadi/API_Guide (branch main). Never document APIs of anything else.
 
 <!-- api-guide-rule:end -->
 ```
@@ -225,19 +281,21 @@ prompt. Use the Agent Skills format:
 ```markdown
 ---
 name: api-guide-docs
-description: Use whenever an API, endpoint, route, API client or API document is added, changed or removed in any project — document it in the shared Aisle API_Guide repo (vidheybhogadi/API_Guide, branch main).
+description: Use whenever an API, endpoint, route, API client or API document of an Aisle Network app (Aisle, Arike, Neene, Neetho, Anbe, Jilebi, HeyDil) is added, changed or removed in any project — file it under the right app in the shared API_Guide repo (vidheybhogadi/API_Guide, branch main). Never document APIs of anything else (other companies, public APIs, personal projects).
 ---
 
-# Shared Aisle API documentation (api-guide-docs)
+# Shared Aisle Network API documentation (api-guide-docs)
 
 <body — see below>
 ```
 
 The body is the full operating instructions, copied **verbatim** from this prompt:
 
-1. the Purpose bullets (repo, branch `main`, audience) and "Work directly on `main` through the GitHub API …"
+1. the Purpose paragraph and bullets (Aisle Network apps only, repo, branch `main`, audience) and "Work directly on
+   `main` through the GitHub API …"
 2. §1 Prerequisites
-3. §2 Learn the existing format
+3. §2 Learn the existing format and **§2A Which app does this API belong to?** (the classification signals, the
+   outcomes table and "write only into the chosen folders")
 4. §3.3 Collect the facts and §3.4 Facts only — applied to the endpoints that were added or changed (not the whole
    project; the one-time discovery of §3.1–3.2 is NOT part of the skill)
 5. §4 No duplicates, §5 Content rules, §6 Publish directly to `main` (including the Netlify deploy check), §7 Report
@@ -280,7 +338,7 @@ Add the rule (§8.1) to each of these files in the current repo, creating the fi
 
   ```markdown
   ---
-  description: Shared API documentation rule (API_Guide)
+  description: Shared Aisle Network API documentation rule (API_Guide)
   alwaysApply: true
   ---
   ```
@@ -372,13 +430,13 @@ never add secrets to this workflow.
 
 Web chats cannot run commands or push to GitHub, so they cannot follow this prompt. Tell me to paste this instruction
 into **ChatGPT → Settings → Personalization → Custom instructions**, or into a **claude.ai Project → Project
-instructions** (it is also on the API_Guide website: Overview → "Using ChatGPT or Claude on the web?" → Copy web-chat
-instruction):
+instructions** (it is also on the API_Guide website: All apps or any app's overview → "Using ChatGPT or Claude on the web?" → Copy
+web-chat instruction):
 
 <!-- web-chat-instruction:start -->
 
 ```text
-When I share or describe an API (an endpoint, route, API client or API document), draft its entry for the shared Aisle API documentation (https://github.com/vidheybhogadi/API_Guide, branch main). You cannot push to GitHub, so: follow the existing format of content/api-data.json and API-Documentation.md in that repo (ask me to paste them if you cannot read them); write facts only (unknowns: "Unknown — confirm with Dev"); no secrets, tokens or real personal data, synthetic examples only; no test cases or QA status; check whether an entry with the same METHOD + normalised path already exists and merge instead of duplicating. Then remind me to publish the draft with a coding agent (Claude Code, Codex, Cursor …) that has the api-guide-docs skill or the "Shared Aisle API documentation" prompt.
+When I share or describe an API (an endpoint, route, API client or API document), first decide whether it belongs to an Aisle Network app (Aisle, Arike, Neene, Neetho, Anbe, Jilebi, HeyDil). If it does not (another company, a public API, a personal project), say "skipped: not an Aisle Network app" and draft nothing. If it does, choose the app from its host, path prefix (uppercase /V1 is Aisle, lowercase /v1 is the shared vernacular backend), app_name header and bundle ids, as listed in content/apps.json of https://github.com/vidheybhogadi/API_Guide (branch main); if the app is unclear or not in that list, ask me. Then draft its entry for that app's folder (content/apps/<app>/, or content/apps/vernac/ or content/apps/network/ with an apps list when several apps share it). You cannot push to GitHub, so: follow the existing format of content/apps/<folder>/api-data.json and API-Documentation.md in that repo (ask me to paste them if you cannot read them); write facts only (unknowns: "Unknown — confirm with Dev"); no secrets, tokens or real personal data, synthetic examples only; no test cases or QA status; check whether an entry with the same app + METHOD + normalised path already exists and merge instead of duplicating. Then remind me to publish the draft with a coding agent (Claude Code, Codex, Cursor …) that has the api-guide-docs skill or the "Shared Aisle Network API documentation" prompt.
 ```
 
 <!-- web-chat-instruction:end -->
@@ -388,6 +446,8 @@ When I share or describe an API (an endpoint, route, API client or API document)
 ## 10. Stop and ask me when
 
 - you lack write access, or the format is unclear
+- the app an API belongs to is ambiguous (§2A signals disagree or are missing)
+- the API belongs to an app that is not in `content/apps.json` (only the owner adds apps)
 - an endpoint's purpose or auth type cannot be found anywhere
 - a conflict with another team's entry appears
 - validation finds a possible secret or real personal data

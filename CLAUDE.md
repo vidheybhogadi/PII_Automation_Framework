@@ -69,12 +69,20 @@ documentation**: no test cases, QA status or question IDs.
 - **This repo** keeps the content: `scripts/api-docs/export.ts` reads the source documents and writes
   `docs/API-Documentation.md` (`npm run docs:api`, also run by `npm run m2:docs`).
 - **The website** lives in its own repo, **API_Guide** (https://github.com/vidheybhogadi/API_Guide, branch `main`):
-  `src/` (styles + browser script, same look as the PII report), `build.mjs`, `netlify.toml`, plus the exported
-  `content/api-data.json` and the same `API-Documentation.md`. Netlify builds and deploys it on every push.
+  `src/` (styles + browser script, same look as the PII report), `build.mjs`, `netlify.toml`. It is **multi-app**:
+  `content/apps.json` registers the Aisle Network apps (Aisle, Arike, Neene, Neetho, Anbe, Jilebi, HeyDil) with
+  their backends and classification signals, and each API lives in `content/apps/<app>/` (shared vernacular routes in
+  `content/apps/vernac/`, network-wide routes in `content/apps/network/`, each with an `apps` list). **This repo's
+  content is the Aisle app's**: the export writes only `content/apps/aisle/api-data.json` + `API-Documentation.md`.
+  Netlify builds and deploys it on every push.
+- APIs that are not Aisle Network APIs (other companies, public APIs, personal projects) are **never documented**;
+  third-party providers (Razorpay, Paytm, the PII service itself …) appear only as providers/data stores on app endpoints; routes an app's own backend serves (e.g. Aisle's PII facade routes) are that app's APIs.
 - `npm run docs:api:publish` (with `API_DOCS_REPO_DIR` = local clone of API_Guide) exports the content there, checks
   the site builds, commits and pushes. The user authorised pushing to API_Guide `main`; this repo is still never
   committed or pushed unless asked.
-- `docs/shared-api-docs-prompt.md` is the standing prompt for every team (the site's "Copy prompt" button). Its §8
+- `docs/shared-api-docs-prompt.md` is the standing prompt for every team (the site's "Copy prompt" button). §2A
+  classifies each API to an app (host → path prefix/case → `app_name` → bundle ids → repo; ambiguous or unknown app →
+  stop and ask). Its §8
   installs the rule machine-wide (master skill `~/.config/api-guide/SKILL.md`, linked into Claude Code / Codex,
   rule line in Gemini / Windsurf), per repo (`AGENTS.md`, `CLAUDE.md`, Copilot, Cursor) and as a CI check; §9 is the
   web-chat instruction. `.github/workflows/api-docs-check.yml` comments on a PR (non-blocking) when API source files
@@ -116,8 +124,9 @@ asked again:
 
 <!-- api-guide-rule:start -->
 
-Shared API documentation (always, without being asked): whenever an API is added, changed or removed in any project,
-follow the api-guide-docs skill (~/.config/api-guide/SKILL.md) to update https://github.com/vidheybhogadi/API_Guide
-(branch main).
+Shared Aisle Network API documentation (always, without being asked): whenever an API of an Aisle Network app
+(Aisle, Arike, Neene, Neetho, Anbe, Jilebi, HeyDil) is added, changed or removed in any project, follow the
+api-guide-docs skill (~/.config/api-guide/SKILL.md) to file it under the right app in
+https://github.com/vidheybhogadi/API_Guide (branch main). Never document APIs of anything else.
 
 <!-- api-guide-rule:end -->

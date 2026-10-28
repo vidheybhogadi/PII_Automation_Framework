@@ -1,8 +1,11 @@
 /**
- * Exports the Aisle API documentation content from this repository's source documents:
- *   - docs/API-Documentation.md            the whole documentation as one Markdown file (kept in this repo)
- *   - <guide repo>/content/api-data.json   the same content as data, rendered by the API_Guide website
- *   - <guide repo>/API-Documentation.md    the same Markdown file, kept in the API_Guide repo too
+ * Exports the Aisle API documentation content from this repository's source documents. The API_Guide website covers
+ * every Aisle Network app (Aisle, Arike, Neene, Neetho, Anbe, Jilebi, HeyDil — registry in its content/apps.json);
+ * this repository's content is the Aisle app's, so it is written to the `aisle` folder only:
+ *   - docs/API-Documentation.md                          the whole documentation as one Markdown file (kept here)
+ *   - <guide repo>/content/apps/aisle/api-data.json      the same content as data, rendered by the website
+ *   - <guide repo>/content/apps/aisle/API-Documentation.md  the same Markdown file, kept in the API_Guide repo too
+ * Other apps' folders (written by other teams' agents) are never touched.
  *
  *   npm run docs:api                                   write docs/API-Documentation.md
  *   npm run docs:api -- --out <API_Guide clone>        also write the content into the API_Guide repo
@@ -37,6 +40,8 @@ import {
 const ROOT = path.resolve(__dirname, '../..');
 const MD_OUT = path.join(ROOT, 'docs/API-Documentation.md');
 const BASE_URL = 'https://testa2.aisle.co';
+/** The API_Guide folder this repository's content belongs to (an app id from API_Guide content/apps.json). */
+const APP = 'aisle';
 const TODAY = new Date().toISOString().slice(0, 10);
 
 /** Remove internal QA references (question IDs) from source text before it reaches the docs. */
@@ -1027,17 +1032,18 @@ function main() {
   const i = process.argv.indexOf('--out');
   const out = i > 0 ? process.argv[i + 1] : undefined;
   if (out) {
-    mkdirSync(path.join(out, 'content'), { recursive: true });
+    const dir = path.join(out, 'content/apps', APP);
+    mkdirSync(dir, { recursive: true });
     const content = {
-      meta: { generated: TODAY, baseUrl: BASE_URL, endpoints: data.apis.length },
+      meta: { app: APP, generated: TODAY, baseUrl: BASE_URL, endpoints: data.apis.length },
       fieldLabels: FIELD_LABEL,
       fields: PII_FIELDS,
       groups: data.groups,
       guides: gs,
       apis: data.apis,
     };
-    writeFileSync(path.join(out, 'content/api-data.json'), `${JSON.stringify(content, null, 1)}\n`);
-    writeFileSync(path.join(out, 'API-Documentation.md'), md);
+    writeFileSync(path.join(dir, 'api-data.json'), `${JSON.stringify(content, null, 1)}\n`);
+    writeFileSync(path.join(dir, 'API-Documentation.md'), md);
   }
   console.log(
     `API docs: ${path.relative(ROOT, MD_OUT)} — ${data.apis.length} endpoints${out ? ` · content written to ${out}` : ''}`,
