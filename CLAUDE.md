@@ -74,6 +74,11 @@ documentation**: no test cases, QA status or question IDs.
 - `npm run docs:api:publish` (with `API_DOCS_REPO_DIR` = local clone of API_Guide) exports the content there, checks
   the site builds, commits and pushes. The user authorised pushing to API_Guide `main`; this repo is still never
   committed or pushed unless asked.
+- `docs/shared-api-docs-prompt.md` is the standing prompt for every team (the site's "Copy prompt" button). Its §8
+  installs the rule machine-wide (master skill `~/.config/api-guide/SKILL.md`, linked into Claude Code / Codex,
+  rule line in Gemini / Windsurf), per repo (`AGENTS.md`, `CLAUDE.md`, Copilot, Cursor) and as a CI check; §9 is the
+  web-chat instruction. `.github/workflows/api-docs-check.yml` comments on a PR (non-blocking) when API source files
+  change without `docs/API-Documentation.md`.
 
 Whenever the user shares a new API list, document or endpoint (any feature, not only PII), **always**, without being
 asked again:
@@ -108,3 +113,11 @@ asked again:
   never guessed. Unknowns are marked Blocked with a BQ-xx question; real defects stay failing (security findings).
 - Synthetic test data only; never production records or real phone numbers. Read-only DB access only.
 - Never fabricate test results. Do not commit or push unless asked.
+
+<!-- api-guide-rule:start -->
+
+Shared API documentation (always, without being asked): whenever an API is added, changed or removed in any project,
+follow the api-guide-docs skill (~/.config/api-guide/SKILL.md) to update https://github.com/vidheybhogadi/API_Guide
+(branch main).
+
+<!-- api-guide-rule:end -->
