@@ -80,6 +80,7 @@ documentation**: no test cases, QA status or question IDs.
 - `npm run docs:api:publish` (with `API_DOCS_REPO_DIR` = local clone of API_Guide) exports the content there, checks
   the site builds, commits and pushes. The user authorised pushing to API_Guide `main`; this repo is still never
   committed or pushed unless asked.
+- **Drift:** after each M2 run, `npm run docs:api:drift` (report → `m2/docs/api-drift-report.md`; `-- --apply` after review).
 - `docs/shared-api-docs-prompt.md` is the standing prompt for every team (the site's "Copy prompt" button). §2A
   classifies each API to an app (host → path prefix/case → `app_name` → bundle ids → repo; ambiguous or unknown app →
   stop and ask). Its §8

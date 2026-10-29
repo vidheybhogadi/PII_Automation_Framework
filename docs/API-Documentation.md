@@ -2,7 +2,7 @@
 
 # Aisle API Documentation
 
-Every Aisle API: what it does, how to call it, the path a request takes through the code, and which data it reads and writes. 213 endpoints · staging `https://testa2.aisle.co` · generated 2026-10-26.
+Every Aisle API: what it does, how to call it, the path a request takes through the code, and which data it reads and writes. 248 endpoints · staging `https://testa2.aisle.co` · generated 2026-10-29.
 
 The same content is published as a website from the [API_Guide](https://github.com/vidheybhogadi/API_Guide) repository.
 
@@ -14,11 +14,11 @@ The same content is published as a website from the [API_Guide](https://github.c
 - [Profiles](#area-g3) — 13 endpoints
 - [Lists & discovery](#area-g4) — 21 endpoints
 - [Interactions, chat & live audio](#area-g5) — 30 endpoints
-- [Profile updates](#area-g6) — 36 endpoints
-- [Payments — checkout](#area-g7) — 12 endpoints
+- [Profile updates](#area-g6) — 39 endpoints
+- [Payments — checkout](#area-g7) — 38 endpoints
 - [Payments — verification](#area-g8) — 11 endpoints
-- [Provider callbacks](#area-g9) — 7 endpoints
-- [CMS / admin](#area-g10) — 52 endpoints
+- [Provider callbacks](#area-g9) — 10 endpoints
+- [CMS / admin](#area-g10) — 55 endpoints
 - [PII service (direct)](#area-m1) — 13 endpoints
 
 <a id="architecture"></a>
@@ -231,6 +231,8 @@ Read and write first names directly in the PII service (test token). 5 endpoints
 
 Personal data: First name (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** Read · **Code** `app/controllers/v1/pii_integration_controller.rb; config/routes.rb#L18`
 
 **Request**
@@ -244,6 +246,12 @@ curl -i --request GET "https://testa2.aisle.co/V1/pii_integration/first_name" \
   --get \
   --data-urlencode "user_id=$USER_ID"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
+- `user_id` (seen on staging 2026-10-25)
+- `first_name` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -270,6 +278,12 @@ _Code path — First name_
 
 - **Observed on staging:** Observed 2026-10-19: unknown synthetic user_id → 200 {status, user_id, first_name:null}; no user_id → 400 "Missing required parameter: user_id"; no token → 401 (empty HTML body).
 
+**What changed**
+
+- 2026-10-25 — Response field added: `first_name` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `user_id` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-002"></a>
 
 #### `POST /V1/pii_integration/first_name` — Write first name
@@ -277,6 +291,8 @@ _Code path — First name_
 **Write first name.** Read and write first names directly in the PII service (test token).
 
 Personal data: First name (writes), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** Write / update PII · **Code** `app/controllers/v1/pii_integration_controller.rb; config/routes.rb#L19`
 
@@ -296,6 +312,13 @@ curl -i --request POST "https://testa2.aisle.co/V1/pii_integration/first_name" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
+- `user_id` (seen on staging 2026-10-25)
+- `ref` (seen on staging 2026-10-25)
+- `first_name` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -318,6 +341,13 @@ _Code path — First name_
 | App database | `profiles.first_name` | read / write |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `first_name` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `ref` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `user_id` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-003"></a>
 
 #### `POST /V1/pii_integration/profile_first_names` — Profile first names
@@ -325,6 +355,8 @@ _Code path — First name_
 **Profile first names.** Read and write first names directly in the PII service (test token).
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** Batch read · **Code** `app/controllers/v1/pii_integration_controller.rb; config/routes.rb#L21`
 
@@ -346,6 +378,13 @@ curl -i --request POST "https://testa2.aisle.co/V1/pii_integration/profile_first
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
+- `requested_ref_count` (seen on staging 2026-10-25)
+- `returned_ref_count` (seen on staging 2026-10-25)
+- `profiles` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -375,6 +414,13 @@ _Code path — First name_
 
 - **Observed on staging:** Observed 2026-10-19: unknown ref → 200 {status, requested_ref_count, returned_ref_count, profiles:{<ref>:null}}; empty refs → 400.
 
+**What changed**
+
+- 2026-10-25 — Response field added: `profiles` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `returned_ref_count` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `requested_ref_count` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-190"></a>
 
 #### `POST /V1/pii_integration/first_names/batch` — Batch
@@ -382,6 +428,8 @@ _Code path — First name_
 **Batch.** Read and write first names directly in the PII service (test token).
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** Batch read · **Code** `app/controllers/v1/pii_integration_controller.rb; config/routes.rb#L20`
 
@@ -403,6 +451,13 @@ curl -i --request POST "https://testa2.aisle.co/V1/pii_integration/first_names/b
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
+- `requested_user_count` (seen on staging 2026-10-25)
+- `returned_user_count` (seen on staging 2026-10-25)
+- `first_names` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -428,6 +483,13 @@ _Code path — First name_
 
 - **Observed on staging:** Observed 2026-10-19: unknown user_ids → 200 {status, requested_user_count, returned_user_count, first_names:{}}; empty user_ids → 400.
 
+**What changed**
+
+- 2026-10-25 — Response field added: `first_names` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `returned_user_count` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `requested_user_count` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-208"></a>
 
 #### `POST /V1/pii_integration/profile_first_name_source` — Profile first name source
@@ -436,11 +498,13 @@ _Code path — First name_
 
 Personal data: First name (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** Read (name source diagnostic) · **Code** `app/controllers/v1/pii_integration_controller.rb; config/routes.rb#L22`
 
 **Request**
 
-Request fields: none
+Request fields: `first_name` (optional · from code — confirm with Dev), `ref` (optional, string · from code — confirm with Dev), `user_id` (optional, string · from code — confirm with Dev)
 
 ```bash
 curl -i --request POST "https://testa2.aisle.co/V1/pii_integration/profile_first_name_source" \
@@ -448,6 +512,19 @@ curl -i --request POST "https://testa2.aisle.co/V1/pii_integration/profile_first
   --header "Content-Type: application/json" \
   --data-binary '{}'
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
+- `user_id` (seen on staging 2026-10-25)
+- `ref` (seen on staging 2026-10-25)
+- `pii_only_write_performed` (seen on staging 2026-10-25)
+- `db_first_name_before` (seen on staging 2026-10-25)
+- `db_first_name_after` (seen on staging 2026-10-25)
+- `pii_first_name` (seen on staging 2026-10-25)
+- `profile_response_first_name` (seen on staging 2026-10-25)
+- `profile_response_uses_pii` (seen on staging 2026-10-25)
+- `hide_first_name` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -474,6 +551,22 @@ _Code path — First name_
 - **From the developers:** **Broken declaration:** `profile_first_name_source` is present in routes but absent from `V1::PiiIntegrationController`. A valid test token cannot make this route work. Do not use it as a successful PII smoke test. The diagnostic command below demonstrates the declared route only.
 - **Observed on staging:** Observed 2026-10-19: route IS implemented on staging (contradicts the Dev doc) — {} → 400 "Missing required parameter: user_id or ref"; unknown ref → 404 "Profile not found".
 - **Known limitation:** The Dev inventory lists this route without an action; staging does answer it (see the observed behaviour).
+
+**What changed**
+
+- 2026-10-29 — Request field added: `user_id` · from code — confirm with Dev · `app/controllers/v1/pii_integration_controller.rb:125 @004e72c (via profile_from_params)`
+- 2026-10-29 — Request field added: `ref` · from code — confirm with Dev · `app/controllers/v1/pii_integration_controller.rb:127 @004e72c (via profile_from_params)`
+- 2026-10-29 — Request field added: `first_name` · from code — confirm with Dev · `app/controllers/v1/pii_integration_controller.rb:92 @004e72c`
+- 2026-10-25 — Response field added: `hide_first_name` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `profile_response_uses_pii` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `profile_response_first_name` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `pii_first_name` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `db_first_name_after` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `db_first_name_before` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `pii_only_write_performed` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `ref` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `user_id` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
 
 <a id="area-g2"></a>
 
@@ -505,6 +598,8 @@ Sign-up, phone login, profile edit, hide-name, delete and reset — the flows th
 
 Personal data: First name (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (hide/unhide name) · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L94`
 
 **Request**
@@ -523,6 +618,11 @@ curl -i --request POST "https://testa2.aisle.co/V1/users/toggle_hide_name" \
 {}
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
+- `first_name` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -545,6 +645,11 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `first_name` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-057"></a>
 
 #### `POST /V1/user/submit_profile` — Update profile
@@ -552,6 +657,8 @@ _Code path — First name_
 **Update profile.** Sign-up, phone login, profile edit, hide-name, delete and reset — the flows that write personal data.
 
 Personal data: First name (writes), Email (writes), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Write / update PII · **Code** `app/controllers/v1/sessions_controller.rb; config/routes.rb#L153`
 
@@ -602,6 +709,69 @@ curl -i --request POST "https://testa2.aisle.co/V1/user/submit_profile" \
 JSON
 ```
 
+**Response fields** (top level; type not stated unless shown)
+
+- `id` (seen on staging 2026-10-25)
+- `status_v1` (seen on staging 2026-10-25)
+- `auth_token` (seen on staging 2026-10-25)
+- `first_name` (seen on staging 2026-10-25)
+- `gender` (seen on staging 2026-10-25)
+- `profile_state` (seen on staging 2026-10-25)
+- `percentage_profile_complete` (seen on staging 2026-10-25)
+- `profile_complete_without_selfie` (seen on staging 2026-10-25)
+- `verification_status` (seen on staging 2026-10-25)
+- `has_mobile_number` (seen on staging 2026-10-25)
+- `application_stage` (seen on staging 2026-10-25)
+- `application_stage_v2` (seen on staging 2026-10-25)
+- `is_boost_available` (seen on staging 2026-10-25)
+- `has_concierge_subscription` (seen on staging 2026-10-25)
+- `show_concierge_icon` (seen on staging 2026-10-25)
+- `zendesk_url` (seen on staging 2026-10-25)
+- `use_firebase_face_recognition` (seen on staging 2026-10-25)
+- `show_update_app` (seen on staging 2026-10-25)
+- `enable_instagram_connection` (seen on staging 2026-10-25)
+- `display_watch_clip` (seen on staging 2026-10-25)
+- `video_information_urls` (seen on staging 2026-10-25)
+- `your_story_form_url` (seen on staging 2026-10-25)
+- `image_upload_api` (seen on staging 2026-10-25)
+- `can_send_competitor_data` (seen on staging 2026-10-25)
+- `move_image_upload_to_last_page` (seen on staging 2026-10-25)
+- `use_presigned_url` (seen on staging 2026-10-25)
+- `selfie_compression_size` (seen on staging 2026-10-25)
+- `is_onboarding_phase_2` (seen on staging 2026-10-25)
+- `use_liveliness_check` (seen on staging 2026-10-25)
+- `meta_trigger_event_list` (seen on staging 2026-10-25)
+- `pubnub_origin_link` (seen on staging 2026-10-25)
+- `last_android_constant_file_update` (seen on staging 2026-10-25)
+- `last_ios_constant_file_update` (seen on staging 2026-10-25)
+- `store_kit_2_enabled` (seen on staging 2026-10-25)
+- `active_algorithms` (seen on staging 2026-10-25)
+- `enable_multi_comment` (seen on staging 2026-10-25)
+- `popular_profile` (seen on staging 2026-10-25)
+- `is_likely_to_pay` (seen on staging 2026-10-25)
+- `first_login_after_approval` (seen on staging 2026-10-25)
+- `avatar` (seen on staging 2026-10-25)
+- `ref` (seen on staging 2026-10-25)
+- `about` (seen on staging 2026-10-25)
+- `age` (seen on staging 2026-10-25)
+- `review_warning` (seen on staging 2026-10-25)
+- `active_plan_type` (seen on staging 2026-10-25)
+- `has_bought_subscription` (seen on staging 2026-10-25)
+- `is_boost_active` (seen on staging 2026-10-25)
+- `selfie_verification_allowed` (seen on staging 2026-10-25)
+- `selfie_verification_message` (seen on staging 2026-10-25)
+- `attempts_left` (seen on staging 2026-10-25)
+- `is_deleted` (seen on staging 2026-10-25)
+- `show_weekly` (seen on staging 2026-10-25)
+- `is_liveness_verified` (seen on staging 2026-10-25)
+- `show_discounted_pricing` (seen on staging 2026-10-25)
+- `intro_offer_timer` (seen on staging 2026-10-25)
+- `show_personalised_comment_popup` (seen on staging 2026-10-25)
+- `personalised_comment_popup_text` (seen on staging 2026-10-25)
+- `selfie_gesture` (seen on staging 2026-10-25)
+- `show_complete_profile_popup` (seen on staging 2026-10-25)
+- `is_spark_enabled` (seen on staging 2026-10-25)
+
 **End-to-end flow**
 
 _Code path — First name_
@@ -640,6 +810,69 @@ _Code path — Email_
 - **From the developers:** Onboarding writes first name and email only when their existing values are missing. Use an onboarding user and valid field IDs and uploaded photos. The web controller also uses this shared submit flow.
 - **Observed on staging:** Observed 2026-10-23: POST /V1/user/submit_profile with {} or {data:{}} (new user) → 406 {status, message:"Please submit valid details…", your_story_form_url, is_backend_error, is_spark_enabled}. With the UI automation team’s body (option ids, 4 Aisle-CDN photos) → 200, profile_state "pending_not_verified", the submitted first_name returned; after POST /V1/account_journey/update_community_message_agreed a new verify shows application_stage "completed". ~35 s later profile_state became "image_inappropriate" with gender-mixed photo sets; with the gender-matched MALE set the profile stayed "pending_not_verified" >60 s (photos must match the declared gender; submit_profile copies each photo URL and stores a 54-byte placeholder if it cannot fetch it, still answering 200).
 
+**What changed**
+
+- 2026-10-25 — Response field added: `is_spark_enabled` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_complete_profile_popup` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_gesture` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `personalised_comment_popup_text` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_personalised_comment_popup` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `intro_offer_timer` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_discounted_pricing` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_liveness_verified` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_weekly` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_deleted` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `attempts_left` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_verification_message` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_verification_allowed` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_boost_active` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_bought_subscription` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `active_plan_type` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `review_warning` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `age` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `about` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `ref` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `avatar` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `first_login_after_approval` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_likely_to_pay` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `popular_profile` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `enable_multi_comment` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `active_algorithms` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `store_kit_2_enabled` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `last_ios_constant_file_update` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `last_android_constant_file_update` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `pubnub_origin_link` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `meta_trigger_event_list` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `use_liveliness_check` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_onboarding_phase_2` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_compression_size` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `use_presigned_url` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `move_image_upload_to_last_page` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `can_send_competitor_data` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `image_upload_api` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `your_story_form_url` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `video_information_urls` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `display_watch_clip` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `enable_instagram_connection` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_update_app` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `use_firebase_face_recognition` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `zendesk_url` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_concierge_icon` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_concierge_subscription` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_boost_available` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `application_stage_v2` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `application_stage` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_mobile_number` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `verification_status` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `profile_complete_without_selfie` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `percentage_profile_complete` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `profile_state` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `gender` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `first_name` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `auth_token` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status_v1` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `id` · seen on staging 2026-10-25
+
 <a id="api-058"></a>
 
 #### `POST /V1/user/edit` — Edit profile
@@ -647,6 +880,8 @@ _Code path — Email_
 **Edit profile.** Sign-up, phone login, profile edit, hide-name, delete and reset — the flows that write personal data.
 
 Personal data: First name (writes), Email (reads), Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Write / update PII · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L154`
 
@@ -705,6 +940,14 @@ curl -i --request POST "https://testa2.aisle.co/V1/user/edit" \
 JSON
 ```
 
+**Response fields** (top level; type not stated unless shown)
+
+- `user` (seen on staging 2026-10-25)
+- `ref` (seen on staging 2026-10-25)
+- `intro_questions` (seen on staging 2026-10-25)
+- `discover_profile_order` (seen on staging 2026-10-25)
+- `audio_prompts` (seen on staging 2026-10-25)
+
 **End-to-end flow**
 
 _Code path — First name_
@@ -752,6 +995,14 @@ _Code path — Phone_
 
 - **From the developers:** Use the current complete editable payload when testing an existing profile: omitted work, traits, interests or audio fields can be cleared by edit_profile_details. personal_email in this body does not update email; this edit path changes the name and returns the existing email and phone.
 
+**What changed**
+
+- 2026-10-25 — Response field added: `audio_prompts` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `discover_profile_order` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `intro_questions` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `ref` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `user` · seen on staging 2026-10-25
+
 <a id="api-059"></a>
 
 #### `POST /V1/user/delete` — Delete account
@@ -759,6 +1010,8 @@ _Code path — Phone_
 **Delete account.** Sign-up, phone login, profile edit, hide-name, delete and reset — the flows that write personal data.
 
 Personal data: First name (reads), Email (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Delete account (reads PII for cleanup) · **Code** `app/controllers/v1/sessions_controller.rb; config/routes.rb#L155`
 
@@ -781,6 +1034,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/user/delete" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -818,6 +1075,10 @@ _Code path — Email_
 - **From the developers:** Deletion uses PII names/emails in its downstream account cleanup payload. Run only for a disposable test account.
 - **Observed on staging:** Observed 2026-10-23: a NEW (onboarding-stage) user’s valid token → 401; account deletion works only after onboarding. For an onboarded account: {id:<ref>} alone → 500; {id:<ref>, reason_id:1, note} → 200, the old token is dead afterwards and a new login starts at application_stage general_information_stage_1 (no profile). A "disabled" profile cannot be recovered (activate_user 403, delete has no effect). Confirmed again for a male-set account: delete → 200 and the number is reset.
 
+**What changed**
+
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-060"></a>
 
 #### `POST /V1/sessions/verify_number_login_v1` — Verify number login v1
@@ -827,6 +1088,8 @@ _Code path — Email_
 Personal data: First name (reads), Email (reads), Phone (writes), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app (before login) · **Auth** None — provider signature · **Operation** Write / update PII · **Code** `app/controllers/v1/sessions_controller.rb; config/routes.rb#L160`
 
@@ -917,6 +1180,8 @@ _Code path — Phone_
 
 Personal data: First name (writes), Email (writes), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Write / update PII · **Code** `app/controllers/v1/sessions_controller.rb; config/routes.rb#L161`
 
 **Request**
@@ -960,6 +1225,12 @@ curl -i --request POST "https://testa2.aisle.co/V1/sessions/submit_profile_web" 
 JSON
 ```
 
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
+- `message` (seen on staging 2026-10-25)
+- `is_invite_available` (seen on staging 2026-10-25)
+
 **End-to-end flow**
 
 _Code path — First name_
@@ -997,6 +1268,12 @@ _Code path — Email_
 
 - **From the developers:** This is /V1/sessions/submit_profile_web. It only enters the new-profile branch if the user has no profile; receiver_profile must identify an eligible invitation target.
 
+**What changed**
+
+- 2026-10-25 — Response field added: `is_invite_available` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `message` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-062"></a>
 
 #### `POST /V1/sessions/fetch_login_response` — Create login response v1
@@ -1006,6 +1283,8 @@ _Code path — Email_
 Personal data: First name (reads), Email (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app (before login) · **Auth** None — provider signature · **Operation** Login (reads/writes PII) · **Code** `app/controllers/v1/sessions_controller.rb; config/routes.rb#L164`
 
@@ -1082,6 +1361,8 @@ _Code path — Email_
 
 Personal data: First name (writes), Email (writes), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Write / update PII · **Code** `app/controllers/web/sessions_controller.rb; config/routes.rb#L365`
 
 **Request**
@@ -1128,6 +1409,69 @@ curl -i --request POST "https://testa2.aisle.co/web/user/update" \
 JSON
 ```
 
+**Response fields** (top level; type not stated unless shown)
+
+- `id` (seen on staging 2026-10-25)
+- `status_v1` (seen on staging 2026-10-25)
+- `auth_token` (seen on staging 2026-10-25)
+- `first_name` (seen on staging 2026-10-25)
+- `gender` (seen on staging 2026-10-25)
+- `profile_state` (seen on staging 2026-10-25)
+- `percentage_profile_complete` (seen on staging 2026-10-25)
+- `profile_complete_without_selfie` (seen on staging 2026-10-25)
+- `verification_status` (seen on staging 2026-10-25)
+- `has_mobile_number` (seen on staging 2026-10-25)
+- `application_stage` (seen on staging 2026-10-25)
+- `application_stage_v2` (seen on staging 2026-10-25)
+- `is_boost_available` (seen on staging 2026-10-25)
+- `has_concierge_subscription` (seen on staging 2026-10-25)
+- `show_concierge_icon` (seen on staging 2026-10-25)
+- `zendesk_url` (seen on staging 2026-10-25)
+- `use_firebase_face_recognition` (seen on staging 2026-10-25)
+- `show_update_app` (seen on staging 2026-10-25)
+- `enable_instagram_connection` (seen on staging 2026-10-25)
+- `display_watch_clip` (seen on staging 2026-10-25)
+- `video_information_urls` (seen on staging 2026-10-25)
+- `your_story_form_url` (seen on staging 2026-10-25)
+- `image_upload_api` (seen on staging 2026-10-25)
+- `can_send_competitor_data` (seen on staging 2026-10-25)
+- `move_image_upload_to_last_page` (seen on staging 2026-10-25)
+- `use_presigned_url` (seen on staging 2026-10-25)
+- `selfie_compression_size` (seen on staging 2026-10-25)
+- `is_onboarding_phase_2` (seen on staging 2026-10-25)
+- `use_liveliness_check` (seen on staging 2026-10-25)
+- `meta_trigger_event_list` (seen on staging 2026-10-25)
+- `pubnub_origin_link` (seen on staging 2026-10-25)
+- `last_android_constant_file_update` (seen on staging 2026-10-25)
+- `last_ios_constant_file_update` (seen on staging 2026-10-25)
+- `store_kit_2_enabled` (seen on staging 2026-10-25)
+- `active_algorithms` (seen on staging 2026-10-25)
+- `enable_multi_comment` (seen on staging 2026-10-25)
+- `popular_profile` (seen on staging 2026-10-25)
+- `is_likely_to_pay` (seen on staging 2026-10-25)
+- `first_login_after_approval` (seen on staging 2026-10-25)
+- `avatar` (seen on staging 2026-10-25)
+- `ref` (seen on staging 2026-10-25)
+- `about` (seen on staging 2026-10-25)
+- `age` (seen on staging 2026-10-25)
+- `review_warning` (seen on staging 2026-10-25)
+- `active_plan_type` (seen on staging 2026-10-25)
+- `has_bought_subscription` (seen on staging 2026-10-25)
+- `is_boost_active` (seen on staging 2026-10-25)
+- `selfie_verification_allowed` (seen on staging 2026-10-25)
+- `selfie_verification_message` (seen on staging 2026-10-25)
+- `attempts_left` (seen on staging 2026-10-25)
+- `is_deleted` (seen on staging 2026-10-25)
+- `show_weekly` (seen on staging 2026-10-25)
+- `is_liveness_verified` (seen on staging 2026-10-25)
+- `show_discounted_pricing` (seen on staging 2026-10-25)
+- `intro_offer_timer` (seen on staging 2026-10-25)
+- `show_personalised_comment_popup` (seen on staging 2026-10-25)
+- `personalised_comment_popup_text` (seen on staging 2026-10-25)
+- `selfie_gesture` (seen on staging 2026-10-25)
+- `show_complete_profile_popup` (seen on staging 2026-10-25)
+- `is_spark_enabled` (seen on staging 2026-10-25)
+
 **End-to-end flow**
 
 _Code path — First name_
@@ -1165,6 +1509,69 @@ _Code path — Email_
 
 - **From the developers:** Onboarding writes first name and email only when their existing values are missing. Use an onboarding user and valid field IDs and uploaded photos. The web controller also uses this shared submit flow.
 
+**What changed**
+
+- 2026-10-25 — Response field added: `is_spark_enabled` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_complete_profile_popup` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_gesture` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `personalised_comment_popup_text` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_personalised_comment_popup` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `intro_offer_timer` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_discounted_pricing` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_liveness_verified` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_weekly` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_deleted` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `attempts_left` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_verification_message` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_verification_allowed` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_boost_active` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_bought_subscription` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `active_plan_type` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `review_warning` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `age` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `about` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `ref` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `avatar` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `first_login_after_approval` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_likely_to_pay` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `popular_profile` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `enable_multi_comment` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `active_algorithms` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `store_kit_2_enabled` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `last_ios_constant_file_update` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `last_android_constant_file_update` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `pubnub_origin_link` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `meta_trigger_event_list` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `use_liveliness_check` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_onboarding_phase_2` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_compression_size` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `use_presigned_url` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `move_image_upload_to_last_page` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `can_send_competitor_data` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `image_upload_api` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `your_story_form_url` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `video_information_urls` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `display_watch_clip` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `enable_instagram_connection` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_update_app` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `use_firebase_face_recognition` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `zendesk_url` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_concierge_icon` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_concierge_subscription` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_boost_available` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `application_stage_v2` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `application_stage` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_mobile_number` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `verification_status` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `profile_complete_without_selfie` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `percentage_profile_complete` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `profile_state` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `gender` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `first_name` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `auth_token` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status_v1` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `id` · seen on staging 2026-10-25
+
 <a id="api-130"></a>
 
 #### `POST /web/user/edit` — Edit profile
@@ -1173,11 +1580,13 @@ _Code path — Email_
 
 Personal data: First name (writes), Email (reads), Phone (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Write / update PII · **Code** `app/controllers/web/users_controller.rb; config/routes.rb#L366`
 
 **Request**
 
-Request fields: `data`, `general_information`, `first_name`, `photos`, `photo`, `photo_id`, `status`, `user_traits`, `trait_id`, `user_interests_v2`, `interest_id`, `preferences`, `partial_work`, `work_title`, `industry`, `college`, `graduation_year`, `audio_prompt`, `question_id`, `audio_url`
+Request fields: `data`, `general_information`, `first_name`, `photos`, `photo`, `photo_id`, `status`, `user_traits`, `trait_id`, `user_interests_v2`, `interest_id`, `preferences`, `partial_work`, `work_title`, `industry`, `college`, `graduation_year`, `audio_prompt`, `question_id`, `audio_url`, `data.about` (optional · from code — confirm with Dev), `data.user_interests` (optional · from code — confirm with Dev), `device_type` (optional · from code — confirm with Dev)
 
 ```bash
 curl -i --request POST "https://testa2.aisle.co/web/user/edit" \
@@ -1227,6 +1636,10 @@ curl -i --request POST "https://testa2.aisle.co/web/user/edit" \
 JSON
 ```
 
+**Response fields** (top level; type not stated unless shown)
+
+- `user` (seen on staging 2026-10-25)
+
 **End-to-end flow**
 
 _Code path — First name_
@@ -1274,6 +1687,13 @@ _Code path — Phone_
 
 - **From the developers:** Use the current complete editable payload when testing an existing profile: omitted work, traits, interests or audio fields can be cleared by edit_profile_details. personal_email in this body does not update email; this edit path changes the name and returns the existing email and phone.
 
+**What changed**
+
+- 2026-10-29 — Request field added: `device_type` · from code — confirm with Dev · `app/controllers/web/users_controller.rb:34 @004e72c`
+- 2026-10-29 — Request field added: `data.user_interests` · from code — confirm with Dev · `app/controllers/web/users_controller.rb:37 @004e72c`
+- 2026-10-29 — Request field added: `data.about` · from code — confirm with Dev · `app/controllers/web/users_controller.rb:38 @004e72c`
+- 2026-10-25 — Response field added: `user` · seen on staging 2026-10-25
+
 <a id="api-131"></a>
 
 #### `POST /web/user/delete` — Delete account
@@ -1281,6 +1701,8 @@ _Code path — Phone_
 **Delete account.** Sign-up, phone login, profile edit, hide-name, delete and reset — the flows that write personal data.
 
 Personal data: First name (reads), Email (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Delete account (reads PII for cleanup) · **Code** `app/controllers/web/sessions_controller.rb; config/routes.rb#L367`
 
@@ -1300,6 +1722,10 @@ curl -i --request POST "https://testa2.aisle.co/web/user/delete" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -1336,6 +1762,10 @@ _Code path — Email_
 
 - **From the developers:** Deletion uses PII names/emails in its downstream account cleanup payload. Run only for a disposable test account.
 
+**What changed**
+
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-196"></a>
 
 #### `POST /V1/users/delete_older_account` — Users delete older account
@@ -1343,6 +1773,8 @@ _Code path — Email_
 **Users delete older account.** Sign-up, phone login, profile edit, hide-name, delete and reset — the flows that write personal data.
 
 Personal data: First name (reads), Email (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Delete account (reads PII for cleanup) · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L98`
 
@@ -1364,6 +1796,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/users/delete_older_account" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -1390,6 +1826,10 @@ _Code path — First name, Email_
 | App database | `account_emails.name (via profiles.email_id)` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/v1/users_controller.rb:300 @004e72c`
+
 <a id="api-197"></a>
 
 #### `POST /V1/users/delete_current_account` — Users delete current account
@@ -1397,6 +1837,8 @@ _Code path — First name, Email_
 **Users delete current account.** Sign-up, phone login, profile edit, hide-name, delete and reset — the flows that write personal data.
 
 Personal data: First name (reads), Email (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Delete account (reads PII for cleanup) · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L99`
 
@@ -1454,6 +1896,8 @@ Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Write / update PII · **Code** `app/controllers/v1/sessions_controller.rb; config/routes.rb#L156`
 
 **Request**
@@ -1475,6 +1919,68 @@ curl -i --request POST "https://testa2.aisle.co/V1/user/reset_profile" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `id` (seen on staging 2026-10-25)
+- `status_v1` (seen on staging 2026-10-25)
+- `auth_token` (seen on staging 2026-10-25)
+- `first_name` (seen on staging 2026-10-25)
+- `gender` (seen on staging 2026-10-25)
+- `profile_state` (seen on staging 2026-10-25)
+- `percentage_profile_complete` (seen on staging 2026-10-25)
+- `profile_complete_without_selfie` (seen on staging 2026-10-25)
+- `verification_status` (seen on staging 2026-10-25)
+- `has_mobile_number` (seen on staging 2026-10-25)
+- `application_stage` (seen on staging 2026-10-25)
+- `application_stage_v2` (seen on staging 2026-10-25)
+- `is_boost_available` (seen on staging 2026-10-25)
+- `has_concierge_subscription` (seen on staging 2026-10-25)
+- `show_concierge_icon` (seen on staging 2026-10-25)
+- `zendesk_url` (seen on staging 2026-10-25)
+- `use_firebase_face_recognition` (seen on staging 2026-10-25)
+- `show_update_app` (seen on staging 2026-10-25)
+- `enable_instagram_connection` (seen on staging 2026-10-25)
+- `display_watch_clip` (seen on staging 2026-10-25)
+- `video_information_urls` (seen on staging 2026-10-25)
+- `your_story_form_url` (seen on staging 2026-10-25)
+- `image_upload_api` (seen on staging 2026-10-25)
+- `can_send_competitor_data` (seen on staging 2026-10-25)
+- `move_image_upload_to_last_page` (seen on staging 2026-10-25)
+- `use_presigned_url` (seen on staging 2026-10-25)
+- `selfie_compression_size` (seen on staging 2026-10-25)
+- `is_onboarding_phase_2` (seen on staging 2026-10-25)
+- `use_liveliness_check` (seen on staging 2026-10-25)
+- `meta_trigger_event_list` (seen on staging 2026-10-25)
+- `pubnub_origin_link` (seen on staging 2026-10-25)
+- `last_android_constant_file_update` (seen on staging 2026-10-25)
+- `last_ios_constant_file_update` (seen on staging 2026-10-25)
+- `store_kit_2_enabled` (seen on staging 2026-10-25)
+- `active_algorithms` (seen on staging 2026-10-25)
+- `enable_multi_comment` (seen on staging 2026-10-25)
+- `popular_profile` (seen on staging 2026-10-25)
+- `is_likely_to_pay` (seen on staging 2026-10-25)
+- `first_login_after_approval` (seen on staging 2026-10-25)
+- `avatar` (seen on staging 2026-10-25)
+- `ref` (seen on staging 2026-10-25)
+- `about` (seen on staging 2026-10-25)
+- `age` (seen on staging 2026-10-25)
+- `review_warning` (seen on staging 2026-10-25)
+- `active_plan_type` (seen on staging 2026-10-25)
+- `has_bought_subscription` (seen on staging 2026-10-25)
+- `is_boost_active` (seen on staging 2026-10-25)
+- `selfie_verification_allowed` (seen on staging 2026-10-25)
+- `selfie_verification_message` (seen on staging 2026-10-25)
+- `attempts_left` (seen on staging 2026-10-25)
+- `is_deleted` (seen on staging 2026-10-25)
+- `show_weekly` (seen on staging 2026-10-25)
+- `is_liveness_verified` (seen on staging 2026-10-25)
+- `show_discounted_pricing` (seen on staging 2026-10-25)
+- `intro_offer_timer` (seen on staging 2026-10-25)
+- `show_personalised_comment_popup` (seen on staging 2026-10-25)
+- `personalised_comment_popup_text` (seen on staging 2026-10-25)
+- `selfie_gesture` (seen on staging 2026-10-25)
+- `show_complete_profile_popup` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -1501,6 +2007,68 @@ _Code path — First name_
 
 - **From the developers:** Copies compatibility fields to a new user/profile. It does not explicitly seed the new user's NAME, EMAIL or PHONE service rows; see migration gaps.
 - **Known limitation:** Copies local fields to a new user but does not create PII-service records for it.
+
+**What changed**
+
+- 2026-10-25 — Response field added: `show_complete_profile_popup` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_gesture` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `personalised_comment_popup_text` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_personalised_comment_popup` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `intro_offer_timer` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_discounted_pricing` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_liveness_verified` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_weekly` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_deleted` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `attempts_left` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_verification_message` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_verification_allowed` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_boost_active` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_bought_subscription` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `active_plan_type` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `review_warning` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `age` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `about` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `ref` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `avatar` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `first_login_after_approval` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_likely_to_pay` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `popular_profile` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `enable_multi_comment` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `active_algorithms` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `store_kit_2_enabled` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `last_ios_constant_file_update` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `last_android_constant_file_update` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `pubnub_origin_link` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `meta_trigger_event_list` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `use_liveliness_check` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_onboarding_phase_2` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_compression_size` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `use_presigned_url` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `move_image_upload_to_last_page` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `can_send_competitor_data` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `image_upload_api` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `your_story_form_url` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `video_information_urls` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `display_watch_clip` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `enable_instagram_connection` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_update_app` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `use_firebase_face_recognition` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `zendesk_url` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_concierge_icon` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_concierge_subscription` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_boost_available` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `application_stage_v2` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `application_stage` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_mobile_number` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `verification_status` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `profile_complete_without_selfie` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `percentage_profile_complete` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `profile_state` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `gender` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `first_name` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `auth_token` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status_v1` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `id` · seen on staging 2026-10-25
 
 <a id="area-g3"></a>
 
@@ -1532,11 +2100,13 @@ Return one profile — your own or another member’s. 13 endpoints.
 
 Personal data: First name (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L68`
 
 **Request**
 
-Request fields: `ref`
+Request fields: `ref`, `conversation_id` (optional · from code — confirm with Dev)
 
 ```bash
 curl -i --request GET "https://testa2.aisle.co/V1/users/profile_info" \
@@ -1548,6 +2118,14 @@ curl -i --request GET "https://testa2.aisle.co/V1/users/profile_info" \
   --get \
   --data-urlencode "ref=$OTHER_REF"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `user` (seen on staging 2026-10-25)
+- `report_options` (seen on staging 2026-10-25)
+- `own_info` (seen on staging 2026-10-25)
+- `intro_questions` (seen on staging 2026-10-25)
+- `exclusivity` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -1571,6 +2149,15 @@ _Code path — First name_
 | Cache | `Profile cache` | read / rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Response field added: `exclusivity` · from code — confirm with Dev · `app/controllers/v1/users_controller.rb:103 @004e72c`
+- 2026-10-29 — Request field added: `conversation_id` · from code — confirm with Dev · `app/controllers/v1/users_controller.rb:103 @004e72c`
+- 2026-10-25 — Response field added: `intro_questions` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `own_info` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `report_options` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `user` · seen on staging 2026-10-25
+
 <a id="api-012"></a>
 
 #### `GET /V1/users/profile_info_web` — Web profile info
@@ -1578,6 +2165,8 @@ _Code path — First name_
 **Web profile info.** Return one profile — your own or another member’s.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** None — provider signature · **Operation** Read · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L69`
 
@@ -1633,6 +2222,8 @@ _Code path — First name_
 
 Personal data: First name (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L70`
 
 **Request**
@@ -1647,6 +2238,76 @@ curl -i --request GET "https://testa2.aisle.co/V1/users/fetch_own_info" \
   --header "app_version: ${APP_VERSION}" \
   --header "unique_identifier: ${DEVICE_ID}"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `user_id` (seen on staging 2026-10-25)
+- `first_name` (seen on staging 2026-10-25)
+- `profile_state` (seen on staging 2026-10-25)
+- `gender` (seen on staging 2026-10-25)
+- `has_selected_mbti` (seen on staging 2026-10-25)
+- `hide_first_name` (seen on staging 2026-10-25)
+- `percentage_profile_complete` (seen on staging 2026-10-25)
+- `profile_complete_without_selfie` (seen on staging 2026-10-25)
+- `daily_requests_left` (seen on staging 2026-10-25)
+- `show_complete_profile_popup` (seen on staging 2026-10-25)
+- `active_plan_type` (seen on staging 2026-10-25)
+- `daily_likes_left` (seen on staging 2026-10-25)
+- `has_intro_answer` (seen on staging 2026-10-25)
+- `pending_invitations_count` (seen on staging 2026-10-25)
+- `likes_received_count` (seen on staging 2026-10-25)
+- `total_connections_count` (seen on staging 2026-10-25)
+- `verification_status` (seen on staging 2026-10-25)
+- `selfie_verification_message_v1` (seen on staging 2026-10-25)
+- `out_of_likes_messages` (seen on staging 2026-10-25)
+- `icebreaker_add_popup_feature_enabled` (seen on staging 2026-10-25)
+- `opposite_gender` (seen on staging 2026-10-25)
+- `success_stories` (seen on staging 2026-10-25)
+- `is_boost_active` (seen on staging 2026-10-25)
+- `boost_time` (seen on staging 2026-10-25)
+- `boost_popup` (seen on staging 2026-10-25)
+- `show_boost_button` (seen on staging 2026-10-25)
+- `has_active_survey` (seen on staging 2026-10-25)
+- `has_concierge_subscription` (seen on staging 2026-10-25)
+- `show_buy_extra_invites_popup` (seen on staging 2026-10-25)
+- `can_add_settle` (seen on staging 2026-10-25)
+- `can_import_contact` (seen on staging 2026-10-25)
+- `show_concierge_icon` (seen on staging 2026-10-25)
+- `has_story` (seen on staging 2026-10-25)
+- `show_story_alert` (seen on staging 2026-10-25)
+- `show_image_alert` (seen on staging 2026-10-25)
+- `image_list` (seen on staging 2026-10-25)
+- `zendesk_url` (seen on staging 2026-10-25)
+- `has_audio_prompt` (seen on staging 2026-10-25)
+- `has_settle` (seen on staging 2026-10-25)
+- `has_partial_work` (seen on staging 2026-10-25)
+- `has_relationship_goal` (seen on staging 2026-10-25)
+- `has_philosophy` (seen on staging 2026-10-25)
+- `settles` (seen on staging 2026-10-25)
+- `preferences` (seen on staging 2026-10-25)
+- `traits` (seen on staging 2026-10-25)
+- `interests` (seen on staging 2026-10-25)
+- `interests_v2` (seen on staging 2026-10-25)
+- `icebreaker_questions` (seen on staging 2026-10-25)
+- `audio_prompts` (seen on staging 2026-10-25)
+- `display_auto_pop_up` (seen on staging 2026-10-25)
+- `display_popup_on_launch` (seen on staging 2026-10-25)
+- `image_prompts` (seen on staging 2026-10-25)
+- `selfie_verification_allowed` (seen on staging 2026-10-25)
+- `selfie_verification_message` (seen on staging 2026-10-25)
+- `has_traits` (seen on staging 2026-10-25)
+- `has_interests` (seen on staging 2026-10-25)
+- `relationship_goals` (seen on staging 2026-10-25)
+- `show_mandatory_complete_profile_popup` (seen on staging 2026-10-25)
+- `phonepe_sub_id` (seen on staging 2026-10-25)
+- `phonepe_cancel_text` (seen on staging 2026-10-25)
+- `is_phonepe_sub_active` (seen on staging 2026-10-25)
+- `sorting_popup_text` (seen on staging 2026-10-25)
+- `show_my_type_button` (seen on staging 2026-10-25)
+- `like_tab_sort_by` (seen on staging 2026-10-25)
+- `like_tab_my_type` (seen on staging 2026-10-25)
+- `show_discounted_pricing` (seen on staging 2026-10-25)
+- `intro_offer_timer` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -1674,6 +2335,76 @@ _Code path — First name_
 
 - **Observed on staging:** Observed 2026-10-19: no token → 401 {unauthorized_request:true}. Observed 2026-10-23: a NEW (onboarding-stage) user’s valid token → 401 {unauthorized_request} — a 401 here is not proof of a credential problem; an ONBOARDED user’s token → 200 {user_id, first_name, profile_state, gender, hide_first_name, …} (no email), before and >60 s after submit with the male photo set.
 
+**What changed**
+
+- 2026-10-25 — Response field added: `intro_offer_timer` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_discounted_pricing` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `like_tab_my_type` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `like_tab_sort_by` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_my_type_button` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `sorting_popup_text` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_phonepe_sub_active` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `phonepe_cancel_text` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `phonepe_sub_id` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_mandatory_complete_profile_popup` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `relationship_goals` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_interests` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_traits` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_verification_message` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_verification_allowed` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `image_prompts` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `display_popup_on_launch` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `display_auto_pop_up` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `audio_prompts` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `icebreaker_questions` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `interests_v2` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `interests` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `traits` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `preferences` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `settles` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_philosophy` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_relationship_goal` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_partial_work` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_settle` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_audio_prompt` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `zendesk_url` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `image_list` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_image_alert` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_story_alert` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_story` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_concierge_icon` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `can_import_contact` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `can_add_settle` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_buy_extra_invites_popup` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_concierge_subscription` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_active_survey` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_boost_button` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `boost_popup` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `boost_time` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_boost_active` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `success_stories` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `opposite_gender` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `icebreaker_add_popup_feature_enabled` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `out_of_likes_messages` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_verification_message_v1` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `verification_status` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `total_connections_count` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `likes_received_count` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `pending_invitations_count` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_intro_answer` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `daily_likes_left` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `active_plan_type` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_complete_profile_popup` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `daily_requests_left` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `profile_complete_without_selfie` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `percentage_profile_complete` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `hide_first_name` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_selected_mbti` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `gender` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `profile_state` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `first_name` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `user_id` · seen on staging 2026-10-25
+
 <a id="api-016"></a>
 
 #### `GET /V1/users/discover_profile_list_v2` — Discover profile list v2
@@ -1682,11 +2413,13 @@ _Code path — First name_
 
 Personal data: First name (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L73`
 
 **Request**
 
-Request fields: `page`, `items_per_page`
+Request fields: `page`, `items_per_page`, `ps` (optional · from code — confirm with Dev)
 
 ```bash
 curl -i --request GET "https://testa2.aisle.co/V1/users/discover_profile_list_v2" \
@@ -1699,6 +2432,23 @@ curl -i --request GET "https://testa2.aisle.co/V1/users/discover_profile_list_v2
   --data-urlencode "page=1" \
   --data-urlencode "items_per_page=10"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `matches_list` (seen on staging 2026-10-25)
+- `report_options` (seen on staging 2026-10-25)
+- `own_info` (seen on staging 2026-10-25)
+- `settings` (seen on staging 2026-10-25)
+- `show_foryou_tab` (seen on staging 2026-10-25)
+- `show_foryou_animation` (seen on staging 2026-10-25)
+- `curator_feedback` (seen on staging 2026-10-25)
+- `user_joined_after_incognito_mode` (seen on staging 2026-10-25)
+- `show_incognito_mode` (seen on staging 2026-10-25)
+- `is_user_incognito` (seen on staging 2026-10-25)
+- `profile_sharing_popup_text` (seen on staging 2026-10-25)
+- `has_recommendation` (seen on staging 2026-10-25)
+- `incognito_mode_cards` (seen on staging 2026-10-25)
+- `free_premium_female` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -1723,6 +2473,24 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Request field added: `ps` · from code — confirm with Dev · `app/controllers/v1/users_controller.rb:51 @004e72c`
+- 2026-10-25 — Response field added: `free_premium_female` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `incognito_mode_cards` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_recommendation` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `profile_sharing_popup_text` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_user_incognito` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_incognito_mode` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `user_joined_after_incognito_mode` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `curator_feedback` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_foryou_animation` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_foryou_tab` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `settings` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `own_info` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `report_options` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `matches_list` · seen on staging 2026-10-25
+
 <a id="api-017"></a>
 
 #### `GET /V1/users/meta_for_discover` — Meta for discover
@@ -1731,11 +2499,13 @@ _Code path — First name_
 
 Personal data: First name (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L75`
 
 **Request**
 
-Request fields: none
+Request fields: `ps` (optional · from code — confirm with Dev)
 
 ```bash
 curl -i --request GET "https://testa2.aisle.co/V1/users/meta_for_discover" \
@@ -1745,6 +2515,71 @@ curl -i --request GET "https://testa2.aisle.co/V1/users/meta_for_discover" \
   --header "app_version: ${APP_VERSION}" \
   --header "unique_identifier: ${DEVICE_ID}"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `settings` (seen on staging 2026-10-25)
+- `curator_feedback` (seen on staging 2026-10-25)
+- `has_recommendation` (seen on staging 2026-10-25)
+- `free_premium_female` (seen on staging 2026-10-25)
+- `verification_status` (seen on staging 2026-10-25)
+- `selfie_verification_allowed` (seen on staging 2026-10-25)
+- `selfie_verification_message` (seen on staging 2026-10-25)
+- `percentage_profile_complete` (seen on staging 2026-10-25)
+- `selfie_compression_size` (seen on staging 2026-10-25)
+- `attempts_left` (seen on staging 2026-10-25)
+- `active_plan_type` (seen on staging 2026-10-25)
+- `can_send_competitor_data` (seen on staging 2026-10-25)
+- `video_information_urls` (seen on staging 2026-10-25)
+- `your_story_form_url` (seen on staging 2026-10-25)
+- `selfie_gesture` (seen on staging 2026-10-25)
+- `use_liveliness_check` (seen on staging 2026-10-25)
+- `meta_trigger_event_list` (seen on staging 2026-10-25)
+- `is_liveness_verified` (seen on staging 2026-10-25)
+- `user_id` (seen on staging 2026-10-25)
+- `first_name` (seen on staging 2026-10-25)
+- `profile_state` (seen on staging 2026-10-25)
+- `gender` (seen on staging 2026-10-25)
+- `hide_first_name` (seen on staging 2026-10-25)
+- `daily_requests_left` (seen on staging 2026-10-25)
+- `daily_likes_left` (seen on staging 2026-10-25)
+- `is_boost_active` (seen on staging 2026-10-25)
+- `show_buy_extra_invites_popup` (seen on staging 2026-10-25)
+- `zendesk_url` (seen on staging 2026-10-25)
+- `has_partial_work` (seen on staging 2026-10-25)
+- `interests_v2` (seen on staging 2026-10-25)
+- `icebreaker_questions` (seen on staging 2026-10-25)
+- `audio_prompts` (seen on staging 2026-10-25)
+- `phonepe_sub_id` (seen on staging 2026-10-25)
+- `phonepe_cancel_text` (seen on staging 2026-10-25)
+- `is_phonepe_sub_active` (seen on staging 2026-10-25)
+- `image_list` (seen on staging 2026-10-25)
+- `report_options` (seen on staging 2026-10-25)
+- `profile_sharing_popup_text` (seen on staging 2026-10-25)
+- `show_foryou_tab` (seen on staging 2026-10-25)
+- `show_foryou_animation` (seen on staging 2026-10-25)
+- `show_incognito_mode` (seen on staging 2026-10-25)
+- `is_user_incognito` (seen on staging 2026-10-25)
+- `user_joined_after_incognito_mode` (seen on staging 2026-10-25)
+- `incognito_mode_cards` (seen on staging 2026-10-25)
+- `boost_popup` (seen on staging 2026-10-25)
+- `boost_time` (seen on staging 2026-10-25)
+- `show_boost_button` (seen on staging 2026-10-25)
+- `active_algorithms` (seen on staging 2026-10-25)
+- `show_my_type_button` (seen on staging 2026-10-25)
+- `like_tab_sort_by` (seen on staging 2026-10-25)
+- `like_tab_my_type` (seen on staging 2026-10-25)
+- `show_discounted_pricing` (seen on staging 2026-10-25)
+- `has_audio_prompt` (seen on staging 2026-10-25)
+- `has_settle` (seen on staging 2026-10-25)
+- `has_relationship_goal` (seen on staging 2026-10-25)
+- `has_philosophy` (seen on staging 2026-10-25)
+- `has_traits` (seen on staging 2026-10-25)
+- `has_interests` (seen on staging 2026-10-25)
+- `has_story` (seen on staging 2026-10-25)
+- `preferences` (seen on staging 2026-10-25)
+- `relationship_goals` (seen on staging 2026-10-25)
+- `traits` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -1768,6 +2603,72 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Request field added: `ps` · from code — confirm with Dev · `app/controllers/v1/users_controller.rb:27 @004e72c`
+- 2026-10-25 — Response field added: `traits` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `relationship_goals` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `preferences` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_story` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_interests` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_traits` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_philosophy` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_relationship_goal` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_settle` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_audio_prompt` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_discounted_pricing` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `like_tab_my_type` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `like_tab_sort_by` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_my_type_button` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `active_algorithms` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_boost_button` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `boost_time` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `boost_popup` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `incognito_mode_cards` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `user_joined_after_incognito_mode` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_user_incognito` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_incognito_mode` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_foryou_animation` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_foryou_tab` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `profile_sharing_popup_text` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `report_options` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `image_list` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_phonepe_sub_active` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `phonepe_cancel_text` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `phonepe_sub_id` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `audio_prompts` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `icebreaker_questions` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `interests_v2` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_partial_work` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `zendesk_url` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_buy_extra_invites_popup` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_boost_active` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `daily_likes_left` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `daily_requests_left` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `hide_first_name` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `gender` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `profile_state` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `first_name` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `user_id` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_liveness_verified` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `meta_trigger_event_list` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `use_liveliness_check` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_gesture` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `your_story_form_url` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `video_information_urls` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `can_send_competitor_data` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `active_plan_type` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `attempts_left` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_compression_size` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `percentage_profile_complete` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_verification_message` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_verification_allowed` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `verification_status` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `free_premium_female` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_recommendation` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `curator_feedback` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `settings` · seen on staging 2026-10-25
+
 <a id="api-018"></a>
 
 #### `GET /V1/users/get_shareable_link` — Get shareable link
@@ -1775,6 +2676,8 @@ _Code path — First name_
 **Get shareable link.** Return one profile — your own or another member’s.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L76`
 
@@ -1792,6 +2695,11 @@ curl -i --request GET "https://testa2.aisle.co/V1/users/get_shareable_link" \
   --get \
   --data-urlencode "recommended_profile_ref=$OTHER_REF"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `link` (seen on staging 2026-10-25)
+- `preview_text` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -1815,6 +2723,11 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `preview_text` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `link` · seen on staging 2026-10-25
+
 <a id="api-021"></a>
 
 #### `GET /V1/users/:ref` — Users by ref
@@ -1822,6 +2735,8 @@ _Code path — First name_
 **Users by ref.** Return one profile — your own or another member’s.
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L83`
 
@@ -1837,6 +2752,12 @@ curl -i --request GET "https://testa2.aisle.co/V1/users/${REF}" \
   --header "app_version: ${APP_VERSION}" \
   --header "unique_identifier: ${DEVICE_ID}"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `user` (seen on staging 2026-10-25)
+- `intro_questions` (seen on staging 2026-10-25)
+- `audio_prompts` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -1888,6 +2809,12 @@ _Code path — Phone_
 
 - **Observed on staging:** Observed 2026-10-23: for a synthetic account onboarded with the gender-matched male photo set, GET /V1/users/:ref → 200 before and >60 s after submit (old and fresh token).
 
+**What changed**
+
+- 2026-10-25 — Response field added: `audio_prompts` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `intro_questions` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `user` · seen on staging 2026-10-25
+
 <a id="api-086"></a>
 
 #### `GET /V1/user/verify_user_v1` — Verify user v1
@@ -1895,6 +2822,8 @@ _Code path — Phone_
 **Verify user v1.** Return one profile — your own or another member’s.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/app_releases_controller.rb; config/routes.rb#L275`
 
@@ -1910,6 +2839,47 @@ curl -i --request GET "https://testa2.aisle.co/V1/user/verify_user_v1" \
   --header "app_version: ${APP_VERSION}" \
   --header "unique_identifier: ${DEVICE_ID}"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `mandatory` (seen on staging 2026-10-25)
+- `invalid_account` (seen on staging 2026-10-25)
+- `about` (seen on staging 2026-10-25)
+- `age` (seen on staging 2026-10-25)
+- `popular_profile` (seen on staging 2026-10-25)
+- `is_likely_to_pay` (seen on staging 2026-10-25)
+- `review_warning` (seen on staging 2026-10-25)
+- `profile_state` (seen on staging 2026-10-25)
+- `percentage_profile_complete` (seen on staging 2026-10-25)
+- `profile_complete_without_selfie` (seen on staging 2026-10-25)
+- `verification_status` (seen on staging 2026-10-25)
+- `has_intro_question` (seen on staging 2026-10-25)
+- `has_mobile_number` (seen on staging 2026-10-25)
+- `is_boost_active` (seen on staging 2026-10-25)
+- `is_boost_available` (seen on staging 2026-10-25)
+- `can_send_competitor_data` (seen on staging 2026-10-25)
+- `has_concierge_subscription` (seen on staging 2026-10-25)
+- `show_concierge_icon` (seen on staging 2026-10-25)
+- `zendesk_url` (seen on staging 2026-10-25)
+- `use_firebase_face_recognition` (seen on staging 2026-10-25)
+- `show_update_app` (seen on staging 2026-10-25)
+- `enable_instagram_connection` (seen on staging 2026-10-25)
+- `selfie_verification_allowed` (seen on staging 2026-10-25)
+- `selfie_verification_message` (seen on staging 2026-10-25)
+- `display_watch_clip` (seen on staging 2026-10-25)
+- `video_information_urls` (seen on staging 2026-10-25)
+- `your_story_form_url` (seen on staging 2026-10-25)
+- `attempts_left` (seen on staging 2026-10-25)
+- `use_presigned_url` (seen on staging 2026-10-25)
+- `image_inappropriate_message` (seen on staging 2026-10-25)
+- `selfie_compression_size` (seen on staging 2026-10-25)
+- `is_onboarding_phase_2` (seen on staging 2026-10-25)
+- `application_stage_v2` (seen on staging 2026-10-25)
+- `pre_discover_screen_text` (seen on staging 2026-10-25)
+- `show_weekly` (seen on staging 2026-10-25)
+- `version` (seen on staging 2026-10-25)
+- `message` (seen on staging 2026-10-25)
+- `selfie_gesture` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -1942,6 +2912,47 @@ _Code path — First name_
 
 - **Observed on staging:** Observed 2026-10-23: GET /V1/user/verify_user_v1 with a NEW (onboarding-stage) user’s token → 200; also 200 for a freshly onboarded account (male set) before and >60 s after submit.
 
+**What changed**
+
+- 2026-10-25 — Response field added: `selfie_gesture` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `message` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `version` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_weekly` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `pre_discover_screen_text` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `application_stage_v2` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_onboarding_phase_2` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_compression_size` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `image_inappropriate_message` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `use_presigned_url` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `attempts_left` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `your_story_form_url` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `video_information_urls` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `display_watch_clip` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_verification_message` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_verification_allowed` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `enable_instagram_connection` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_update_app` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `use_firebase_face_recognition` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `zendesk_url` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_concierge_icon` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_concierge_subscription` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `can_send_competitor_data` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_boost_available` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_boost_active` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_mobile_number` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_intro_question` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `verification_status` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `profile_complete_without_selfie` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `percentage_profile_complete` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `profile_state` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `review_warning` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_likely_to_pay` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `popular_profile` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `age` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `about` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `invalid_account` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `mandatory` · seen on staging 2026-10-25
+
 <a id="api-087"></a>
 
 #### `POST /V1/user/verify_user_v1` — Verify user v1
@@ -1949,6 +2960,8 @@ _Code path — First name_
 **Verify user v1.** Return one profile — your own or another member’s.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read (POST) · **Code** `app/controllers/v1/app_releases_controller.rb; config/routes.rb#L276`
 
@@ -1968,6 +2981,47 @@ curl -i --request POST "https://testa2.aisle.co/V1/user/verify_user_v1" \
 {}
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `mandatory` (seen on staging 2026-10-25)
+- `invalid_account` (seen on staging 2026-10-25)
+- `about` (seen on staging 2026-10-25)
+- `age` (seen on staging 2026-10-25)
+- `popular_profile` (seen on staging 2026-10-25)
+- `is_likely_to_pay` (seen on staging 2026-10-25)
+- `review_warning` (seen on staging 2026-10-25)
+- `profile_state` (seen on staging 2026-10-25)
+- `percentage_profile_complete` (seen on staging 2026-10-25)
+- `profile_complete_without_selfie` (seen on staging 2026-10-25)
+- `verification_status` (seen on staging 2026-10-25)
+- `has_intro_question` (seen on staging 2026-10-25)
+- `has_mobile_number` (seen on staging 2026-10-25)
+- `is_boost_active` (seen on staging 2026-10-25)
+- `is_boost_available` (seen on staging 2026-10-25)
+- `can_send_competitor_data` (seen on staging 2026-10-25)
+- `has_concierge_subscription` (seen on staging 2026-10-25)
+- `show_concierge_icon` (seen on staging 2026-10-25)
+- `zendesk_url` (seen on staging 2026-10-25)
+- `use_firebase_face_recognition` (seen on staging 2026-10-25)
+- `show_update_app` (seen on staging 2026-10-25)
+- `enable_instagram_connection` (seen on staging 2026-10-25)
+- `selfie_verification_allowed` (seen on staging 2026-10-25)
+- `selfie_verification_message` (seen on staging 2026-10-25)
+- `display_watch_clip` (seen on staging 2026-10-25)
+- `video_information_urls` (seen on staging 2026-10-25)
+- `your_story_form_url` (seen on staging 2026-10-25)
+- `attempts_left` (seen on staging 2026-10-25)
+- `use_presigned_url` (seen on staging 2026-10-25)
+- `image_inappropriate_message` (seen on staging 2026-10-25)
+- `selfie_compression_size` (seen on staging 2026-10-25)
+- `is_onboarding_phase_2` (seen on staging 2026-10-25)
+- `application_stage_v2` (seen on staging 2026-10-25)
+- `pre_discover_screen_text` (seen on staging 2026-10-25)
+- `show_weekly` (seen on staging 2026-10-25)
+- `version` (seen on staging 2026-10-25)
+- `message` (seen on staging 2026-10-25)
+- `selfie_gesture` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -1996,6 +3050,47 @@ _Code path — First name_
 | Cache | `Profile cache` | read / rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `selfie_gesture` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `message` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `version` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_weekly` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `pre_discover_screen_text` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `application_stage_v2` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_onboarding_phase_2` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_compression_size` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `image_inappropriate_message` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `use_presigned_url` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `attempts_left` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `your_story_form_url` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `video_information_urls` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `display_watch_clip` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_verification_message` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_verification_allowed` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `enable_instagram_connection` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_update_app` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `use_firebase_face_recognition` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `zendesk_url` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_concierge_icon` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_concierge_subscription` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `can_send_competitor_data` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_boost_available` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_boost_active` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_mobile_number` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_intro_question` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `verification_status` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `profile_complete_without_selfie` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `percentage_profile_complete` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `profile_state` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `review_warning` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_likely_to_pay` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `popular_profile` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `age` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `about` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `invalid_account` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `mandatory` · seen on staging 2026-10-25
+
 <a id="api-088"></a>
 
 #### `GET /V1/user/verify_user` — Verify user
@@ -2003,6 +3098,8 @@ _Code path — First name_
 **Verify user.** Return one profile — your own or another member’s.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/app_releases_controller.rb; config/routes.rb#L277`
 
@@ -2018,6 +3115,66 @@ curl -i --request GET "https://testa2.aisle.co/V1/user/verify_user" \
   --header "app_version: ${APP_VERSION}" \
   --header "unique_identifier: ${DEVICE_ID}"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
+- `id` (seen on staging 2026-10-25)
+- `application_stage` (seen on staging 2026-10-25)
+- `application_stage_v2` (seen on staging 2026-10-25)
+- `zendesk_url` (seen on staging 2026-10-25)
+- `verification_status` (seen on staging 2026-10-25)
+- `selfie_verification_allowed` (seen on staging 2026-10-25)
+- `selfie_verification_message` (seen on staging 2026-10-25)
+- `percentage_profile_complete` (seen on staging 2026-10-25)
+- `profile_complete_without_selfie` (seen on staging 2026-10-25)
+- `auth_token` (seen on staging 2026-10-25)
+- `selfie_compression_size` (seen on staging 2026-10-25)
+- `popular_profile` (seen on staging 2026-10-25)
+- `is_likely_to_pay` (seen on staging 2026-10-25)
+- `meta_trigger_event_list` (seen on staging 2026-10-25)
+- `move_image_upload_to_last_page` (seen on staging 2026-10-25)
+- `attempts_left` (seen on staging 2026-10-25)
+- `active_plan_type` (seen on staging 2026-10-25)
+- `is_boost_active` (seen on staging 2026-10-25)
+- `show_weekly` (seen on staging 2026-10-25)
+- `can_send_competitor_data` (seen on staging 2026-10-25)
+- `first_name` (seen on staging 2026-10-25)
+- `avatar` (seen on staging 2026-10-25)
+- `ref` (seen on staging 2026-10-25)
+- `gender` (seen on staging 2026-10-25)
+- `profile_state` (seen on staging 2026-10-25)
+- `is_boost_available` (seen on staging 2026-10-25)
+- `is_onboarding_phase_2` (seen on staging 2026-10-25)
+- `use_presigned_url` (seen on staging 2026-10-25)
+- `video_information_urls` (seen on staging 2026-10-25)
+- `your_story_form_url` (seen on staging 2026-10-25)
+- `age` (seen on staging 2026-10-25)
+- `selfie_gesture` (seen on staging 2026-10-25)
+- `mandatory` (seen on staging 2026-10-25)
+- `invalid_account` (seen on staging 2026-10-25)
+- `message` (seen on staging 2026-10-25)
+- `image_inappropriate_message` (seen on staging 2026-10-25)
+- `pre_discover_screen_text` (seen on staging 2026-10-25)
+- `show_complete_profile_popup` (seen on staging 2026-10-25)
+- `use_liveliness_check` (seen on staging 2026-10-25)
+- `is_liveness_verified` (seen on staging 2026-10-25)
+- `active_algorithms` (seen on staging 2026-10-25)
+- `success_stories` (seen on staging 2026-10-25)
+- `can_import_contact` (seen on staging 2026-10-25)
+- `pubnub_origin_link` (seen on staging 2026-10-25)
+- `has_partial_work` (seen on staging 2026-10-25)
+- `display_watch_clip` (seen on staging 2026-10-25)
+- `last_android_constant_file_update` (seen on staging 2026-10-25)
+- `last_ios_constant_file_update` (seen on staging 2026-10-25)
+- `show_personalised_comment_popup` (seen on staging 2026-10-25)
+- `personalised_comment_popup_text` (seen on staging 2026-10-25)
+- `send_integrity_token` (seen on staging 2026-10-25)
+- `store_kit_2_enabled` (seen on staging 2026-10-25)
+- `show_discounted_pricing` (seen on staging 2026-10-25)
+- `enable_multi_comment` (seen on staging 2026-10-25)
+- `intro_offer_timer` (seen on staging 2026-10-25)
+- `is_spark_enabled` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -2045,6 +3202,66 @@ _Code path — First name_
 
 - **Observed on staging:** Observed 2026-10-23: GET /V1/user/verify_user with a NEW (onboarding-stage) user’s token → 200 incl. application_stage, application_stage_v2 (list of stages), selfie_compression_size.
 
+**What changed**
+
+- 2026-10-25 — Response field added: `is_spark_enabled` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `intro_offer_timer` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `enable_multi_comment` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_discounted_pricing` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `store_kit_2_enabled` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `send_integrity_token` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `personalised_comment_popup_text` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_personalised_comment_popup` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `last_ios_constant_file_update` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `last_android_constant_file_update` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `display_watch_clip` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_partial_work` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `pubnub_origin_link` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `can_import_contact` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `success_stories` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `active_algorithms` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_liveness_verified` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `use_liveliness_check` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_complete_profile_popup` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `pre_discover_screen_text` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `image_inappropriate_message` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `message` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `invalid_account` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `mandatory` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_gesture` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `age` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `your_story_form_url` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `video_information_urls` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `use_presigned_url` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_onboarding_phase_2` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_boost_available` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `profile_state` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `gender` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `ref` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `avatar` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `first_name` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `can_send_competitor_data` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_weekly` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_boost_active` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `active_plan_type` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `attempts_left` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `move_image_upload_to_last_page` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `meta_trigger_event_list` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_likely_to_pay` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `popular_profile` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_compression_size` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `auth_token` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `profile_complete_without_selfie` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `percentage_profile_complete` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_verification_message` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `selfie_verification_allowed` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `verification_status` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `zendesk_url` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `application_stage_v2` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `application_stage` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `id` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-119"></a>
 
 #### `GET /web/users/profile_info` — Users profile info
@@ -2052,6 +3269,8 @@ _Code path — First name_
 **Users profile info.** Return one profile — your own or another member’s.
 
 Personal data: First name (reads), Free text (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/web/users_controller.rb; config/routes.rb#L350`
 
@@ -2066,6 +3285,12 @@ curl -i --request GET "https://testa2.aisle.co/web/users/profile_info" \
   --get \
   --data-urlencode "ref=$OTHER_REF"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `user` (seen on staging 2026-10-25)
+- `report_options` (seen on staging 2026-10-25)
+- `own_info` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -2102,6 +3327,12 @@ _Free-text encryption — Free text_
 
 - **Observed on staging:** Observed 2026-10-23: no token → 401 (empty text/html body).
 
+**What changed**
+
+- 2026-10-25 — Response field added: `own_info` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `report_options` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `user` · seen on staging 2026-10-25
+
 <a id="api-120"></a>
 
 #### `GET /web/users/:ref` — Users by ref
@@ -2109,6 +3340,8 @@ _Free-text encryption — Free text_
 **Users by ref.** Return one profile — your own or another member’s.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/web/users_controller.rb; config/routes.rb#L351`
 
@@ -2121,6 +3354,10 @@ curl -i --request GET "https://testa2.aisle.co/web/users/${REF}" \
   --header "Authorization: Bearer ${USER_TOKEN}" \
   --header "Accept: application/json"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `user` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -2146,6 +3383,10 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `user` · seen on staging 2026-10-25
+
 <a id="api-186"></a>
 
 #### `GET /api/profile_data/:user_id` — Profile data
@@ -2153,6 +3394,8 @@ _Code path — First name_
 **Profile data.** Return one profile — your own or another member’s.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Partner system (InfoEdge) · **Auth** INFOEDGE_PROFILE_API_TOKEN · **Operation** Read · **Code** `app/controllers/api/external_controller.rb; config/routes.rb#L672`
 
@@ -2234,6 +3477,8 @@ Return lists of profiles, requests, likes, chats or events, with a first name pe
 
 Personal data: First name (reads), Phone (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Batch read · **Code** `app/controllers/v1/invites_controller.rb; config/routes.rb#L58`
 
 **Request**
@@ -2251,6 +3496,14 @@ curl -i --request GET "https://testa2.aisle.co/V1/invites/all_requests" \
   --data-urlencode "page=1" \
   --data-urlencode "items_per_page=10"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `invites` (seen on staging 2026-10-25)
+- `total_invites` (seen on staging 2026-10-25)
+- `totalPages` (seen on staging 2026-10-25)
+- `report_options` (seen on staging 2026-10-25)
+- `refresh_duration` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -2292,6 +3545,14 @@ _Code path — Phone_
 
 - **Observed on staging:** Observed 2026-10-23: GET /V1/invites/all_requests → 200 for a freshly onboarded synthetic account (male set), before and >60 s after submit.
 
+**What changed**
+
+- 2026-10-25 — Response field added: `refresh_duration` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `report_options` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `totalPages` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `total_invites` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `invites` · seen on staging 2026-10-25
+
 <a id="api-006"></a>
 
 #### `GET /V1/invites/list_comments_with_pagination` — List comments with pagination
@@ -2299,6 +3560,8 @@ _Code path — Phone_
 **List comments with pagination.** Return lists of profiles, requests, likes, chats or events, with a first name per row.
 
 Personal data: First name (reads), Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Batch read · **Code** `app/controllers/v1/invites_controller.rb; config/routes.rb#L59`
 
@@ -2318,6 +3581,12 @@ curl -i --request GET "https://testa2.aisle.co/V1/invites/list_comments_with_pag
   --data-urlencode "items_per_page=10"
 ```
 
+**Response fields** (top level; type not stated unless shown)
+
+- `invites` (seen on staging 2026-10-25)
+- `comment_next_cursor` (seen on staging 2026-10-25)
+- `report_options` (seen on staging 2026-10-25)
+
 **End-to-end flow**
 
 _Code path — First name_
@@ -2355,6 +3624,12 @@ _Code path — Phone_
 | Cache | `Profile cache` | read / rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `report_options` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `comment_next_cursor` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `invites` · seen on staging 2026-10-25
+
 <a id="api-007"></a>
 
 #### `GET /V1/invites/list_comments_and_likes` — List comments and likes
@@ -2363,11 +3638,13 @@ _Code path — Phone_
 
 Personal data: First name (reads), Phone (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Batch read · **Code** `app/controllers/v1/invites_controller.rb; config/routes.rb#L60`
 
 **Request**
 
-Request fields: `page`, `items_per_page`
+Request fields: `page`, `items_per_page`, `opened_from_pn` (optional · from code — confirm with Dev), `sort_by` (optional · from code — confirm with Dev)
 
 ```bash
 curl -i --request GET "https://testa2.aisle.co/V1/invites/list_comments_and_likes" \
@@ -2381,6 +3658,25 @@ curl -i --request GET "https://testa2.aisle.co/V1/invites/list_comments_and_like
   --data-urlencode "items_per_page=10"
 ```
 
+**Response fields** (top level; type not stated unless shown)
+
+- `invites` (seen on staging 2026-10-25)
+- `comment_next_cursor` (seen on staging 2026-10-25)
+- `report_options` (seen on staging 2026-10-25)
+- `users` (seen on staging 2026-10-25)
+- `nextCursor` (seen on staging 2026-10-25)
+- `subscribed_likes_display_text` (seen on staging 2026-10-25)
+- `no_likes_message` (seen on staging 2026-10-25)
+- `no_of_tiles_to_display` (seen on staging 2026-10-25)
+- `complete_profile_check` (seen on staging 2026-10-25)
+- `can_see_profile` (seen on staging 2026-10-25)
+- `is_default_payment_concierge` (seen on staging 2026-10-25)
+- `show_my_type_button` (seen on staging 2026-10-25)
+- `sparks` (seen on staging 2026-10-25)
+- `previously_recevied_spark` (seen on staging 2026-10-25)
+- `show_popup` (seen on staging 2026-10-25)
+- `popup` (seen on staging 2026-10-25)
+
 **End-to-end flow**
 
 _Code path — First name_
@@ -2418,6 +3714,27 @@ _Code path — Phone_
 | Cache | `Profile cache` | read / rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Request field added: `sort_by` · from code — confirm with Dev · `app/controllers/v1/invites_controller.rb:112 @004e72c`
+- 2026-10-29 — Request field added: `opened_from_pn` · from code — confirm with Dev · `app/controllers/v1/invites_controller.rb:119 @004e72c`
+- 2026-10-25 — Response field added: `popup` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_popup` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `previously_recevied_spark` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `sparks` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_my_type_button` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_default_payment_concierge` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `can_see_profile` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `complete_profile_check` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `no_of_tiles_to_display` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `no_likes_message` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `subscribed_likes_display_text` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `nextCursor` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `users` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `report_options` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `comment_next_cursor` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `invites` · seen on staging 2026-10-25
+
 <a id="api-008"></a>
 
 #### `GET /V1/invites/list_request_and_likes` — List request and likes
@@ -2426,11 +3743,13 @@ _Code path — Phone_
 
 Personal data: First name (reads), Phone (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Batch read · **Code** `app/controllers/v1/invites_controller.rb; config/routes.rb#L61`
 
 **Request**
 
-Request fields: `page`, `items_per_page`
+Request fields: `page`, `items_per_page`, `opened_from_pn` (optional · from code — confirm with Dev), `sort_by` (optional · from code — confirm with Dev)
 
 ```bash
 curl -i --request GET "https://testa2.aisle.co/V1/invites/list_request_and_likes" \
@@ -2443,6 +3762,25 @@ curl -i --request GET "https://testa2.aisle.co/V1/invites/list_request_and_likes
   --data-urlencode "page=1" \
   --data-urlencode "items_per_page=10"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `invites` (seen on staging 2026-10-25)
+- `total_invites` (seen on staging 2026-10-25)
+- `totalPages` (seen on staging 2026-10-25)
+- `report_options` (seen on staging 2026-10-25)
+- `refresh_duration` (seen on staging 2026-10-25)
+- `users` (seen on staging 2026-10-25)
+- `nextCursor` (seen on staging 2026-10-25)
+- `subscribed_likes_display_text` (seen on staging 2026-10-25)
+- `no_likes_message` (seen on staging 2026-10-25)
+- `no_of_tiles_to_display` (seen on staging 2026-10-25)
+- `complete_profile_check` (seen on staging 2026-10-25)
+- `can_see_profile` (seen on staging 2026-10-25)
+- `is_default_payment_concierge` (seen on staging 2026-10-25)
+- `show_my_type_button` (seen on staging 2026-10-25)
+- `show_popup` (seen on staging 2026-10-25)
+- `popup` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -2480,6 +3818,27 @@ _Code path — Phone_
 | Cache | `Profile cache` | read / rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Request field added: `sort_by` · from code — confirm with Dev · `app/controllers/v1/invites_controller.rb:55 @004e72c`
+- 2026-10-29 — Request field added: `opened_from_pn` · from code — confirm with Dev · `app/controllers/v1/invites_controller.rb:62 @004e72c`
+- 2026-10-25 — Response field added: `popup` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_popup` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_my_type_button` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_default_payment_concierge` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `can_see_profile` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `complete_profile_check` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `no_of_tiles_to_display` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `no_likes_message` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `subscribed_likes_display_text` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `nextCursor` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `users` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `refresh_duration` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `report_options` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `totalPages` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `total_invites` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `invites` · seen on staging 2026-10-25
+
 <a id="api-014"></a>
 
 #### `GET /V1/users/matches_list_v2` — Matches list v2
@@ -2487,6 +3846,8 @@ _Code path — Phone_
 **Matches list v2.** Return lists of profiles, requests, likes, chats or events, with a first name per row.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Batch read · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L71`
 
@@ -2505,6 +3866,13 @@ curl -i --request GET "https://testa2.aisle.co/V1/users/matches_list_v2" \
   --data-urlencode "page=1" \
   --data-urlencode "items_per_page=10"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `users_list` (seen on staging 2026-10-25)
+- `suggestion_state` (seen on staging 2026-10-25)
+- `show_foryou_tab` (seen on staging 2026-10-25)
+- `suggestions_source` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -2537,6 +3905,13 @@ _Code path — First name_
 
 - **Observed on staging:** Observed 2026-10-23: GET /V1/users/matches_list_v2 → 200 for a freshly onboarded synthetic account (male set), before and >60 s after submit.
 
+**What changed**
+
+- 2026-10-25 — Response field added: `suggestions_source` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_foryou_tab` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `suggestion_state` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `users_list` · seen on staging 2026-10-25
+
 <a id="api-015"></a>
 
 #### `POST /V1/users/matches_list_v3` — Matches list v2
@@ -2544,6 +3919,8 @@ _Code path — First name_
 **Matches list v2.** Return lists of profiles, requests, likes, chats or events, with a first name per row.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Batch read · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L72`
 
@@ -2566,6 +3943,13 @@ curl -i --request POST "https://testa2.aisle.co/V1/users/matches_list_v3" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `users_list` (seen on staging 2026-10-25)
+- `suggestion_state` (seen on staging 2026-10-25)
+- `show_foryou_tab` (seen on staging 2026-10-25)
+- `suggestions_source` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -2598,6 +3982,13 @@ _Code path — First name_
 
 - **From the developers:** POST alias of the matches_list_v2 action.
 
+**What changed**
+
+- 2026-10-25 — Response field added: `suggestions_source` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_foryou_tab` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `suggestion_state` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `users_list` · seen on staging 2026-10-25
+
 <a id="api-019"></a>
 
 #### `GET /V1/users/fetch_concierge_list` — Fetch concierge list
@@ -2605,6 +3996,8 @@ _Code path — First name_
 **Fetch concierge list.** Return lists of profiles, requests, likes, chats or events, with a first name per row.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L77`
 
@@ -2623,6 +4016,25 @@ curl -i --request GET "https://testa2.aisle.co/V1/users/fetch_concierge_list" \
   --data-urlencode "page=1" \
   --data-urlencode "items_per_page=10"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `users` (seen on staging 2026-10-25)
+- `next_page` (seen on staging 2026-10-25)
+- `nextCursor` (seen on staging 2026-10-25)
+- `report_options` (seen on staging 2026-10-25)
+- `own_info` (seen on staging 2026-10-25)
+- `constant_messages` (seen on staging 2026-10-25)
+- `banners_v2` (seen on staging 2026-10-25)
+- `live_list` (seen on staging 2026-10-25)
+- `total_profile_count` (seen on staging 2026-10-25)
+- `search_filter` (seen on staging 2026-10-25)
+- `can_enter_profile` (seen on staging 2026-10-25)
+- `show_payment_box` (seen on staging 2026-10-25)
+- `has_concierge_subscription` (seen on staging 2026-10-25)
+- `box_message` (seen on staging 2026-10-25)
+- `know_more_message` (seen on staging 2026-10-25)
+- `know_more_message_2` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -2647,6 +4059,25 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `know_more_message_2` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `know_more_message` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `box_message` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_concierge_subscription` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `show_payment_box` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `can_enter_profile` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `search_filter` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `total_profile_count` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `live_list` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `banners_v2` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `constant_messages` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `own_info` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `report_options` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `nextCursor` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `next_page` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `users` · seen on staging 2026-10-25
+
 <a id="api-020"></a>
 
 #### `GET /V1/users/fetch_top_matched_profiles` — Fetch top matched profiles
@@ -2654,6 +4085,8 @@ _Code path — First name_
 **Fetch top matched profiles.** Return lists of profiles, requests, likes, chats or events, with a first name per row.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Batch read · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L78`
 
@@ -2672,6 +4105,12 @@ curl -i --request GET "https://testa2.aisle.co/V1/users/fetch_top_matched_profil
   --data-urlencode "page=1" \
   --data-urlencode "items_per_page=10"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `users` (seen on staging 2026-10-25)
+- `next_refresh_time` (seen on staging 2026-10-25)
+- `daily_requests_left` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -2700,6 +4139,12 @@ _Code path — First name_
 | Cache | `Profile cache` | read / rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `daily_requests_left` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `next_refresh_time` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `users` · seen on staging 2026-10-25
+
 <a id="api-047"></a>
 
 #### `GET /V1/list_request_sent` — List request sent
@@ -2707,6 +4152,8 @@ _Code path — First name_
 **List request sent.** Return lists of profiles, requests, likes, chats or events, with a first name per row.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/like_controller.rb; config/routes.rb#L133`
 
@@ -2725,6 +4172,14 @@ curl -i --request GET "https://testa2.aisle.co/V1/list_request_sent" \
   --data-urlencode "page=1" \
   --data-urlencode "items_per_page=10"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `users` (seen on staging 2026-10-25)
+- `nextCursor_1` (seen on staging 2026-10-25)
+- `nextCursor_2` (seen on staging 2026-10-25)
+- `report_options` (seen on staging 2026-10-25)
+- `own_info` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -2749,6 +4204,14 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `own_info` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `report_options` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `nextCursor_2` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `nextCursor_1` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `users` · seen on staging 2026-10-25
+
 <a id="api-048"></a>
 
 #### `GET /V1/list_likes_received_v1` — List likes received v1
@@ -2756,6 +4219,8 @@ _Code path — First name_
 **List likes received v1.** Return lists of profiles, requests, likes, chats or events, with a first name per row.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/like_controller.rb; config/routes.rb#L134`
 
@@ -2774,6 +4239,18 @@ curl -i --request GET "https://testa2.aisle.co/V1/list_likes_received_v1" \
   --data-urlencode "page=1" \
   --data-urlencode "items_per_page=10"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `users` (seen on staging 2026-10-25)
+- `nextCursor` (seen on staging 2026-10-25)
+- `subscribed_likes_display_text` (seen on staging 2026-10-25)
+- `no_likes_message` (seen on staging 2026-10-25)
+- `no_of_tiles_to_display` (seen on staging 2026-10-25)
+- `complete_profile_check` (seen on staging 2026-10-25)
+- `can_see_profile` (seen on staging 2026-10-25)
+- `report_options` (seen on staging 2026-10-25)
+- `is_default_payment_concierge` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -2797,6 +4274,18 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `is_default_payment_concierge` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `report_options` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `can_see_profile` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `complete_profile_check` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `no_of_tiles_to_display` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `no_likes_message` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `subscribed_likes_display_text` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `nextCursor` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `users` · seen on staging 2026-10-25
+
 <a id="api-049"></a>
 
 #### `GET /V1/list_all_passed` — List all passed
@@ -2804,6 +4293,8 @@ _Code path — First name_
 **List all passed.** Return lists of profiles, requests, likes, chats or events, with a first name per row.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/like_controller.rb; config/routes.rb#L135`
 
@@ -2822,6 +4313,12 @@ curl -i --request GET "https://testa2.aisle.co/V1/list_all_passed" \
   --data-urlencode "page=1" \
   --data-urlencode "items_per_page=10"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `users` (seen on staging 2026-10-25)
+- `own_info` (seen on staging 2026-10-25)
+- `report_options` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -2846,6 +4343,12 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `report_options` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `own_info` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `users` · seen on staging 2026-10-25
+
 <a id="api-054"></a>
 
 #### `POST /V1/like_received` — List likes and requests received
@@ -2853,6 +4356,8 @@ _Code path — First name_
 **List likes and requests received.** Return lists of profiles, requests, likes, chats or events, with a first name per row.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read (POST) · **Code** `app/controllers/v1/like_controller.rb; config/routes.rb#L141`
 
@@ -2875,6 +4380,15 @@ curl -i --request POST "https://testa2.aisle.co/V1/like_received" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `users` (seen on staging 2026-10-25)
+- `nextCursor_1` (seen on staging 2026-10-25)
+- `nextCursor_2` (seen on staging 2026-10-25)
+- `report_options` (seen on staging 2026-10-25)
+- `own_info` (seen on staging 2026-10-25)
+- `refresh_duration` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -2899,6 +4413,15 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `refresh_duration` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `own_info` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `report_options` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `nextCursor_2` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `nextCursor_1` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `users` · seen on staging 2026-10-25
+
 <a id="api-063"></a>
 
 #### `GET /V1/list_connected_profiles` — List connected profiles
@@ -2906,6 +4429,8 @@ _Code path — First name_
 **List connected profiles.** Return lists of profiles, requests, likes, chats or events, with a first name per row.
 
 Personal data: First name (reads), Phone (reads), Free text (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/messages_controller.rb; config/routes.rb#L173`
 
@@ -2924,6 +4449,14 @@ curl -i --request GET "https://testa2.aisle.co/V1/list_connected_profiles" \
   --data-urlencode "page=1" \
   --data-urlencode "items_per_page=10"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `user_id` (seen on staging 2026-10-25)
+- `conversations` (seen on staging 2026-10-25)
+- `total_connections_count` (seen on staging 2026-10-25)
+- `refresh_duration` (seen on staging 2026-10-25)
+- `feedback_intro_popup` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -2974,6 +4507,14 @@ _Free-text encryption — Free text_
 - **From the developers:** Phone impact is the is_test_user? branch; phone is not added to other members' response fields.
 - **Observed on staging:** Observed 2026-10-23: no token → 401 {unauthorized_request}; a freshly onboarded synthetic account (male set) → 200 before and >60 s after submit.
 
+**What changed**
+
+- 2026-10-25 — Response field added: `feedback_intro_popup` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `refresh_duration` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `total_connections_count` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `conversations` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `user_id` · seen on staging 2026-10-25
+
 <a id="api-068"></a>
 
 #### `GET /V1/combined_messages_hidden_list` — Combined messages hidden list
@@ -2981,6 +4522,8 @@ _Free-text encryption — Free text_
 **Combined messages hidden list.** Return lists of profiles, requests, likes, chats or events, with a first name per row.
 
 Personal data: First name (reads), Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/messages_controller.rb; config/routes.rb#L184`
 
@@ -2999,6 +4542,13 @@ curl -i --request GET "https://testa2.aisle.co/V1/combined_messages_hidden_list"
   --data-urlencode "page=1" \
   --data-urlencode "items_per_page=10"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `user_id` (seen on staging 2026-10-25)
+- `conversations` (seen on staging 2026-10-25)
+- `hidden_linked_users` (seen on staging 2026-10-25)
+- `feedback_intro_popup` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -3039,6 +4589,13 @@ _Code path — Phone_
 
 - **From the developers:** Phone impact is the is_test_user? branch; phone is not added to other members' response fields.
 
+**What changed**
+
+- 2026-10-25 — Response field added: `feedback_intro_popup` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `hidden_linked_users` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `conversations` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `user_id` · seen on staging 2026-10-25
+
 <a id="api-069"></a>
 
 #### `POST /V1/chat/chat_messages` — Chat messages
@@ -3046,6 +4603,8 @@ _Code path — Phone_
 **Chat messages.** Return lists of profiles, requests, likes, chats or events, with a first name per row.
 
 Personal data: First name (reads), Free text (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read (POST) · **Code** `app/controllers/v1/messages_controller.rb; config/routes.rb#L188`
 
@@ -3113,6 +4672,8 @@ _Free-text encryption — Free text_
 
 Personal data: First name (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/speed_dating_controller.rb; config/routes.rb#L302`
 
 **Request**
@@ -3165,6 +4726,8 @@ _Code path — First name_
 
 Personal data: First name (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/advertisement_controller.rb; config/routes.rb#L310`
 
 **Request**
@@ -3182,6 +4745,12 @@ curl -i --request GET "https://testa2.aisle.co/V1/advertisement/profiles_voted" 
   --data-urlencode "page=1" \
   --data-urlencode "items_per_page=10"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `profiles` (seen on staging 2026-10-25)
+- `own_info` (seen on staging 2026-10-25)
+- `report_options` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -3205,6 +4774,12 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `report_options` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `own_info` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `profiles` · seen on staging 2026-10-25
+
 <a id="api-107"></a>
 
 #### `GET /V1/live_audio` — Live audio
@@ -3212,6 +4787,8 @@ _Code path — First name_
 **Live audio.** Return lists of profiles, requests, likes, chats or events, with a first name per row.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/live_audio_controller.rb; config/routes.rb#L312`
 
@@ -3230,6 +4807,13 @@ curl -i --request GET "https://testa2.aisle.co/V1/live_audio" \
   --data-urlencode "page=1" \
   --data-urlencode "app_launch=false"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `live_list` (seen on staging 2026-10-25)
+- `live_list_v1` (seen on staging 2026-10-25)
+- `room_settings` (seen on staging 2026-10-25)
+- `agora_data` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -3255,6 +4839,13 @@ _Code path — First name_
 | Cache | `Live-audio room cache` | rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `agora_data` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `room_settings` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `live_list_v1` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `live_list` · seen on staging 2026-10-25
+
 <a id="api-116"></a>
 
 #### `GET /web/invites/all_requests` — List all requests
@@ -3262,6 +4853,8 @@ _Code path — First name_
 **List all requests.** Return lists of profiles, requests, likes, chats or events, with a first name per row.
 
 Personal data: First name (reads), Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Batch read · **Code** `app/controllers/web/invites_controller.rb; config/routes.rb#L343`
 
@@ -3277,6 +4870,14 @@ curl -i --request GET "https://testa2.aisle.co/web/invites/all_requests" \
   --data-urlencode "page=1" \
   --data-urlencode "items_per_page=10"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `invites` (seen on staging 2026-10-25)
+- `total_invites` (seen on staging 2026-10-25)
+- `totalPages` (seen on staging 2026-10-25)
+- `report_options` (seen on staging 2026-10-25)
+- `refresh_duration` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -3314,6 +4915,14 @@ _Code path — Phone_
 | Cache | `Profile cache` | read / rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `refresh_duration` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `report_options` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `totalPages` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `total_invites` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `invites` · seen on staging 2026-10-25
+
 <a id="api-126"></a>
 
 #### `GET /web/list_likes_received` — Web list likes received
@@ -3321,6 +4930,8 @@ _Code path — Phone_
 **Web list likes received.** Return lists of profiles, requests, likes, chats or events, with a first name per row.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/web/like_controller.rb; config/routes.rb#L359`
 
@@ -3336,6 +4947,18 @@ curl -i --request GET "https://testa2.aisle.co/web/list_likes_received" \
   --data-urlencode "page=1" \
   --data-urlencode "items_per_page=10"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `users` (seen on staging 2026-10-25)
+- `nextCursor` (seen on staging 2026-10-25)
+- `subscribed_likes_display_text` (seen on staging 2026-10-25)
+- `no_likes_message` (seen on staging 2026-10-25)
+- `no_of_tiles_to_display` (seen on staging 2026-10-25)
+- `complete_profile_check` (seen on staging 2026-10-25)
+- `can_see_profile` (seen on staging 2026-10-25)
+- `report_options` (seen on staging 2026-10-25)
+- `is_default_payment_concierge` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -3359,6 +4982,18 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `is_default_payment_concierge` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `report_options` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `can_see_profile` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `complete_profile_check` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `no_of_tiles_to_display` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `no_likes_message` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `subscribed_likes_display_text` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `nextCursor` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `users` · seen on staging 2026-10-25
+
 <a id="api-191"></a>
 
 #### `GET /V1/users/test_profile_list` — Test profile list
@@ -3366,6 +5001,8 @@ _Code path — First name_
 **Test profile list.** Return lists of profiles, requests, likes, chats or events, with a first name per row.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** Read · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L16`
 
@@ -3378,6 +5015,11 @@ curl -i --request GET "https://testa2.aisle.co/V1/users/test_profile_list" \
   --header "Authorization: Bearer ${TEST_TOKEN}" \
   --header "Accept: application/json"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `invites` (seen on staging 2026-10-25)
+- `likes` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -3398,6 +5040,11 @@ _Code path — First name_
 | PII database | `user_pii_field_value (field_name = NAME)` | read |
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
+
+**What changed**
+
+- 2026-10-25 — Response field added: `likes` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `invites` · seen on staging 2026-10-25
 
 <a id="area-g5"></a>
 
@@ -3446,6 +5093,8 @@ Likes, invites, accept / pass, reports, messages, calls and live audio. 30 endpo
 
 Personal data: First name (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/invites_controller.rb; config/routes.rb#L57`
 
 **Request**
@@ -3468,6 +5117,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/invites/send_request_to_profi
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -3493,6 +5146,10 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-009"></a>
 
 #### `POST /V1/invites/accept_request` — Accept request
@@ -3500,6 +5157,8 @@ _Code path — First name_
 **Accept request.** Likes, invites, accept / pass, reports, messages, calls and live audio.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/invites_controller.rb; config/routes.rb#L62`
 
@@ -3524,6 +5183,11 @@ curl -i --request POST "https://testa2.aisle.co/V1/invites/accept_request" \
 JSON
 ```
 
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
+- `conversation_id` (seen on staging 2026-10-25)
+
 **End-to-end flow**
 
 _Code path — First name_
@@ -3547,6 +5211,11 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `conversation_id` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-010"></a>
 
 #### `POST /V1/invites/pass_request` — Pass request
@@ -3556,6 +5225,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/invites_controller.rb; config/routes.rb#L63`
 
@@ -3578,6 +5249,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/invites/pass_request" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -3609,6 +5284,10 @@ _Code path — First name_
 | Kafka | `Profile sync event` | publish |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-046"></a>
 
 #### `POST /V1/like` — Like
@@ -3616,6 +5295,8 @@ _Code path — First name_
 **Like.** Likes, invites, accept / pass, reports, messages, calls and live audio.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/like_controller.rb; config/routes.rb#L132`
 
@@ -3637,6 +5318,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/like" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -3662,6 +5347,10 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-050"></a>
 
 #### `POST /V1/pass_user` — Pass user
@@ -3671,6 +5360,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/like_controller.rb; config/routes.rb#L136`
 
@@ -3693,6 +5384,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/pass_user" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -3724,6 +5419,10 @@ _Code path — First name_
 | Kafka | `Profile sync event` | publish |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-051"></a>
 
 #### `POST /V1/like_back` — Like back
@@ -3731,6 +5430,8 @@ _Code path — First name_
 **Like back.** Likes, invites, accept / pass, reports, messages, calls and live audio.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/like_controller.rb; config/routes.rb#L137`
 
@@ -3753,6 +5454,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/like_back" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -3778,6 +5483,10 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-052"></a>
 
 #### `POST /V1/like_without_deduction` — Like without deduction
@@ -3785,6 +5494,8 @@ _Code path — First name_
 **Like without deduction.** Likes, invites, accept / pass, reports, messages, calls and live audio.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/like_controller.rb; config/routes.rb#L138`
 
@@ -3807,6 +5518,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/like_without_deduction" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -3832,6 +5547,10 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-053"></a>
 
 #### `POST /V1/like_sent` — Send request or like
@@ -3839,6 +5558,8 @@ _Code path — First name_
 **Send request or like.** Likes, invites, accept / pass, reports, messages, calls and live audio.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/like_controller.rb; config/routes.rb#L140`
 
@@ -3861,6 +5582,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/like_sent" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -3887,6 +5612,10 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-055"></a>
 
 #### `POST /V1/like_accept` — Accept request or like
@@ -3894,6 +5623,8 @@ _Code path — First name_
 **Accept request or like.** Likes, invites, accept / pass, reports, messages, calls and live audio.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/like_controller.rb; config/routes.rb#L142`
 
@@ -3916,6 +5647,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/like_accept" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -3941,6 +5676,10 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-056"></a>
 
 #### `POST /V1/like_passed` — Pass request or like
@@ -3950,6 +5689,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/like_controller.rb; config/routes.rb#L143`
 
@@ -3972,6 +5713,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/like_passed" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -4004,6 +5749,10 @@ _Code path — First name_
 | Kafka | `Profile sync event` | publish |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-064"></a>
 
 #### `POST /V1/connect_linked_users` — Connect linked users
@@ -4011,6 +5760,8 @@ _Code path — First name_
 **Connect linked users.** Likes, invites, accept / pass, reports, messages, calls and live audio.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/messages_controller.rb; config/routes.rb#L176`
 
@@ -4033,6 +5784,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/connect_linked_users" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `conversation_id` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -4059,6 +5814,10 @@ _Code path — First name_
 | Cache | `Conversation cache` | read / rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `conversation_id` · seen on staging 2026-10-25
+
 <a id="api-065"></a>
 
 #### `POST /V1/messages/generate_agora_token` — Generate agora token
@@ -4066,6 +5825,8 @@ _Code path — First name_
 **Generate agora token.** Likes, invites, accept / pass, reports, messages, calls and live audio.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/messages_controller.rb; config/routes.rb#L177`
 
@@ -4121,6 +5882,8 @@ _Code path — First name_
 
 Personal data: First name (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/messages_controller.rb; config/routes.rb#L181`
 
 **Request**
@@ -4141,6 +5904,12 @@ curl -i --request POST "https://testa2.aisle.co/V1/messages/unlock_video_call" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `can_call` (seen on staging 2026-10-25)
+- `video_call_message` (seen on staging 2026-10-25)
+- `call_enabled` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -4164,6 +5933,12 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `call_enabled` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `video_call_message` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `can_call` · seen on staging 2026-10-25
+
 <a id="api-067"></a>
 
 #### `GET /V1/messages/can_video_call` — Can video call
@@ -4171,6 +5946,8 @@ _Code path — First name_
 **Can video call.** Likes, invites, accept / pass, reports, messages, calls and live audio.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/messages_controller.rb; config/routes.rb#L183`
 
@@ -4188,6 +5965,12 @@ curl -i --request GET "https://testa2.aisle.co/V1/messages/can_video_call" \
   --get \
   --data-urlencode "conversation_id=$CONVERSATION_ID"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `can_call` (seen on staging 2026-10-25)
+- `video_call_message` (seen on staging 2026-10-25)
+- `call_enabled` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -4211,6 +5994,12 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `call_enabled` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `video_call_message` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `can_call` · seen on staging 2026-10-25
+
 <a id="api-098"></a>
 
 #### `POST /V1/report` — Report
@@ -4218,6 +6007,8 @@ _Code path — First name_
 **Report.** Likes, invites, accept / pass, reports, messages, calls and live audio.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/report_controller.rb; config/routes.rb#L296`
 
@@ -4242,6 +6033,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/report" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -4269,6 +6064,10 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/v1/report_controller.rb:7 @004e72c`
+
 <a id="api-103"></a>
 
 #### `POST /V1/speed_dating/give_feedback` — Give feedback
@@ -4276,6 +6075,8 @@ _Code path — First name_
 **Give feedback.** Likes, invites, accept / pass, reports, messages, calls and live audio.
 
 Personal data: First name (reads), Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/speed_dating_controller.rb; config/routes.rb#L304`
 
@@ -4303,6 +6104,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/speed_dating/give_feedback" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -4344,6 +6149,10 @@ _Code path — Phone_
 
 - **From the developers:** Requires a completed event and booked participants. Mutual likes create a connection and messages containing the PII-derived full phone numbers.
 
+**What changed**
+
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/v1/speed_dating_controller.rb:22 @004e72c`
+
 <a id="api-108"></a>
 
 #### `POST /V1/live_audio/go_live` — Go live
@@ -4351,6 +6160,8 @@ _Code path — Phone_
 **Go live.** Likes, invites, accept / pass, reports, messages, calls and live audio.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/live_audio_controller.rb; config/routes.rb#L313`
 
@@ -4404,6 +6215,8 @@ _Code path — First name_
 
 Personal data: First name (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/live_audio_controller.rb; config/routes.rb#L314`
 
 **Request**
@@ -4455,6 +6268,8 @@ _Code path — First name_
 **Send request to talk.** Likes, invites, accept / pass, reports, messages, calls and live audio.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/live_audio_controller.rb; config/routes.rb#L315`
 
@@ -4509,6 +6324,8 @@ _Code path — First name_
 
 Personal data: First name (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/live_audio_controller.rb; config/routes.rb#L316`
 
 **Request**
@@ -4529,6 +6346,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/live_audio/switch_speaker" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -4553,6 +6374,10 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/v1/live_audio_controller.rb:50 @004e72c`
+
 <a id="api-112"></a>
 
 #### `POST /V1/live_audio/leave_room` — Leave room
@@ -4560,6 +6385,8 @@ _Code path — First name_
 **Leave room.** Likes, invites, accept / pass, reports, messages, calls and live audio.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/live_audio_controller.rb; config/routes.rb#L317`
 
@@ -4613,6 +6440,8 @@ _Code path — First name_
 
 Personal data: First name (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/web/invites_controller.rb; config/routes.rb#L344`
 
 **Request**
@@ -4632,6 +6461,10 @@ curl -i --request POST "https://testa2.aisle.co/web/invites/accept_request_v1" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -4656,6 +6489,10 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-118"></a>
 
 #### `POST /web/invites/pass_request` — Pass request
@@ -4665,6 +6502,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/web/invites_controller.rb; config/routes.rb#L345`
 
@@ -4684,6 +6523,10 @@ curl -i --request POST "https://testa2.aisle.co/web/invites/pass_request" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -4715,6 +6558,10 @@ _Code path — First name_
 | Kafka | `Profile sync event` | publish |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-125"></a>
 
 #### `POST /web/like` — Web like
@@ -4722,6 +6569,8 @@ _Code path — First name_
 **Web like.** Likes, invites, accept / pass, reports, messages, calls and live audio.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/web/like_controller.rb; config/routes.rb#L358`
 
@@ -4740,6 +6589,10 @@ curl -i --request POST "https://testa2.aisle.co/web/like" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -4765,6 +6618,10 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-127"></a>
 
 #### `POST /web/pass_user` — Pass user
@@ -4774,6 +6631,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/web/like_controller.rb; config/routes.rb#L360`
 
@@ -4793,6 +6652,10 @@ curl -i --request POST "https://testa2.aisle.co/web/pass_user" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -4824,6 +6687,10 @@ _Code path — First name_
 | Kafka | `Profile sync event` | publish |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-128"></a>
 
 #### `POST /web/like_back` — Like back
@@ -4831,6 +6698,8 @@ _Code path — First name_
 **Like back.** Likes, invites, accept / pass, reports, messages, calls and live audio.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/web/like_controller.rb; config/routes.rb#L361`
 
@@ -4850,6 +6719,10 @@ curl -i --request POST "https://testa2.aisle.co/web/like_back" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -4875,6 +6748,10 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-132"></a>
 
 #### `POST /web/connect_linked_users` — Connect linked users
@@ -4882,6 +6759,8 @@ _Code path — First name_
 **Connect linked users.** Likes, invites, accept / pass, reports, messages, calls and live audio.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/web/messages_controller.rb; config/routes.rb#L377`
 
@@ -4901,6 +6780,10 @@ curl -i --request POST "https://testa2.aisle.co/web/connect_linked_users" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `conversation_id` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -4927,6 +6810,10 @@ _Code path — First name_
 | Cache | `Conversation cache` | read / rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `conversation_id` · seen on staging 2026-10-25
+
 <a id="api-135"></a>
 
 #### `POST /web/report` — Web report
@@ -4934,6 +6821,8 @@ _Code path — First name_
 **Web report.** Likes, invites, accept / pass, reports, messages, calls and live audio.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/web/report_controller.rb; config/routes.rb#L397`
 
@@ -4955,6 +6844,10 @@ curl -i --request POST "https://testa2.aisle.co/web/report" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -4982,6 +6875,10 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/web/report_controller.rb:7 @004e72c`
+
 <a id="api-187"></a>
 
 #### `POST /V1/messages/send` — Messages send
@@ -4991,6 +6888,8 @@ _Code path — First name_
 Personal data: First name (reads), Free text (writes), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/messages_controller.rb; config/routes.rb#L171`
 
@@ -5016,6 +6915,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/messages/send" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -5055,6 +6958,10 @@ _Free-text encryption — Free text_
 - **Observed on staging:** Observed 2026-10-23: no token → 401 {unauthorized_request}.
 - **Known limitation:** Messages are saved by a background job (ChatMessageWorker), so a message can take a moment to appear.
 
+**What changed**
+
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-188"></a>
 
 #### `POST /web/messages/send` — Messages send
@@ -5064,6 +6971,8 @@ _Free-text encryption — Free text_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/web/messages_controller.rb; config/routes.rb#L372`
 
@@ -5115,7 +7024,7 @@ _Code path — First name_
 
 ### Profile updates
 
-Update part of your own profile and return or re-cache it. 36 endpoints.
+Update part of your own profile and return or re-cache it. 39 endpoints.
 
 | Method | Path | What it is |
 | --- | --- | --- |
@@ -5155,6 +7064,9 @@ Update part of your own profile and return or re-cache it. 36 endpoints.
 | POST | [`/web/users/deactivate_user`](#api-123) | Deactivate user |
 | POST | [`/web/users/activate_user`](#api-124) | Activate user |
 | POST | [`/web/user/location`](#api-134) | Update location coordinates |
+| POST | [`/V1/images/upload`](#code-030) | Create |
+| POST | [`/V1/images/detect_face_in_image`](#code-031) | Detect face in image |
+| POST | [`/V1/images/image_modifications`](#code-032) | Image modifications |
 
 <a id="api-022"></a>
 
@@ -5163,6 +7075,8 @@ Update part of your own profile and return or re-cache it. 36 endpoints.
 **Users about.** Update part of your own profile and return or re-cache it.
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L84`
 
@@ -5184,6 +7098,11 @@ curl -i --request POST "https://testa2.aisle.co/V1/users/about" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `user` (seen on staging 2026-10-25)
+- `ref` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -5228,6 +7147,11 @@ _Code path — Phone_
 | App database | `sms_notification_phone_numbers.number (via users.phone_number_id)` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `ref` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `user` · seen on staging 2026-10-25
+
 <a id="api-023"></a>
 
 #### `POST /V1/users/add_meetup` — Add meetup
@@ -5237,6 +7161,8 @@ _Code path — Phone_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L85`
 
@@ -5260,6 +7186,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/users/add_meetup" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -5287,6 +7217,10 @@ _Code path — First name_
 | Cache | `Profile cache` | read / rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/v1/users_controller.rb:295 @004e72c`
+
 <a id="api-024"></a>
 
 #### `POST /V1/users/update_interests` — Update interests
@@ -5294,6 +7228,8 @@ _Code path — First name_
 **Update interests.** Update part of your own profile and return or re-cache it.
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L86`
 
@@ -5321,6 +7257,11 @@ curl -i --request POST "https://testa2.aisle.co/V1/users/update_interests" \
 JSON
 ```
 
+**Response fields** (top level; type not stated unless shown)
+
+- `user` (seen on staging 2026-10-25)
+- `ref` (seen on staging 2026-10-25)
+
 **End-to-end flow**
 
 _Code path — First name_
@@ -5364,6 +7305,11 @@ _Code path — Phone_
 | App database | `sms_notification_phone_numbers.number (via users.phone_number_id)` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `ref` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `user` · seen on staging 2026-10-25
+
 <a id="api-025"></a>
 
 #### `POST /V1/users/update_interests_v2` — Update interests v2
@@ -5371,6 +7317,8 @@ _Code path — Phone_
 **Update interests v2.** Update part of your own profile and return or re-cache it.
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L87`
 
@@ -5397,6 +7345,11 @@ curl -i --request POST "https://testa2.aisle.co/V1/users/update_interests_v2" \
 JSON
 ```
 
+**Response fields** (top level; type not stated unless shown)
+
+- `user` (seen on staging 2026-10-25)
+- `ref` (seen on staging 2026-10-25)
+
 **End-to-end flow**
 
 _Code path — First name_
@@ -5440,6 +7393,11 @@ _Code path — Phone_
 | App database | `sms_notification_phone_numbers.number (via users.phone_number_id)` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `ref` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `user` · seen on staging 2026-10-25
+
 <a id="api-026"></a>
 
 #### `POST /V1/users/update_traits` — Update traits
@@ -5447,6 +7405,8 @@ _Code path — Phone_
 **Update traits.** Update part of your own profile and return or re-cache it.
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L88`
 
@@ -5473,6 +7433,11 @@ curl -i --request POST "https://testa2.aisle.co/V1/users/update_traits" \
 JSON
 ```
 
+**Response fields** (top level; type not stated unless shown)
+
+- `user` (seen on staging 2026-10-25)
+- `ref` (seen on staging 2026-10-25)
+
 **End-to-end flow**
 
 _Code path — First name_
@@ -5516,6 +7481,11 @@ _Code path — Phone_
 | App database | `sms_notification_phone_numbers.number (via users.phone_number_id)` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `ref` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `user` · seen on staging 2026-10-25
+
 <a id="api-027"></a>
 
 #### `POST /V1/users/mail_subscription` — Mail subscription
@@ -5523,6 +7493,8 @@ _Code path — Phone_
 **Mail subscription.** Update part of your own profile and return or re-cache it.
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L89`
 
@@ -5543,6 +7515,11 @@ curl -i --request POST "https://testa2.aisle.co/V1/users/mail_subscription" \
 JSON
 ```
 
+**Response fields** (top level; type not stated unless shown)
+
+- `user` (seen on staging 2026-10-25)
+- `ref` (seen on staging 2026-10-25)
+
 **End-to-end flow**
 
 _Code path — First name_
@@ -5586,6 +7563,11 @@ _Code path — Phone_
 | App database | `sms_notification_phone_numbers.number (via users.phone_number_id)` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `ref` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `user` · seen on staging 2026-10-25
+
 <a id="api-028"></a>
 
 #### `POST /V1/users/sms_subscription` — Sms subscription
@@ -5593,6 +7575,8 @@ _Code path — Phone_
 **Sms subscription.** Update part of your own profile and return or re-cache it.
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L90`
 
@@ -5613,6 +7597,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/users/sms_subscription" \
 JSON
 ```
 
+**Response fields** (top level; type not stated unless shown)
+
+- `user` (seen on staging 2026-10-25)
+
 **End-to-end flow**
 
 _Code path — First name_
@@ -5656,6 +7644,10 @@ _Code path — Phone_
 | App database | `sms_notification_phone_numbers.number (via users.phone_number_id)` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `user` · seen on staging 2026-10-25
+
 <a id="api-029"></a>
 
 #### `POST /V1/users/deactivate_user` — Deactivate user
@@ -5665,6 +7657,8 @@ _Code path — Phone_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L91`
 
@@ -5684,6 +7678,11 @@ curl -i --request POST "https://testa2.aisle.co/V1/users/deactivate_user" \
 {}
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
+- `is_boost_available` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -5713,6 +7712,11 @@ _Code path — First name_
 | Kafka | `Profile sync event` | publish |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `is_boost_available` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-030"></a>
 
 #### `POST /V1/users/activate_user` — Activate user
@@ -5722,6 +7726,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L92`
 
@@ -5741,6 +7747,12 @@ curl -i --request POST "https://testa2.aisle.co/V1/users/activate_user" \
 {}
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
+- `is_boost_available` (seen on staging 2026-10-25)
+- `profile_state` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -5770,6 +7782,12 @@ _Code path — First name_
 | Kafka | `Profile sync event` | publish |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `profile_state` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `is_boost_available` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-031"></a>
 
 #### `POST /V1/users/verify_selfie_v1` — Verify selfie v1
@@ -5779,6 +7797,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L93`
 
@@ -5800,6 +7820,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/users/verify_selfie_v1" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `is_backend_error` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -5831,6 +7855,10 @@ _Code path — First name_
 
 - **From the developers:** Use a valid uploaded selfie and the current gesture. For a liveness flow, also supply the genuine liveness_response returned by the provider.
 
+**What changed**
+
+- 2026-10-29 — Response field added: `is_backend_error` · from code — confirm with Dev · `app/controllers/v1/users_controller.rb:250 @004e72c`
+
 <a id="api-033"></a>
 
 #### `POST /V1/users/toggle_profile_sharing` — Toggle profile sharing
@@ -5840,6 +7868,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L95`
 
@@ -5859,6 +7889,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/users/toggle_profile_sharing"
 {}
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -5886,6 +7920,10 @@ _Code path — First name_
 | Cache | `Profile cache` | read / rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-034"></a>
 
 #### `POST /V1/users/toggle_profile_incognito` — Toggle profile incognito
@@ -5895,6 +7933,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L96`
 
@@ -5914,6 +7954,11 @@ curl -i --request POST "https://testa2.aisle.co/V1/users/toggle_profile_incognit
 {}
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
+- `message` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -5942,6 +7987,11 @@ _Code path — First name_
 | Kafka | `Profile sync event` | publish |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `message` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-035"></a>
 
 #### `POST /V1/users/toogle_concierge_badge_display` — Toggle concierge badge display
@@ -5951,6 +8001,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L97`
 
@@ -5970,6 +8022,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/users/toogle_concierge_badge_
 {}
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -5997,6 +8053,10 @@ _Code path — First name_
 | Cache | `Profile cache` | read / rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-036"></a>
 
 #### `POST /V1/users/update_settle_info` — Update settle info
@@ -6004,6 +8064,8 @@ _Code path — First name_
 **Update settle info.** Update part of your own profile and return or re-cache it.
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L101`
 
@@ -6025,6 +8087,11 @@ curl -i --request POST "https://testa2.aisle.co/V1/users/update_settle_info" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
+- `user` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -6069,6 +8136,11 @@ _Code path — Phone_
 | App database | `sms_notification_phone_numbers.number (via users.phone_number_id)` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `user` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-037"></a>
 
 #### `POST /V1/users/update_relationship_goal_info` — Update relationship goal info
@@ -6076,6 +8148,8 @@ _Code path — Phone_
 **Update relationship goal info.** Update part of your own profile and return or re-cache it.
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L102`
 
@@ -6101,6 +8175,11 @@ curl -i --request POST "https://testa2.aisle.co/V1/users/update_relationship_goa
 JSON
 ```
 
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
+- `user` (seen on staging 2026-10-25)
+
 **End-to-end flow**
 
 _Code path — First name_
@@ -6144,6 +8223,11 @@ _Code path — Phone_
 | App database | `sms_notification_phone_numbers.number (via users.phone_number_id)` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `user` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-038"></a>
 
 #### `POST /V1/users/update_philosophy_info` — Update philosophy info
@@ -6151,6 +8235,8 @@ _Code path — Phone_
 **Update philosophy info.** Update part of your own profile and return or re-cache it.
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L103`
 
@@ -6178,6 +8264,11 @@ curl -i --request POST "https://testa2.aisle.co/V1/users/update_philosophy_info"
 JSON
 ```
 
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
+- `user` (seen on staging 2026-10-25)
+
 **End-to-end flow**
 
 _Code path — First name_
@@ -6221,6 +8312,11 @@ _Code path — Phone_
 | App database | `sms_notification_phone_numbers.number (via users.phone_number_id)` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `user` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-039"></a>
 
 #### `POST /V1/users/update_mbti_info` — Update mbti info data
@@ -6228,6 +8324,8 @@ _Code path — Phone_
 **Update mbti info data.** Update part of your own profile and return or re-cache it.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L104`
 
@@ -6249,6 +8347,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/users/update_mbti_info" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -6272,6 +8374,10 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-040"></a>
 
 #### `POST /V1/users/update_audio_prompt` — Update audio prompt
@@ -6279,6 +8385,8 @@ _Code path — First name_
 **Update audio prompt.** Update part of your own profile and return or re-cache it.
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L106`
 
@@ -6301,6 +8409,14 @@ curl -i --request POST "https://testa2.aisle.co/V1/users/update_audio_prompt" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `user` (seen on staging 2026-10-25)
+- `intro_questions` (seen on staging 2026-10-25)
+- `percentage_profile_complete` (seen on staging 2026-10-25)
+- `profile_complete_without_selfie` (seen on staging 2026-10-25)
+- `status` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -6345,6 +8461,14 @@ _Code path — Phone_
 | App database | `sms_notification_phone_numbers.number (via users.phone_number_id)` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `profile_complete_without_selfie` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `percentage_profile_complete` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `intro_questions` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `user` · seen on staging 2026-10-25
+
 <a id="api-041"></a>
 
 #### `POST /V1/users/save_auto_pop_up_info` — Save auto pop up info
@@ -6354,6 +8478,8 @@ _Code path — Phone_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L108`
 
@@ -6379,6 +8505,16 @@ curl -i --request POST "https://testa2.aisle.co/V1/users/save_auto_pop_up_info" 
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `percentage_profile_complete` (seen on staging 2026-10-25)
+- `profile_complete_without_selfie` (seen on staging 2026-10-25)
+- `status` (seen on staging 2026-10-25)
+- `has_settle` (seen on staging 2026-10-25)
+- `has_traits` (seen on staging 2026-10-25)
+- `has_philosophy` (seen on staging 2026-10-25)
+- `has_interests` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -6410,6 +8546,16 @@ _Code path — First name_
 
 - **From the developers:** This example exercises the traits branch; interests, work and philosophy are alternative popup branches.
 
+**What changed**
+
+- 2026-10-25 — Response field added: `has_interests` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_philosophy` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_traits` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `has_settle` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `profile_complete_without_selfie` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `percentage_profile_complete` · seen on staging 2026-10-25
+
 <a id="api-042"></a>
 
 #### `POST /V1/users/user_name` — Set public user name
@@ -6419,6 +8565,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L113`
 
@@ -6440,6 +8588,11 @@ curl -i --request POST "https://testa2.aisle.co/V1/users/user_name" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
+- `message` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -6468,6 +8621,11 @@ _Code path — First name_
 | Kafka | `Profile sync event` | publish |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `message` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-043"></a>
 
 #### `POST /V1/users/public_profile` — Set profile public
@@ -6477,6 +8635,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L114`
 
@@ -6496,6 +8656,12 @@ curl -i --request POST "https://testa2.aisle.co/V1/users/public_profile" \
 {}
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
+- `message` (seen on staging 2026-10-25)
+- `link` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -6523,6 +8689,12 @@ _Code path — First name_
 | Kafka | `Profile sync event` | publish |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `link` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `message` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-044"></a>
 
 #### `POST /V1/setting/update_preferences` — Update preferences
@@ -6533,11 +8705,13 @@ Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/setting_controller.rb; config/routes.rb#L128`
 
 **Request**
 
-Request fields: `age_from`, `age_to`
+Request fields: `age_from`, `age_to`, `allow_extended_age_range` (optional · from code — confirm with Dev), `allow_extended_distance_range` (optional · from code — confirm with Dev), `diet_ids` (optional · from code — confirm with Dev), `distance_limit` (optional · from code — confirm with Dev), `drinking` (optional · from code — confirm with Dev), `drinking_v1` (optional · from code — confirm with Dev), `drinking_v2` (optional · from code — confirm with Dev), `faith_ids` (optional · from code — confirm with Dev), `marital_statuses` (optional · from code — confirm with Dev), `marital_statuses_v1` (optional · from code — confirm with Dev), `max_height` (optional · from code — confirm with Dev), `mbti_list` (optional · from code — confirm with Dev), `min_height` (optional · from code — confirm with Dev), `mother_tongue_ids` (optional · from code — confirm with Dev), `smoking` (optional · from code — confirm with Dev), `smoking_v1` (optional · from code — confirm with Dev), `smoking_v2` (optional · from code — confirm with Dev), `work_experience` (optional · from code — confirm with Dev), `work_experience_v1` (optional · from code — confirm with Dev), `work_industry` (optional · from code — confirm with Dev), `work_industry_v1` (optional · from code — confirm with Dev), `work_qualification` (optional · from code — confirm with Dev), `work_qualification_v1` (optional · from code — confirm with Dev)
 
 ```bash
 curl -i --request POST "https://testa2.aisle.co/V1/setting/update_preferences" \
@@ -6554,6 +8728,11 @@ curl -i --request POST "https://testa2.aisle.co/V1/setting/update_preferences" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
+- `settings` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -6582,6 +8761,34 @@ _Code path — First name_
 | Kafka | `Profile sync event` | publish |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Request field added: `work_qualification_v1` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:59 @004e72c`
+- 2026-10-29 — Request field added: `work_qualification` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:56 @004e72c`
+- 2026-10-29 — Request field added: `work_industry_v1` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:53 @004e72c`
+- 2026-10-29 — Request field added: `work_industry` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:50 @004e72c`
+- 2026-10-29 — Request field added: `work_experience_v1` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:65 @004e72c`
+- 2026-10-29 — Request field added: `work_experience` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:62 @004e72c`
+- 2026-10-29 — Request field added: `smoking_v2` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:38 @004e72c`
+- 2026-10-29 — Request field added: `smoking_v1` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:35 @004e72c`
+- 2026-10-29 — Request field added: `smoking` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:32 @004e72c`
+- 2026-10-29 — Request field added: `mother_tongue_ids` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:20 @004e72c`
+- 2026-10-29 — Request field added: `min_height` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:29 @004e72c`
+- 2026-10-29 — Request field added: `mbti_list` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:68 @004e72c`
+- 2026-10-29 — Request field added: `max_height` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:29 @004e72c`
+- 2026-10-29 — Request field added: `marital_statuses_v1` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:26 @004e72c`
+- 2026-10-29 — Request field added: `marital_statuses` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:23 @004e72c`
+- 2026-10-29 — Request field added: `faith_ids` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:14 @004e72c`
+- 2026-10-29 — Request field added: `drinking_v2` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:47 @004e72c`
+- 2026-10-29 — Request field added: `drinking_v1` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:44 @004e72c`
+- 2026-10-29 — Request field added: `drinking` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:41 @004e72c`
+- 2026-10-29 — Request field added: `distance_limit` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:17 @004e72c`
+- 2026-10-29 — Request field added: `diet_ids` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:85 @004e72c`
+- 2026-10-29 — Request field added: `allow_extended_distance_range` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:76 @004e72c`
+- 2026-10-29 — Request field added: `allow_extended_age_range` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:72 @004e72c`
+- 2026-10-25 — Response field added: `settings` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-045"></a>
 
 #### `POST /V1/setting/reset_preferences` — Reset preferences
@@ -6590,11 +8797,13 @@ _Code path — First name_
 
 Personal data: First name (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/setting_controller.rb; config/routes.rb#L129`
 
 **Request**
 
-Request fields: none
+Request fields: `only_reset` (optional · from code — confirm with Dev)
 
 ```bash
 curl -i --request POST "https://testa2.aisle.co/V1/setting/reset_preferences" \
@@ -6633,6 +8842,10 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Request field added: `only_reset` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:106 @004e72c`
+
 <a id="api-085"></a>
 
 #### `POST /V1/user/location` — Update location coordinates
@@ -6642,6 +8855,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L272`
 
@@ -6665,6 +8880,11 @@ curl -i --request POST "https://testa2.aisle.co/V1/user/location" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
+- `refresh_profile_list` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -6693,6 +8913,11 @@ _Code path — First name_
 | Cache | `Profile cache` | read / rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `refresh_profile_list` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-089"></a>
 
 #### `POST /V1/user/app_launch` — App launch
@@ -6702,6 +8927,8 @@ _Code path — First name_
 Personal data: First name (reads), Email (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/app_releases_controller.rb; config/routes.rb#L278`
 
@@ -6721,6 +8948,11 @@ curl -i --request POST "https://testa2.aisle.co/V1/user/app_launch" \
 {}
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
+- `is_onboarding_phase_2` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -6765,6 +8997,11 @@ _Code path — Email_
 
 - **Observed on staging:** Observed 2026-10-23: POST /V1/user/app_launch {} with a NEW (onboarding-stage) user’s token → 200.
 
+**What changed**
+
+- 2026-10-25 — Response field added: `is_onboarding_phase_2` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-090"></a>
 
 #### `POST /V1/images/upload_images_v2` — Upload images v2
@@ -6774,6 +9011,8 @@ _Code path — Email_
 Personal data: First name (reads), Email (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/images_controller.rb; config/routes.rb#L282`
 
@@ -6856,6 +9095,8 @@ _Code path — Email_
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/images_controller.rb; config/routes.rb#L285`
 
 **Request**
@@ -6887,6 +9128,11 @@ curl -i --request POST "https://testa2.aisle.co/V1/images/edit_images" \
 JSON
 ```
 
+**Response fields** (top level; type not stated unless shown)
+
+- `user` (seen on staging 2026-10-25)
+- `ref` (seen on staging 2026-10-25)
+
 **End-to-end flow**
 
 _Code path — First name_
@@ -6930,6 +9176,11 @@ _Code path — Phone_
 | App database | `sms_notification_phone_numbers.number (via users.phone_number_id)` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `ref` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `user` · seen on staging 2026-10-25
+
 <a id="api-097"></a>
 
 #### `POST /V1/subscription/boost_profile` — Boost profile
@@ -6939,6 +9190,8 @@ _Code path — Phone_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/subscription_controller.rb; config/routes.rb#L292`
 
@@ -6958,6 +9211,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/subscription/boost_profile" \
 {}
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -6987,6 +9244,10 @@ _Code path — First name_
 | Kafka | `Profile sync event` | publish |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-099"></a>
 
 #### `POST /V1/introduction/edit_icebreaker` — Edit icebreaker
@@ -6994,6 +9255,8 @@ _Code path — First name_
 **Edit icebreaker.** Update part of your own profile and return or re-cache it.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/introduction_controller.rb; config/routes.rb#L299`
 
@@ -7021,6 +9284,13 @@ curl -i --request POST "https://testa2.aisle.co/V1/introduction/edit_icebreaker"
 JSON
 ```
 
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
+- `percentage_profile_complete` (seen on staging 2026-10-25)
+- `profile_complete_without_selfie` (seen on staging 2026-10-25)
+- `icebreakers` (seen on staging 2026-10-25)
+
 **End-to-end flow**
 
 _Code path — First name_
@@ -7047,6 +9317,13 @@ _Code path — First name_
 | Cache | `Profile cache` | read / rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `icebreakers` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `profile_complete_without_selfie` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `percentage_profile_complete` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-100"></a>
 
 #### `POST /V1/introduction/edit_icebreaker_v1` — Edit icebreaker v1
@@ -7054,6 +9331,8 @@ _Code path — First name_
 **Edit icebreaker v1.** Update part of your own profile and return or re-cache it.
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/introduction_controller.rb; config/routes.rb#L300`
 
@@ -7076,6 +9355,16 @@ curl -i --request POST "https://testa2.aisle.co/V1/introduction/edit_icebreaker_
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
+- `percentage_profile_complete` (seen on staging 2026-10-25)
+- `profile_complete_without_selfie` (seen on staging 2026-10-25)
+- `icebreakers` (seen on staging 2026-10-25)
+- `intro_questions` (seen on staging 2026-10-25)
+- `user` (seen on staging 2026-10-25)
+- `ref` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -7120,6 +9409,16 @@ _Code path — Phone_
 | App database | `sms_notification_phone_numbers.number (via users.phone_number_id)` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `ref` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `user` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `intro_questions` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `icebreakers` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `profile_complete_without_selfie` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `percentage_profile_complete` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-105"></a>
 
 #### `POST /V1/advertisement/vote` — Advertisement vote
@@ -7129,6 +9428,8 @@ _Code path — Phone_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/advertisement_controller.rb; config/routes.rb#L309`
 
@@ -7150,6 +9451,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/advertisement/vote" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -7177,6 +9482,10 @@ _Code path — First name_
 | Cache | `Profile cache` | read / rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/v1/advertisement_controller.rb:7 @004e72c`
+
 <a id="api-121"></a>
 
 #### `POST /web/users/about` — Users about
@@ -7184,6 +9493,8 @@ _Code path — First name_
 **Users about.** Update part of your own profile and return or re-cache it.
 
 Personal data: First name (reads), Email (reads), Phone (reads), Free text (writes), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/web/users_controller.rb; config/routes.rb#L352`
 
@@ -7202,6 +9513,11 @@ curl -i --request POST "https://testa2.aisle.co/web/users/about" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `user` (seen on staging 2026-10-25)
+- `ref` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -7259,6 +9575,11 @@ _Free-text encryption — Free text_
 
 - **Observed on staging:** Observed 2026-10-23: no token → 401 (empty text/html body).
 
+**What changed**
+
+- 2026-10-25 — Response field added: `ref` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `user` · seen on staging 2026-10-25
+
 <a id="api-122"></a>
 
 #### `POST /web/users/update_settings` — Update settings
@@ -7268,6 +9589,8 @@ _Free-text encryption — Free text_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/web/users_controller.rb; config/routes.rb#L353`
 
@@ -7287,6 +9610,10 @@ curl -i --request POST "https://testa2.aisle.co/web/users/update_settings" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -7315,6 +9642,10 @@ _Code path — First name_
 | Kafka | `Profile sync event` | publish |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-123"></a>
 
 #### `POST /web/users/deactivate_user` — Deactivate user
@@ -7324,6 +9655,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/web/users_controller.rb; config/routes.rb#L354`
 
@@ -7340,6 +9673,10 @@ curl -i --request POST "https://testa2.aisle.co/web/users/deactivate_user" \
 {}
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -7369,6 +9706,10 @@ _Code path — First name_
 | Kafka | `Profile sync event` | publish |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-124"></a>
 
 #### `POST /web/users/activate_user` — Activate user
@@ -7378,6 +9719,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/web/users_controller.rb; config/routes.rb#L355`
 
@@ -7394,6 +9737,10 @@ curl -i --request POST "https://testa2.aisle.co/web/users/activate_user" \
 {}
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -7423,6 +9770,10 @@ _Code path — First name_
 | Kafka | `Profile sync event` | publish |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-134"></a>
 
 #### `POST /web/user/location` — Update location coordinates
@@ -7432,6 +9783,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/web/users_controller.rb; config/routes.rb#L388`
 
@@ -7452,6 +9805,11 @@ curl -i --request POST "https://testa2.aisle.co/web/user/location" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
+- `refresh_profile_list` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -7480,11 +9838,115 @@ _Code path — First name_
 | Cache | `Profile cache` | read / rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `refresh_profile_list` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
+<a id="code-030"></a>
+
+#### `POST /V1/images/upload` — Create
+
+**Create.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/images_controller.rb; config/routes.rb#L331`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:331` @004e72c → `v1/images#create` (`app/controllers/v1/images_controller.rb:7 @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** line 8 passes all params to Amazon::Url.upload_image — the fields read there are not determined; line 9 renders response — its full key set is built at run time
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:331 @004e72c`
+
+<a id="code-031"></a>
+
+#### `POST /V1/images/detect_face_in_image` — Detect face in image
+
+**Detect face in image.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/images_controller.rb; config/routes.rb#L333`
+
+**Request**
+
+Request fields: `image_url` (optional · from code — confirm with Dev)
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:333` @004e72c → `v1/images#detect_face_in_image` (`app/controllers/v1/images_controller.rb:43 @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** line 45 renders response — its full key set is built at run time
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:333 @004e72c`
+
+<a id="code-032"></a>
+
+#### `POST /V1/images/image_modifications` — Image modifications
+
+**Image modifications.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/images_controller.rb; config/routes.rb#L334`
+
+**Request**
+
+Request fields: `original_url` (optional · from code — confirm with Dev)
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:334` @004e72c → `v1/images#image_modifications` (`app/controllers/v1/images_controller.rb:48 @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** line 51 passes all params to image_optimizer_obj.image_modifications_api — the fields read there are not determined; line 52 renders response — its full key set is built at run time
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:334 @004e72c`
+
 <a id="area-g7"></a>
 
 ### Payments — checkout
 
-Start a payment: the provider’s customer details (name, email, phone) are built from personal data. 12 endpoints.
+Start a payment: the provider’s customer details (name, email, phone) are built from personal data. 38 endpoints.
 
 | Method | Path | What it is |
 | --- | --- | --- |
@@ -7500,6 +9962,32 @@ Start a payment: the provider’s customer details (name, email, phone) are buil
 | POST | [`/V1/payment/get_cashfree_request_params_web`](#api-189) | Get cashfree request params web |
 | POST | [`/V1/payment/generate_qr_code`](#api-193) | Cashfree get upi qr code |
 | POST | [`/V1/payment/send_web_purchase_link`](#api-194) | Payment send web purchase link |
+| POST | [`/V1/payment/cashfree/subscription/create`](#code-002) | Create cashfree subscription |
+| GET | [`/V1/payment/cashfree/subscription/status`](#code-003) | Cashfree subscription status |
+| POST | [`/V1/payment/cashfree/subscription/cancel`](#code-004) | Cancel cashfree subscription |
+| POST | [`/V1/payment/ms/activateAnySubscriptionWithExpiry`](#code-007) | Activate any subscription with expiry ms |
+| POST | [`/V1/payment/ms/addExtraInvites`](#code-008) | Add extra invites ms |
+| POST | [`/V1/payment/ms/addBoostToProfile`](#code-009) | Add boost to profile ms |
+| POST | [`/V1/payment/ms/activePremiumSubscription`](#code-010) | Active premium subscription ms |
+| POST | [`/V1/payment/ms/activateAnySubscription`](#code-011) | Activate any subscription ms |
+| POST | [`/V1/payment/ms/enableExclusivity`](#code-012) | Enable exclusivity ms |
+| POST | [`/V1/payment/ms/fetchUserIdFromIosIdentifier`](#code-013) | Fetch user id from ios identifier ms |
+| POST | [`/V1/payment/ms/deactivateActiveSubscription`](#code-014) | Deactivate active subscription ms |
+| POST | [`/V1/payment/ms/editUserSubscription`](#code-015) | Edit user subscription ms |
+| POST | [`/V1/payment/ms/addConsumableDataGoogle`](#code-016) | Add consumable data google ms |
+| POST | [`/V1/payment/ms/getAccountSubscription`](#code-017) | Get account subscription ms |
+| POST | [`/V1/payment/ms/removeAccountSubscription`](#code-018) | Remove account subscription ms |
+| POST | [`/V1/payment/ms/getActiveConciergeSubscription`](#code-019) | Get active concierge subscription ms |
+| POST | [`/V1/payment/ms/getActiveAislePlusSubscription`](#code-020) | Get active aisle plus subscription ms |
+| POST | [`/V1/payment/ms/getActivePremiumSubscriptionByGooglePlay`](#code-021) | Get active premium subscription by google play ms |
+| POST | [`/V1/payment/ms/extendSubscription`](#code-022) | Extend subscription ms |
+| POST | [`/V1/payment/ms/reduceSubscription`](#code-023) | Reduce subscription ms |
+| POST | [`/V1/payment/ms/addConsummableDataGoogle`](#code-024) | Add consumable data google ms |
+| POST | [`/V1/payment/ms/validateIosConsumable`](#code-025) | Validate ios consummable response ms |
+| POST | [`/V1/payment/ms/getActiveSubscriptionByPlan`](#code-026) | Get active subscription by plan ms |
+| POST | [`/V1/payment/ms/editUserSubscriptionPostAppleSubscriptions`](#code-027) | Edit user subscription post apple subscriptions ms |
+| POST | [`/V1/payment/ms/saveToS3`](#code-028) | Save to s3 ms |
+| POST | [`/V1/payment/ms/profileExists`](#code-029) | Profile exists ms |
 
 <a id="api-073"></a>
 
@@ -7508,6 +9996,8 @@ Start a payment: the provider’s customer details (name, email, phone) are buil
 **Get cashfree request params.** Start a payment: the provider’s customer details (name, email, phone) are built from personal data.
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Outbound payload (reads PII) · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L211`
 
@@ -7594,6 +10084,8 @@ _Code path — Phone_
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Outbound payload (reads PII) · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L213`
 
 **Request**
@@ -7674,6 +10166,8 @@ _Code path — Phone_
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Outbound payload (reads PII) · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L220`
 
 **Request**
@@ -7747,6 +10241,8 @@ _Code path — Phone_
 **Send cashfree collect request.** Start a payment: the provider’s customer details (name, email, phone) are built from personal data.
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Outbound payload (reads PII) · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L226`
 
@@ -7831,6 +10327,8 @@ _Code path — Phone_
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Outbound payload (reads PII) · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L227`
 
 **Request**
@@ -7907,6 +10405,8 @@ _Code path — Phone_
 
 Personal data: Phone (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Outbound payload (reads PII) · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L235`
 
 **Request**
@@ -7966,6 +10466,8 @@ _Code path — Phone_
 
 Personal data: Phone (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Outbound payload (reads PII) · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L241`
 
 **Request**
@@ -7992,6 +10494,11 @@ curl -i --request POST "https://testa2.aisle.co/V1/payment/phone_pay/one_time_pa
 JSON
 ```
 
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
+- `transaction_id` (from code — confirm with Dev)
+
 **End-to-end flow**
 
 _Code path — Phone_
@@ -8014,6 +10521,11 @@ _Code path — Phone_
 | Outside provider | `PhonePe` | called |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Response field added: `transaction_id` · from code — confirm with Dev · `app/controllers/v1/payment_controller.rb:364 @004e72c`
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/v1/payment_controller.rb:364 @004e72c`
+
 <a id="api-084"></a>
 
 #### `POST /V1/payment/phone_pay/create_phone_pay_subscription_web` — Create phone pay subscription web
@@ -8021,6 +10533,8 @@ _Code path — Phone_
 **Create phone pay subscription web.** Start a payment: the provider’s customer details (name, email, phone) are built from personal data.
 
 Personal data: Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** Web JWT · **Operation** Outbound payload (reads PII) · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L247`
 
@@ -8080,6 +10594,8 @@ _Code path — Phone_
 **Update personal details.** Start a payment: the provider’s customer details (name, email, phone) are built from personal data.
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** Web JWT · **Operation** Outbound payload (reads PII) · **Code** `app/controllers/v1/speed_dating_controller.rb; config/routes.rb#L307`
 
@@ -8168,6 +10684,8 @@ _Code path — Phone_
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Web app · **Auth** Web JWT · **Operation** Outbound payload (reads PII) · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L214`
 
 **Request**
@@ -8231,6 +10749,8 @@ _Code path — First name, Email, Phone_
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Outbound payload (reads PII) · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L225`
 
 **Request**
@@ -8292,6 +10812,8 @@ Personal data: Phone (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Outbound payload (reads PII) · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L228`
 
 **Request**
@@ -8343,6 +10865,864 @@ _Code path — Phone_
 
 - **From the developers:** Use device_type=ios in the headers too. Requires an eligible male India iOS profile, no active subscription, and remaining SMS cooldown/daily allowance.
 
+<a id="code-002"></a>
+
+#### `POST /V1/payment/cashfree/subscription/create` — Create cashfree subscription
+
+**Create cashfree subscription.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L230`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:230` @004e72c → `v1/payment#create_cashfree_subscription` (`app/controllers/v1/payment_controller.rb:276 @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** line 277 passes all params to Payment::Cashfree.create_cashfree_subscription — the fields read there are not determined; line 278 renders response — its full key set is built at run time
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:230 @004e72c`
+
+<a id="code-003"></a>
+
+#### `GET /V1/payment/cashfree/subscription/status` — Cashfree subscription status
+
+**Cashfree subscription status.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L231`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:231` @004e72c → `v1/payment#cashfree_subscription_status` (`app/controllers/v1/payment_controller.rb:281 @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** line 282 passes all params to Payment::Cashfree.cashfree_subscription_status — the fields read there are not determined; line 283 renders response — its full key set is built at run time
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:231 @004e72c`
+
+<a id="code-004"></a>
+
+#### `POST /V1/payment/cashfree/subscription/cancel` — Cancel cashfree subscription
+
+**Cancel cashfree subscription.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L232`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:232` @004e72c → `v1/payment#cancel_cashfree_subscription` (`app/controllers/v1/payment_controller.rb:286 @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** line 287 passes all params to Payment::Cashfree.cancel_cashfree_subscription — the fields read there are not determined; line 288 renders response — its full key set is built at run time
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:232 @004e72c`
+
+<a id="code-007"></a>
+
+#### `POST /V1/payment/ms/activateAnySubscriptionWithExpiry` — Activate any subscription with expiry ms
+
+**Activate any subscription with expiry ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L285`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:285` @004e72c → `v1/payment#activate_any_subscription_with_expiry_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** action activate_any_subscription_with_expiry_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:285 @004e72c`
+
+<a id="code-008"></a>
+
+#### `POST /V1/payment/ms/addExtraInvites` — Add extra invites ms
+
+**Add extra invites ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L286`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:286` @004e72c → `v1/payment#add_extra_invites_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** action add_extra_invites_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:286 @004e72c`
+
+<a id="code-009"></a>
+
+#### `POST /V1/payment/ms/addBoostToProfile` — Add boost to profile ms
+
+**Add boost to profile ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L287`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:287` @004e72c → `v1/payment#add_boost_to_profile_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** action add_boost_to_profile_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:287 @004e72c`
+
+<a id="code-010"></a>
+
+#### `POST /V1/payment/ms/activePremiumSubscription` — Active premium subscription ms
+
+**Active premium subscription ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L288`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:288` @004e72c → `v1/payment#active_premium_subscription_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** action active_premium_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:288 @004e72c`
+
+<a id="code-011"></a>
+
+#### `POST /V1/payment/ms/activateAnySubscription` — Activate any subscription ms
+
+**Activate any subscription ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L289`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:289` @004e72c → `v1/payment#activate_any_subscription_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** action activate_any_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:289 @004e72c`
+
+<a id="code-012"></a>
+
+#### `POST /V1/payment/ms/enableExclusivity` — Enable exclusivity ms
+
+**Enable exclusivity ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L290`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:290` @004e72c → `v1/payment#enable_exclusivity_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** action enable_exclusivity_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:290 @004e72c`
+
+<a id="code-013"></a>
+
+#### `POST /V1/payment/ms/fetchUserIdFromIosIdentifier` — Fetch user id from ios identifier ms
+
+**Fetch user id from ios identifier ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L291`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:291` @004e72c → `v1/payment#fetch_user_id_from_ios_identifier_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** action fetch_user_id_from_ios_identifier_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:291 @004e72c`
+
+<a id="code-014"></a>
+
+#### `POST /V1/payment/ms/deactivateActiveSubscription` — Deactivate active subscription ms
+
+**Deactivate active subscription ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L292`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:292` @004e72c → `v1/payment#deactivate_active_subscription_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** action deactivate_active_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:292 @004e72c`
+
+<a id="code-015"></a>
+
+#### `POST /V1/payment/ms/editUserSubscription` — Edit user subscription ms
+
+**Edit user subscription ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L293`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:293` @004e72c → `v1/payment#edit_user_subscription_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** action edit_user_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:293 @004e72c`
+
+<a id="code-016"></a>
+
+#### `POST /V1/payment/ms/addConsumableDataGoogle` — Add consumable data google ms
+
+**Add consumable data google ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L294`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:294` @004e72c → `v1/payment#add_consumable_data_google_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** action add_consumable_data_google_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:294 @004e72c`
+
+<a id="code-017"></a>
+
+#### `POST /V1/payment/ms/getAccountSubscription` — Get account subscription ms
+
+**Get account subscription ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L295`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:295` @004e72c → `v1/payment#get_account_subscription_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** action get_account_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:295 @004e72c`
+
+<a id="code-018"></a>
+
+#### `POST /V1/payment/ms/removeAccountSubscription` — Remove account subscription ms
+
+**Remove account subscription ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L296`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:296` @004e72c → `v1/payment#remove_account_subscription_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** action remove_account_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:296 @004e72c`
+
+<a id="code-019"></a>
+
+#### `POST /V1/payment/ms/getActiveConciergeSubscription` — Get active concierge subscription ms
+
+**Get active concierge subscription ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L297`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:297` @004e72c → `v1/payment#get_active_concierge_subscription_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** action get_active_concierge_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:297 @004e72c`
+
+<a id="code-020"></a>
+
+#### `POST /V1/payment/ms/getActiveAislePlusSubscription` — Get active aisle plus subscription ms
+
+**Get active aisle plus subscription ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L298`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:298` @004e72c → `v1/payment#get_active_aisle_plus_subscription_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** action get_active_aisle_plus_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:298 @004e72c`
+
+<a id="code-021"></a>
+
+#### `POST /V1/payment/ms/getActivePremiumSubscriptionByGooglePlay` — Get active premium subscription by google play ms
+
+**Get active premium subscription by google play ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L299`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:299` @004e72c → `v1/payment#get_active_premium_subscription_by_google_play_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** action get_active_premium_subscription_by_google_play_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:299 @004e72c`
+
+<a id="code-022"></a>
+
+#### `POST /V1/payment/ms/extendSubscription` — Extend subscription ms
+
+**Extend subscription ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L300`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:300` @004e72c → `v1/payment#extend_subscription_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** action extend_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:300 @004e72c`
+
+<a id="code-023"></a>
+
+#### `POST /V1/payment/ms/reduceSubscription` — Reduce subscription ms
+
+**Reduce subscription ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L301`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:301` @004e72c → `v1/payment#reduce_subscription_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** action reduce_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:301 @004e72c`
+
+<a id="code-024"></a>
+
+#### `POST /V1/payment/ms/addConsummableDataGoogle` — Add consumable data google ms
+
+**Add consumable data google ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L302`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:302` @004e72c → `v1/payment#add_consumable_data_google_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** action add_consumable_data_google_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:302 @004e72c`
+
+<a id="code-025"></a>
+
+#### `POST /V1/payment/ms/validateIosConsumable` — Validate ios consummable response ms
+
+**Validate ios consummable response ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L303`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:303` @004e72c → `v1/payment#validate_ios_consummable_response_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** action validate_ios_consummable_response_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:303 @004e72c`
+
+<a id="code-026"></a>
+
+#### `POST /V1/payment/ms/getActiveSubscriptionByPlan` — Get active subscription by plan ms
+
+**Get active subscription by plan ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L304`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:304` @004e72c → `v1/payment#get_active_subscription_by_plan_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** action get_active_subscription_by_plan_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:304 @004e72c`
+
+<a id="code-027"></a>
+
+#### `POST /V1/payment/ms/editUserSubscriptionPostAppleSubscriptions` — Edit user subscription post apple subscriptions ms
+
+**Edit user subscription post apple subscriptions ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L305`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:305` @004e72c → `v1/payment#edit_user_subscription_post_apple_subscriptions_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** action edit_user_subscription_post_apple_subscriptions_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:305 @004e72c`
+
+<a id="code-028"></a>
+
+#### `POST /V1/payment/ms/saveToS3` — Save to s3 ms
+
+**Save to s3 ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L306`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:306` @004e72c → `v1/payment#save_to_s3_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** action save_to_s3_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:306 @004e72c`
+
+<a id="code-029"></a>
+
+#### `POST /V1/payment/ms/profileExists` — Profile exists ms
+
+**Profile exists ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L307`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:307` @004e72c → `v1/payment#profile_exists_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** action profile_exists_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:307 @004e72c`
+
 <a id="area-g8"></a>
 
 ### Payments — verification
@@ -8373,6 +11753,8 @@ Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Payment verify → cache rebuild · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L199`
 
 **Request**
@@ -8393,6 +11775,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/payment/verify_razorpay_payme
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -8424,6 +11810,10 @@ _Code path — First name_
 | Outside provider | `Razorpay` | called |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-071"></a>
 
 #### `POST /V1/payment/verify_ios_payment_v1` — Verify ios payment v1
@@ -8433,6 +11823,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Payment verify → cache rebuild · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L208`
 
@@ -8498,6 +11890,8 @@ Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Payment verify → cache rebuild · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L210`
 
 **Request**
@@ -8522,6 +11916,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/payment/verify_paytm_payment_
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -8552,6 +11950,10 @@ _Code path — First name_
 | Outside provider | `Paytm` | called |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-075"></a>
 
 #### `POST /V1/payment/verify_cashfree_payment` — Verify cashfree payment
@@ -8562,11 +11964,13 @@ Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Payment verify → cache rebuild · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L215`
 
 **Request**
 
-Request fields: `order_id`
+Request fields: `order_id`, `sort_by` (optional · from code — confirm with Dev)
 
 ```bash
 curl -i --request POST "https://testa2.aisle.co/V1/payment/verify_cashfree_payment" \
@@ -8582,6 +11986,11 @@ curl -i --request POST "https://testa2.aisle.co/V1/payment/verify_cashfree_payme
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `is_backend_error` (from code — confirm with Dev)
+- `message` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -8612,6 +12021,12 @@ _Code path — First name_
 | Outside provider | `Cashfree` | called |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Response field added: `message` · from code — confirm with Dev · `app/controllers/v1/payment_controller.rb:167 @004e72c`
+- 2026-10-29 — Response field added: `is_backend_error` · from code — confirm with Dev · `app/controllers/v1/payment_controller.rb:166 @004e72c`
+- 2026-10-29 — Request field added: `sort_by` · from code — confirm with Dev · `app/controllers/v1/payment_controller.rb:126 @004e72c`
+
 <a id="api-092"></a>
 
 #### `POST /V1/subscription/verify_android_payments` — Verify android payments
@@ -8622,11 +12037,13 @@ Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Payment verify → cache rebuild · **Code** `app/controllers/v1/subscription_controller.rb; config/routes.rb#L287`
 
 **Request**
 
-Request fields: `product_id`, `purchase_token`
+Request fields: `product_id`, `purchase_token`, `conversation_id` (optional · from code — confirm with Dev), `sort_by` (optional · from code — confirm with Dev)
 
 ```bash
 curl -i --request POST "https://testa2.aisle.co/V1/subscription/verify_android_payments" \
@@ -8643,6 +12060,16 @@ curl -i --request POST "https://testa2.aisle.co/V1/subscription/verify_android_p
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
+- `payment_type` (from code — confirm with Dev)
+- `boost_left` (from code — confirm with Dev)
+- `sparks_left` (from code — confirm with Dev)
+- `extra_invites` (from code — confirm with Dev)
+- `currency_code` (from code — confirm with Dev)
+- `amount_in_currency` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -8674,6 +12101,18 @@ _Code path — First name_
 | Outside provider | `Google Play` | called |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Response field added: `amount_in_currency` · from code — confirm with Dev · `app/controllers/v1/subscription_controller.rb:35 @004e72c`
+- 2026-10-29 — Response field added: `currency_code` · from code — confirm with Dev · `app/controllers/v1/subscription_controller.rb:35 @004e72c`
+- 2026-10-29 — Response field added: `extra_invites` · from code — confirm with Dev · `app/controllers/v1/subscription_controller.rb:35 @004e72c`
+- 2026-10-29 — Response field added: `sparks_left` · from code — confirm with Dev · `app/controllers/v1/subscription_controller.rb:35 @004e72c`
+- 2026-10-29 — Response field added: `boost_left` · from code — confirm with Dev · `app/controllers/v1/subscription_controller.rb:35 @004e72c`
+- 2026-10-29 — Response field added: `payment_type` · from code — confirm with Dev · `app/controllers/v1/subscription_controller.rb:35 @004e72c`
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/v1/subscription_controller.rb:35 @004e72c`
+- 2026-10-29 — Request field added: `sort_by` · from code — confirm with Dev · `app/controllers/v1/subscription_controller.rb:26 @004e72c`
+- 2026-10-29 — Request field added: `conversation_id` · from code — confirm with Dev · `app/controllers/v1/subscription_controller.rb:14 @004e72c`
+
 <a id="api-093"></a>
 
 #### `POST /V1/subscription/restore_android_subscription` — Restore android subscription
@@ -8683,6 +12122,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Payment verify → cache rebuild · **Code** `app/controllers/v1/subscription_controller.rb; config/routes.rb#L288`
 
@@ -8705,6 +12146,11 @@ curl -i --request POST "https://testa2.aisle.co/V1/subscription/restore_android_
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
+- `message` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -8735,6 +12181,11 @@ _Code path — First name_
 | Outside provider | `Google Play` | called |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Response field added: `message` · from code — confirm with Dev · `app/controllers/v1/subscription_controller.rb:53 @004e72c`
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/v1/subscription_controller.rb:53 @004e72c`
+
 <a id="api-096"></a>
 
 #### `POST /V1/subscription/restore_ios_subscription_v1` — Restore ios subscription v1
@@ -8744,6 +12195,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Payment verify → cache rebuild · **Code** `app/controllers/v1/subscription_controller.rb; config/routes.rb#L291`
 
@@ -8806,11 +12259,13 @@ Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Payment verify → cache rebuild · **Code** `app/controllers/v1/speed_dating_controller.rb; config/routes.rb#L303`
 
 **Request**
 
-Request fields: `event_id`, `payment_id`
+Request fields: `event_id`, `payment_id`, `ORDERID` (optional · from code — confirm with Dev)
 
 ```bash
 curl -i --request POST "https://testa2.aisle.co/V1/speed_dating/book_event" \
@@ -8827,6 +12282,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/speed_dating/book_event" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -8860,6 +12319,11 @@ _Code path — First name_
 
 - **From the developers:** Razorpay branch shown. If configured for Paytm, send ORDERID, STATUS, TXNAMOUNT, CHECKSUMHASH and RESPMSG from its verified callback instead.
 
+**What changed**
+
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/v1/speed_dating_controller.rb:17 @004e72c`
+- 2026-10-29 — Request field added: `ORDERID` · from code — confirm with Dev · `app/controllers/v1/speed_dating_controller.rb:12 @004e72c`
+
 <a id="api-115"></a>
 
 #### `POST /V1/freebies/claim` — Claim freebie
@@ -8869,6 +12333,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Payment verify → cache rebuild · **Code** `app/controllers/v1/freebie_controller.rb; config/routes.rb#L329`
 
@@ -8890,6 +12356,11 @@ curl -i --request POST "https://testa2.aisle.co/V1/freebies/claim" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `data` (from code — confirm with Dev)
+- `status` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -8920,6 +12391,11 @@ _Code path — First name_
 | Cache | `Profile cache` | read / rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/v1/freebie_controller.rb:6 @004e72c`
+- 2026-10-29 — Response field added: `data` · from code — confirm with Dev · `app/controllers/v1/freebie_controller.rb:6 @004e72c`
+
 <a id="api-133"></a>
 
 #### `POST /web/payment/verify_razorpay_payment` — Verify razorpay payment
@@ -8929,6 +12405,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Payment verify → cache rebuild · **Code** `app/controllers/web/payment_controller.rb; config/routes.rb#L384`
 
@@ -8986,11 +12464,13 @@ _Code path — First name_
 
 Personal data: First name (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Payment verify → cache rebuild · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L217`
 
 **Request**
 
-Request fields: `order_id`
+Request fields: `order_id`, `sort_by` (optional · from code — confirm with Dev)
 
 ```bash
 curl -i --request POST "https://testa2.aisle.co/V1/payment/verify_cashfree_payments_web" \
@@ -9006,6 +12486,11 @@ curl -i --request POST "https://testa2.aisle.co/V1/payment/verify_cashfree_payme
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `is_backend_error` (from code — confirm with Dev)
+- `message` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -9028,11 +12513,17 @@ _Code path — First name_
 | Outside provider | `Cashfree` | called |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Response field added: `message` · from code — confirm with Dev · `app/controllers/v1/payment_controller.rb:167 @004e72c`
+- 2026-10-29 — Response field added: `is_backend_error` · from code — confirm with Dev · `app/controllers/v1/payment_controller.rb:166 @004e72c`
+- 2026-10-29 — Request field added: `sort_by` · from code — confirm with Dev · `app/controllers/v1/payment_controller.rb:126 @004e72c`
+
 <a id="area-g9"></a>
 
 ### Provider callbacks
 
-Called by outside providers (PhonePe, Google Play, Apple, Pusher) — no user login. 7 endpoints.
+Called by outside providers (PhonePe, Google Play, Apple, Pusher) — no user login. 10 endpoints.
 
 | Method | Path | What it is |
 | --- | --- | --- |
@@ -9043,6 +12534,9 @@ Called by outside providers (PhonePe, Google Play, Apple, Pusher) — no user lo
 | POST | [`/V1/payment/apple_webhook_v2`](#api-095) | Apple webhook v2 |
 | POST | [`/V1/pusher_presence_webhook`](#api-113) | Pusher presence webhook |
 | GET | [`/V1/pusher_presence_webhook`](#api-114) | Pusher presence webhook |
+| POST | [`/V1/messages/firebase_webhook`](#code-001) | Firebase webhook |
+| POST | [`/V1/payment/cashfree/subscription/webhook`](#code-005) | Cashfree subscription webhook |
+| POST | [`/V1/payment/cashfree/subscription/authorization_callback`](#code-006) | Cashfree subscription authorization callback |
 
 <a id="api-080"></a>
 
@@ -9053,6 +12547,8 @@ Called by outside providers (PhonePe, Google Play, Apple, Pusher) — no user lo
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Outside provider (callback) · **Auth** None — provider signature · **Operation** Callback / webhook · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L236`
 
@@ -9071,6 +12567,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/payment/phone_pay/mandate_cre
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -9107,6 +12607,10 @@ _Code path — First name_
 
 - **From the developers:** Use the original provider callback response and its matching X-VERIFY value. A successful mandate callback can activate a subscription and refresh the profile cache.
 
+**What changed**
+
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/v1/payment_controller.rb:341 @004e72c`
+
 <a id="api-081"></a>
 
 #### `POST /V1/payment/phone_pay/refund_callback` — Phone pay refund webhook
@@ -9116,6 +12620,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Outside provider (callback) · **Auth** None — provider signature · **Operation** Callback / webhook · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L239`
 
@@ -9176,6 +12682,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Outside provider (callback) · **Auth** None — provider signature · **Operation** Callback / webhook · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L240`
 
@@ -9238,6 +12746,8 @@ Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Outside provider (callback) · **Auth** None — provider signature · **Operation** Callback / webhook · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L289`
 
 **Request**
@@ -9259,6 +12769,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/payment/googleplay_webhook" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -9294,6 +12808,10 @@ _Code path — First name_
 
 - **From the developers:** message.data is Base64 of the Google Real-time Developer Notification JSON for a genuine test purchase. Provider verification and matching purchase records are required to reach subscription activation.
 
+**What changed**
+
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/v1/payment_controller.rb:218 @004e72c`
+
 <a id="api-095"></a>
 
 #### `POST /V1/payment/apple_webhook_v2` — Apple webhook v2
@@ -9303,6 +12821,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Outside provider (callback) · **Auth** None — provider signature · **Operation** Callback / webhook · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L290`
 
@@ -9320,6 +12840,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/payment/apple_webhook_v2" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -9357,6 +12881,10 @@ _Code path — First name_
 
 - **From the developers:** signedPayload must be the genuine Apple server-notification JWS for a sandbox test transaction. An arbitrary JWT cannot exercise this flow.
 
+**What changed**
+
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/v1/payment_controller.rb:224 @004e72c`
+
 <a id="api-113"></a>
 
 #### `POST /V1/pusher_presence_webhook` — Pusher presence webhook
@@ -9365,11 +12893,13 @@ _Code path — First name_
 
 Personal data: First name (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Outside provider (callback) · **Auth** None — provider signature · **Operation** Callback / webhook · **Code** `app/controllers/v1/live_audio_controller.rb; config/routes.rb#L320`
 
 **Request**
 
-Request fields: `events`, `channel`, `name`, `user_id`
+Request fields: `events`, `channel`, `name`, `user_id`, `channel_name` (optional · from code — confirm with Dev), `token` (optional · from code — confirm with Dev)
 
 ```bash
 curl -i --request POST "https://testa2.aisle.co/V1/pusher_presence_webhook" \
@@ -9388,6 +12918,10 @@ curl -i --request POST "https://testa2.aisle.co/V1/pusher_presence_webhook" \
 JSON
 ```
 
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
+
 **End-to-end flow**
 
 _Code path — First name_
@@ -9416,6 +12950,12 @@ _Code path — First name_
 
 - **From the developers:** Use the presence-event branch without Authorization; adding an app token selects Pusher channel authentication instead. A matching live room is required for the cache-update branch.
 
+**What changed**
+
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/v1/live_audio_controller.rb:92 @004e72c`
+- 2026-10-29 — Request field added: `token` · from code — confirm with Dev · `app/controllers/v1/live_audio_controller.rb:65 @004e72c`
+- 2026-10-29 — Request field added: `channel_name` · from code — confirm with Dev · `app/controllers/v1/live_audio_controller.rb:95 @004e72c`
+
 <a id="api-114"></a>
 
 #### `GET /V1/pusher_presence_webhook` — Pusher presence webhook
@@ -9424,11 +12964,13 @@ _Code path — First name_
 
 Personal data: First name (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Outside provider (callback) · **Auth** None — provider signature · **Operation** Callback / webhook · **Code** `app/controllers/v1/live_audio_controller.rb; config/routes.rb#L321`
 
 **Request**
 
-Request fields: `events[0][channel]`, `events[0][name]`, `events[0][user_id]`
+Request fields: `events[0][channel]`, `events[0][name]`, `events[0][user_id]`, `channel_name` (optional · from code — confirm with Dev), `events` (optional, array · from code — confirm with Dev), `token` (optional · from code — confirm with Dev)
 
 ```bash
 curl -i --request GET "https://testa2.aisle.co/V1/pusher_presence_webhook" \
@@ -9439,6 +12981,10 @@ curl -i --request GET "https://testa2.aisle.co/V1/pusher_presence_webhook" \
   --data-urlencode "events[0][user_id]=$USER_ID"
 ```
 
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
+
 **End-to-end flow**
 
 _Code path — First name_
@@ -9467,11 +13013,117 @@ _Code path — First name_
 
 - **From the developers:** Use the presence-event branch without Authorization; adding an app token selects Pusher channel authentication instead. A matching live room is required for the cache-update branch.
 
+**What changed**
+
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/v1/live_audio_controller.rb:92 @004e72c`
+- 2026-10-29 — Request field added: `token` · from code — confirm with Dev · `app/controllers/v1/live_audio_controller.rb:65 @004e72c`
+- 2026-10-29 — Request field added: `events` · from code — confirm with Dev · `app/controllers/v1/live_audio_controller.rb:71 @004e72c`
+- 2026-10-29 — Request field added: `channel_name` · from code — confirm with Dev · `app/controllers/v1/live_audio_controller.rb:95 @004e72c`
+
+<a id="code-001"></a>
+
+#### `POST /V1/messages/firebase_webhook` — Firebase webhook
+
+**Firebase webhook.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/messages_controller.rb; config/routes.rb#L197`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:197` @004e72c → `v1/messages#firebase_webhook` (`app/controllers/v1/messages_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** action firebase_webhook is not defined in app/controllers/v1/messages_controller.rb (inherited or generated)
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:197 @004e72c`
+
+<a id="code-005"></a>
+
+#### `POST /V1/payment/cashfree/subscription/webhook` — Cashfree subscription webhook
+
+**Cashfree subscription webhook.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L233`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:233` @004e72c → `v1/payment#cashfree_subscription_webhook` (`app/controllers/v1/payment_controller.rb:291 @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** line 294 renders response — its full key set is built at run time
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:233 @004e72c`
+
+<a id="code-006"></a>
+
+#### `POST /V1/payment/cashfree/subscription/authorization_callback` — Cashfree subscription authorization callback
+
+**Cashfree subscription authorization callback.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L234`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:234` @004e72c → `v1/payment#cashfree_subscription_authorization_callback` (`app/controllers/v1/payment_controller.rb:297 @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** line 298 passes all params to Payment::Cashfree.cashfree_subscription_authorization_callback — the fields read there are not determined; line 299 renders response — its full key set is built at run time
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:234 @004e72c`
+
 <a id="area-g10"></a>
 
 ### CMS / admin
 
-Admin views, edits, search, curation, reviews, member activity and exports. 52 endpoints.
+Admin views, edits, search, curation, reviews, member activity and exports. 55 endpoints.
 
 | Method | Path | What it is |
 | --- | --- | --- |
@@ -9527,6 +13179,9 @@ Admin views, edits, search, curation, reviews, member activity and exports. 52 e
 | GET | [`/admin/reports`](#api-185) | Admin reports |
 | GET | [`/bangalore745/irl`](#api-192) | ActiveAdmin IRL content |
 | POST | [`/admin/members/autofeed_update`](#api-209) | Members autofeed update |
+| GET | [`/admin/member/fetch_spark_purchase_history`](#code-033) | Fetch spark purchase history |
+| GET | [`/admin/members/download_account_data`](#code-034) | Download account data |
+| GET | [`/admin/stories/fetch_deleted_reasons`](#code-035) | Fetch deleted reasons |
 
 <a id="api-136"></a>
 
@@ -9535,6 +13190,8 @@ Admin views, edits, search, curation, reviews, member activity and exports. 52 e
 **Users by ref.** Admin views, edits, search, curation, reviews, member activity and exports.
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS (browser session) · **Auth** Admin browser session cookie · **Operation** Read (admin) · **Code** `app/controllers/users_controller.rb; config/routes.rb#L418`
 
@@ -9583,6 +13240,8 @@ _Code path — First name, Email, Phone_
 
 Personal data: First name (reads), Email (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** CMS (browser session) · **Auth** Admin browser session cookie · **Operation** Admin action · **Code** `app/controllers/users_controller.rb; config/routes.rb#L420`
 
 **Request**
@@ -9601,6 +13260,10 @@ curl -i --request POST "https://testa2.aisle.co/users/send_misuse_email" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -9637,6 +13300,10 @@ _Code path — Email_
 
 - **From the developers:** Requires a logged-in admin browser session and a pending review with warning allowance.
 
+**What changed**
+
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/users_controller.rb:36 @004e72c`
+
 <a id="api-138"></a>
 
 #### `GET /admin/users/:ref` — Users by ref
@@ -9644,6 +13311,8 @@ _Code path — Email_
 **Users by ref.** Admin views, edits, search, curation, reviews, member activity and exports.
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/pending_controller.rb; config/routes.rb#L569`
 
@@ -9693,6 +13362,8 @@ _Code path — First name, Email, Phone_
 
 Personal data: First name (writes), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Write / update PII · **Code** `app/controllers/admin/pending_controller.rb; config/routes.rb#L570`
 
 **Request**
@@ -9730,6 +13401,10 @@ curl -i --request POST "https://testa2.aisle.co/admin/approve_and_edit" \
 JSON
 ```
 
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
+
 **End-to-end flow**
 
 _Code path — First name_
@@ -9758,6 +13433,10 @@ _Code path — First name_
 - **From the developers:** Non-associate admin access is required for first-name edits. The separate local phone update does not write PHONE PII; see migration gaps.
 - **Known limitation:** Admin phone edits change only the local number. The PII service keeps the old phone, which is shown when the phone switch is on.
 
+**What changed**
+
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/admin/pending_controller.rb:39 @004e72c`
+
 <a id="api-140"></a>
 
 #### `POST /admin/update_profile` — Update profile
@@ -9765,6 +13444,8 @@ _Code path — First name_
 **Update profile.** Admin views, edits, search, curation, reviews, member activity and exports.
 
 Personal data: First name (writes), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Write / update PII · **Code** `app/controllers/admin/updated_controller.rb; config/routes.rb#L571`
 
@@ -9803,6 +13484,10 @@ curl -i --request POST "https://testa2.aisle.co/admin/update_profile" \
 JSON
 ```
 
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
+
 **End-to-end flow**
 
 _Code path — First name_
@@ -9831,6 +13516,10 @@ _Code path — First name_
 - **From the developers:** Non-associate admin access is required for first-name edits. The separate local phone update does not write PHONE PII; see migration gaps.
 - **Known limitation:** Admin phone edits change only the local number. The PII service keeps the old phone, which is shown when the phone switch is on.
 
+**What changed**
+
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/admin/updated_controller.rb:5 @004e72c`
+
 <a id="api-141"></a>
 
 #### `POST /admin/disapprove` — Disapprove
@@ -9840,6 +13529,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/pending_controller.rb; config/routes.rb#L572`
 
@@ -9860,6 +13551,10 @@ curl -i --request POST "https://testa2.aisle.co/admin/disapprove" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -9888,6 +13583,10 @@ _Code path — First name_
 | Kafka | `Profile sync event` | publish |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/admin/pending_controller.rb:49 @004e72c`
+
 <a id="api-142"></a>
 
 #### `GET /admin/pending/curation_tab` — Curation tab
@@ -9895,6 +13594,8 @@ _Code path — First name_
 **Curation tab.** Admin views, edits, search, curation, reviews, member activity and exports.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/pending_controller.rb; config/routes.rb#L573`
 
@@ -9943,6 +13644,8 @@ _Code path — First name_
 
 Personal data: First name (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/pending_controller.rb; config/routes.rb#L574`
 
 **Request**
@@ -9989,6 +13692,8 @@ _Code path — First name_
 **People hni tab.** Admin views, edits, search, curation, reviews, member activity and exports.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/pending_controller.rb; config/routes.rb#L575`
 
@@ -10037,6 +13742,8 @@ _Code path — First name_
 
 Personal data: First name (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/pending_controller.rb; config/routes.rb#L576`
 
 **Request**
@@ -10078,6 +13785,10 @@ curl -i --request POST "https://testa2.aisle.co/admin/pending/people_hni_tab" \
 JSON
 ```
 
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
+
 **End-to-end flow**
 
 _Code path — First name_
@@ -10104,6 +13815,10 @@ _Code path — First name_
 
 - **From the developers:** Curation/VIP batch writes are processed asynchronously by Admin::Curation. HNI updates are immediate. Select a profile in the corresponding queue.
 
+**What changed**
+
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/admin/pending_controller.rb:60 @004e72c`
+
 <a id="api-146"></a>
 
 #### `POST /admin/pending/curation_tab_update_profiles_state` — Curation tab update profiles state
@@ -10111,6 +13826,8 @@ _Code path — First name_
 **Curation tab update profiles state.** Admin views, edits, search, curation, reviews, member activity and exports.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/pending_controller.rb; config/routes.rb#L577`
 
@@ -10190,6 +13907,8 @@ _Code path — First name_
 
 Personal data: First name (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/pending_controller.rb; config/routes.rb#L580`
 
 **Request**
@@ -10268,6 +13987,8 @@ _Code path — First name_
 
 Personal data: First name (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/images_controller.rb; config/routes.rb#L585`
 
 **Request**
@@ -10313,6 +14034,8 @@ _Code path — First name_
 **Images updates tab.** Admin views, edits, search, curation, reviews, member activity and exports.
 
 Personal data: First name (writes), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Write / update PII · **Code** `app/controllers/admin/images_controller.rb; config/routes.rb#L586`
 
@@ -10390,11 +14113,13 @@ _Code path — First name_
 
 Personal data: First name (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/images_controller.rb; config/routes.rb#L587`
 
 **Request**
 
-Request fields: `page`
+Request fields: `page`, `date` (optional · from code — confirm with Dev)
 
 ```bash
 curl -i --request GET "https://testa2.aisle.co/admin/images/list_auto_updates_images" \
@@ -10428,6 +14153,10 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Request field added: `date` · from code — confirm with Dev · `app/controllers/admin/images_controller.rb:41 @004e72c`
+
 <a id="api-151"></a>
 
 #### `POST /admin/images/auto_updates_images_update` — Auto updates images update
@@ -10436,11 +14165,13 @@ _Code path — First name_
 
 Personal data: First name (writes), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Write / update PII · **Code** `app/controllers/admin/images_controller.rb; config/routes.rb#L588`
 
 **Request**
 
-Request fields: `tab`, `approve`, `ref`, `first_name`, `gender`, `updated_images`, `photo`, `photo_id`, `can_save`, `reject`, `banned`, `inappropriate`, `page`
+Request fields: `tab`, `approve`, `ref`, `first_name`, `gender`, `updated_images`, `photo`, `photo_id`, `can_save`, `reject`, `banned`, `inappropriate`, `page`, `date` (optional · from code — confirm with Dev)
 
 ```bash
 curl -i --request POST "https://testa2.aisle.co/admin/images/auto_updates_images_update" \
@@ -10504,6 +14235,10 @@ _Code path — First name_
 
 - **From the developers:** First-name changes in approve/reject items require gender to be supplied as well. auto_updates_images_update forces tab=auto_updates_images.
 
+**What changed**
+
+- 2026-10-29 — Request field added: `date` · from code — confirm with Dev · `app/controllers/admin/images_controller.rb:48 @004e72c`
+
 <a id="api-152"></a>
 
 #### `GET /admin/images/list_multiple_profiles_disapproved_v1` — List multiple profiles disapproved v1
@@ -10511,6 +14246,8 @@ _Code path — First name_
 **List multiple profiles disapproved v1.** Admin views, edits, search, curation, reviews, member activity and exports.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/images_controller.rb; config/routes.rb#L590`
 
@@ -10558,6 +14295,8 @@ _Code path — First name_
 
 Personal data: First name (writes), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Write / update PII · **Code** `app/controllers/admin/images_controller.rb; config/routes.rb#L591`
 
 **Request**
@@ -10600,6 +14339,11 @@ curl -i --request POST "https://testa2.aisle.co/admin/images/approve_reject_mult
 JSON
 ```
 
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
+- `page` (from code — confirm with Dev)
+
 **End-to-end flow**
 
 _Code path — First name_
@@ -10626,6 +14370,11 @@ _Code path — First name_
 
 - **From the developers:** First-name changes in approve/reject items require gender to be supplied as well. auto_updates_images_update forces tab=auto_updates_images.
 
+**What changed**
+
+- 2026-10-29 — Response field added: `page` · from code — confirm with Dev · `app/controllers/admin/images_controller.rb:55 @004e72c`
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/admin/images_controller.rb:55 @004e72c`
+
 <a id="api-154"></a>
 
 #### `POST /admin/images/approve_reject_multiple_photos_disapproved` — Approve reject multiple photos disapproved
@@ -10634,11 +14383,13 @@ _Code path — First name_
 
 Personal data: First name (writes), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Write / update PII · **Code** `app/controllers/admin/images_controller.rb; config/routes.rb#L592`
 
 **Request**
 
-Request fields: `tab`, `approve`, `ref`, `first_name`, `gender`, `updated_images`, `photo`, `photo_id`, `can_save`, `reject`, `banned`, `inappropriate`, `page`
+Request fields: `tab`, `approve`, `ref`, `first_name`, `gender`, `updated_images`, `photo`, `photo_id`, `can_save`, `reject`, `banned`, `inappropriate`, `page`, `approve_profile` (optional, array · from code — confirm with Dev)
 
 ```bash
 curl -i --request POST "https://testa2.aisle.co/admin/images/approve_reject_multiple_photos_disapproved" \
@@ -10676,6 +14427,10 @@ curl -i --request POST "https://testa2.aisle.co/admin/images/approve_reject_mult
 JSON
 ```
 
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
+
 **End-to-end flow**
 
 _Code path — First name_
@@ -10701,6 +14456,11 @@ _Code path — First name_
 
 - **From the developers:** First-name changes in approve/reject items require gender to be supplied as well. auto_updates_images_update forces tab=auto_updates_images.
 
+**What changed**
+
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/admin/images_controller.rb:124 @004e72c`
+- 2026-10-29 — Request field added: `approve_profile` · from code — confirm with Dev · `app/controllers/admin/images_controller.rb:107 @004e72c`
+
 <a id="api-155"></a>
 
 #### `POST /admin/images/mark_selfie_verified` — Mark selfie verified
@@ -10710,6 +14470,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/images_controller.rb; config/routes.rb#L593`
 
@@ -10729,6 +14491,10 @@ curl -i --request POST "https://testa2.aisle.co/admin/images/mark_selfie_verifie
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -10757,6 +14523,10 @@ _Code path — First name_
 | Kafka | `Profile sync event` | publish |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/admin/images_controller.rb:132 @004e72c`
+
 <a id="api-156"></a>
 
 #### `GET /admin/reviews/list_multiple` — List multiple
@@ -10764,6 +14534,8 @@ _Code path — First name_
 **List multiple.** Admin views, edits, search, curation, reviews, member activity and exports.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/reviews_controller.rb; config/routes.rb#L600`
 
@@ -10780,6 +14552,12 @@ curl -i --request GET "https://testa2.aisle.co/admin/reviews/list_multiple" \
   --data-urlencode "page=1" \
   --data-urlencode "message_type=story"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `reviews` (from code — confirm with Dev)
+- `page` (from code — confirm with Dev)
+- `total_pages` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -10802,6 +14580,12 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Response field added: `total_pages` · from code — confirm with Dev · `app/controllers/admin/reviews_controller.rb:29 @004e72c`
+- 2026-10-29 — Response field added: `page` · from code — confirm with Dev · `app/controllers/admin/reviews_controller.rb:29 @004e72c`
+- 2026-10-29 — Response field added: `reviews` · from code — confirm with Dev · `app/controllers/admin/reviews_controller.rb:29 @004e72c`
+
 <a id="api-157"></a>
 
 #### `GET /admin/reviews/fetch_individual` — Fetch individual
@@ -10809,6 +14593,8 @@ _Code path — First name_
 **Fetch individual.** Admin views, edits, search, curation, reviews, member activity and exports.
 
 Personal data: First name (reads), Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/reviews_controller.rb; config/routes.rb#L601`
 
@@ -10825,6 +14611,12 @@ curl -i --request GET "https://testa2.aisle.co/admin/reviews/fetch_individual" \
   --data-urlencode "page=1" \
   --data-urlencode "message_type=story"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `review_data` (from code — confirm with Dev)
+- `page` (from code — confirm with Dev)
+- `total_pages` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -10855,6 +14647,12 @@ _Code path — Phone_
 | App database | `sms_notification_phone_numbers.number (via users.phone_number_id)` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Response field added: `total_pages` · from code — confirm with Dev · `app/controllers/admin/reviews_controller.rb:35 @004e72c`
+- 2026-10-29 — Response field added: `page` · from code — confirm with Dev · `app/controllers/admin/reviews_controller.rb:35 @004e72c`
+- 2026-10-29 — Response field added: `review_data` · from code — confirm with Dev · `app/controllers/admin/reviews_controller.rb:35 @004e72c`
+
 <a id="api-158"></a>
 
 #### `POST /admin/reviews/update_multiple` — Update multiple
@@ -10862,6 +14660,8 @@ _Code path — Phone_
 **Update multiple.** Admin views, edits, search, curation, reviews, member activity and exports.
 
 Personal data: First name (reads), Email (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/reviews_controller.rb; config/routes.rb#L602`
 
@@ -10889,6 +14689,10 @@ curl -i --request POST "https://testa2.aisle.co/admin/reviews/update_multiple" \
 JSON
 ```
 
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
+
 **End-to-end flow**
 
 _Code path — First name_
@@ -10922,6 +14726,10 @@ _Code path — Email_
 | App database | `account_emails.name (via profiles.email_id)` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/admin/reviews_controller.rb:79 @004e72c`
+
 <a id="api-159"></a>
 
 #### `POST /admin/reviews/save` — Reviews save
@@ -10929,6 +14737,8 @@ _Code path — Email_
 **Reviews save.** Admin views, edits, search, curation, reviews, member activity and exports.
 
 Personal data: First name (reads), Email (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/reviews_controller.rb; config/routes.rb#L605`
 
@@ -10951,6 +14761,10 @@ curl -i --request POST "https://testa2.aisle.co/admin/reviews/save" \
 JSON
 ```
 
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
+
 **End-to-end flow**
 
 _Code path — First name_
@@ -10984,6 +14798,10 @@ _Code path — Email_
 | App database | `account_emails.name (via profiles.email_id)` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/admin/reviews_controller.rb:110 @004e72c`
+
 <a id="api-160"></a>
 
 #### `GET /admin/member/search` — Member search
@@ -10992,11 +14810,13 @@ _Code path — Email_
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Search · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L607`
 
 **Request**
 
-Request fields: `first_name`, `email`, `phone_number`, `page`
+Request fields: `first_name`, `email`, `phone_number`, `page`, `invoice_id` (optional · from code — confirm with Dev)
 
 ```bash
 curl -i --request GET "https://testa2.aisle.co/admin/member/search" \
@@ -11009,6 +14829,12 @@ curl -i --request GET "https://testa2.aisle.co/admin/member/search" \
   --data-urlencode "phone_number=1012345678" \
   --data-urlencode "page=1"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `profile_list` (from code — confirm with Dev)
+- `page` (from code — confirm with Dev)
+- `total_pages` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -11052,6 +14878,13 @@ _Code path — Phone_
 - **From the developers:** Filters combine. First-name and email search use PII service search; phone search still uses local SQL. Run each filter separately as well as combined.
 - **Known limitation:** First-name and email filters use PII-service search even when the read switches are off; phone search still uses the local table.
 
+**What changed**
+
+- 2026-10-29 — Response field added: `total_pages` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:25 @004e72c`
+- 2026-10-29 — Response field added: `page` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:25 @004e72c`
+- 2026-10-29 — Response field added: `profile_list` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:25 @004e72c`
+- 2026-10-29 — Request field added: `invoice_id` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:5 @004e72c`
+
 <a id="api-161"></a>
 
 #### `GET /admin/member/aws_moderated_list` — Aws moderated list
@@ -11059,6 +14892,8 @@ _Code path — Phone_
 **Aws moderated list.** Admin views, edits, search, curation, reviews, member activity and exports.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L608`
 
@@ -11074,6 +14909,12 @@ curl -i --request GET "https://testa2.aisle.co/admin/member/aws_moderated_list" 
   --get \
   --data-urlencode "page=1"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `moderation_list` (from code — confirm with Dev)
+- `page` (from code — confirm with Dev)
+- `total_pages` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -11096,6 +14937,12 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Response field added: `total_pages` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:195 @004e72c`
+- 2026-10-29 — Response field added: `page` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:195 @004e72c`
+- 2026-10-29 — Response field added: `moderation_list` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:195 @004e72c`
+
 <a id="api-162"></a>
 
 #### `GET /admin/member/feed` — Feed
@@ -11104,11 +14951,13 @@ _Code path — First name_
 
 Personal data: First name (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L609`
 
 **Request**
 
-Request fields: `page`, `type`
+Request fields: `page`, `type`, `profile_state` (optional · from code — confirm with Dev)
 
 ```bash
 curl -i --request GET "https://testa2.aisle.co/admin/member/feed" \
@@ -11119,6 +14968,13 @@ curl -i --request GET "https://testa2.aisle.co/admin/member/feed" \
   --data-urlencode "page=1" \
   --data-urlencode "type=auto_curate"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `profile_list` (from code — confirm with Dev)
+- `page` (from code — confirm with Dev)
+- `total_pages` (from code — confirm with Dev)
+- `total_profiles` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -11141,6 +14997,14 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Response field added: `total_profiles` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:228 @004e72c`
+- 2026-10-29 — Response field added: `total_pages` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:228 @004e72c`
+- 2026-10-29 — Response field added: `page` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:228 @004e72c`
+- 2026-10-29 — Response field added: `profile_list` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:228 @004e72c`
+- 2026-10-29 — Request field added: `profile_state` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:202 @004e72c`
+
 <a id="api-163"></a>
 
 #### `GET /admin/member/fetch_complete_info` — Fetch complete info
@@ -11148,6 +15012,8 @@ _Code path — First name_
 **Fetch complete info.** Admin views, edits, search, curation, reviews, member activity and exports.
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Batch read · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L610`
 
@@ -11216,6 +15082,8 @@ _Code path — Phone_
 **Fetch bait profile info.** Admin views, edits, search, curation, reviews, member activity and exports.
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Batch read · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L615`
 
@@ -11292,6 +15160,8 @@ _Code path — Phone_
 
 Personal data: First name (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Batch read · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L616`
 
 **Request**
@@ -11337,6 +15207,8 @@ _Code path — First name_
 **User activity v1.** Admin views, edits, search, curation, reviews, member activity and exports.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L617`
 
@@ -11391,6 +15263,8 @@ Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L619`
 
 **Request**
@@ -11410,6 +15284,10 @@ curl -i --request POST "https://testa2.aisle.co/admin/members/ban_profile" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -11438,6 +15316,10 @@ _Code path — First name_
 | Kafka | `Profile sync event` | publish |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:158 @004e72c`
+
 <a id="api-168"></a>
 
 #### `POST /admin/members/inappropriate_profile` — Inappropriate profile
@@ -11447,6 +15329,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L620`
 
@@ -11466,6 +15350,10 @@ curl -i --request POST "https://testa2.aisle.co/admin/members/inappropriate_prof
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -11493,6 +15381,10 @@ _Code path — First name_
 | Kafka | `Profile sync event` | publish |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:170 @004e72c`
+
 <a id="api-169"></a>
 
 #### `POST /admin/members/review_update` — Review update
@@ -11503,11 +15395,13 @@ Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L621`
 
 **Request**
 
-Request fields: `review_failed_refs`, `review_passed_refs`, `image_updates`
+Request fields: `review_failed_refs`, `review_passed_refs`, `image_updates`, `skip_render` (optional · from code — confirm with Dev)
 
 ```bash
 curl -i --request POST "https://testa2.aisle.co/admin/members/review_update" \
@@ -11525,6 +15419,10 @@ curl -i --request POST "https://testa2.aisle.co/admin/members/review_update" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -11557,6 +15455,11 @@ _Code path — First name_
 
 - **From the developers:** The changed name access is in conditional profile-save/image-cache side effects.
 
+**What changed**
+
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:300 @004e72c`
+- 2026-10-29 — Request field added: `skip_render` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:299 @004e72c`
+
 <a id="api-170"></a>
 
 #### `GET /admin/members/autofeed` — Autofeed
@@ -11565,11 +15468,13 @@ _Code path — First name_
 
 Personal data: First name (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L622`
 
 **Request**
 
-Request fields: `page`, `profile_state`
+Request fields: `page`, `profile_state`, `bucket` (optional · from code — confirm with Dev), `date` (optional · from code — confirm with Dev)
 
 ```bash
 curl -i --request GET "https://testa2.aisle.co/admin/members/autofeed" \
@@ -11580,6 +15485,14 @@ curl -i --request GET "https://testa2.aisle.co/admin/members/autofeed" \
   --data-urlencode "page=1" \
   --data-urlencode "profile_state=approved"
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `profiles` (from code — confirm with Dev)
+- `page` (from code — confirm with Dev)
+- `total_pages` (from code — confirm with Dev)
+- `total_profiles` (from code — confirm with Dev)
+- `total_profiles_all_states` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -11602,6 +15515,16 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Response field added: `total_profiles_all_states` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:348 @004e72c`
+- 2026-10-29 — Response field added: `total_profiles` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:348 @004e72c`
+- 2026-10-29 — Response field added: `total_pages` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:348 @004e72c`
+- 2026-10-29 — Response field added: `page` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:348 @004e72c`
+- 2026-10-29 — Response field added: `profiles` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:348 @004e72c`
+- 2026-10-29 — Request field added: `date` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:308 @004e72c`
+- 2026-10-29 — Request field added: `bucket` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:307 @004e72c`
+
 <a id="api-171"></a>
 
 #### `GET /admin/members/retry_curation_bucket_list` — Retry curation bucket list
@@ -11609,6 +15532,8 @@ _Code path — First name_
 **Retry curation bucket list.** Admin views, edits, search, curation, reviews, member activity and exports.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L624`
 
@@ -11656,6 +15581,8 @@ _Code path — First name_
 **Fetch verified profile.** Admin views, edits, search, curation, reviews, member activity and exports.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L625`
 
@@ -11706,6 +15633,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L626`
 
@@ -11767,6 +15696,8 @@ Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L628`
 
 **Request**
@@ -11789,6 +15720,11 @@ curl -i --request POST "https://testa2.aisle.co/admin/members/refund_payment" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
+- `message` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -11819,6 +15755,11 @@ _Code path — First name_
 | Cache | `Profile cache` | read / rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Response field added: `message` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:401 @004e72c`
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:401 @004e72c`
+
 <a id="api-175"></a>
 
 #### `POST /admin/members/toggle_subscription` — Toggle subscription
@@ -11828,6 +15769,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L631`
 
@@ -11848,6 +15791,11 @@ curl -i --request POST "https://testa2.aisle.co/admin/members/toggle_subscriptio
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
+- `is_active` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -11878,6 +15826,11 @@ _Code path — First name_
 
 - **From the developers:** end_date is required when enabling an inactive subscription. Toggling an active subscription removes it.
 
+**What changed**
+
+- 2026-10-29 — Response field added: `is_active` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:468 @004e72c`
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:468 @004e72c`
+
 <a id="api-176"></a>
 
 #### `POST /admin/members/capture_payment` — Capture payment
@@ -11887,6 +15840,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L633`
 
@@ -11906,6 +15861,11 @@ curl -i --request POST "https://testa2.aisle.co/admin/members/capture_payment" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
+- `message` (from code — confirm with Dev)
 
 **End-to-end flow**
 
@@ -11938,6 +15898,11 @@ _Code path — First name_
 | Cache | `Profile cache` | read / rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
 
+**What changed**
+
+- 2026-10-29 — Response field added: `message` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:579 @004e72c`
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:579 @004e72c`
+
 <a id="api-177"></a>
 
 #### `POST /admin/members/correct_profile_location` — Correct profile location
@@ -11945,6 +15910,8 @@ _Code path — First name_
 **Correct profile location.** Admin views, edits, search, curation, reviews, member activity and exports.
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Batch read · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L634`
 
@@ -12021,6 +15988,8 @@ _Code path — Phone_
 
 Personal data: First name (reads), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Search · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L636`
 
 **Request**
@@ -12071,6 +16040,8 @@ _Code path — First name_
 **Download profile details.** Admin views, edits, search, curation, reviews, member activity and exports.
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L637`
 
@@ -12140,11 +16111,13 @@ _Code path — Phone_
 
 Personal data: First name (writes), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Write / update PII · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L639`
 
 **Request**
 
-Request fields: `type`, `approve`, `ref`, `first_name`, `gender`, `photos`, `photo`, `photo_id`, `can_save`, `disapprove`, `inappropriate`, `editedImages`, `banned`, `visible_refs`, `moveToFeed`
+Request fields: `type`, `approve`, `ref`, `first_name`, `gender`, `photos`, `photo`, `photo_id`, `can_save`, `disapprove`, `inappropriate`, `editedImages`, `banned`, `visible_refs`, `moveToFeed`, `skip_render` (optional · from code — confirm with Dev)
 
 ```bash
 curl -i --request POST "https://testa2.aisle.co/admin/members/approve_disapprove_banned_profiles" \
@@ -12184,6 +16157,10 @@ curl -i --request POST "https://testa2.aisle.co/admin/members/approve_disapprove
 JSON
 ```
 
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
+
 **End-to-end flow**
 
 _Code path — First name_
@@ -12210,6 +16187,11 @@ _Code path — First name_
 
 - **From the developers:** Use type=auto_curate to exercise the changed first-name assignment in the auto-curated batch path. Test approve, disapprove, inappropriate and editedImages with separate profiles.
 
+**What changed**
+
+- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:723 @004e72c`
+- 2026-10-29 — Request field added: `skip_render` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:722 @004e72c`
+
 <a id="api-181"></a>
 
 #### `GET /admin/connections/fetch_messages` — Fetch messages
@@ -12217,6 +16199,8 @@ _Code path — First name_
 **Fetch messages.** Admin views, edits, search, curation, reviews, member activity and exports.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/connections_controller.rb; config/routes.rb#L645`
 
@@ -12266,6 +16250,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/payments_controller.rb; config/routes.rb#L650`
 
@@ -12323,6 +16309,8 @@ _Code path — First name_
 Personal data: First name (reads), through the app’s PII integration.
 
 The personal-data step runs only in some cases — a profile state, a cache miss, a successful payment or a background job.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/payments_controller.rb; config/routes.rb#L651`
 
@@ -12383,6 +16371,8 @@ _Code path — First name_
 **Admin stories.** Admin views, edits, search, curation, reviews, member activity and exports.
 
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/stories_controller.rb; config/routes.rb#L661`
 
@@ -12450,6 +16440,8 @@ _Code path — Phone_
 **Admin reports.** Admin views, edits, search, curation, reviews, member activity and exports.
 
 Personal data: First name (reads), through the app’s PII integration.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/reports_controller.rb; config/routes.rb#L662`
 
@@ -12552,6 +16544,8 @@ _Code path — First name, Email, Phone_
 
 Personal data: First name (writes), through the app’s PII integration.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Write / update PII · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L623`
 
 **Request**
@@ -12618,6 +16612,113 @@ _Code path — First name_
 
 - **From the developers:** The controller normalizes approve/reject/inappropriate and forces type=auto_curate, moveToFeed=true. Repeat with reject and inappropriate decisions on separate profiles.
 
+<a id="code-033"></a>
+
+#### `GET /admin/member/fetch_spark_purchase_history` — Fetch spark purchase history
+
+**Fetch spark purchase history.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L662`
+
+**Request**
+
+Request fields: `ref` (optional · from code — confirm with Dev)
+
+**Response fields** (top level; type not stated unless shown)
+
+- `spark_purchase_history` (from code — confirm with Dev)
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:662` @004e72c → `admin/members#fetch_spark_purchase_history` (`app/controllers/admin/members_controller.rb:83 @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:662 @004e72c`
+
+<a id="code-034"></a>
+
+#### `GET /admin/members/download_account_data` — Download account data
+
+**Download account data.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L686`
+
+**Request**
+
+Request fields: `export_id` (optional · from code — confirm with Dev), `ref` (optional · from code — confirm with Dev)
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (from code — confirm with Dev)
+- `export_id` (from code — confirm with Dev)
+- `reused` (from code — confirm with Dev)
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:686` @004e72c → `admin/members#download_account_data` (`app/controllers/admin/members_controller.rb:604 @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:686 @004e72c`
+
+<a id="code-035"></a>
+
+#### `GET /admin/stories/fetch_deleted_reasons` — Fetch deleted reasons
+
+**Fetch deleted reasons.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
+
+Purpose and personal data: not stated.
+
+_Last verified 2026-10-29 · code @ 004e72c_
+
+**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/admin/stories_controller.rb; config/routes.rb#L704`
+
+**Request**
+
+Request fields: none
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+Not stated.
+
+**Good to know**
+
+- **From code — confirm with Dev:** Found in `config/routes.rb:704` @004e72c → `admin/stories#fetch_deleted_reasons` (`app/controllers/admin/stories_controller.rb:8 @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
+- **Not determined from the code:** line 10 renders response — its full key set is built at run time
+
+**What changed**
+
+- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:704 @004e72c`
+
 <a id="area-m1"></a>
 
 ### PII service (direct)
@@ -12648,6 +16749,8 @@ Direct routes to the PII service: save, read, search, bulk read, temporary phone
 
 Personal data: First name (writes), Email (writes), Phone (writes), directly in the PII service.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** PII proxy (direct)
 
 **Request**
@@ -12667,6 +16770,13 @@ curl -i --request POST "https://testa2.aisle.co/V1/api/v1/pii-test" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
+- `message` (seen on staging 2026-10-25)
+- `data` (seen on staging 2026-10-25)
+- `error` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -12709,6 +16819,13 @@ _Code path — Phone_
 
 - **Tip:** Writes through these routes go straight to the PII service and skip the app’s caches — app screens can keep showing the old value until the cache expires.
 
+**What changed**
+
+- 2026-10-25 — Response field added: `error` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `data` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `message` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-200"></a>
 
 #### `POST /V1/api/v1/pii-test/read` — Read
@@ -12716,6 +16833,8 @@ _Code path — Phone_
 **Read.** Direct routes to the PII service: save, read, search, bulk read, temporary phones, free-text keys, readiness.
 
 Personal data: First name (reads), Email (reads), Phone (reads), directly in the PII service.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** PII proxy (direct)
 
@@ -12737,6 +16856,13 @@ curl -i --request POST "https://testa2.aisle.co/V1/api/v1/pii-test/read" \
 }
 JSON
 ```
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (seen on staging 2026-10-25)
+- `message` (seen on staging 2026-10-25)
+- `data` (seen on staging 2026-10-25)
+- `error` (seen on staging 2026-10-25)
 
 **End-to-end flow**
 
@@ -12779,6 +16905,13 @@ _Code path — Phone_
 
 - **Tip:** Writes through these routes go straight to the PII service and skip the app’s caches — app screens can keep showing the old value until the cache expires.
 
+**What changed**
+
+- 2026-10-25 — Response field added: `error` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `data` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `message` · seen on staging 2026-10-25
+- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
+
 <a id="api-201"></a>
 
 #### `POST /V1/api/v1/pii-test/batch/read` — Batch read
@@ -12786,6 +16919,8 @@ _Code path — Phone_
 **Batch read.** Direct routes to the PII service: save, read, search, bulk read, temporary phones, free-text keys, readiness.
 
 Personal data: First name (reads), Email (reads), Phone (reads), directly in the PII service.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** PII proxy (direct)
 
@@ -12860,6 +16995,8 @@ _Code path — Phone_
 
 Personal data: First name (reads), directly in the PII service.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** PII proxy (direct) · **Code** `config/routes.rb`
 
 **Request**
@@ -12913,6 +17050,8 @@ _Code path — First name_
 **EMAIL search.** Direct routes to the PII service: save, read, search, bulk read, temporary phones, free-text keys, readiness.
 
 Personal data: Email (reads), directly in the PII service.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** PII proxy (direct) · **Code** `config/routes.rb`
 
@@ -12968,6 +17107,8 @@ _Code path — Email_
 
 Personal data: Phone (reads), directly in the PII service.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** PII proxy (direct) · **Code** `config/routes.rb`
 
 **Request**
@@ -13022,6 +17163,8 @@ _Code path — Phone_
 
 Personal data: Phone (reads), directly in the PII service.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** PII proxy (direct) · **Code** `app/controllers/v1/pii_test_controller.rb; config/routes.rb#L29`
 
 **Request**
@@ -13073,6 +17216,8 @@ _Code path — Phone_
 
 Personal data: Phone (reads), directly in the PII service.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** PII proxy (direct) · **Code** `app/controllers/v1/pii_test_controller.rb; config/routes.rb#L30`
 
 **Request**
@@ -13122,6 +17267,8 @@ _Code path — Phone_
 **Phones promote.** Direct routes to the PII service: save, read, search, bulk read, temporary phones, free-text keys, readiness.
 
 Personal data: Phone (reads), directly in the PII service.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** PII proxy (direct) · **Code** `app/controllers/v1/pii_test_controller.rb; config/routes.rb#L31`
 
@@ -13174,6 +17321,8 @@ _Code path — Phone_
 
 It does not read or write personal data itself.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** PII proxy (direct) · **Code** `Aisle PII facade (Milestone 1) — see m1/docs/aisle-api.md`
 
 **Request**
@@ -13208,6 +17357,8 @@ curl -i -X GET "https://testa2.aisle.co/V1/api/v1/pii-test/health/ready" \
 **Free-text keys.** Direct routes to the PII service: save, read, search, bulk read, temporary phones, free-text keys, readiness.
 
 Personal data: Free text (writes), directly in the PII service.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** PII proxy (direct) · **Code** `Aisle PII facade (Milestone 1) — see m1/docs/aisle-api.md`
 
@@ -13258,6 +17409,8 @@ _Free-text encryption — Free text_
 
 Personal data: Free text (reads), directly in the PII service.
 
+_Last verified 2026-10-29 · code @ 004e72c_
+
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** PII proxy (direct) · **Code** `Aisle PII facade (Milestone 1) — see m1/docs/aisle-api.md`
 
 **Request**
@@ -13307,6 +17460,8 @@ _Free-text encryption — Free text_
 **Keys revoke.** Direct routes to the PII service: save, read, search, bulk read, temporary phones, free-text keys, readiness.
 
 Personal data: Free text (writes), directly in the PII service.
+
+_Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** PII service (direct) · **Code** `PII service route (Aisle facade)`
 

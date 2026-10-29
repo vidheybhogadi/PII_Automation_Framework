@@ -30,11 +30,39 @@ All commands run from the project root. The facade tests need `.env` with `AISLE
 | `npm run m2:contracts:record`  | record staging contract baselines (explicit only) → `m2/contracts/recorded/` + `REVIEW.md`           |
 | `npm run m2:contracts:approve` | approve reviewed recordings: `-- --by "<name>" <case…\|all>` → `m2/contracts/approved/`              |
 | `npm run m2:docs`              | rebuild `m2/docs/m2-test-cases.xlsx` (+ results of the last M2 run) and the API docs                 |
+| `npm run docs:api:drift`       | API docs drift check (run after each M2 run) → `m2/docs/api-drift-report.md` (see below)             |
+| `npm run m2:test:drift`        | `m2:test`, then the drift check on that run                                                          |
 
 Every `test:*` command except `m1:test:unit`, `m1:test:debug` and `m1:test:list` runs the full pipeline: tests → report
 (`reports/qa-report/`, archived copy in `reports/archive/<timestamp>__<run-id>/`) → PDF → `m1/docs/test-cases.xlsx`,
 then opens the dashboard in your browser. Auto-open is skipped in CI; turn it off locally with `-- --no-open` or
 `REPORT_OPEN=false`.
+
+## API docs drift check (after each M2 run)
+
+`npm run docs:api:drift` spots changes to the documented APIs automatically and writes
+`m2/docs/api-drift-report.md` (+ `.json`), grouped by endpoint, each item with its evidence and a confidence:
+
+- **Code** — fetches `origin/develop_new` in the read-only Aisle clone (`AISLE_REPO_DIR`, default
+  `~/Downloads/PII/aisle_new`) and reads `config/routes.rb` and the controllers with `git show` (never checks out, runs
+  or copies that code). It compares them with the documented snapshot `ae838f4`: removed routes, new routes under a
+  documented controller (listed only — new APIs go through the new-API flow), request params read
+  (`params[...]`, `require`/`permit`, `dig`, `fetch`, `required_param(...)`) and literal `render json:` keys.
+- **Staging** — the 2xx exchanges of the latest M2 run (`reports/m2/latest/run-data.json`, or `-- --run <file>`):
+  request field names sent and top-level response field names returned.
+- Anything dynamic (params handed on whole, keys built at run time, routes made by a gem, code and staging
+  disagreeing) is listed under **Needs review** or **Could not be determined** and is never applied.
+
+Review the report, then `npm run docs:api:drift -- --apply` appends the evidence-backed changes to
+`m2/docs/api-changes.json` (append-only; re-running adds nothing twice) and regenerates `docs/API-Documentation.md`;
+`npm run docs:api:publish` updates the API_Guide site. On the site, removed params and response fields stay struck
+through ("Removed on <date>") for 90 days, removed endpoints are kept with a Removed badge and left out of the counts,
+and every endpoint shows "What changed" and "Last verified". Add `--document-new-routes` to also document the routes found
+only in the code (no Dev document) **docs-only**, labelled "from code — confirm with Dev": they are recorded in
+`m2/docs/code-discovered-routes.json` / `.md` and added to the docs (`docsOnly: true`) but never to the M2 inventory,
+so they get no QA group, test case or test code. Only what the code literally shows is recorded; the rest is "not
+stated". Options: `--no-fetch`, `--head <ref>`, `--base <ref>`,
+`--repo <path>`.
 
 ## Daily run and report email (GitHub Actions)
 

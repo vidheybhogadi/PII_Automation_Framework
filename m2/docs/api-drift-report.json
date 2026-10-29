@@ -1,0 +1,2339 @@
+{
+  "generated": "2026-10-29",
+  "head": {
+    "ref": "origin/develop_new",
+    "sha": "004e72c64513beaf9958f0058534bdfeebe1b32e",
+    "date": "2026-10-29"
+  },
+  "base": { "ref": "ae838f4", "sha": "ae838f460acd4d9f9d60d0d633f3abe449408bde", "date": "2026-10-15" },
+  "staging": [
+    {
+      "runId": "qa-auto-20261025t173325-ffd3",
+      "date": "2026-10-25",
+      "file": "/Users/aisle/Downloads/PII/PII_Automation_Framework/reports/m2/latest/run-data.json"
+    }
+  ],
+  "checked": 248,
+  "findings": [
+    {
+      "apiId": "API-003",
+      "method": "POST",
+      "path": "/V1/pii_integration/profile_first_names",
+      "kind": "param-added",
+      "name": "user_ids",
+      "before": null,
+      "after": null,
+      "source": "staging",
+      "confidence": "low",
+      "evidence": [
+        "staging run qa-auto-20261025t173325-ffd3 (2026-10-25), tests M2-PIIR-008, M2-PIIR-009, M2-API-003-CACHE +2"
+      ],
+      "note": "Sent by the QA suite and answered 2xx, but the code does not show it being read.",
+      "review": true
+    },
+    {
+      "apiId": "API-190",
+      "method": "POST",
+      "path": "/V1/pii_integration/first_names/batch",
+      "kind": "param-added",
+      "name": "refs",
+      "before": null,
+      "after": null,
+      "source": "staging",
+      "confidence": "low",
+      "evidence": [
+        "staging run qa-auto-20261025t173325-ffd3 (2026-10-25), tests M2-PIIR-007, M2-PIIR-008, M2-API-190-CACHE +2"
+      ],
+      "note": "Sent by the QA suite and answered 2xx, but the code does not show it being read.",
+      "review": true
+    }
+  ],
+  "notDetermined": [
+    {
+      "apiId": "API-004",
+      "method": "POST",
+      "path": "/V1/invites/send_request_to_profile",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/invites_controller.rb:169 passes all params to Chat::Request.send_request — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-005",
+      "method": "GET",
+      "path": "/V1/invites/all_requests",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/invites_controller.rb:7 passes all params to Chat::Request.list_all_invitations — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-006",
+      "method": "GET",
+      "path": "/V1/invites/list_comments_with_pagination",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/invites_controller.rb:12 passes all params to Chat::Request.list_all_comments — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-007",
+      "method": "GET",
+      "path": "/V1/invites/list_comments_and_likes",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/invites_controller.rb:92 passes all params to Chat::Request.list_all_comments — the fields read there are not determined",
+        "app/controllers/v1/invites_controller.rb:98 passes all params to UserLike.list_likes_received_v2 — the fields read there are not determined",
+        "app/controllers/v1/invites_controller.rb:102 passes all params to Statement — the fields read there are not determined",
+        "app/controllers/v1/invites_controller.rb:104 passes all params to UserLike.create_empty_likes_received_response — the fields read there are not determined",
+        "app/controllers/v1/invites_controller.rb:140 passes all params to Account::Spark.fetch_pending_sparks_received — the fields read there are not determined",
+        "app/controllers/v1/invites_controller.rb:143 passes all params to Popup::Context.new — the fields read there are not determined",
+        "app/controllers/v1/invites_controller.rb:145 passes all params to FreebieClaim.should_show_static_card_on_likes_tab? — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-008",
+      "method": "GET",
+      "path": "/V1/invites/list_request_and_likes",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/invites_controller.rb:35 passes all params to Chat::Request.list_all_invitations — the fields read there are not determined",
+        "app/controllers/v1/invites_controller.rb:41 passes all params to UserLike.list_likes_received_v2 — the fields read there are not determined",
+        "app/controllers/v1/invites_controller.rb:45 passes all params to Statement — the fields read there are not determined",
+        "app/controllers/v1/invites_controller.rb:47 passes all params to UserLike.create_empty_likes_received_response — the fields read there are not determined",
+        "app/controllers/v1/invites_controller.rb:84 passes all params to Popup::Context.new — the fields read there are not determined",
+        "app/controllers/v1/invites_controller.rb:86 passes all params to FreebieClaim.should_show_static_card_on_likes_tab? — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-009",
+      "method": "POST",
+      "path": "/V1/invites/accept_request",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/invites_controller.rb:151 passes all params to Chat::Request.accept_request — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-010",
+      "method": "POST",
+      "path": "/V1/invites/pass_request",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/invites_controller.rb:156 passes all params to Chat::Request.pass_request — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-011",
+      "method": "GET",
+      "path": "/V1/users/profile_info",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/users_controller.rb:101 passes all params to current_profile.fetch_profile_info — the fields read there are not determined",
+        "app/controllers/v1/users_controller.rb:103 passes all params to Chat::Message.fetch_exclusivity_data — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-012",
+      "method": "GET",
+      "path": "/V1/users/profile_info_web",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/users_controller.rb:109 passes all params to Profile.fetch_web_profile_info — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-012",
+      "method": "GET",
+      "path": "/V1/users/profile_info_web",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/users_controller.rb:110 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-014",
+      "method": "GET",
+      "path": "/V1/users/matches_list_v2",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/users_controller.rb:19 passes all params to Algorithm.select_algorithm_for_discover_profile_list — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-015",
+      "method": "POST",
+      "path": "/V1/users/matches_list_v3",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/users_controller.rb:19 passes all params to Algorithm.select_algorithm_for_discover_profile_list — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-016",
+      "method": "GET",
+      "path": "/V1/users/discover_profile_list_v2",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/users_controller.rb:56 passes all params to Algorithm.select_algorithm_for_discover_tab — the fields read there are not determined",
+        "app/controllers/v1/users_controller.rb:69 passes all params to FreebieClaim.fetch_free_female_premium_popup_details — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-017",
+      "method": "GET",
+      "path": "/V1/users/meta_for_discover",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/users_controller.rb:29 passes all params to current_profile.fetch_meta_for_discover_tab — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-019",
+      "method": "GET",
+      "path": "/V1/users/fetch_concierge_list",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/users_controller.rb:89 passes all params to Algorithm::ConciergeList.fetch_concierge_profile_list — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-020",
+      "method": "GET",
+      "path": "/V1/users/fetch_top_matched_profiles",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/users_controller.rb:96 passes all params to Algorithm::TopMatch.fetch_top_matched_profiles — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-023",
+      "method": "POST",
+      "path": "/V1/users/add_meetup",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/users_controller.rb:294 passes all params to Account::Meetup.add — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-031",
+      "method": "POST",
+      "path": "/V1/users/verify_selfie_v1",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/users_controller.rb:234 passes all params to Selfie::Verification.verify_user_selfie_based_on_app_version — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-031",
+      "method": "POST",
+      "path": "/V1/users/verify_selfie_v1",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/users_controller.rb:252 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-038",
+      "method": "POST",
+      "path": "/V1/users/update_philosophy_info",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/users_controller.rb:338 passes all params to current_profile.fetch_profile_info — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-041",
+      "method": "POST",
+      "path": "/V1/users/save_auto_pop_up_info",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/users_controller.rb:411 passes all params to current_profile.save_auto_pop_up_data — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-042",
+      "method": "POST",
+      "path": "/V1/users/user_name",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/users_controller.rb:370 passes all params to current_profile.set_user_name — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-044",
+      "method": "POST",
+      "path": "/V1/setting/update_preferences",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/setting_controller.rb:12 passes all params to Interested::Age.update_age — the fields read there are not determined",
+        "app/controllers/v1/setting_controller.rb:18 passes all params to Interested::Distance.update_distance_limit — the fields read there are not determined",
+        "app/controllers/v1/setting_controller.rb:24 passes all params to Interested::MaritalStatus.update_marital_status — the fields read there are not determined",
+        "app/controllers/v1/setting_controller.rb:27 passes all params to Interested::MaritalStatus.update_marital_status_v1 — the fields read there are not determined",
+        "app/controllers/v1/setting_controller.rb:30 passes all params to Interested::Height.update_height — the fields read there are not determined",
+        "app/controllers/v1/setting_controller.rb:33 passes all params to Interested::Smoking.update_smoking — the fields read there are not determined",
+        "app/controllers/v1/setting_controller.rb:36 passes all params to Interested::Smoking.update_smoking_v1 — the fields read there are not determined",
+        "app/controllers/v1/setting_controller.rb:39 passes all params to Interested::Smoking.update_smoking_v2 — the fields read there are not determined",
+        "app/controllers/v1/setting_controller.rb:42 passes all params to Interested::Drinking.update_drinking — the fields read there are not determined",
+        "app/controllers/v1/setting_controller.rb:45 passes all params to Interested::Drinking.update_drinking_v1 — the fields read there are not determined",
+        "app/controllers/v1/setting_controller.rb:48 passes all params to Interested::Drinking.update_drinking_v2 — the fields read there are not determined",
+        "app/controllers/v1/setting_controller.rb:51 passes all params to Interested::WorkIndustry.update_work_industry — the fields read there are not determined",
+        "app/controllers/v1/setting_controller.rb:54 passes all params to Interested::WorkIndustry.update_work_industry_v1 — the fields read there are not determined",
+        "app/controllers/v1/setting_controller.rb:57 passes all params to Interested::WorkHighestQualification.update_work_qualification — the fields read there are not determined",
+        "app/controllers/v1/setting_controller.rb:60 passes all params to Interested::WorkHighestQualification.update_work_qualification_v1 — the fields read there are not determined",
+        "app/controllers/v1/setting_controller.rb:63 passes all params to Interested::WorkExperience.update_work_experience — the fields read there are not determined",
+        "app/controllers/v1/setting_controller.rb:66 passes all params to Interested::WorkExperience.update_work_experience_v1 — the fields read there are not determined",
+        "app/controllers/v1/setting_controller.rb:73 passes all params to Interested::Age.update_age_range_extension — the fields read there are not determined",
+        "app/controllers/v1/setting_controller.rb:77 passes all params to Interested::Distance.update_distance_range_extension — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-045",
+      "method": "POST",
+      "path": "/V1/setting/reset_preferences",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/setting_controller.rb:109 passes all params to Algorithm.select_algorithm_for_discover_tab — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-045",
+      "method": "POST",
+      "path": "/V1/setting/reset_preferences",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/setting_controller.rb:107 renders current_profile — its full key set is built at run time",
+        "app/controllers/v1/setting_controller.rb:110 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-046",
+      "method": "POST",
+      "path": "/V1/like",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/like_controller.rb:12 passes all params to UserLike.like_user — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-047",
+      "method": "GET",
+      "path": "/V1/list_request_sent",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/like_controller.rb:48 passes all params to UserLike.fetch_activity_list — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-048",
+      "method": "GET",
+      "path": "/V1/list_likes_received_v1",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/like_controller.rb:38 passes all params to UserLike.list_likes_received_v2 — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-049",
+      "method": "GET",
+      "path": "/V1/list_all_passed",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/like_controller.rb:43 passes all params to UserPass.list_passed_profiles — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-050",
+      "method": "POST",
+      "path": "/V1/pass_user",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/like_controller.rb:32 passes all params to UserPass.pass_user — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-051",
+      "method": "POST",
+      "path": "/V1/like_back",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/like_controller.rb:18 passes all params to UserLike.like_user — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-052",
+      "method": "POST",
+      "path": "/V1/like_without_deduction",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/like_controller.rb:24 passes all params to UserLike.like_user — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-053",
+      "method": "POST",
+      "path": "/V1/like_sent",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/like_controller.rb:53 passes all params to UserLike.send_request_or_like — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-054",
+      "method": "POST",
+      "path": "/V1/like_received",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/like_controller.rb:69 passes all params to UserLike.fetch_likes_and_requests_recieved — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-055",
+      "method": "POST",
+      "path": "/V1/like_accept",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/like_controller.rb:58 passes all params to UserLike.accept_request_or_like — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-056",
+      "method": "POST",
+      "path": "/V1/like_passed",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/like_controller.rb:63 passes all params to UserLike.pass_request_or_like — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-057",
+      "method": "POST",
+      "path": "/V1/user/submit_profile",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/sessions_controller.rb:31 passes all params to current_user.submit_profile — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-059",
+      "method": "POST",
+      "path": "/V1/user/delete",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/sessions_controller.rb:61 passes all params to current_user.delete_all_account_info — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-060",
+      "method": "POST",
+      "path": "/V1/sessions/verify_number_login_v1",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/sessions_controller.rb:21 passes all params to SmsNotification::PhoneNumber.verify_login_with_number — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-060",
+      "method": "POST",
+      "path": "/V1/sessions/verify_number_login_v1",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/sessions_controller.rb:22 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-061",
+      "method": "POST",
+      "path": "/V1/sessions/submit_profile_web",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/sessions_controller.rb:50 passes all params to current_user.submit_profile_web — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-062",
+      "method": "POST",
+      "path": "/V1/sessions/fetch_login_response",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/sessions_controller.rb:153 passes all params to User.login_from_phone_number_v1 — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-062",
+      "method": "POST",
+      "path": "/V1/sessions/fetch_login_response",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/sessions_controller.rb:154 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-063",
+      "method": "GET",
+      "path": "/V1/list_connected_profiles",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/messages_controller.rb:6 passes all params to Chat::Conversation.all_active_conversations_v1 — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-064",
+      "method": "POST",
+      "path": "/V1/connect_linked_users",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/messages_controller.rb:60 passes all params to Chat::Conversation.convert_to_full_connection — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-065",
+      "method": "POST",
+      "path": "/V1/messages/generate_agora_token",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/messages_controller.rb:77 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-068",
+      "method": "GET",
+      "path": "/V1/combined_messages_hidden_list",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/messages_controller.rb:19 passes all params to Chat::Conversation.all_active_conversations — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-069",
+      "method": "POST",
+      "path": "/V1/chat/chat_messages",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/messages_controller.rb:72 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-070",
+      "method": "POST",
+      "path": "/V1/payment/verify_razorpay_payment_v1",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:19 passes all params to Payment::Razorpay::Transaction.verify_payment — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-071",
+      "method": "POST",
+      "path": "/V1/payment/verify_ios_payment_v1",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:67 passes all params to Payment::Apple::Receipt.verify_payment — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-071",
+      "method": "POST",
+      "path": "/V1/payment/verify_ios_payment_v1",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:69 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-072",
+      "method": "POST",
+      "path": "/V1/payment/verify_paytm_payment_v1",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:86 passes all params to Payment::Paytm::Transaction.verify_payment — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-073",
+      "method": "POST",
+      "path": "/V1/payment/get_cashfree_request_params",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:97 passes all params to Payment::Cashfree::Order.fetch_order_token — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-073",
+      "method": "POST",
+      "path": "/V1/payment/get_cashfree_request_params",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:98 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-074",
+      "method": "POST",
+      "path": "/V1/payment/get_cashfree_web_request_params",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:102 passes all params to Payment::Cashfree::Order.fetch_web_order_token_v2 — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-074",
+      "method": "POST",
+      "path": "/V1/payment/get_cashfree_web_request_params",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:103 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-075",
+      "method": "POST",
+      "path": "/V1/payment/verify_cashfree_payment",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:116 passes all params to Payment::Cashfree::Transaction.verify_transaction_without_delay — the fields read there are not determined",
+        "app/controllers/v1/payment_controller.rb:148 passes all params to OfflineEvent::Order.verify_transaction — the fields read there are not determined",
+        "app/controllers/v1/payment_controller.rb:150 passes all params to Payment::Cashfree::Transaction.verify_transaction — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-075",
+      "method": "POST",
+      "path": "/V1/payment/verify_cashfree_payment",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:169 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-076",
+      "method": "POST",
+      "path": "/V1/payment/get_payu_request_params",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:183 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-077",
+      "method": "POST",
+      "path": "/V1/payment/send_collect_request",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:205 passes all params to Payment::Cashfree::Order.send_collect_request — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-077",
+      "method": "POST",
+      "path": "/V1/payment/send_collect_request",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:206 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-078",
+      "method": "POST",
+      "path": "/V1/payment/get_payment_link",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:211 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-079",
+      "method": "POST",
+      "path": "/V1/payment/phone_pay/create_subscription",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:321 passes all params to Payment::Phonepay.create_subscription_handler — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-079",
+      "method": "POST",
+      "path": "/V1/payment/phone_pay/create_subscription",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:322 renders resp — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-081",
+      "method": "POST",
+      "path": "/V1/payment/phone_pay/refund_callback",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:512 replaces params with a decoded payload — later reads are not request fields"
+      ]
+    },
+    {
+      "apiId": "API-081",
+      "method": "POST",
+      "path": "/V1/payment/phone_pay/refund_callback",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:509 renders a view template or nothing — keys not determined"
+      ]
+    },
+    {
+      "apiId": "API-082",
+      "method": "POST",
+      "path": "/V1/payment/phone_pay/one_time_payment_callback",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:542 replaces params with a decoded payload — later reads are not request fields"
+      ]
+    },
+    {
+      "apiId": "API-082",
+      "method": "POST",
+      "path": "/V1/payment/phone_pay/one_time_payment_callback",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:540 renders a view template or nothing — keys not determined"
+      ]
+    },
+    {
+      "apiId": "API-084",
+      "method": "POST",
+      "path": "/V1/payment/phone_pay/create_phone_pay_subscription_web",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:326 passes all params to Payment::Phonepay.create_subscription_handler — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-084",
+      "method": "POST",
+      "path": "/V1/payment/phone_pay/create_phone_pay_subscription_web",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:327 renders resp — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-086",
+      "method": "GET",
+      "path": "/V1/user/verify_user_v1",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/app_releases_controller.rb:8 passes all params to DeviceInfo::BannedVersion.verify_users_details_v1 — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-087",
+      "method": "POST",
+      "path": "/V1/user/verify_user_v1",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/app_releases_controller.rb:8 passes all params to DeviceInfo::BannedVersion.verify_users_details_v1 — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-088",
+      "method": "GET",
+      "path": "/V1/user/verify_user",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/app_releases_controller.rb:19 passes all params to DeviceInfo::BannedVersion.fetch_app_launch_info — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-089",
+      "method": "POST",
+      "path": "/V1/user/app_launch",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/app_releases_controller.rb:14 passes all params to Action::MongoActivity.record_app_launch_info — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-090",
+      "method": "POST",
+      "path": "/V1/images/upload_images_v2",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/images_controller.rb:23 passes all params to current_profile.aws_moderation_for_images_by_inappropriate_profile — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-090",
+      "method": "POST",
+      "path": "/V1/images/upload_images_v2",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/images_controller.rb:27 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-092",
+      "method": "POST",
+      "path": "/V1/subscription/verify_android_payments",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/subscription_controller.rb:10 passes all params to another method — the fields read there are not determined",
+        "app/controllers/v1/subscription_controller.rb:19 passes all params to Payment::Google::Token.verify_android_payment — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-093",
+      "method": "POST",
+      "path": "/V1/subscription/restore_android_subscription",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/subscription_controller.rb:56 passes all params to Payment::Google::Token.restore_purchase — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-093",
+      "method": "POST",
+      "path": "/V1/subscription/restore_android_subscription",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/subscription_controller.rb:49 renders failure_message — its full key set is built at run time",
+        "app/controllers/v1/subscription_controller.rb:58 renders response — its full key set is built at run time",
+        "app/controllers/v1/subscription_controller.rb:63 renders response — its full key set is built at run time",
+        "app/controllers/v1/subscription_controller.rb:67 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-096",
+      "method": "POST",
+      "path": "/V1/subscription/restore_ios_subscription_v1",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/subscription_controller.rb:72 passes all params to Payment::Apple::Receipt.restore_purchase — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-096",
+      "method": "POST",
+      "path": "/V1/subscription/restore_ios_subscription_v1",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/subscription_controller.rb:76 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-098",
+      "method": "POST",
+      "path": "/V1/report",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/report_controller.rb:6 passes all params to Action::Report.report_user — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-101",
+      "method": "GET",
+      "path": "/V1/speed_dating/event_info",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/speed_dating_controller.rb:8 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-102",
+      "method": "POST",
+      "path": "/V1/speed_dating/book_event",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/speed_dating_controller.rb:13 passes all params to Payment::Razorpay::Transaction.verify_payment — the fields read there are not determined",
+        "app/controllers/v1/speed_dating_controller.rb:15 passes all params to Payment::Paytm::Transaction.verify_payment — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-103",
+      "method": "POST",
+      "path": "/V1/speed_dating/give_feedback",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/speed_dating_controller.rb:21 passes all params to SpeedDating::Feedback.add_feedback — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-104",
+      "method": "POST",
+      "path": "/V1/paint_bar_mixer/update_personal_details",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/speed_dating_controller.rb:36 passes all params to PaintBarMixer.update_personal_details — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-104",
+      "method": "POST",
+      "path": "/V1/paint_bar_mixer/update_personal_details",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/speed_dating_controller.rb:37 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-105",
+      "method": "POST",
+      "path": "/V1/advertisement/vote",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/advertisement_controller.rb:6 passes all params to Advertisement::PollResult.vote! — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-106",
+      "method": "GET",
+      "path": "/V1/advertisement/profiles_voted",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/advertisement_controller.rb:11 passes all params to current_profile.fetch_profiles_voted — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-107",
+      "method": "GET",
+      "path": "/V1/live_audio",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/live_audio_controller.rb:7 passes all params to LiveAudio::Room.fetch_all_live_audios — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-108",
+      "method": "POST",
+      "path": "/V1/live_audio/go_live",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/live_audio_controller.rb:26 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-109",
+      "method": "POST",
+      "path": "/V1/live_audio/join_room",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/live_audio_controller.rb:32 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-110",
+      "method": "POST",
+      "path": "/V1/live_audio/send_request_to_talk",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/live_audio_controller.rb:45 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-112",
+      "method": "POST",
+      "path": "/V1/live_audio/leave_room",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/live_audio_controller.rb:40 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-113",
+      "method": "POST",
+      "path": "/V1/pusher_presence_webhook",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/live_audio_controller.rb:96 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-114",
+      "method": "GET",
+      "path": "/V1/pusher_presence_webhook",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/live_audio_controller.rb:96 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-115",
+      "method": "POST",
+      "path": "/V1/freebies/claim",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/freebie_controller.rb:5 passes all params to FreebieClaim.create_claim_entry — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-116",
+      "method": "GET",
+      "path": "/web/invites/all_requests",
+      "what": "params",
+      "reasons": [
+        "app/controllers/web/invites_controller.rb:7 passes all params to Chat::Request.list_all_invitations — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-117",
+      "method": "POST",
+      "path": "/web/invites/accept_request_v1",
+      "what": "params",
+      "reasons": [
+        "app/controllers/web/invites_controller.rb:12 passes all params to Chat::Request.accept_request — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-118",
+      "method": "POST",
+      "path": "/web/invites/pass_request",
+      "what": "params",
+      "reasons": [
+        "app/controllers/web/invites_controller.rb:17 passes all params to Chat::Request.pass_request — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-119",
+      "method": "GET",
+      "path": "/web/users/profile_info",
+      "what": "params",
+      "reasons": [
+        "app/controllers/web/users_controller.rb:10 passes all params to current_profile.fetch_profile_info — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-122",
+      "method": "POST",
+      "path": "/web/users/update_settings",
+      "what": "params",
+      "reasons": [
+        "app/controllers/web/users_controller.rb:71 passes all params to Interested::Age.update_age — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-125",
+      "method": "POST",
+      "path": "/web/like",
+      "what": "params",
+      "reasons": [
+        "app/controllers/web/like_controller.rb:8 passes all params to UserLike.like_user — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-126",
+      "method": "GET",
+      "path": "/web/list_likes_received",
+      "what": "params",
+      "reasons": [
+        "app/controllers/web/like_controller.rb:23 passes all params to UserLike.list_likes_received_v2 — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-128",
+      "method": "POST",
+      "path": "/web/like_back",
+      "what": "params",
+      "reasons": [
+        "app/controllers/web/like_controller.rb:13 passes all params to UserLike.like_user — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-129",
+      "method": "POST",
+      "path": "/web/user/update",
+      "what": "params",
+      "reasons": [
+        "app/controllers/web/sessions_controller.rb:17 passes all params to current_user.submit_profile — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-131",
+      "method": "POST",
+      "path": "/web/user/delete",
+      "what": "params",
+      "reasons": [
+        "app/controllers/web/sessions_controller.rb:27 passes all params to current_user.delete_all_account_info — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-132",
+      "method": "POST",
+      "path": "/web/connect_linked_users",
+      "what": "params",
+      "reasons": [
+        "app/controllers/web/messages_controller.rb:22 passes all params to Chat::Conversation.convert_to_full_connection — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-133",
+      "method": "POST",
+      "path": "/web/payment/verify_razorpay_payment",
+      "what": "params",
+      "reasons": [
+        "app/controllers/web/payment_controller.rb:11 passes all params to Payment::Razorpay::Transaction.verify_payment — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-133",
+      "method": "POST",
+      "path": "/web/payment/verify_razorpay_payment",
+      "what": "response",
+      "reasons": [
+        "app/controllers/web/payment_controller.rb:12 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-135",
+      "method": "POST",
+      "path": "/web/report",
+      "what": "params",
+      "reasons": [
+        "app/controllers/web/report_controller.rb:6 passes all params to Action::Report.report_user — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-136",
+      "method": "GET",
+      "path": "/users/:ref",
+      "what": "response",
+      "reasons": [
+        "app/controllers/users_controller.rb:11 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-138",
+      "method": "GET",
+      "path": "/admin/users/:ref",
+      "what": "response",
+      "reasons": [
+        "app/controllers/admin/pending_controller.rb:33 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-139",
+      "method": "POST",
+      "path": "/admin/approve_and_edit",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/pending_controller.rb:38 passes all params to current_admin.update_profile_data — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-140",
+      "method": "POST",
+      "path": "/admin/update_profile",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/updated_controller.rb:4 passes all params to current_admin.update_profile_data — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-142",
+      "method": "GET",
+      "path": "/admin/pending/curation_tab",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/pending_controller.rb:4 passes all params to Profile.pending_profile_list — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-142",
+      "method": "GET",
+      "path": "/admin/pending/curation_tab",
+      "what": "response",
+      "reasons": [
+        "app/controllers/admin/pending_controller.rb:5 renders profiles_response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-143",
+      "method": "GET",
+      "path": "/admin/pending/vip_tab",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/pending_controller.rb:9 passes all params to Profile.fetch_vip_users — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-143",
+      "method": "GET",
+      "path": "/admin/pending/vip_tab",
+      "what": "response",
+      "reasons": [
+        "app/controllers/admin/pending_controller.rb:10 renders profiles_response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-144",
+      "method": "GET",
+      "path": "/admin/pending/people_hni_tab",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/pending_controller.rb:54 passes all params to Profile.people_hni_tab_list — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-144",
+      "method": "GET",
+      "path": "/admin/pending/people_hni_tab",
+      "what": "response",
+      "reasons": [
+        "app/controllers/admin/pending_controller.rb:55 renders profiles_response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-145",
+      "method": "POST",
+      "path": "/admin/pending/people_hni_tab",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/pending_controller.rb:59 passes all params to Admin::Curation.update_hni_registry — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-146",
+      "method": "POST",
+      "path": "/admin/pending/curation_tab_update_profiles_state",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/pending_controller.rb:14 passes all params to Admin::Curation.add_to_list — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-146",
+      "method": "POST",
+      "path": "/admin/pending/curation_tab_update_profiles_state",
+      "what": "response",
+      "reasons": [
+        "app/controllers/admin/pending_controller.rb:15 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-147",
+      "method": "POST",
+      "path": "/admin/pending/vip_tab_update_profiles_state",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/pending_controller.rb:20 passes all params to Admin::Curation.add_to_list — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-147",
+      "method": "POST",
+      "path": "/admin/pending/vip_tab_update_profiles_state",
+      "what": "response",
+      "reasons": [
+        "app/controllers/admin/pending_controller.rb:21 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-148",
+      "method": "GET",
+      "path": "/admin/images/list_multiple_profiles_v1",
+      "what": "response",
+      "reasons": [
+        "app/controllers/admin/images_controller.rb:36 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-149",
+      "method": "POST",
+      "path": "/admin/images/images_updates_tab",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/images_controller.rb:59 passes all params to current_admin.update_profile_images — the fields read there are not determined",
+        "app/controllers/admin/images_controller.rb:60 passes all params to current_admin.update_profile_images_2 — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-149",
+      "method": "POST",
+      "path": "/admin/images/images_updates_tab",
+      "what": "response",
+      "reasons": [
+        "app/controllers/admin/images_controller.rb:66 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-150",
+      "method": "GET",
+      "path": "/admin/images/list_auto_updates_images",
+      "what": "response",
+      "reasons": [
+        "app/controllers/admin/images_controller.rb:42 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-151",
+      "method": "POST",
+      "path": "/admin/images/auto_updates_images_update",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/images_controller.rb:47 passes all params to current_admin.update_profile_images — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-151",
+      "method": "POST",
+      "path": "/admin/images/auto_updates_images_update",
+      "what": "response",
+      "reasons": [
+        "app/controllers/admin/images_controller.rb:49 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-152",
+      "method": "GET",
+      "path": "/admin/images/list_multiple_profiles_disapproved_v1",
+      "what": "response",
+      "reasons": [
+        "app/controllers/admin/images_controller.rb:31 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-153",
+      "method": "POST",
+      "path": "/admin/images/approve_reject_multiple_photos_v1",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/images_controller.rb:54 passes all params to current_admin.update_profile_images — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-154",
+      "method": "POST",
+      "path": "/admin/images/approve_reject_multiple_photos_disapproved",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/images_controller.rb:103 passes all params to current_admin.reject_photos — the fields read there are not determined",
+        "app/controllers/admin/images_controller.rb:111 replaces params with a decoded payload — later reads are not request fields"
+      ]
+    },
+    {
+      "apiId": "API-159",
+      "method": "POST",
+      "path": "/admin/reviews/save",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/reviews_controller.rb:105 passes all params to SpamFilter::Review.update_individual — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-160",
+      "method": "GET",
+      "path": "/admin/member/search",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/members_controller.rb:10 passes all params to Profile.search_user_by_params — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-162",
+      "method": "GET",
+      "path": "/admin/member/feed",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/members_controller.rb:200 passes all params to auto_curate_feed — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-163",
+      "method": "GET",
+      "path": "/admin/member/fetch_complete_info",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/members_controller.rb:29 passes all params to User.fetch_complete_details — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-163",
+      "method": "GET",
+      "path": "/admin/member/fetch_complete_info",
+      "what": "response",
+      "reasons": [
+        "app/controllers/admin/members_controller.rb:30 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-164",
+      "method": "GET",
+      "path": "/admin/member/fetch_bait_profile_info",
+      "what": "params",
+      "reasons": [
+        "action fetch_bait_profile_info is not defined in app/controllers/admin/members_controller.rb (inherited or generated)"
+      ]
+    },
+    {
+      "apiId": "API-165",
+      "method": "GET",
+      "path": "/admin/member/fetch_connected_profiles",
+      "what": "response",
+      "reasons": [
+        "app/controllers/admin/members_controller.rb:95 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-166",
+      "method": "GET",
+      "path": "/admin/member/user_activity_v1",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/members_controller.rb:102 passes all params to UserLike.sent_activity — the fields read there are not determined",
+        "app/controllers/admin/members_controller.rb:104 passes all params to UserLike.received_activity — the fields read there are not determined",
+        "app/controllers/admin/members_controller.rb:106 passes all params to UserLike.passed_activity — the fields read there are not determined",
+        "app/controllers/admin/members_controller.rb:108 passes all params to Account::Spark.sent_activity — the fields read there are not determined",
+        "app/controllers/admin/members_controller.rb:110 passes all params to Account::Spark.received_activity — the fields read there are not determined",
+        "app/controllers/admin/members_controller.rb:112 passes all params to Account::Spark.received_accepted_activity — the fields read there are not determined",
+        "app/controllers/admin/members_controller.rb:114 passes all params to Account::Spark.received_rejected_activity — the fields read there are not determined",
+        "app/controllers/admin/members_controller.rb:116 passes all params to Account::Spark.sent_accepted_activity — the fields read there are not determined",
+        "app/controllers/admin/members_controller.rb:118 passes all params to Account::Spark.sent_rejected_activity — the fields read there are not determined",
+        "app/controllers/admin/members_controller.rb:120 passes all params to Chat::Conversation.fetch_linked_activity — the fields read there are not determined",
+        "app/controllers/admin/members_controller.rb:122 passes all params to Chat::Conversation.connected_activity — the fields read there are not determined",
+        "app/controllers/admin/members_controller.rb:124 passes all params to Chat::Request.sent_replies_activity — the fields read there are not determined",
+        "app/controllers/admin/members_controller.rb:126 passes all params to Chat::Request.received_replies_activity — the fields read there are not determined",
+        "app/controllers/admin/members_controller.rb:128 passes all params to Chat::Conversation.fetch_linked_activity — the fields read there are not determined",
+        "app/controllers/admin/members_controller.rb:130 passes all params to Chat::Conversation.connected_activity — the fields read there are not determined",
+        "app/controllers/admin/members_controller.rb:132 passes all params to Action::Block.user_blocked_activity — the fields read there are not determined",
+        "app/controllers/admin/members_controller.rb:134 passes all params to Action::Block.user_blocked_self_activity — the fields read there are not determined",
+        "app/controllers/admin/members_controller.rb:136 passes all params to Action::Report.user_reported_activity — the fields read there are not determined",
+        "app/controllers/admin/members_controller.rb:138 passes all params to Chat::Request.invites_sent_accepted_activity — the fields read there are not determined",
+        "app/controllers/admin/members_controller.rb:140 passes all params to Chat::Request.invites_received_accepted_activity — the fields read there are not determined",
+        "app/controllers/admin/members_controller.rb:142 passes all params to Chat::Request.invites_sent_passed_activity — the fields read there are not determined",
+        "app/controllers/admin/members_controller.rb:144 passes all params to Chat::Request.invites_received_passed_activity — the fields read there are not determined",
+        "app/controllers/admin/members_controller.rb:146 passes all params to UserPass.fetch_user_passed_activity — the fields read there are not determined",
+        "app/controllers/admin/members_controller.rb:148 passes all params to Action::Report.user_reported_activity — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-166",
+      "method": "GET",
+      "path": "/admin/member/user_activity_v1",
+      "what": "response",
+      "reasons": [
+        "app/controllers/admin/members_controller.rb:150 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-171",
+      "method": "GET",
+      "path": "/admin/members/retry_curation_bucket_list",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/members_controller.rb:377 passes all params to Profile.fetch_failed_review_profile_list — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-171",
+      "method": "GET",
+      "path": "/admin/members/retry_curation_bucket_list",
+      "what": "response",
+      "reasons": [
+        "app/controllers/admin/members_controller.rb:377 passes all params to Profile.fetch_failed_review_profile_list — the fields read there are not determined",
+        "app/controllers/admin/members_controller.rb:378 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-172",
+      "method": "GET",
+      "path": "/admin/members/fetch_verified_profile",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/members_controller.rb:383 passes all params to Profile.fetch_verified_not_admin_approved_profiles_list — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-172",
+      "method": "GET",
+      "path": "/admin/members/fetch_verified_profile",
+      "what": "response",
+      "reasons": [
+        "app/controllers/admin/members_controller.rb:384 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-173",
+      "method": "POST",
+      "path": "/admin/members/update_verified_profile",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/members_controller.rb:389 passes all params to Profile.update_verified_profiles_list — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-173",
+      "method": "POST",
+      "path": "/admin/members/update_verified_profile",
+      "what": "response",
+      "reasons": [
+        "app/controllers/admin/members_controller.rb:390 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-174",
+      "method": "POST",
+      "path": "/admin/members/refund_payment",
+      "what": "response",
+      "reasons": [
+        "app/controllers/admin/members_controller.rb:411 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-177",
+      "method": "POST",
+      "path": "/admin/members/correct_profile_location",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/members_controller.rb:585 passes all params to User.fetch_complete_details — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-177",
+      "method": "POST",
+      "path": "/admin/members/correct_profile_location",
+      "what": "response",
+      "reasons": [
+        "app/controllers/admin/members_controller.rb:586 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-178",
+      "method": "GET",
+      "path": "/admin/members/search_profiles",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/members_controller.rb:595 passes all params to Profile.search_profiles_by_params — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-178",
+      "method": "GET",
+      "path": "/admin/members/search_profiles",
+      "what": "response",
+      "reasons": [
+        "app/controllers/admin/members_controller.rb:596 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-179",
+      "method": "GET",
+      "path": "/admin/members/download_profile_details",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/members_controller.rb:600 passes all params to Profile.fetch_profile_data_cms — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-179",
+      "method": "GET",
+      "path": "/admin/members/download_profile_details",
+      "what": "response",
+      "reasons": [
+        "app/controllers/admin/members_controller.rb:601 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-180",
+      "method": "POST",
+      "path": "/admin/members/approve_disapprove_banned_profiles",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/members_controller.rb:665 passes all params to auto_curated_profiles — the fields read there are not determined",
+        "app/controllers/admin/members_controller.rb:696 passes all params to current_admin.approve_profile — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-181",
+      "method": "GET",
+      "path": "/admin/connections/fetch_messages",
+      "what": "response",
+      "reasons": [
+        "app/controllers/admin/connections_controller.rb:5 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-182",
+      "method": "POST",
+      "path": "/admin/payments/subscription_transfer",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/payments_controller.rb:4 passes all params to Account::Subscription.transfer_active_subscription — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-182",
+      "method": "POST",
+      "path": "/admin/payments/subscription_transfer",
+      "what": "response",
+      "reasons": [
+        "app/controllers/admin/payments_controller.rb:5 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-183",
+      "method": "POST",
+      "path": "/admin/payments/capture_android_payment",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/payments_controller.rb:9 passes all params to Payment::Google::Token.capture_android_payment_cms — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-183",
+      "method": "POST",
+      "path": "/admin/payments/capture_android_payment",
+      "what": "response",
+      "reasons": [
+        "app/controllers/admin/payments_controller.rb:10 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-184",
+      "method": "GET",
+      "path": "/admin/stories",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/stories_controller.rb:4 passes all params to Action::DeletedUserDescription.fetch_all — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-184",
+      "method": "GET",
+      "path": "/admin/stories",
+      "what": "response",
+      "reasons": [
+        "app/controllers/admin/stories_controller.rb:5 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-185",
+      "method": "GET",
+      "path": "/admin/reports",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/reports_controller.rb:4 passes all params to Action::Report.fetch_all — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-185",
+      "method": "GET",
+      "path": "/admin/reports",
+      "what": "response",
+      "reasons": [
+        "app/controllers/admin/reports_controller.rb:5 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-186",
+      "method": "GET",
+      "path": "/api/profile_data/:user_id",
+      "what": "response",
+      "reasons": [
+        "app/controllers/api/external_controller.rb:98 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-187",
+      "method": "POST",
+      "path": "/V1/messages/send",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/messages_controller.rb:30 passes all params to Chat::Conversation.send_message — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-188",
+      "method": "POST",
+      "path": "/web/messages/send",
+      "what": "params",
+      "reasons": [
+        "app/controllers/web/messages_controller.rb:6 passes all params to Chat::Conversation.send_message — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-188",
+      "method": "POST",
+      "path": "/web/messages/send",
+      "what": "response",
+      "reasons": [
+        "app/controllers/web/messages_controller.rb:7 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-189",
+      "method": "POST",
+      "path": "/V1/payment/get_cashfree_request_params_web",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:106 delegates to get_cashfree_web_request_params (line 101)",
+        "app/controllers/v1/payment_controller.rb:102 passes all params to Payment::Cashfree::Order.fetch_web_order_token_v2 — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-189",
+      "method": "POST",
+      "path": "/V1/payment/get_cashfree_request_params_web",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:103 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-192",
+      "method": "GET",
+      "path": "/bangalore745/irl",
+      "what": "route",
+      "reasons": [
+        "no static route at ae838f4 or 004e72c (generated by a gem such as ActiveAdmin, or the documented path differs)"
+      ]
+    },
+    {
+      "apiId": "API-193",
+      "method": "POST",
+      "path": "/V1/payment/generate_qr_code",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:201 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-194",
+      "method": "POST",
+      "path": "/V1/payment/send_web_purchase_link",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:303 passes all params to Payment.send_web_purchase_link — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-194",
+      "method": "POST",
+      "path": "/V1/payment/send_web_purchase_link",
+      "what": "response",
+      "reasons": ["app/controllers/v1/payment_controller.rb:302 does not render JSON on success"]
+    },
+    {
+      "apiId": "API-195",
+      "method": "POST",
+      "path": "/V1/payment/verify_cashfree_payments_web",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:116 passes all params to Payment::Cashfree::Transaction.verify_transaction_without_delay — the fields read there are not determined",
+        "app/controllers/v1/payment_controller.rb:148 passes all params to OfflineEvent::Order.verify_transaction — the fields read there are not determined",
+        "app/controllers/v1/payment_controller.rb:150 passes all params to Payment::Cashfree::Transaction.verify_transaction — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-195",
+      "method": "POST",
+      "path": "/V1/payment/verify_cashfree_payments_web",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:169 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-197",
+      "method": "POST",
+      "path": "/V1/users/delete_current_account",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/users_controller.rb:304 passes all params to current_user.delete_current_account — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-197",
+      "method": "POST",
+      "path": "/V1/users/delete_current_account",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/users_controller.rb:305 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "API-198",
+      "method": "POST",
+      "path": "/V1/user/reset_profile",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/sessions_controller.rb:41 passes all params to current_user.reset_profile — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-199",
+      "method": "POST",
+      "path": "/V1/api/v1/pii-test",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/pii_test_controller.rb:31 delegates to proxy_post(…), which reads the request — params not determined"
+      ]
+    },
+    {
+      "apiId": "API-200",
+      "method": "POST",
+      "path": "/V1/api/v1/pii-test/read",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/pii_test_controller.rb:35 delegates to proxy_post(…), which reads the request — params not determined"
+      ]
+    },
+    {
+      "apiId": "API-201",
+      "method": "POST",
+      "path": "/V1/api/v1/pii-test/batch/read",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/pii_test_controller.rb:43 delegates to proxy_post(…), which reads the request — params not determined"
+      ]
+    },
+    {
+      "apiId": "API-201",
+      "method": "POST",
+      "path": "/V1/api/v1/pii-test/batch/read",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/pii_test_controller.rb:43 renders through proxy_post(…) — keys not determined"
+      ]
+    },
+    {
+      "apiId": "API-202",
+      "method": "POST",
+      "path": "/V1/api/v1/pii-test/NAME/search",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/pii_test_controller.rb:39 delegates to proxy_post(…), which reads the request — params not determined"
+      ]
+    },
+    {
+      "apiId": "API-202",
+      "method": "POST",
+      "path": "/V1/api/v1/pii-test/NAME/search",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/pii_test_controller.rb:39 renders through proxy_post(…) — keys not determined"
+      ]
+    },
+    {
+      "apiId": "API-203",
+      "method": "POST",
+      "path": "/V1/api/v1/pii-test/EMAIL/search",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/pii_test_controller.rb:39 delegates to proxy_post(…), which reads the request — params not determined"
+      ]
+    },
+    {
+      "apiId": "API-203",
+      "method": "POST",
+      "path": "/V1/api/v1/pii-test/EMAIL/search",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/pii_test_controller.rb:39 renders through proxy_post(…) — keys not determined"
+      ]
+    },
+    {
+      "apiId": "API-204",
+      "method": "POST",
+      "path": "/V1/api/v1/pii-test/PHONE/search",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/pii_test_controller.rb:39 delegates to proxy_post(…), which reads the request — params not determined"
+      ]
+    },
+    {
+      "apiId": "API-204",
+      "method": "POST",
+      "path": "/V1/api/v1/pii-test/PHONE/search",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/pii_test_controller.rb:39 renders through proxy_post(…) — keys not determined"
+      ]
+    },
+    {
+      "apiId": "API-205",
+      "method": "POST",
+      "path": "/V1/api/v1/pii-test/transient/phones",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/pii_test_controller.rb:47 delegates to proxy_post(…), which reads the request — params not determined"
+      ]
+    },
+    {
+      "apiId": "API-205",
+      "method": "POST",
+      "path": "/V1/api/v1/pii-test/transient/phones",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/pii_test_controller.rb:47 renders through proxy_post(…) — keys not determined"
+      ]
+    },
+    {
+      "apiId": "API-206",
+      "method": "POST",
+      "path": "/V1/api/v1/pii-test/transient/phones/resolve",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/pii_test_controller.rb:51 delegates to proxy_post(…), which reads the request — params not determined"
+      ]
+    },
+    {
+      "apiId": "API-206",
+      "method": "POST",
+      "path": "/V1/api/v1/pii-test/transient/phones/resolve",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/pii_test_controller.rb:51 renders through proxy_post(…) — keys not determined"
+      ]
+    },
+    {
+      "apiId": "API-207",
+      "method": "POST",
+      "path": "/V1/api/v1/pii-test/transient/phones/promote",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/pii_test_controller.rb:55 delegates to proxy_post(…), which reads the request — params not determined"
+      ]
+    },
+    {
+      "apiId": "API-207",
+      "method": "POST",
+      "path": "/V1/api/v1/pii-test/transient/phones/promote",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/pii_test_controller.rb:55 renders through proxy_post(…) — keys not determined"
+      ]
+    },
+    {
+      "apiId": "API-209",
+      "method": "POST",
+      "path": "/admin/members/autofeed_update",
+      "what": "params",
+      "reasons": [
+        "app/controllers/admin/members_controller.rb:371 passes all params to auto_curated_profiles — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "API-209",
+      "method": "POST",
+      "path": "/admin/members/autofeed_update",
+      "what": "response",
+      "reasons": [
+        "app/controllers/admin/members_controller.rb:357 renders a view template or nothing — keys not determined"
+      ]
+    },
+    {
+      "apiId": "API-210",
+      "method": "GET",
+      "path": "/V1/api/v1/pii-test/health/ready",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/pii_test_controller.rb:25 renders through a helper — keys not determined"
+      ]
+    },
+    {
+      "apiId": "API-211",
+      "method": "POST",
+      "path": "/V1/api/v1/pii-test/free-text/keys",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/pii_test_controller.rb:59 delegates to proxy_post(…), which reads the request — params not determined"
+      ]
+    },
+    {
+      "apiId": "API-211",
+      "method": "POST",
+      "path": "/V1/api/v1/pii-test/free-text/keys",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/pii_test_controller.rb:59 renders through proxy_post(…) — keys not determined"
+      ]
+    },
+    {
+      "apiId": "API-212",
+      "method": "POST",
+      "path": "/V1/api/v1/pii-test/free-text/keys/read",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/pii_test_controller.rb:63 delegates to proxy_post(…), which reads the request — params not determined"
+      ]
+    },
+    {
+      "apiId": "API-212",
+      "method": "POST",
+      "path": "/V1/api/v1/pii-test/free-text/keys/read",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/pii_test_controller.rb:63 renders through proxy_post(…) — keys not determined"
+      ]
+    },
+    {
+      "apiId": "M1-revokeFreeTextKey",
+      "method": "POST",
+      "path": "/V1/api/v1/pii-test/free-text/keys/revoke",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/pii_test_controller.rb:67 delegates to proxy_post(…), which reads the request — params not determined"
+      ]
+    },
+    {
+      "apiId": "M1-revokeFreeTextKey",
+      "method": "POST",
+      "path": "/V1/api/v1/pii-test/free-text/keys/revoke",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/pii_test_controller.rb:67 renders through proxy_post(…) — keys not determined"
+      ]
+    },
+    {
+      "apiId": "CODE-001",
+      "method": "POST",
+      "path": "/V1/messages/firebase_webhook",
+      "what": "params",
+      "reasons": [
+        "action firebase_webhook is not defined in app/controllers/v1/messages_controller.rb (inherited or generated)"
+      ]
+    },
+    {
+      "apiId": "CODE-002",
+      "method": "POST",
+      "path": "/V1/payment/cashfree/subscription/create",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:277 passes all params to Payment::Cashfree.create_cashfree_subscription — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "CODE-002",
+      "method": "POST",
+      "path": "/V1/payment/cashfree/subscription/create",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:278 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "CODE-003",
+      "method": "GET",
+      "path": "/V1/payment/cashfree/subscription/status",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:282 passes all params to Payment::Cashfree.cashfree_subscription_status — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "CODE-003",
+      "method": "GET",
+      "path": "/V1/payment/cashfree/subscription/status",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:283 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "CODE-004",
+      "method": "POST",
+      "path": "/V1/payment/cashfree/subscription/cancel",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:287 passes all params to Payment::Cashfree.cancel_cashfree_subscription — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "CODE-004",
+      "method": "POST",
+      "path": "/V1/payment/cashfree/subscription/cancel",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:288 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "CODE-005",
+      "method": "POST",
+      "path": "/V1/payment/cashfree/subscription/webhook",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:294 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "CODE-006",
+      "method": "POST",
+      "path": "/V1/payment/cashfree/subscription/authorization_callback",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:298 passes all params to Payment::Cashfree.cashfree_subscription_authorization_callback — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "CODE-006",
+      "method": "POST",
+      "path": "/V1/payment/cashfree/subscription/authorization_callback",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/payment_controller.rb:299 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "CODE-007",
+      "method": "POST",
+      "path": "/V1/payment/ms/activateAnySubscriptionWithExpiry",
+      "what": "params",
+      "reasons": [
+        "action activate_any_subscription_with_expiry_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)"
+      ]
+    },
+    {
+      "apiId": "CODE-008",
+      "method": "POST",
+      "path": "/V1/payment/ms/addExtraInvites",
+      "what": "params",
+      "reasons": [
+        "action add_extra_invites_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)"
+      ]
+    },
+    {
+      "apiId": "CODE-009",
+      "method": "POST",
+      "path": "/V1/payment/ms/addBoostToProfile",
+      "what": "params",
+      "reasons": [
+        "action add_boost_to_profile_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)"
+      ]
+    },
+    {
+      "apiId": "CODE-010",
+      "method": "POST",
+      "path": "/V1/payment/ms/activePremiumSubscription",
+      "what": "params",
+      "reasons": [
+        "action active_premium_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)"
+      ]
+    },
+    {
+      "apiId": "CODE-011",
+      "method": "POST",
+      "path": "/V1/payment/ms/activateAnySubscription",
+      "what": "params",
+      "reasons": [
+        "action activate_any_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)"
+      ]
+    },
+    {
+      "apiId": "CODE-012",
+      "method": "POST",
+      "path": "/V1/payment/ms/enableExclusivity",
+      "what": "params",
+      "reasons": [
+        "action enable_exclusivity_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)"
+      ]
+    },
+    {
+      "apiId": "CODE-013",
+      "method": "POST",
+      "path": "/V1/payment/ms/fetchUserIdFromIosIdentifier",
+      "what": "params",
+      "reasons": [
+        "action fetch_user_id_from_ios_identifier_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)"
+      ]
+    },
+    {
+      "apiId": "CODE-014",
+      "method": "POST",
+      "path": "/V1/payment/ms/deactivateActiveSubscription",
+      "what": "params",
+      "reasons": [
+        "action deactivate_active_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)"
+      ]
+    },
+    {
+      "apiId": "CODE-015",
+      "method": "POST",
+      "path": "/V1/payment/ms/editUserSubscription",
+      "what": "params",
+      "reasons": [
+        "action edit_user_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)"
+      ]
+    },
+    {
+      "apiId": "CODE-016",
+      "method": "POST",
+      "path": "/V1/payment/ms/addConsumableDataGoogle",
+      "what": "params",
+      "reasons": [
+        "action add_consumable_data_google_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)"
+      ]
+    },
+    {
+      "apiId": "CODE-017",
+      "method": "POST",
+      "path": "/V1/payment/ms/getAccountSubscription",
+      "what": "params",
+      "reasons": [
+        "action get_account_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)"
+      ]
+    },
+    {
+      "apiId": "CODE-018",
+      "method": "POST",
+      "path": "/V1/payment/ms/removeAccountSubscription",
+      "what": "params",
+      "reasons": [
+        "action remove_account_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)"
+      ]
+    },
+    {
+      "apiId": "CODE-019",
+      "method": "POST",
+      "path": "/V1/payment/ms/getActiveConciergeSubscription",
+      "what": "params",
+      "reasons": [
+        "action get_active_concierge_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)"
+      ]
+    },
+    {
+      "apiId": "CODE-020",
+      "method": "POST",
+      "path": "/V1/payment/ms/getActiveAislePlusSubscription",
+      "what": "params",
+      "reasons": [
+        "action get_active_aisle_plus_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)"
+      ]
+    },
+    {
+      "apiId": "CODE-021",
+      "method": "POST",
+      "path": "/V1/payment/ms/getActivePremiumSubscriptionByGooglePlay",
+      "what": "params",
+      "reasons": [
+        "action get_active_premium_subscription_by_google_play_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)"
+      ]
+    },
+    {
+      "apiId": "CODE-022",
+      "method": "POST",
+      "path": "/V1/payment/ms/extendSubscription",
+      "what": "params",
+      "reasons": [
+        "action extend_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)"
+      ]
+    },
+    {
+      "apiId": "CODE-023",
+      "method": "POST",
+      "path": "/V1/payment/ms/reduceSubscription",
+      "what": "params",
+      "reasons": [
+        "action reduce_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)"
+      ]
+    },
+    {
+      "apiId": "CODE-024",
+      "method": "POST",
+      "path": "/V1/payment/ms/addConsummableDataGoogle",
+      "what": "params",
+      "reasons": [
+        "action add_consumable_data_google_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)"
+      ]
+    },
+    {
+      "apiId": "CODE-025",
+      "method": "POST",
+      "path": "/V1/payment/ms/validateIosConsumable",
+      "what": "params",
+      "reasons": [
+        "action validate_ios_consummable_response_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)"
+      ]
+    },
+    {
+      "apiId": "CODE-026",
+      "method": "POST",
+      "path": "/V1/payment/ms/getActiveSubscriptionByPlan",
+      "what": "params",
+      "reasons": [
+        "action get_active_subscription_by_plan_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)"
+      ]
+    },
+    {
+      "apiId": "CODE-027",
+      "method": "POST",
+      "path": "/V1/payment/ms/editUserSubscriptionPostAppleSubscriptions",
+      "what": "params",
+      "reasons": [
+        "action edit_user_subscription_post_apple_subscriptions_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)"
+      ]
+    },
+    {
+      "apiId": "CODE-028",
+      "method": "POST",
+      "path": "/V1/payment/ms/saveToS3",
+      "what": "params",
+      "reasons": [
+        "action save_to_s3_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)"
+      ]
+    },
+    {
+      "apiId": "CODE-029",
+      "method": "POST",
+      "path": "/V1/payment/ms/profileExists",
+      "what": "params",
+      "reasons": [
+        "action profile_exists_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)"
+      ]
+    },
+    {
+      "apiId": "CODE-030",
+      "method": "POST",
+      "path": "/V1/images/upload",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/images_controller.rb:8 passes all params to Amazon::Url.upload_image — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "CODE-030",
+      "method": "POST",
+      "path": "/V1/images/upload",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/images_controller.rb:9 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "CODE-031",
+      "method": "POST",
+      "path": "/V1/images/detect_face_in_image",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/images_controller.rb:45 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "CODE-032",
+      "method": "POST",
+      "path": "/V1/images/image_modifications",
+      "what": "params",
+      "reasons": [
+        "app/controllers/v1/images_controller.rb:51 passes all params to image_optimizer_obj.image_modifications_api — the fields read there are not determined"
+      ]
+    },
+    {
+      "apiId": "CODE-032",
+      "method": "POST",
+      "path": "/V1/images/image_modifications",
+      "what": "response",
+      "reasons": [
+        "app/controllers/v1/images_controller.rb:52 renders response — its full key set is built at run time"
+      ]
+    },
+    {
+      "apiId": "CODE-035",
+      "method": "GET",
+      "path": "/admin/stories/fetch_deleted_reasons",
+      "what": "response",
+      "reasons": [
+        "app/controllers/admin/stories_controller.rb:10 renders response — its full key set is built at run time"
+      ]
+    }
+  ],
+  "routeFileDynamic": [
+    { "line": 2, "text": "devise_for :admin_users, ActiveAdmin::Devise.config" },
+    { "line": 3, "text": "ActiveAdmin.routes(self)" },
+    { "line": 6, "text": "mount Sidekiq::Web => '/admin/sidekiq'" }
+  ]
+}

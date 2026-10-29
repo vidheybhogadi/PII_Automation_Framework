@@ -203,6 +203,36 @@ folders (`vernac`, `network`) and in the other folders of the same family, so a 
 
 ---
 
+## 5A. When an API changes or is removed
+
+An API that is already documented is updated in place — never added a second time, never deleted.
+
+1. **Update the existing entry** (same app + METHOD + normalised path, §4.1). Change only what changed — request
+   params, response fields, auth, flow, notes — and keep everything else.
+2. **Removed request params / response fields:** do not delete them. Keep them in the entry with
+   `"removedOn": "<YYYY-MM-DD>"`; the site shows them struck through ("Removed on <date>"). After 90 days they may
+   leave the endpoint body, but the change stays in the entry's `history`.
+3. **Removed endpoint:** never delete the entry. Mark it removed —
+   `"removed": { "on": "<YYYY-MM-DD>", "source": "code" | "staging" | "dev", "label": "<source label>" }` — so it shows
+   a Removed badge and notice and is left out of the counts. Tell me in the report.
+4. **Record every change** in the entry's `history` list:
+   `{ "date", "kind", "name", "before", "after", "source", "label" }`, where `kind` is one of `param-added`,
+   `param-removed`, `param-changed`, `field-added`, `field-removed`, `field-changed`, `endpoint-removed`,
+   `endpoint-restored`, and `source` is:
+   - `code` — label "from code — confirm with Dev"; put the evidence (`file:line @<short commit>`) in `ref`
+   - `staging` — label "seen on staging <date>" (an observed staging response)
+   - `dev` — label "confirmed by Dev" (the owning developer's written answer)
+5. Each added or changed param / response field carries its `source` and `label` (and `since`, the date). An unknown
+   type is left out (shown as "not stated") — never guess it. Set `lastVerified: { "date", "source", "label" }` to
+   when you last checked the entry against the code or staging.
+6. **Ambiguous → do not change it; ask.** A route that may be generated at run time, params handed on whole to other
+   code, a field that is returned only sometimes, code and staging disagreeing (staging wins): leave the entry as it
+   is, list the item under "Skipped / unsure" in your report (§7) and ask me. If the project has a drift check (for
+   example `npm run docs:api:drift` in the Aisle QA repo), use its report as the evidence and apply only what it does
+   not mark "needs review".
+
+---
+
 ## 6. Publish directly to `main` (no clone, no branch, no PR)
 
 1. Build the new versions of `content/apps/<folder>/api-data.json` and `content/apps/<folder>/API-Documentation.md`
@@ -243,6 +273,7 @@ Reply with:
 
 - Added: N endpoints (app + method + path)
 - Merged: N endpoints (what was added to each)
+- Changed / removed: N endpoints (what changed, source and evidence; removed endpoints and params named)
 - Conflicts: list (endpoint, existing vs yours, evidence)
 - Skipped / unsure: list with reasons — including every `skipped: not an Aisle Network app`
 - Commit SHA and Netlify deploy result
@@ -298,10 +329,12 @@ The body is the full operating instructions, copied **verbatim** from this promp
    outcomes table and "write only into the chosen folders")
 4. §3.3 Collect the facts and §3.4 Facts only — applied to the endpoints that were added or changed (not the whole
    project; the one-time discovery of §3.1–3.2 is NOT part of the skill)
-5. §4 No duplicates, §5 Content rules, §6 Publish directly to `main` (including the Netlify deploy check), §7 Report
-6. **Removed APIs:** "For a removed API, do not delete the entry. Mark it `Deprecated / removed in <framework>`
-   and tell the user, so the owner can decide."
-7. §10 Stop and ask
+5. §4 No duplicates, §5 Content rules, **§5A When an API changes or is removed**, §6 Publish directly to `main`
+   (including the Netlify deploy check), §7 Report
+6. §10 Stop and ask
+
+(The Aisle QA repo generates this file from the prompt with `npm run docs:api:skill`; any other agent assembles it
+from the sections above.)
 
 If the file already exists, overwrite it with the new content (it is generated from this prompt; nothing else lives
 there).
@@ -450,6 +483,7 @@ When I share or describe an API (an endpoint, route, API client or API document)
 - the API belongs to an app that is not in `content/apps.json` (only the owner adds apps)
 - an endpoint's purpose or auth type cannot be found anywhere
 - a conflict with another team's entry appears
+- a change or removal is ambiguous (§5A.6)
 - validation finds a possible secret or real personal data
 - the Netlify deploy fails and the fix is not obvious
 - an install step (§8) would overwrite content you did not write, or a symlink/copy fails

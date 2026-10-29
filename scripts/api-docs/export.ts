@@ -5,6 +5,10 @@
  *   - docs/API-Documentation.md                          the whole documentation as one Markdown file (kept here)
  *   - <guide repo>/content/apps/aisle/api-data.json      the same content as data, rendered by the website
  *   - <guide repo>/content/apps/aisle/API-Documentation.md  the same Markdown file, kept in the API_Guide repo too
+ *   - <guide repo>/content/shared-api-docs-prompt.md     the standing prompt (docs/shared-api-docs-prompt.md), verbatim
+ * Recorded API changes (m2/docs/api-changes.json, written by `npm run docs:api:drift -- --apply`) are merged in:
+ * source-labelled params and response fields, removed ones struck through for 90 days, removed endpoints flagged
+ * (kept, not counted), a per-endpoint "What changed" history and "Last verified".
  * Other apps' folders (written by other teams' agents) are never touched.
  *
  *   npm run docs:api                                   write docs/API-Documentation.md
@@ -18,9 +22,11 @@
  * what is good to know. No test cases, QA status or question IDs. Every fact comes from a source file in this
  * repository (Dev's API documents, the Milestone 1 facade collection, the PII DB schema) — nothing is typed per API.
  */
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { ENDPOINTS } from '../../m1/src/clients/endpoints';
+import { activeNames, docState, loadChanges, type ChangeLog, type DocItem, type DocState } from './changes';
+import { loadCodeRoutes, type CodeRoute } from './code-routes';
 import { PII_INPUT } from '../../m2/scripts/m2-baseline';
 import {
   actionOf,
@@ -42,7 +48,7 @@ const MD_OUT = path.join(ROOT, 'docs/API-Documentation.md');
 const BASE_URL = 'https://testa2.aisle.co';
 /** The API_Guide folder this repository's content belongs to (an app id from API_Guide content/apps.json). */
 const APP = 'aisle';
-const TODAY = new Date().toISOString().slice(0, 10);
+const TODAY = process.env.API_DOCS_TODAY?.trim() || new Date().toISOString().slice(0, 10);
 
 /** Remove internal QA references (question IDs) from source text before it reaches the docs. */
 const clean = (s: string) =>
@@ -151,7 +157,7 @@ const explain = (fn: string) => {
   return { explain: hit?.[1] ?? '', pii: hit?.[2] ?? /pii|first_name|email|number|phone/i.test(fn) };
 };
 
-const GROUP_INFO: Record<string, { name: string; blurb: string }> = {
+export const GROUP_INFO: Record<string, { name: string; blurb: string }> = {
   G1: {
     name: 'First-name service routes',
     blurb: 'Read and write first names directly in the PII service (test token).',
@@ -506,7 +512,29 @@ function notesOf(a: InventoryApi) {
 }
 
 // ---- Build ------------------------------------------------------------------------------------------------
-function build() {
+/** Published form of a doc item (param / response field): name, source label, dates; unknown type = not stated. */
+const pubItem = (x: DocItem) => ({
+  name: x.name,
+  source: x.source,
+  label:
+    x.source === 'doc'
+      ? ''
+      : x.source === 'staging'
+        ? `seen on staging ${x.since ?? ''}`.trim()
+        : x.source === 'code'
+          ? 'from code — confirm with Dev'
+          : 'confirmed by Dev',
+  ...(x.since ? { since: x.since } : {}),
+  ...(x.removedOn ? { removedOn: x.removedOn } : {}),
+  ...(x.required !== undefined ? { required: x.required } : {}),
+  ...(x.type ? { type: x.type } : {}),
+  ...(x.ref ? { ref: x.ref } : {}),
+});
+
+export function build(opts: { log?: ChangeLog; today?: string; codeRoutes?: CodeRoute[] } = {}) {
+  const log = opts.log ?? loadChanges(ROOT);
+  const codeRoutes = opts.codeRoutes ?? loadCodeRoutes(ROOT).routes;
+  const today = opts.today ?? TODAY;
   const inventory = parseInventory(ROOT);
   const curls = m1Curls();
   const extras: InventoryApi[] = Object.values(ENDPOINTS)
@@ -530,6 +558,7 @@ function build() {
     const file = a.source.split(';')[0]!.trim();
     if (file) bySource.set(file, [...(bySource.get(file) ?? []), a.id.toLowerCase()]);
   }
+  for (const r of codeRoutes) bySource.set(r.file, [...(bySource.get(r.file) ?? []), r.id.toLowerCase()]);
   const apis = all.map((a) => {
     const g = gk(a);
     const facade = a.path.replace(/^\/V1/, '');
@@ -538,6 +567,7 @@ function build() {
     );
     const file = a.source.split(';')[0]!.trim();
     const name = nameOf(a);
+    const st: DocState = docState(a.id, a.requestKeys, log, today);
     return {
       slug: a.id.toLowerCase(),
       id: a.id,
@@ -556,7 +586,12 @@ function build() {
       source: a.source,
       summary: summaryOf(a),
       headers: headersOf(curl),
-      keys: a.requestKeys,
+      keys: activeNames(st.params),
+      params: st.params.map(pubItem),
+      responseFields: st.responseFields.map(pubItem),
+      history: st.history,
+      ...(st.lastVerified ? { lastVerified: st.lastVerified } : {}),
+      ...(st.removed ? { removed: st.removed } : {}),
       curl,
       flows: flowsOf(a),
       gates: a.fields.map((f) => [f, GATES[f][0], GATES[f][1]]),
@@ -567,6 +602,73 @@ function build() {
         `${a.method} ${a.path} ${name} ${actionOf(a)} ${a.fields.map((f) => FIELD_LABEL[f]).join(' ')} ${callerOf(a)}`.toLowerCase(),
     };
   });
+  type Entry = (typeof apis)[number] & { docsOnly?: true; origin?: 'code' };
+  // Code-discovered routes (docs-only, "from code — confirm with Dev"): only what the code literally shows.
+  for (const r of codeRoutes) {
+    const ref = (line: number) => `${r.file}:${line} @${r.sha}`;
+    const st: DocState = docState(r.id, [], log, today, {
+      params: r.params.map((p) => ({
+        name: p.name,
+        source: 'code',
+        since: r.found,
+        required: p.required,
+        ...(p.type ? { type: p.type } : {}),
+        ref: ref(p.line),
+      })),
+      fields: r.responseKeys.map((k) => ({ name: k.name, source: 'code', since: r.found, ref: ref(k.line) })),
+    });
+    const name = humanize(r.action);
+    const where = r.line ? ref(r.line) : `${r.file} @${r.sha}`;
+    const notes: { title: string; text: string; warn?: boolean }[] = [
+      {
+        title: 'From code — confirm with Dev',
+        text: `Found in \`config/routes.rb:${r.routeLine}\` @${r.sha} → \`${r.controller}#${r.action}\` (\`${where}\`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.`,
+        warn: true,
+      },
+    ];
+    if (!r.paramsComplete || (r.responseKeys.length && !r.responseComplete) || !r.responseKeys.length)
+      notes.push({
+        title: 'Not determined from the code',
+        text: r.notes.length
+          ? r.notes.map((n) => n.replace(/^app\/controllers\/\S+?:(\d+)/, 'line $1')).join('; ')
+          : 'Nothing further.',
+      });
+    const e: Entry = {
+      slug: r.id.toLowerCase(),
+      id: r.id,
+      method: r.method,
+      path: r.path,
+      group: r.group,
+      name,
+      fields: [],
+      auth: 'not stated',
+      caller: 'not stated',
+      operation: 'not stated',
+      source: `${r.file}; config/routes.rb#L${r.routeLine}`,
+      summary: [
+        `**${name}.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.`,
+        'Purpose and personal data: not stated.',
+      ],
+      headers: [],
+      keys: activeNames(st.params),
+      params: st.params.map(pubItem),
+      responseFields: st.responseFields.map(pubItem),
+      history: st.history,
+      ...(st.lastVerified ? { lastVerified: st.lastVerified } : {}),
+      ...(st.removed ? { removed: st.removed } : {}),
+      curl: [],
+      flows: [],
+      gates: [],
+      stores: [],
+      notes,
+      related: (bySource.get(r.file) ?? []).filter((s) => s !== r.id.toLowerCase()).slice(0, 24),
+      search: `${r.method} ${r.path} ${name} ${r.action} from code`.toLowerCase(),
+      docsOnly: true,
+      origin: 'code',
+    };
+    apis.push(e);
+  }
+  const live = apis.filter((a) => !a.removed);
   const groups = GROUPS.map((g) => ({
     key: g.key,
     name: GROUP_INFO[g.key]!.name,
@@ -574,7 +676,7 @@ function build() {
     blurb: GROUP_INFO[g.key]!.blurb,
     slugs: apis.filter((a) => a.group === g.key).map((a) => a.slug),
   }));
-  return { apis, groups };
+  return { apis, live, groups };
 }
 type Built = ReturnType<typeof build>;
 
@@ -599,9 +701,9 @@ interface Guide {
   sections: Section[];
 }
 
-function guides(data: Built): Guide[] {
+export function guides(data: Built): Guide[] {
   const { apis } = data;
-  const n = (pred: (a: Built['apis'][number]) => boolean) => apis.filter(pred).length;
+  const n = (pred: (a: Built['apis'][number]) => boolean) => data.live.filter(pred).length;
   return [
     {
       slug: 'architecture',
@@ -932,21 +1034,67 @@ function mdBlock(b: Block): string {
   if ('note' in b) return `> **${b.note.title}.** ${b.note.text}`;
   return b.arch.map((x, i) => `${i + 1}. **${x.title}** — ${x.lines.join('; ')}`).join('\n');
 }
-function markdown(data: Built, gs: Guide[]) {
+type Api = Built['apis'][number];
+type PubItem = Api['params'][number];
+const KIND_TEXT: Record<string, string> = {
+  'param-added': 'Request field added',
+  'param-removed': 'Request field removed',
+  'param-changed': 'Request field changed',
+  'field-added': 'Response field added',
+  'field-removed': 'Response field removed',
+  'field-changed': 'Response field changed',
+  'endpoint-added': 'Endpoint added (found in code)',
+  'endpoint-removed': 'Endpoint removed',
+  'endpoint-restored': 'Endpoint restored',
+};
+const attrText = (x: { required?: boolean; type?: string } | null) =>
+  x
+    ? [x.required === undefined ? '' : x.required ? 'required' : 'optional', x.type ?? '']
+        .filter(Boolean)
+        .join(', ')
+    : '';
+/** One documented param / field in Markdown: struck through when removed, with its source label. */
+function mdItem(x: PubItem): string {
+  const attrs = attrText(x);
+  const tail = [attrs, x.label].filter(Boolean).join(' · ');
+  return x.removedOn
+    ? `~~\`${x.name}\`~~ (removed on ${x.removedOn}${x.label ? ` · ${x.label}` : ''})`
+    : `\`${x.name}\`${tail ? ` (${tail})` : ''}`;
+}
+function mdHistory(a: Api): string[] {
+  if (!a.history.length) return [];
+  return [
+    '**What changed**',
+    '',
+    [...a.history]
+      .reverse()
+      .map((h) => {
+        const what = KIND_TEXT[h.kind] ?? h.kind;
+        const delta =
+          h.before || h.after ? ` (${attrText(h.before) || '—'} → ${attrText(h.after) || '—'})` : '';
+        return `- ${h.date} — ${what}${h.name ? `: \`${h.name}\`` : ''}${h.kind.endsWith('changed') ? delta : ''} · ${h.label}${h.ref ? ` · \`${h.ref}\`` : ''}`;
+      })
+      .join('\n'),
+    '',
+  ];
+}
+
+export function markdown(data: Built, gs: Guide[]) {
   const { apis, groups } = data;
+  const liveCount = (slugs: string[]) => slugs.filter((s) => !apis.find((x) => x.slug === s)?.removed).length;
   const out: string[] = [
     '<!-- GENERATED FILE — do not edit by hand. Source: PII_Automation_Framework scripts/api-docs/export.ts · `npm run docs:api` -->',
     '',
     '# Aisle API Documentation',
     '',
-    `Every Aisle API: what it does, how to call it, the path a request takes through the code, and which data it reads and writes. ${apis.length} endpoints · staging \`${BASE_URL}\` · generated ${TODAY}.`,
+    `Every Aisle API: what it does, how to call it, the path a request takes through the code, and which data it reads and writes. ${data.live.length} endpoints${apis.length > data.live.length ? ` (plus ${apis.length - data.live.length} removed, kept for reference)` : ''} · staging \`${BASE_URL}\` · generated ${TODAY}.`,
     '',
     'The same content is published as a website from the [API_Guide](https://github.com/vidheybhogadi/API_Guide) repository.',
     '',
     '## Contents',
     '',
     '- Guides: ' + gs.map((g) => `[${g.title}](#${g.slug})`).join(' · '),
-    ...groups.map((g) => `- [${g.name}](#area-${g.key.toLowerCase()}) — ${g.slugs.length} endpoints`),
+    ...groups.map((g) => `- [${g.name}](#area-${g.key.toLowerCase()}) — ${liveCount(g.slugs)} endpoints`),
     '',
   ];
   for (const g of gs) {
@@ -963,7 +1111,7 @@ function markdown(data: Built, gs: Guide[]) {
       '',
       `### ${g.name}`,
       '',
-      `${g.blurb} ${g.slugs.length} endpoints.`,
+      `${g.blurb} ${liveCount(g.slugs)} endpoints.`,
       '',
     );
     out.push(
@@ -971,15 +1119,30 @@ function markdown(data: Built, gs: Guide[]) {
         ['Method', 'Path', 'What it is'],
         g.slugs.map((s) => {
           const a = apis.find((x) => x.slug === s)!;
-          return [a.method, `[\`${a.path}\`](#${a.slug})`, a.name];
+          return [
+            a.method,
+            `${a.removed ? '~~' : ''}[\`${a.path}\`](#${a.slug})${a.removed ? `~~ (removed ${a.removed.on})` : ''}`,
+            a.name,
+          ];
         }),
       ),
       '',
     );
     for (const s of g.slugs) {
       const a = apis.find((x) => x.slug === s)!;
-      out.push(`<a id="${a.slug}"></a>`, '', `#### \`${a.method} ${a.path}\` — ${a.name}`, '');
+      out.push(
+        `<a id="${a.slug}"></a>`,
+        '',
+        `#### \`${a.method} ${a.path}\` — ${a.name}${a.removed ? ' (removed)' : ''}`,
+        '',
+      );
+      if (a.removed)
+        out.push(
+          `> **Removed on ${a.removed.on}** (${a.removed.label}${a.removed.ref ? ` · \`${a.removed.ref}\`` : ''}). The route no longer exists; this entry is kept for reference.`,
+          '',
+        );
       out.push(...a.summary.map((p) => `${p}\n`));
+      if (a.lastVerified) out.push(`_Last verified ${a.lastVerified.date} · ${a.lastVerified.label}_`, '');
       out.push(
         `**Called by** ${a.caller} · **Auth** ${a.auth} · **Operation** ${a.operation}${
           a.source ? ` · **Code** \`${a.source}\`` : ''
@@ -987,9 +1150,17 @@ function markdown(data: Built, gs: Guide[]) {
         '',
       );
       out.push('**Request**', '');
-      out.push(`Request fields: ${a.keys.length ? a.keys.map((k) => `\`${k}\``).join(', ') : 'none'}`, '');
+      out.push(`Request fields: ${a.params.length ? a.params.map(mdItem).join(', ') : 'none'}`, '');
       for (const c of a.curl) out.push('```bash', c, '```', '');
+      if (a.responseFields.length)
+        out.push(
+          '**Response fields** (top level; type not stated unless shown)',
+          '',
+          a.responseFields.map((x) => `- ${mdItem(x)}`).join('\n'),
+          '',
+        );
       out.push('**End-to-end flow**', '');
+      if (!a.flows.length) out.push('Not stated.', '');
       for (const l of a.flows) {
         if (l.fields.length) out.push(`_${l.label} — ${l.fields.map((f) => FIELD_LABEL[f]).join(', ')}_`, '');
         out.push(
@@ -1010,20 +1181,37 @@ function markdown(data: Built, gs: Guide[]) {
       out.push(
         '**What it reads and writes**',
         '',
-        mdTable(
-          ['Store', 'Object', 'Access'],
-          a.stores.map((r) => [r.store, `\`${r.object}\``, r.access]),
-        ),
+        a.stores.length
+          ? mdTable(
+              ['Store', 'Object', 'Access'],
+              a.stores.map((r) => [r.store, `\`${r.object}\``, r.access]),
+            )
+          : 'Not stated.',
         '',
       );
       if (a.notes.length)
         out.push('**Good to know**', '', a.notes.map((x) => `- **${x.title}:** ${x.text}`).join('\n'), '');
+      out.push(...mdHistory(a));
     }
   }
   return out.join('\n').replace(/\n{3,}/g, '\n\n');
 }
 
 // ---- Main -------------------------------------------------------------------------------------------------
+/**
+ * An endpoint as written to api-data.json: the change-tracking fields only when they say something (params that are
+ * all plain Dev request keys are already `keys`), so unchanged endpoints keep their old shape and the page stays small.
+ */
+export function published(a: Built['apis'][number]) {
+  const { params, responseFields, history, ...rest } = a;
+  return {
+    ...rest,
+    ...(params.some((p) => p.source !== 'doc' || p.removedOn) ? { params } : {}),
+    ...(responseFields.length ? { responseFields } : {}),
+    ...(history.length ? { history } : {}),
+  };
+}
+
 function main() {
   const data = build();
   const gs = guides(data);
@@ -1035,19 +1223,29 @@ function main() {
     const dir = path.join(out, 'content/apps', APP);
     mkdirSync(dir, { recursive: true });
     const content = {
-      meta: { app: APP, generated: TODAY, baseUrl: BASE_URL, endpoints: data.apis.length },
+      meta: {
+        app: APP,
+        generated: TODAY,
+        baseUrl: BASE_URL,
+        endpoints: data.live.length,
+        ...(data.apis.length > data.live.length ? { removed: data.apis.length - data.live.length } : {}),
+      },
       fieldLabels: FIELD_LABEL,
       fields: PII_FIELDS,
       groups: data.groups,
       guides: gs,
-      apis: data.apis,
+      apis: data.apis.map(published),
     };
     writeFileSync(path.join(dir, 'api-data.json'), `${JSON.stringify(content, null, 1)}\n`);
     writeFileSync(path.join(dir, 'API-Documentation.md'), md);
+    // The standing documentation prompt (the site's "Copy prompt" button) is exported with the content, so the
+    // API_Guide copy is always this repository's docs/shared-api-docs-prompt.md — never edited by hand there.
+    const prompt = path.join(ROOT, 'docs/shared-api-docs-prompt.md');
+    if (existsSync(prompt)) copyFileSync(prompt, path.join(out, 'content/shared-api-docs-prompt.md'));
   }
   console.log(
-    `API docs: ${path.relative(ROOT, MD_OUT)} — ${data.apis.length} endpoints${out ? ` · content written to ${out}` : ''}`,
+    `API docs: ${path.relative(ROOT, MD_OUT)} — ${data.live.length} endpoints${out ? ` · content written to ${out}` : ''}`,
   );
 }
 
-main();
+if (require.main === module) main();

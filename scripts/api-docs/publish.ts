@@ -4,15 +4,16 @@
  *
  *   API_DOCS_REPO_DIR=/path/to/API_Guide npm run docs:api:publish
  *
- * Exports this repository's content — the Aisle app's — into the clone (content/apps/aisle/api-data.json +
- * content/apps/aisle/API-Documentation.md, plus content/shared-api-docs-prompt.md — the standing documentation prompt
- * from docs/shared-api-docs-prompt.md, offered by the site's "Copy prompt" button), checks that the site builds there
+ * Exports this repository's content — the Aisle app's — into the clone through export.ts --out
+ * (content/apps/aisle/api-data.json + content/apps/aisle/API-Documentation.md, plus content/shared-api-docs-prompt.md —
+ * the standing documentation prompt from docs/shared-api-docs-prompt.md, offered by the site's "Copy prompt" button;
+ * the export writes it, so the two copies never diverge), checks that the site builds there
  * (node build.mjs), then commits and pushes only if that content changed. Other apps' folders, the app registry
  * (content/apps.json) and the website code (src/, build.mjs) are owned by the API_Guide repo and never touched here.
  * API_DOCS_REPO_DIR can also be set in .env.
  */
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, existsSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import dotenv from 'dotenv';
 
@@ -39,8 +40,6 @@ function main() {
     cwd: ROOT,
     stdio: 'inherit',
   });
-  const prompt = path.join(ROOT, 'docs/shared-api-docs-prompt.md');
-  if (existsSync(prompt)) copyFileSync(prompt, path.join(repo, 'content/shared-api-docs-prompt.md'));
   execFileSync('node', ['build.mjs'], { cwd: repo, stdio: 'inherit' });
 
   const paths = ['content/apps/aisle', 'content/shared-api-docs-prompt.md'];
