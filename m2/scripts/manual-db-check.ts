@@ -2,6 +2,12 @@
  * Manual-testing helper: shows the DB rows behind ONE synthetic test account, read-only.
  *
  *   npx tsx m2/scripts/manual-db-check.ts <10-digit test number>      e.g. 1012345678
+ *   npx tsx m2/scripts/manual-db-check.ts <number> story,chat         + extra sections (or "all"):
+ *     story · icebreakers · comments · chat · cms (admin_logs) · selfie
+ *
+ * - Free-text sections show the plaintext column with chars / bytes / non-ASCII (emoji loss shows up), and for the
+ *   encrypted copy only present / length / md5 / "plaintext visible inside it". Text that belongs to another account
+ *   is shown only when that account is also a synthetic test number; otherwise it is hidden.
  *
  * - Only allowed test numbers (+91 10xxxxxxxx, never the 106 series) are accepted — anything else is refused before
  *   any query, so the Aisle DB (which holds real users' data) is only ever read for the tester's own accounts.
@@ -52,7 +58,162 @@ async function columnsOf(db: DbAdapter, table: string): Promise<string[]> {
   return rows.map((r) => r.column_name);
 }
 
+/** Extra sections (2nd argument): free-text and CMS tables for the same account. */
+const SECTIONS = ['story', 'icebreakers', 'comments', 'chat', 'cms', 'selfie'] as const;
+type Section = (typeof SECTIONS)[number];
+
+/** Encrypted free-text copy: present / length / short md5 / "plaintext visible inside it" — never the value. */
+const enc = (col: string, plain: string) => `
+  (${col} IS NOT NULL AND ${col} <> '') AS encrypted_present,
+  length(${col}) AS encrypted_len, left(md5(${col}), 10) AS encrypted_md5,
+  (${plain} <> '' AND ${col} IS NOT NULL AND position(${plain} IN ${col}) > 0) AS plaintext_visible`;
+
+/** Text stats that make emoji / Unicode loss visible (characters vs bytes, any non-ASCII). */
+const stats = (col: string) => `
+  char_length(${col}) AS chars, octet_length(${col}) AS bytes, (${col} ~ '[^\\x01-\\x7F]') AS has_non_ascii`;
+
+/** user ids (as text) of the other accounts that are also synthetic test numbers — only their text is shown. */
+async function testAccountIds(app: DbAdapter, ids: string[]): Promise<Set<string>> {
+  if (!ids.length) return new Set();
+  const rows = await app.query<{ id: string; number: string }>(
+    `SELECT u.id::text AS id, n.number FROM users u JOIN sms_notification_phone_numbers n ON n.id = u.phone_number_id
+      WHERE u.id = ANY($1::bigint[])`,
+    [ids],
+  );
+  return new Set(rows.filter((r) => isAllowedTestNumber(r.number.replace(/^\+?91/, ''))).map((r) => r.id));
+}
+
+/** Blank out text that belongs to (or was sent by) an account that is not one of our test numbers. */
+function maskOthers(
+  rows: Row[],
+  textCols: string[],
+  ownerCol: string,
+  allowed: Set<string>,
+  self: string,
+): Row[] {
+  return rows.map((r) => {
+    const owner = String(r[ownerCol]);
+    if (owner === self || allowed.has(owner)) return r;
+    const copy = { ...r };
+    for (const c of textCols) copy[c] = '[not a test account — hidden]';
+    return copy;
+  });
+}
+
+async function extraSections(app: DbAdapter, userId: string, sections: Section[]): Promise<void> {
+  if (sections.includes('story')) {
+    show(
+      'Aisle DB · account_stories (My Story)',
+      await app.query<Row>(
+        `SELECT id, about, ${stats('about')}, ${enc('encrypted_free_text_about', 'about')}, created_at, updated_at
+           FROM account_stories WHERE user_id = $1::bigint`,
+        [userId],
+      ),
+    );
+  }
+  if (sections.includes('icebreakers')) {
+    show(
+      'Aisle DB · intro_answers (icebreakers)',
+      await app.query<Row>(
+        `SELECT a.intro_question_id AS question_id, a.position, a.answer, ${stats('a.answer')},
+                ${enc('a.encrypted_free_text_answer', 'a.answer')}, a.updated_at
+           FROM intro_answers a WHERE a.user_id = $1::bigint ORDER BY a.position`,
+        [userId],
+      ),
+    );
+  }
+  if (sections.includes('comments')) {
+    const rows = await app.query<Row>(
+      `SELECT id, CASE WHEN sender_id = $1::bigint THEN 'sent' ELSE 'received' END AS direction,
+              sender_id::text AS sender_id, receiver_id::text AS receiver_id, status, reply_message,
+              ${stats('reply_message')}, created_at, updated_at
+         FROM chat_requests WHERE sender_id = $1::bigint OR receiver_id = $1::bigint
+        ORDER BY updated_at DESC LIMIT 20`,
+      [userId],
+    );
+    const others = rows
+      .flatMap((r) => [String(r.sender_id), String(r.receiver_id)])
+      .filter((id) => id !== userId);
+    const allowed = await testAccountIds(app, [...new Set(others)]);
+    show(
+      'Aisle DB · chat_requests (comments / invites, last 20)',
+      maskOthers(rows, ['reply_message'], 'sender_id', allowed, userId),
+    );
+  }
+  if (sections.includes('chat')) {
+    // Own messages first (indexed by user_id), then the other side of those conversations.
+    const own = await app.query<Row>(
+      `WITH m AS MATERIALIZED (SELECT * FROM chat_messages WHERE user_id = $1::bigint)
+       SELECT id, conversation_id, user_id::text AS sender_id, content, ${stats('content')},
+              ${enc('encrypted_free_text_content', 'content')}, previous_message,
+              (encrypted_free_text_previous_message IS NOT NULL) AS encrypted_previous_present, created_at
+         FROM m ORDER BY id DESC LIMIT 20`,
+      [userId],
+    );
+    const convIds = [...new Set(own.map((r) => Number(r.conversation_id)))];
+    const theirs = convIds.length
+      ? await app.query<Row>(
+          `WITH m AS MATERIALIZED (SELECT * FROM chat_messages WHERE conversation_id = ANY($1::int[]))
+           SELECT id, conversation_id, user_id::text AS sender_id, content, ${stats('content')},
+                  ${enc('encrypted_free_text_content', 'content')}, previous_message, created_at
+             FROM m WHERE user_id <> $2::bigint ORDER BY id DESC LIMIT 20`,
+          [convIds, userId],
+        )
+      : [];
+    const allowed = await testAccountIds(app, [...new Set(theirs.map((r) => String(r.sender_id)))]);
+    show('Aisle DB · chat_messages sent by this account (last 20)', own);
+    show(
+      'Aisle DB · chat_messages received in those chats (last 20)',
+      maskOthers(theirs, ['content', 'previous_message'], 'sender_id', allowed, userId),
+    );
+    if (convIds.length) {
+      show(
+        'Aisle DB · chat_conversations (chat-list preview)',
+        await app.query<Row>(
+          `SELECT id, last_message, ${stats('last_message')}, ${enc('encrypted_free_text_last_message', 'last_message')},
+                  updated_at
+             FROM chat_conversations WHERE id = ANY($1::int[])`,
+          [convIds],
+        ),
+      );
+    }
+  }
+  if (sections.includes('cms')) {
+    show(
+      'Aisle DB · admin_logs (CMS actions on this account, last 20)',
+      await app.query<Row>(
+        `SELECT id, admin_id, activity_type, cms_tab, left(data::text, 120) AS data, created_at
+           FROM admin_logs WHERE user_id = $1::bigint ORDER BY id DESC LIMIT 20`,
+        [userId],
+      ),
+    );
+  }
+  if (sections.includes('selfie')) {
+    show(
+      'Aisle DB · selfie_verifications',
+      await app.query<Row>(
+        `SELECT s.id, s.status, (s.encrypted_free_text_selfie_url IS NOT NULL) AS encrypted_selfie_url_present,
+                (s.encrypted_free_text_modified_selfie_url IS NOT NULL) AS encrypted_modified_url_present,
+                s.created_at, s.updated_at
+           FROM selfie_verifications s JOIN profiles p ON p.id = s.profile_id WHERE p.user_id = $1::bigint`,
+        [userId],
+      ),
+    );
+  }
+}
+
 async function main(): Promise<void> {
+  const arg = (process.argv[3] ?? '').toLowerCase();
+  const sections: Section[] =
+    arg === 'all'
+      ? [...SECTIONS]
+      : (arg.split(',').filter((s) => (SECTIONS as readonly string[]).includes(s)) as Section[]);
+  if (arg && arg !== 'all' && !sections.length) {
+    console.error(
+      `Unknown section "${arg}". Use one of: ${SECTIONS.join(', ')}, all (comma-separated is fine).`,
+    );
+    process.exit(2);
+  }
   const number = (process.argv[2] ?? '').replace(/^\+?91/, '').trim();
   if (!isAllowedTestNumber(number)) {
     console.error('Refused: give a synthetic test number 10xxxxxxxx (never the 106 series).');
@@ -138,6 +299,7 @@ async function main(): Promise<void> {
           `${dupes.length ? ` · DUPLICATE rows for ${[...new Set(dupes)].join(', ')}` : ' · no duplicates'}` +
           ` · plaintext inside ciphertext: ${rows.some((r) => r.plaintext_visible === true) ? 'YES (check!)' : 'no'}`,
       );
+      if (sections.length) await extraSections(app, userId, sections);
     }
   } finally {
     await app.close();
