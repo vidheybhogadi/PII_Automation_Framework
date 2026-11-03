@@ -26,6 +26,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from
 import path from 'node:path';
 import { ENDPOINTS } from '../../m1/src/clients/endpoints';
 import { activeNames, docState, loadChanges, type ChangeLog, type DocItem, type DocState } from './changes';
+import { CODE_DOCS_JSON, DOC_ONLY_GROUPS, loadCodeDocs, type CodeDoc } from './code-docs';
 import { loadCodeRoutes, type CodeRoute } from './code-routes';
 import { PII_INPUT } from '../../m2/scripts/m2-baseline';
 import {
@@ -46,6 +47,9 @@ import {
 const ROOT = path.resolve(__dirname, '../..');
 const MD_OUT = path.join(ROOT, 'docs/API-Documentation.md');
 const BASE_URL = 'https://testa2.aisle.co';
+const SITE_URL = 'https://aisleapidocs.netlify.app/';
+/** Documented from the code (code-documented-routes.json): listed in the Markdown, described on the website. */
+const isCodeDoc = (a: { origin?: string; flows: unknown[] }) => a.origin === 'code' && a.flows.length > 0;
 /** The API_Guide folder this repository's content belongs to (an app id from API_Guide content/apps.json). */
 const APP = 'aisle';
 const TODAY = process.env.API_DOCS_TODAY?.trim() || new Date().toISOString().slice(0, 10);
@@ -531,7 +535,9 @@ const pubItem = (x: DocItem) => ({
   ...(x.ref ? { ref: x.ref } : {}),
 });
 
-export function build(opts: { log?: ChangeLog; today?: string; codeRoutes?: CodeRoute[] } = {}) {
+export function build(
+  opts: { log?: ChangeLog; today?: string; codeRoutes?: CodeRoute[]; codeDocs?: CodeDoc[] } = {},
+) {
   const log = opts.log ?? loadChanges(ROOT);
   const codeRoutes = opts.codeRoutes ?? loadCodeRoutes(ROOT).routes;
   const today = opts.today ?? TODAY;
@@ -668,14 +674,37 @@ export function build(opts: { log?: ChangeLog; today?: string; codeRoutes?: Code
     };
     apis.push(e);
   }
+  // Code-documented routes (m2/docs/code-documented-routes.json): full entries written from the code. One with the id
+  // of a thin code-discovered entry (same method and path) replaces it, keeping that entry's recorded history; the
+  // others are added. A build given its own code routes (tests) reads no code docs from disk unless given them too.
+  const codeDocs = opts.codeDocs ?? (opts.codeRoutes ? [] : (loadCodeDocs(ROOT)?.routes ?? []));
+  for (const d of codeDocs) {
+    const i = apis.findIndex((a) => a.id === d.id && a.method === d.method && a.path === d.path);
+    if (i < 0 && apis.some((a) => a.id === d.id))
+      throw new Error(`${CODE_DOCS_JSON}: ${d.id} clashes with another entry`);
+    const old = i >= 0 ? apis[i] : undefined;
+    const e = {
+      ...d,
+      gates: d.fields.filter((f): f is PiiField => f in GATES).map((f) => [f, GATES[f][0], GATES[f][1]]),
+      responseFields: d.responseFields ?? [],
+      history: old?.history.length ? old.history : d.history,
+      docsOnly: true,
+      origin: 'code',
+    } as unknown as Entry;
+    if (i >= 0) apis[i] = e;
+    else apis.push(e);
+  }
   const live = apis.filter((a) => !a.removed);
-  const groups = GROUPS.map((g) => ({
-    key: g.key,
-    name: GROUP_INFO[g.key]!.name,
-    title: GROUP_INFO[g.key]!.name,
-    blurb: GROUP_INFO[g.key]!.blurb,
-    slugs: apis.filter((a) => a.group === g.key).map((a) => a.slug),
-  }));
+  const groupInfo = (key: string) => GROUP_INFO[key] ?? DOC_ONLY_GROUPS[key]!;
+  const groups = [...GROUPS.map((g) => g.key), ...Object.keys(DOC_ONLY_GROUPS)]
+    .map((key) => ({
+      key,
+      name: groupInfo(key).name,
+      title: groupInfo(key).name,
+      blurb: groupInfo(key).blurb,
+      slugs: apis.filter((a) => a.group === key).map((a) => a.slug),
+    }))
+    .filter((g) => g.slugs.length || GROUP_INFO[g.key]);
   return { apis, live, groups };
 }
 type Built = ReturnType<typeof build>;
@@ -1063,11 +1092,13 @@ function mdItem(x: PubItem): string {
 }
 function mdHistory(a: Api): string[] {
   if (!a.history.length) return [];
+  const more = a.history.length > 3 ? ` (latest 3 of ${a.history.length}; all on the website)` : '';
   return [
-    '**What changed**',
+    `**What changed**${more}`,
     '',
     [...a.history]
       .reverse()
+      .slice(0, 3)
       .map((h) => {
         const what = KIND_TEXT[h.kind] ?? h.kind;
         const delta =
@@ -1090,6 +1121,8 @@ export function markdown(data: Built, gs: Guide[]) {
     `Every Aisle API: what it does, how to call it, the path a request takes through the code, and which data it reads and writes. ${data.live.length} endpoints${apis.length > data.live.length ? ` (plus ${apis.length - data.live.length} removed, kept for reference)` : ''} · staging \`${BASE_URL}\` · generated ${TODAY}.`,
     '',
     'The same content is published as a website from the [API_Guide](https://github.com/vidheybhogadi/API_Guide) repository.',
+    '',
+    `This Markdown is a digest that GitHub can render: example requests (curl), step explanations and full change histories are on the [website](${SITE_URL}), and endpoints documented from the code (marked _from code_ below) are listed here and described there.`,
     '',
     '## Contents',
     '',
@@ -1119,10 +1152,11 @@ export function markdown(data: Built, gs: Guide[]) {
         ['Method', 'Path', 'What it is'],
         g.slugs.map((s) => {
           const a = apis.find((x) => x.slug === s)!;
+          const link = isCodeDoc(a) ? `${SITE_URL}#/${APP}/${a.slug}` : `#${a.slug}`;
           return [
             a.method,
-            `${a.removed ? '~~' : ''}[\`${a.path}\`](#${a.slug})${a.removed ? `~~ (removed ${a.removed.on})` : ''}`,
-            a.name,
+            `${a.removed ? '~~' : ''}[\`${a.path}\`](${link})${a.removed ? `~~ (removed ${a.removed.on})` : ''}`,
+            `${a.name}${isCodeDoc(a) ? ' _(from code)_' : ''}`,
           ];
         }),
       ),
@@ -1130,6 +1164,7 @@ export function markdown(data: Built, gs: Guide[]) {
     );
     for (const s of g.slugs) {
       const a = apis.find((x) => x.slug === s)!;
+      if (isCodeDoc(a)) continue; // described on the website only (keeps this file small enough for GitHub)
       out.push(
         `<a id="${a.slug}"></a>`,
         '',
@@ -1151,7 +1186,6 @@ export function markdown(data: Built, gs: Guide[]) {
       );
       out.push('**Request**', '');
       out.push(`Request fields: ${a.params.length ? a.params.map(mdItem).join(', ') : 'none'}`, '');
-      for (const c of a.curl) out.push('```bash', c, '```', '');
       if (a.responseFields.length)
         out.push(
           '**Response fields** (top level; type not stated unless shown)',
@@ -1163,19 +1197,11 @@ export function markdown(data: Built, gs: Guide[]) {
       if (!a.flows.length) out.push('Not stated.', '');
       for (const l of a.flows) {
         if (l.fields.length) out.push(`_${l.label} — ${l.fields.map((f) => FIELD_LABEL[f]).join(', ')}_`, '');
-        out.push(
-          l.steps.map((st, i) => `${i + 1}. \`${st.fn}\`${st.explain ? ` — ${st.explain}` : ''}`).join('\n'),
-          '',
-        );
+        out.push(l.steps.map((st) => `\`${st.fn}\``).join(' → '), '');
       }
       if (a.gates.length)
         out.push(
-          '**Read switches**',
-          '',
-          mdTable(
-            ['Field', 'Read switch', 'Behaviour'],
-            a.gates.map(([f, s2, b]) => [FIELD_LABEL[f as PiiField], `\`${String(s2)}\``, String(b)]),
-          ),
+          `**Read switches:** ${a.gates.map(([f, s2]) => `${FIELD_LABEL[f as PiiField]} \`${String(s2)}\``).join(' · ')} (see [Personal data](#personal-data))`,
           '',
         );
       out.push(

@@ -2,24 +2,28 @@
 
 # Aisle API Documentation
 
-Every Aisle API: what it does, how to call it, the path a request takes through the code, and which data it reads and writes. 248 endpoints · staging `https://testa2.aisle.co` · generated 2026-10-29.
+Every Aisle API: what it does, how to call it, the path a request takes through the code, and which data it reads and writes. 588 endpoints · staging `https://testa2.aisle.co` · generated 2026-11-03.
 
 The same content is published as a website from the [API_Guide](https://github.com/vidheybhogadi/API_Guide) repository.
+
+This Markdown is a digest that GitHub can render: example requests (curl), step explanations and full change histories are on the [website](https://aisleapidocs.netlify.app/), and endpoints documented from the code (marked _from code_ below) are listed here and described there.
 
 ## Contents
 
 - Guides: [How a request travels](#architecture) · [Authentication](#authentication) · [Personal data](#personal-data) · [Where the data lives](#data-stores) · [Glossary](#glossary)
 - [First-name service routes](#area-g1) — 5 endpoints
-- [Sign-up, login & account](#area-g2) — 13 endpoints
-- [Profiles](#area-g3) — 13 endpoints
-- [Lists & discovery](#area-g4) — 21 endpoints
-- [Interactions, chat & live audio](#area-g5) — 30 endpoints
-- [Profile updates](#area-g6) — 39 endpoints
-- [Payments — checkout](#area-g7) — 38 endpoints
-- [Payments — verification](#area-g8) — 11 endpoints
-- [Provider callbacks](#area-g9) — 10 endpoints
-- [CMS / admin](#area-g10) — 55 endpoints
+- [Sign-up, login & account](#area-g2) — 26 endpoints
+- [Profiles](#area-g3) — 14 endpoints
+- [Lists & discovery](#area-g4) — 26 endpoints
+- [Interactions, chat & live audio](#area-g5) — 55 endpoints
+- [Profile updates](#area-g6) — 53 endpoints
+- [Payments — checkout](#area-g7) — 29 endpoints
+- [Payments — verification](#area-g8) — 49 endpoints
+- [Provider callbacks](#area-g9) — 22 endpoints
+- [CMS / admin](#area-g10) — 93 endpoints
 - [PII service (direct)](#area-m1) — 13 endpoints
+- [App config & integrations](#area-g11) — 68 endpoints
+- [Internal dashboard](#area-g12) — 135 endpoints
 
 <a id="architecture"></a>
 
@@ -63,7 +67,7 @@ Every route needs a credential. All examples use staging (`https://testa2.aisle.
 | User token (JWT) | 128 mobile-app endpoints | Log in with a phone number (below); the login response carries the token. |
 | Web token (JWT) | Web endpoints that need it | Web login with the same account. |
 | TEST_TOKEN | PII service routes (`/V1/api/v1/pii-test/*`, `/V1/pii_integration/*`) | Shared test token from the team’s secret store. |
-| CMS admin token + `webcms: true` | 49 CMS endpoints | An OTP-verified admin with permission for the action. |
+| CMS admin token + `webcms: true` | 88 CMS endpoints | An OTP-verified admin with permission for the action. |
 | Admin browser session | Legacy `/users/*` pages and the IRL admin page | Log in to the CMS in a browser. |
 | Provider signature | Payment and Pusher callbacks | Genuine sandbox payloads from the provider. |
 
@@ -100,10 +104,10 @@ Four kinds of personal data pass through these endpoints. Each has its own read 
 
 | Field | Endpoints | Read switch | Behaviour |
 | --- | --- | --- | --- |
-| First name | 200 | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | 51 | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | 54 | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
-| Free text | 8 | `—` | Encrypted by Aisle with a key from the PII service; there is no read switch. |
+| First name | 214 | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+| Email | 60 | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
+| Phone | 72 | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+| Free text | 15 | `—` | Encrypted by Aisle with a key from the PII service; there is no read switch. |
 
 ### Good to know
 
@@ -239,14 +243,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `user_id`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/V1/pii_integration/first_name" \
-  --header "Authorization: Bearer ${TEST_TOKEN}" \
-  --header "Accept: application/json" \
-  --get \
-  --data-urlencode "user_id=$USER_ID"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -257,14 +253,9 @@ curl -i --request GET "https://testa2.aisle.co/V1/pii_integration/first_name" \
 
 _Code path — First name_
 
-1. `read_first_name` — Writes / reads the first name directly in the PII service.
-2. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`read_first_name` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -300,19 +291,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `user_id`, `first_name`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/pii_integration/first_name" \
-  --header "Authorization: Bearer ${TEST_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "user_id": "$USER_ID",
-  "first_name": "Asha"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -324,14 +302,9 @@ JSON
 
 _Code path — First name_
 
-1. `write_first_name` — Writes / reads the first name directly in the PII service.
-2. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`write_first_name` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -341,12 +314,11 @@ _Code path — First name_
 | App database | `profiles.first_name` | read / write |
 | Audit log | `audit_trails (MongoDB)` | write |
 
-**What changed**
+**What changed** (latest 3 of 4; all on the website)
 
 - 2026-10-25 — Response field added: `first_name` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `ref` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `user_id` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
 
 <a id="api-003"></a>
 
@@ -364,21 +336,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `refs`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/pii_integration/profile_first_names" \
-  --header "Authorization: Bearer ${TEST_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "refs": [
-    "$REF",
-    "$OTHER_REF"
-  ]
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -390,16 +347,9 @@ JSON
 
 _Code path — First name_
 
-1. `profile_first_names`
-2. `get_multiple_cache_data` — Loads many cached profile cards for a list.
-3. `hydrate_first_names!` — Loads first names for many profiles in one go; keeps the cached name if the PII service returns nothing.
-4. `get_first_names_for_users` — Loads first names for many profiles in one go; keeps the cached name if the PII service returns nothing.
+`profile_first_names` → `get_multiple_cache_data` → `hydrate_first_names!` → `get_first_names_for_users`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -414,12 +364,11 @@ _Code path — First name_
 
 - **Observed on staging:** Observed 2026-10-19: unknown ref → 200 {status, requested_ref_count, returned_ref_count, profiles:{<ref>:null}}; empty refs → 400.
 
-**What changed**
+**What changed** (latest 3 of 4; all on the website)
 
 - 2026-10-25 — Response field added: `profiles` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `returned_ref_count` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `requested_ref_count` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
 
 <a id="api-190"></a>
 
@@ -437,21 +386,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `user_ids`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/pii_integration/first_names/batch" \
-  --header "Authorization: Bearer ${TEST_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "user_ids": [
-    "$USER_ID",
-    "$OTHER_USER_ID"
-  ]
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -463,13 +397,9 @@ JSON
 
 _Code path — First name_
 
-1. `Pii::FieldStore.get_first_names` — Loads first names for many profiles in one go; keeps the cached name if the PII service returns nothing.
+`Pii::FieldStore.get_first_names`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -483,12 +413,11 @@ _Code path — First name_
 
 - **Observed on staging:** Observed 2026-10-19: unknown user_ids → 200 {status, requested_user_count, returned_user_count, first_names:{}}; empty user_ids → 400.
 
-**What changed**
+**What changed** (latest 3 of 4; all on the website)
 
 - 2026-10-25 — Response field added: `first_names` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `returned_user_count` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `requested_user_count` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
 
 <a id="api-208"></a>
 
@@ -505,13 +434,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 **Request**
 
 Request fields: `first_name` (optional · from code — confirm with Dev), `ref` (optional, string · from code — confirm with Dev), `user_id` (optional, string · from code — confirm with Dev)
-
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/pii_integration/profile_first_name_source" \
-  --header "Authorization: Bearer ${TEST_TOKEN}" \
-  --header "Content-Type: application/json" \
-  --data-binary '{}'
-```
 
 **Response fields** (top level; type not stated unless shown)
 
@@ -530,13 +452,9 @@ curl -i --request POST "https://testa2.aisle.co/V1/pii_integration/profile_first
 
 _Code path — First name_
 
-1. `Declared route; profile_first_name_source action is absent (broken)`
+`Declared route; profile_first_name_source action is absent (broken)`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -552,27 +470,17 @@ _Code path — First name_
 - **Observed on staging:** Observed 2026-10-19: route IS implemented on staging (contradicts the Dev doc) — {} → 400 "Missing required parameter: user_id or ref"; unknown ref → 404 "Profile not found".
 - **Known limitation:** The Dev inventory lists this route without an action; staging does answer it (see the observed behaviour).
 
-**What changed**
+**What changed** (latest 3 of 13; all on the website)
 
 - 2026-10-29 — Request field added: `user_id` · from code — confirm with Dev · `app/controllers/v1/pii_integration_controller.rb:125 @004e72c (via profile_from_params)`
 - 2026-10-29 — Request field added: `ref` · from code — confirm with Dev · `app/controllers/v1/pii_integration_controller.rb:127 @004e72c (via profile_from_params)`
 - 2026-10-29 — Request field added: `first_name` · from code — confirm with Dev · `app/controllers/v1/pii_integration_controller.rb:92 @004e72c`
-- 2026-10-25 — Response field added: `hide_first_name` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `profile_response_uses_pii` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `profile_response_first_name` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `pii_first_name` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `db_first_name_after` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `db_first_name_before` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `pii_only_write_performed` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `ref` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `user_id` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
 
 <a id="area-g2"></a>
 
 ### Sign-up, login & account
 
-Sign-up, phone login, profile edit, hide-name, delete and reset — the flows that write personal data. 13 endpoints.
+Sign-up, phone login, profile edit, hide-name, delete and reset — the flows that write personal data. 26 endpoints.
 
 | Method | Path | What it is |
 | --- | --- | --- |
@@ -589,6 +497,19 @@ Sign-up, phone login, profile edit, hide-name, delete and reset — the flows th
 | POST | [`/V1/users/delete_older_account`](#api-196) | Users delete older account |
 | POST | [`/V1/users/delete_current_account`](#api-197) | Users delete current account |
 | POST | [`/V1/user/reset_profile`](#api-198) | User reset profile |
+| POST | [`/V1/users/phone_number_login`](https://aisleapidocs.netlify.app/#/aisle/code-036) | Test login: check phone number _(from code)_ |
+| POST | [`/V1/users/verify_otp`](https://aisleapidocs.netlify.app/#/aisle/code-037) | Test login: verify OTP _(from code)_ |
+| GET | [`/V1/users/firebase_token`](https://aisleapidocs.netlify.app/#/aisle/code-038) | Get Firebase token _(from code)_ |
+| POST | [`/V1/user/addDevice`](https://aisleapidocs.netlify.app/#/aisle/code-039) | Register device and push token _(from code)_ |
+| POST | [`/V1/signout_api`](https://aisleapidocs.netlify.app/#/aisle/code-040) | Sign out _(from code)_ |
+| POST | [`/V1/sessions/login_with_phone_number`](https://aisleapidocs.netlify.app/#/aisle/code-041) | Request login OTP _(from code)_ |
+| POST | [`/V1/sessions/login_initiated`](https://aisleapidocs.netlify.app/#/aisle/code-042) | Log login attempt _(from code)_ |
+| POST | [`/V1/sessions/fetch_login_response_web`](https://aisleapidocs.netlify.app/#/aisle/code-043) | Web login response _(from code)_ |
+| POST | [`/V1/device/decode_integrity_token`](https://aisleapidocs.netlify.app/#/aisle/code-044) | Check device integrity _(from code)_ |
+| POST | [`/V1/account_journey/update_community_message_agreed`](https://aisleapidocs.netlify.app/#/aisle/code-045) | Accept community guidelines _(from code)_ |
+| POST | [`/web/auth/:provider/callback`](https://aisleapidocs.netlify.app/#/aisle/code-046) | Web: social login callback _(from code)_ |
+| POST | [`/web/user/addDevice`](https://aisleapidocs.netlify.app/#/aisle/code-047) | Web: register device FCM token _(from code)_ |
+| POST | [`/web/sessions/logout`](https://aisleapidocs.netlify.app/#/aisle/code-048) | Web: log out device _(from code)_ |
 
 <a id="api-032"></a>
 
@@ -606,19 +527,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: none
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/users/toggle_hide_name" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -628,14 +536,9 @@ JSON
 
 _Code path — First name_
 
-1. `toggle_hide_name`
-2. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`toggle_hide_name` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -665,49 +568,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 **Request**
 
 Request fields: `data`, `general_information`, `first_name`, `personal_email`, `gender`, `date_of_birth_v1`, `faith`, `id`, `mother_tongue`, `height`, `relationship_goal`, `photos`, `photo`, `preferences`, `latitude`, `longitude`
-
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/user/submit_profile" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "data": {
-    "general_information": {
-      "first_name": "Asha",
-      "personal_email": "asha@example.com",
-      "gender": "Female",
-      "date_of_birth_v1": "1996-01-15",
-      "faith": {
-        "id": "$FAITH_ID"
-      },
-      "mother_tongue": {
-        "id": "$LANGUAGE_ID"
-      },
-      "height": 65
-    },
-    "relationship_goal": {
-      "id": "$RELATIONSHIP_GOAL_ID"
-    },
-    "photos": [
-      {
-        "photo": "$PHOTO_URL_1"
-      },
-      {
-        "photo": "$PHOTO_URL_2"
-      }
-    ],
-    "preferences": [],
-    "latitude": 12.9716,
-    "longitude": 77.5946
-  }
-}
-JSON
-```
 
 **Response fields** (top level; type not stated unless shown)
 
@@ -776,24 +636,13 @@ JSON
 
 _Code path — First name_
 
-1. `update_profile`
-2. `submit_profile`
-3. `update_application_information!`
-4. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`update_profile` → `submit_profile` → `update_application_information!` → `get_first_name`
 
 _Code path — Email_
 
-1. `update_profile`
-2. `submit_profile`
-3. `update_application_information!`
-4. `Account::Email.add_email/search_user_ids` — Links the onboarding email to the user (only when the user has none yet).
+`update_profile` → `submit_profile` → `update_application_information!` → `Account::Email.add_email/search_user_ids`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -810,68 +659,11 @@ _Code path — Email_
 - **From the developers:** Onboarding writes first name and email only when their existing values are missing. Use an onboarding user and valid field IDs and uploaded photos. The web controller also uses this shared submit flow.
 - **Observed on staging:** Observed 2026-10-23: POST /V1/user/submit_profile with {} or {data:{}} (new user) → 406 {status, message:"Please submit valid details…", your_story_form_url, is_backend_error, is_spark_enabled}. With the UI automation team’s body (option ids, 4 Aisle-CDN photos) → 200, profile_state "pending_not_verified", the submitted first_name returned; after POST /V1/account_journey/update_community_message_agreed a new verify shows application_stage "completed". ~35 s later profile_state became "image_inappropriate" with gender-mixed photo sets; with the gender-matched MALE set the profile stayed "pending_not_verified" >60 s (photos must match the declared gender; submit_profile copies each photo URL and stores a 54-byte placeholder if it cannot fetch it, still answering 200).
 
-**What changed**
+**What changed** (latest 3 of 60; all on the website)
 
 - 2026-10-25 — Response field added: `is_spark_enabled` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `show_complete_profile_popup` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `selfie_gesture` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `personalised_comment_popup_text` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_personalised_comment_popup` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `intro_offer_timer` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_discounted_pricing` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_liveness_verified` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_weekly` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_deleted` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `attempts_left` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `selfie_verification_message` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `selfie_verification_allowed` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_boost_active` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_bought_subscription` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `active_plan_type` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `review_warning` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `age` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `about` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `ref` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `avatar` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `first_login_after_approval` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_likely_to_pay` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `popular_profile` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `enable_multi_comment` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `active_algorithms` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `store_kit_2_enabled` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `last_ios_constant_file_update` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `last_android_constant_file_update` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `pubnub_origin_link` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `meta_trigger_event_list` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `use_liveliness_check` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_onboarding_phase_2` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `selfie_compression_size` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `use_presigned_url` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `move_image_upload_to_last_page` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `can_send_competitor_data` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `image_upload_api` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `your_story_form_url` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `video_information_urls` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `display_watch_clip` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `enable_instagram_connection` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_update_app` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `use_firebase_face_recognition` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `zendesk_url` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_concierge_icon` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_concierge_subscription` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_boost_available` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `application_stage_v2` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `application_stage` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_mobile_number` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `verification_status` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `profile_complete_without_selfie` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `percentage_profile_complete` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `profile_state` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `gender` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `first_name` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `auth_token` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `status_v1` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `id` · seen on staging 2026-10-25
 
 <a id="api-058"></a>
 
@@ -889,57 +681,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `data`, `general_information`, `first_name`, `photos`, `photo`, `photo_id`, `status`, `user_traits`, `trait_id`, `user_interests_v2`, `interest_id`, `preferences`, `partial_work`, `work_title`, `industry`, `college`, `graduation_year`, `audio_prompt`, `question_id`, `audio_url`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/user/edit" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "data": {
-    "general_information": {
-      "first_name": "Asha"
-    },
-    "photos": [
-      {
-        "photo": "$PHOTO_URL_1",
-        "photo_id": "$PHOTO_ID_1",
-        "status": "avatar"
-      },
-      {
-        "photo": "$PHOTO_URL_2",
-        "photo_id": "$PHOTO_ID_2"
-      }
-    ],
-    "user_traits": [
-      {
-        "trait_id": "$TRAIT_ID"
-      }
-    ],
-    "user_interests_v2": [
-      {
-        "interest_id": "$INTEREST_V2_ID"
-      }
-    ],
-    "preferences": [],
-    "partial_work": {
-      "work_title": "Engineer",
-      "industry": "Technology",
-      "college": "Example College",
-      "graduation_year": "2018"
-    },
-    "audio_prompt": {
-      "question_id": "$AUDIO_QUESTION_ID",
-      "audio_url": "$AUDIO_URL"
-    }
-  }
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `user` (seen on staging 2026-10-25)
@@ -952,31 +693,17 @@ JSON
 
 _Code path — First name_
 
-1. `edit_profile`
-2. `edit_profile_details`
-3. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`edit_profile` → `edit_profile_details` → `get_first_name`
 
 _Code path — Email_
 
-1. `edit_profile`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`edit_profile` → `own_detailed_v1` → `own_general_information` → `fetch_email`
 
 _Code path — Phone_
 
-1. `edit_profile`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`edit_profile` → `own_detailed_v1` → `own_general_information` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -995,13 +722,11 @@ _Code path — Phone_
 
 - **From the developers:** Use the current complete editable payload when testing an existing profile: omitted work, traits, interests or audio fields can be cleared by edit_profile_details. personal_email in this body does not update email; this edit path changes the name and returns the existing email and phone.
 
-**What changed**
+**What changed** (latest 3 of 5; all on the website)
 
 - 2026-10-25 — Response field added: `audio_prompts` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `discover_profile_order` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `intro_questions` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `ref` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `user` · seen on staging 2026-10-25
 
 <a id="api-059"></a>
 
@@ -1019,22 +744,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `reason_id`, `note`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/user/delete" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "reason_id": "$DELETE_REASON_ID",
-  "note": "Synthetic PII regression account"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -1043,22 +752,13 @@ JSON
 
 _Code path — First name_
 
-1. `delete_account`
-2. `delete_all_account_info`
-3. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`delete_account` → `delete_all_account_info` → `get_first_name`
 
 _Code path — Email_
 
-1. `delete_account`
-2. `delete_all_account_info`
-3. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`delete_account` → `delete_all_account_info` → `fetch_email`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -1097,60 +797,21 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `phone_code_id`, `mobile_number`, `otp`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/sessions/verify_number_login_v1" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "phone_code_id": "$PHONE_CODE_ID",
-  "mobile_number": "1012345678",
-  "otp": "$OTP"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `verify_number_login_v1`
-2. `verify_login_with_number`
-3. `login_from_phone_number`
-4. `login_response_v1`
-5. `send_for_aws_moderation` — Content moderation and scammer check (only in some states).
-6. `sync_profile_to_kafka` — Publishes the updated profile to Kafka (only in some states).
-7. `create_profile_response` — Rebuilds or reads the cached profile response.
-8. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-9. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`verify_number_login_v1` → `verify_login_with_number` → `login_from_phone_number` → `login_response_v1` → `send_for_aws_moderation` → `sync_profile_to_kafka` → `create_profile_response` → `general_information` → `select_first_name`
 
 _Code path — Email_
 
-1. `verify_number_login_v1`
-2. `verify_login_with_number`
-3. `login_from_phone_number`
-4. `login_response_v1`
-5. `send_for_aws_moderation` — Content moderation and scammer check (only in some states).
-6. `check_for_scammer_before_moderation!` — Content moderation and scammer check (only in some states).
-7. `fetch_email_domain` — Reads the email domain for the scammer check during moderation.
+`verify_number_login_v1` → `verify_login_with_number` → `login_from_phone_number` → `login_response_v1` → `send_for_aws_moderation` → `check_for_scammer_before_moderation!` → `fetch_email_domain`
 
 _Code path — Phone_
 
-1. `verify_number_login_v1`
-2. `verify_login_with_number`
-3. `login_from_phone_number`
-4. `write_pii_phone_number_for_user` — Writes the national phone number to the PII service — only when a new user is created.
+`verify_number_login_v1` → `verify_login_with_number` → `login_from_phone_number` → `write_pii_phone_number_for_user`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -1188,43 +849,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `data`, `general_information`, `first_name`, `personal_email`, `gender`, `date_of_birth_v1`, `faith`, `id`, `mother_tongue`, `height`, `relationship_goal`, `photos`, `preferences`, `latitude`, `longitude`, `receiver_profile`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/sessions/submit_profile_web" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "data": {
-    "general_information": {
-      "first_name": "Asha",
-      "personal_email": "asha@example.com",
-      "gender": "Female",
-      "date_of_birth_v1": "1996-01-15",
-      "faith": {
-        "id": "$FAITH_ID"
-      },
-      "mother_tongue": {
-        "id": "$LANGUAGE_ID"
-      },
-      "height": 65
-    },
-    "relationship_goal": {
-      "id": "$RELATIONSHIP_GOAL_ID"
-    },
-    "photos": [],
-    "preferences": [],
-    "latitude": 12.9716,
-    "longitude": 77.5946
-  },
-  "receiver_profile": "$OTHER_REF"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -1235,24 +859,13 @@ JSON
 
 _Code path — First name_
 
-1. `update_profile_web`
-2. `submit_profile_web`
-3. `update_application_information_web!`
-4. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`update_profile_web` → `submit_profile_web` → `update_application_information_web!` → `get_first_name`
 
 _Code path — Email_
 
-1. `update_profile_web`
-2. `submit_profile_web`
-3. `update_application_information_web!`
-4. `Account::Email.add_email/search_user_ids` — Links the onboarding email to the user (only when the user has none yet).
+`update_profile_web` → `submit_profile_web` → `update_application_information_web!` → `Account::Email.add_email/search_user_ids`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -1292,49 +905,17 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `user_id`, `is_new_user`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/sessions/fetch_login_response" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "user_id": "$USER_ID",
-  "is_new_user": false
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `create_login_response_v1`
-2. `login_from_phone_number_v1`
-3. `login_response_v1`
-4. `send_for_aws_moderation` — Content moderation and scammer check (only in some states).
-5. `sync_profile_to_kafka` — Publishes the updated profile to Kafka (only in some states).
-6. `create_profile_response` — Rebuilds or reads the cached profile response.
-7. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-8. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`create_login_response_v1` → `login_from_phone_number_v1` → `login_response_v1` → `send_for_aws_moderation` → `sync_profile_to_kafka` → `create_profile_response` → `general_information` → `select_first_name`
 
 _Code path — Email_
 
-1. `create_login_response_v1`
-2. `login_from_phone_number_v1`
-3. `login_response_v1`
-4. `send_for_aws_moderation` — Content moderation and scammer check (only in some states).
-5. `check_for_scammer_before_moderation!` — Content moderation and scammer check (only in some states).
-6. `fetch_email_domain` — Reads the email domain for the scammer check during moderation.
+`create_login_response_v1` → `login_from_phone_number_v1` → `login_response_v1` → `send_for_aws_moderation` → `check_for_scammer_before_moderation!` → `fetch_email_domain`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -1368,46 +949,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 **Request**
 
 Request fields: `data`, `general_information`, `first_name`, `personal_email`, `gender`, `date_of_birth_v1`, `faith`, `id`, `mother_tongue`, `height`, `relationship_goal`, `photos`, `photo`, `preferences`, `latitude`, `longitude`
-
-```bash
-curl -i --request POST "https://testa2.aisle.co/web/user/update" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "data": {
-    "general_information": {
-      "first_name": "Asha",
-      "personal_email": "asha@example.com",
-      "gender": "Female",
-      "date_of_birth_v1": "1996-01-15",
-      "faith": {
-        "id": "$FAITH_ID"
-      },
-      "mother_tongue": {
-        "id": "$LANGUAGE_ID"
-      },
-      "height": 65
-    },
-    "relationship_goal": {
-      "id": "$RELATIONSHIP_GOAL_ID"
-    },
-    "photos": [
-      {
-        "photo": "$PHOTO_URL_1"
-      },
-      {
-        "photo": "$PHOTO_URL_2"
-      }
-    ],
-    "preferences": [],
-    "latitude": 12.9716,
-    "longitude": 77.5946
-  }
-}
-JSON
-```
 
 **Response fields** (top level; type not stated unless shown)
 
@@ -1476,24 +1017,13 @@ JSON
 
 _Code path — First name_
 
-1. `update_profile`
-2. `submit_profile`
-3. `update_application_information!`
-4. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`update_profile` → `submit_profile` → `update_application_information!` → `get_first_name`
 
 _Code path — Email_
 
-1. `update_profile`
-2. `submit_profile`
-3. `update_application_information!`
-4. `Account::Email.add_email/search_user_ids` — Links the onboarding email to the user (only when the user has none yet).
+`update_profile` → `submit_profile` → `update_application_information!` → `Account::Email.add_email/search_user_ids`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -1509,68 +1039,11 @@ _Code path — Email_
 
 - **From the developers:** Onboarding writes first name and email only when their existing values are missing. Use an onboarding user and valid field IDs and uploaded photos. The web controller also uses this shared submit flow.
 
-**What changed**
+**What changed** (latest 3 of 60; all on the website)
 
 - 2026-10-25 — Response field added: `is_spark_enabled` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `show_complete_profile_popup` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `selfie_gesture` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `personalised_comment_popup_text` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_personalised_comment_popup` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `intro_offer_timer` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_discounted_pricing` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_liveness_verified` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_weekly` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_deleted` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `attempts_left` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `selfie_verification_message` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `selfie_verification_allowed` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_boost_active` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_bought_subscription` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `active_plan_type` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `review_warning` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `age` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `about` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `ref` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `avatar` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `first_login_after_approval` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_likely_to_pay` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `popular_profile` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `enable_multi_comment` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `active_algorithms` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `store_kit_2_enabled` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `last_ios_constant_file_update` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `last_android_constant_file_update` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `pubnub_origin_link` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `meta_trigger_event_list` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `use_liveliness_check` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_onboarding_phase_2` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `selfie_compression_size` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `use_presigned_url` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `move_image_upload_to_last_page` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `can_send_competitor_data` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `image_upload_api` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `your_story_form_url` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `video_information_urls` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `display_watch_clip` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `enable_instagram_connection` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_update_app` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `use_firebase_face_recognition` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `zendesk_url` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_concierge_icon` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_concierge_subscription` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_boost_available` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `application_stage_v2` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `application_stage` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_mobile_number` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `verification_status` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `profile_complete_without_selfie` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `percentage_profile_complete` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `profile_state` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `gender` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `first_name` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `auth_token` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `status_v1` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `id` · seen on staging 2026-10-25
 
 <a id="api-130"></a>
 
@@ -1588,54 +1061,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `data`, `general_information`, `first_name`, `photos`, `photo`, `photo_id`, `status`, `user_traits`, `trait_id`, `user_interests_v2`, `interest_id`, `preferences`, `partial_work`, `work_title`, `industry`, `college`, `graduation_year`, `audio_prompt`, `question_id`, `audio_url`, `data.about` (optional · from code — confirm with Dev), `data.user_interests` (optional · from code — confirm with Dev), `device_type` (optional · from code — confirm with Dev)
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/web/user/edit" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "data": {
-    "general_information": {
-      "first_name": "Asha"
-    },
-    "photos": [
-      {
-        "photo": "$PHOTO_URL_1",
-        "photo_id": "$PHOTO_ID_1",
-        "status": "avatar"
-      },
-      {
-        "photo": "$PHOTO_URL_2",
-        "photo_id": "$PHOTO_ID_2"
-      }
-    ],
-    "user_traits": [
-      {
-        "trait_id": "$TRAIT_ID"
-      }
-    ],
-    "user_interests_v2": [
-      {
-        "interest_id": "$INTEREST_V2_ID"
-      }
-    ],
-    "preferences": [],
-    "partial_work": {
-      "work_title": "Engineer",
-      "industry": "Technology",
-      "college": "Example College",
-      "graduation_year": "2018"
-    },
-    "audio_prompt": {
-      "question_id": "$AUDIO_QUESTION_ID",
-      "audio_url": "$AUDIO_URL"
-    }
-  }
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `user` (seen on staging 2026-10-25)
@@ -1644,31 +1069,17 @@ JSON
 
 _Code path — First name_
 
-1. `edit_profile`
-2. `edit_profile_details`
-3. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`edit_profile` → `edit_profile_details` → `get_first_name`
 
 _Code path — Email_
 
-1. `edit_profile`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`edit_profile` → `own_detailed_v1` → `own_general_information` → `fetch_email`
 
 _Code path — Phone_
 
-1. `edit_profile`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`edit_profile` → `own_detailed_v1` → `own_general_information` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -1687,12 +1098,11 @@ _Code path — Phone_
 
 - **From the developers:** Use the current complete editable payload when testing an existing profile: omitted work, traits, interests or audio fields can be cleared by edit_profile_details. personal_email in this body does not update email; this edit path changes the name and returns the existing email and phone.
 
-**What changed**
+**What changed** (latest 3 of 4; all on the website)
 
 - 2026-10-29 — Request field added: `device_type` · from code — confirm with Dev · `app/controllers/web/users_controller.rb:34 @004e72c`
 - 2026-10-29 — Request field added: `data.user_interests` · from code — confirm with Dev · `app/controllers/web/users_controller.rb:37 @004e72c`
 - 2026-10-29 — Request field added: `data.about` · from code — confirm with Dev · `app/controllers/web/users_controller.rb:38 @004e72c`
-- 2026-10-25 — Response field added: `user` · seen on staging 2026-10-25
 
 <a id="api-131"></a>
 
@@ -1710,19 +1120,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `reason_id`, `note`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/web/user/delete" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "reason_id": "$DELETE_REASON_ID",
-  "note": "Synthetic PII regression account"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -1731,22 +1128,13 @@ JSON
 
 _Code path — First name_
 
-1. `delete_account`
-2. `delete_all_account_info`
-3. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`delete_account` → `delete_all_account_info` → `get_first_name`
 
 _Code path — Email_
 
-1. `delete_account`
-2. `delete_all_account_info`
-3. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`delete_account` → `delete_all_account_info` → `fetch_email`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -1782,21 +1170,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/users/delete_older_account" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$REF"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -1805,16 +1178,9 @@ JSON
 
 _Code path — First name, Email_
 
-1. `User.delete_older_account`
-2. `delete_all_account_info`
-3. `deletion email name and recipient`
+`User.delete_older_account` → `delete_all_account_info` → `deletion email name and recipient`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -1846,35 +1212,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/users/delete_current_account" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$REF"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name, Email_
 
-1. `User.delete_current_account`
-2. `delete_all_account_info`
-3. `deletion email name and recipient`
+`User.delete_current_account` → `delete_all_account_info` → `deletion email name and recipient`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -1903,22 +1247,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 **Request**
 
 Request fields: `reason_id`, `note`
-
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/user/reset_profile" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "reason_id": "$DELETE_REASON_ID",
-  "note": "Synthetic account reset"
-}
-JSON
-```
 
 **Response fields** (top level; type not stated unless shown)
 
@@ -1986,14 +1314,9 @@ JSON
 
 _Code path — First name_
 
-1. `User.reset_profile`
-2. `copied/new Profile save callbacks and subscription/cache refresh`
+`User.reset_profile` → `copied/new Profile save callbacks and subscription/cache refresh`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -2008,73 +1331,17 @@ _Code path — First name_
 - **From the developers:** Copies compatibility fields to a new user/profile. It does not explicitly seed the new user's NAME, EMAIL or PHONE service rows; see migration gaps.
 - **Known limitation:** Copies local fields to a new user but does not create PII-service records for it.
 
-**What changed**
+**What changed** (latest 3 of 59; all on the website)
 
 - 2026-10-25 — Response field added: `show_complete_profile_popup` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `selfie_gesture` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `personalised_comment_popup_text` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_personalised_comment_popup` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `intro_offer_timer` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_discounted_pricing` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_liveness_verified` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_weekly` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_deleted` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `attempts_left` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `selfie_verification_message` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `selfie_verification_allowed` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_boost_active` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_bought_subscription` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `active_plan_type` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `review_warning` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `age` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `about` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `ref` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `avatar` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `first_login_after_approval` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_likely_to_pay` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `popular_profile` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `enable_multi_comment` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `active_algorithms` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `store_kit_2_enabled` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `last_ios_constant_file_update` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `last_android_constant_file_update` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `pubnub_origin_link` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `meta_trigger_event_list` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `use_liveliness_check` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_onboarding_phase_2` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `selfie_compression_size` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `use_presigned_url` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `move_image_upload_to_last_page` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `can_send_competitor_data` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `image_upload_api` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `your_story_form_url` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `video_information_urls` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `display_watch_clip` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `enable_instagram_connection` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_update_app` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `use_firebase_face_recognition` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `zendesk_url` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_concierge_icon` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_concierge_subscription` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_boost_available` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `application_stage_v2` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `application_stage` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_mobile_number` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `verification_status` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `profile_complete_without_selfie` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `percentage_profile_complete` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `profile_state` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `gender` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `first_name` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `auth_token` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `status_v1` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `id` · seen on staging 2026-10-25
 
 <a id="area-g3"></a>
 
 ### Profiles
 
-Return one profile — your own or another member’s. 13 endpoints.
+Return one profile — your own or another member’s. 14 endpoints.
 
 | Method | Path | What it is |
 | --- | --- | --- |
@@ -2091,6 +1358,7 @@ Return one profile — your own or another member’s. 13 endpoints.
 | GET | [`/web/users/profile_info`](#api-119) | Users profile info |
 | GET | [`/web/users/:ref`](#api-120) | Users by ref |
 | GET | [`/api/profile_data/:user_id`](#api-186) | Profile data |
+| GET | [`/V1/users/fetch_settings`](https://aisleapidocs.netlify.app/#/aisle/code-049) | Get own settings _(from code)_ |
 
 <a id="api-011"></a>
 
@@ -2108,17 +1376,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`, `conversation_id` (optional · from code — confirm with Dev)
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/V1/users/profile_info" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --get \
-  --data-urlencode "ref=$OTHER_REF"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `user` (seen on staging 2026-10-25)
@@ -2131,14 +1388,9 @@ curl -i --request GET "https://testa2.aisle.co/V1/users/profile_info" \
 
 _Code path — First name_
 
-1. `Profile.fetch_profile_info`
-2. `profile_details cache hydration`
+`Profile.fetch_profile_info` → `profile_details cache hydration`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -2149,14 +1401,11 @@ _Code path — First name_
 | Cache | `Profile cache` | read / rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
 
-**What changed**
+**What changed** (latest 3 of 6; all on the website)
 
 - 2026-10-29 — Response field added: `exclusivity` · from code — confirm with Dev · `app/controllers/v1/users_controller.rb:103 @004e72c`
 - 2026-10-29 — Request field added: `conversation_id` · from code — confirm with Dev · `app/controllers/v1/users_controller.rb:103 @004e72c`
 - 2026-10-25 — Response field added: `intro_questions` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `own_info` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `report_options` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `user` · seen on staging 2026-10-25
 
 <a id="api-012"></a>
 
@@ -2174,32 +1423,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `user_name`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/V1/users/profile_info_web" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --get \
-  --data-urlencode "user_name=$PUBLIC_USER_NAME"
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `web_profile_info`
-2. `fetch_web_profile_info`
-3. `profile_details` — Rebuilds or reads the cached profile response.
-4. `create_cache_response` — Rebuilds or reads the cached profile response.
-5. `hydrate_first_name!` — Fills the first name into a cached profile response.
-6. `get_first_name_for_user` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`web_profile_info` → `fetch_web_profile_info` → `profile_details` → `create_cache_response` → `hydrate_first_name!` → `get_first_name_for_user`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -2229,15 +1459,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 **Request**
 
 Request fields: none
-
-```bash
-curl -i --request GET "https://testa2.aisle.co/V1/users/fetch_own_info" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}"
-```
 
 **Response fields** (top level; type not stated unless shown)
 
@@ -2313,15 +1534,9 @@ curl -i --request GET "https://testa2.aisle.co/V1/users/fetch_own_info" \
 
 _Code path — First name_
 
-1. `fetch_own_info`
-2. `fetch_own_info`
-3. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`fetch_own_info` → `fetch_own_info` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -2335,75 +1550,11 @@ _Code path — First name_
 
 - **Observed on staging:** Observed 2026-10-19: no token → 401 {unauthorized_request:true}. Observed 2026-10-23: a NEW (onboarding-stage) user’s valid token → 401 {unauthorized_request} — a 401 here is not proof of a credential problem; an ONBOARDED user’s token → 200 {user_id, first_name, profile_state, gender, hide_first_name, …} (no email), before and >60 s after submit with the male photo set.
 
-**What changed**
+**What changed** (latest 3 of 67; all on the website)
 
 - 2026-10-25 — Response field added: `intro_offer_timer` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `show_discounted_pricing` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `like_tab_my_type` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `like_tab_sort_by` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_my_type_button` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `sorting_popup_text` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_phonepe_sub_active` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `phonepe_cancel_text` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `phonepe_sub_id` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_mandatory_complete_profile_popup` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `relationship_goals` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_interests` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_traits` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `selfie_verification_message` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `selfie_verification_allowed` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `image_prompts` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `display_popup_on_launch` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `display_auto_pop_up` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `audio_prompts` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `icebreaker_questions` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `interests_v2` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `interests` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `traits` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `preferences` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `settles` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_philosophy` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_relationship_goal` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_partial_work` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_settle` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_audio_prompt` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `zendesk_url` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `image_list` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_image_alert` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_story_alert` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_story` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_concierge_icon` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `can_import_contact` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `can_add_settle` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_buy_extra_invites_popup` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_concierge_subscription` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_active_survey` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_boost_button` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `boost_popup` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `boost_time` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_boost_active` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `success_stories` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `opposite_gender` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `icebreaker_add_popup_feature_enabled` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `out_of_likes_messages` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `selfie_verification_message_v1` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `verification_status` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `total_connections_count` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `likes_received_count` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `pending_invitations_count` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_intro_answer` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `daily_likes_left` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `active_plan_type` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_complete_profile_popup` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `daily_requests_left` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `profile_complete_without_selfie` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `percentage_profile_complete` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `hide_first_name` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_selected_mbti` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `gender` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `profile_state` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `first_name` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `user_id` · seen on staging 2026-10-25
 
 <a id="api-016"></a>
 
@@ -2420,18 +1571,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 **Request**
 
 Request fields: `page`, `items_per_page`, `ps` (optional · from code — confirm with Dev)
-
-```bash
-curl -i --request GET "https://testa2.aisle.co/V1/users/discover_profile_list_v2" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --get \
-  --data-urlencode "page=1" \
-  --data-urlencode "items_per_page=10"
-```
 
 **Response fields** (top level; type not stated unless shown)
 
@@ -2454,16 +1593,9 @@ curl -i --request GET "https://testa2.aisle.co/V1/users/discover_profile_list_v2
 
 _Code path — First name_
 
-1. `discover_profile_list_v2`
-2. `get_profile_from_link_ref`
-3. `fetch_recommended_profile_header_text`
-4. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`discover_profile_list_v2` → `get_profile_from_link_ref` → `fetch_recommended_profile_header_text` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -2473,23 +1605,11 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
-**What changed**
+**What changed** (latest 3 of 15; all on the website)
 
 - 2026-10-29 — Request field added: `ps` · from code — confirm with Dev · `app/controllers/v1/users_controller.rb:51 @004e72c`
 - 2026-10-25 — Response field added: `free_premium_female` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `incognito_mode_cards` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_recommendation` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `profile_sharing_popup_text` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_user_incognito` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_incognito_mode` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `user_joined_after_incognito_mode` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `curator_feedback` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_foryou_animation` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_foryou_tab` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `settings` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `own_info` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `report_options` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `matches_list` · seen on staging 2026-10-25
 
 <a id="api-017"></a>
 
@@ -2506,15 +1626,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 **Request**
 
 Request fields: `ps` (optional · from code — confirm with Dev)
-
-```bash
-curl -i --request GET "https://testa2.aisle.co/V1/users/meta_for_discover" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}"
-```
 
 **Response fields** (top level; type not stated unless shown)
 
@@ -2585,15 +1696,9 @@ curl -i --request GET "https://testa2.aisle.co/V1/users/meta_for_discover" \
 
 _Code path — First name_
 
-1. `meta_for_discover`
-2. `fetch_meta_for_discover_tab`
-3. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`meta_for_discover` → `fetch_meta_for_discover_tab` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -2603,71 +1708,11 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
-**What changed**
+**What changed** (latest 3 of 63; all on the website)
 
 - 2026-10-29 — Request field added: `ps` · from code — confirm with Dev · `app/controllers/v1/users_controller.rb:27 @004e72c`
 - 2026-10-25 — Response field added: `traits` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `relationship_goals` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `preferences` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_story` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_interests` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_traits` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_philosophy` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_relationship_goal` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_settle` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_audio_prompt` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_discounted_pricing` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `like_tab_my_type` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `like_tab_sort_by` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_my_type_button` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `active_algorithms` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_boost_button` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `boost_time` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `boost_popup` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `incognito_mode_cards` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `user_joined_after_incognito_mode` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_user_incognito` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_incognito_mode` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_foryou_animation` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_foryou_tab` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `profile_sharing_popup_text` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `report_options` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `image_list` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_phonepe_sub_active` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `phonepe_cancel_text` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `phonepe_sub_id` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `audio_prompts` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `icebreaker_questions` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `interests_v2` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_partial_work` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `zendesk_url` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_buy_extra_invites_popup` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_boost_active` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `daily_likes_left` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `daily_requests_left` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `hide_first_name` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `gender` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `profile_state` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `first_name` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `user_id` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_liveness_verified` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `meta_trigger_event_list` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `use_liveliness_check` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `selfie_gesture` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `your_story_form_url` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `video_information_urls` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `can_send_competitor_data` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `active_plan_type` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `attempts_left` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `selfie_compression_size` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `percentage_profile_complete` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `selfie_verification_message` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `selfie_verification_allowed` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `verification_status` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `free_premium_female` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_recommendation` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `curator_feedback` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `settings` · seen on staging 2026-10-25
 
 <a id="api-018"></a>
 
@@ -2685,17 +1730,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `recommended_profile_ref`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/V1/users/get_shareable_link" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --get \
-  --data-urlencode "recommended_profile_ref=$OTHER_REF"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `link` (seen on staging 2026-10-25)
@@ -2705,15 +1739,9 @@ curl -i --request GET "https://testa2.aisle.co/V1/users/get_shareable_link" \
 
 _Code path — First name_
 
-1. `get_shareable_link`
-2. `get_link`
-3. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`get_shareable_link` → `get_link` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -2744,15 +1772,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: none
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/V1/users/${REF}" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `user` (seen on staging 2026-10-25)
@@ -2763,35 +1782,17 @@ curl -i --request GET "https://testa2.aisle.co/V1/users/${REF}" \
 
 _Code path — First name_
 
-1. `show`
-2. `get_specific_user`
-3. `own_detailed_v1` — The owner’s full profile response.
-4. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-5. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`show` → `get_specific_user` → `own_detailed_v1` → `general_information` → `select_first_name`
 
 _Code path — Email_
 
-1. `show`
-2. `get_specific_user`
-3. `own_detailed_v1` — The owner’s full profile response.
-4. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-5. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`show` → `get_specific_user` → `own_detailed_v1` → `own_general_information` → `fetch_email`
 
 _Code path — Phone_
 
-1. `show`
-2. `get_specific_user`
-3. `own_detailed_v1` — The owner’s full profile response.
-4. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-5. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`show` → `get_specific_user` → `own_detailed_v1` → `own_general_information` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -2831,15 +1832,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: none
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/V1/user/verify_user_v1" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `mandatory` (seen on staging 2026-10-25)
@@ -2885,19 +1877,9 @@ curl -i --request GET "https://testa2.aisle.co/V1/user/verify_user_v1" \
 
 _Code path — First name_
 
-1. `verify_user_v1`
-2. `verify_users_details_v1`
-3. `percentage_profile_complete`
-4. `profile_details` — Rebuilds or reads the cached profile response.
-5. `create_cache_response` — Rebuilds or reads the cached profile response.
-6. `hydrate_first_name!` — Fills the first name into a cached profile response.
-7. `get_first_name_for_user` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`verify_user_v1` → `verify_users_details_v1` → `percentage_profile_complete` → `profile_details` → `create_cache_response` → `hydrate_first_name!` → `get_first_name_for_user`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -2912,46 +1894,11 @@ _Code path — First name_
 
 - **Observed on staging:** Observed 2026-10-23: GET /V1/user/verify_user_v1 with a NEW (onboarding-stage) user’s token → 200; also 200 for a freshly onboarded account (male set) before and >60 s after submit.
 
-**What changed**
+**What changed** (latest 3 of 38; all on the website)
 
 - 2026-10-25 — Response field added: `selfie_gesture` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `message` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `version` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_weekly` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `pre_discover_screen_text` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `application_stage_v2` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_onboarding_phase_2` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `selfie_compression_size` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `image_inappropriate_message` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `use_presigned_url` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `attempts_left` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `your_story_form_url` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `video_information_urls` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `display_watch_clip` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `selfie_verification_message` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `selfie_verification_allowed` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `enable_instagram_connection` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_update_app` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `use_firebase_face_recognition` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `zendesk_url` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_concierge_icon` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_concierge_subscription` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `can_send_competitor_data` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_boost_available` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_boost_active` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_mobile_number` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_intro_question` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `verification_status` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `profile_complete_without_selfie` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `percentage_profile_complete` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `profile_state` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `review_warning` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_likely_to_pay` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `popular_profile` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `age` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `about` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `invalid_account` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `mandatory` · seen on staging 2026-10-25
 
 <a id="api-087"></a>
 
@@ -2969,19 +1916,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: none
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/user/verify_user_v1" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `mandatory` (seen on staging 2026-10-25)
@@ -3027,19 +1961,9 @@ JSON
 
 _Code path — First name_
 
-1. `verify_user_v1`
-2. `verify_users_details_v1`
-3. `percentage_profile_complete`
-4. `profile_details` — Rebuilds or reads the cached profile response.
-5. `create_cache_response` — Rebuilds or reads the cached profile response.
-6. `hydrate_first_name!` — Fills the first name into a cached profile response.
-7. `get_first_name_for_user` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`verify_user_v1` → `verify_users_details_v1` → `percentage_profile_complete` → `profile_details` → `create_cache_response` → `hydrate_first_name!` → `get_first_name_for_user`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -3050,46 +1974,11 @@ _Code path — First name_
 | Cache | `Profile cache` | read / rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
 
-**What changed**
+**What changed** (latest 3 of 38; all on the website)
 
 - 2026-10-25 — Response field added: `selfie_gesture` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `message` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `version` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_weekly` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `pre_discover_screen_text` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `application_stage_v2` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_onboarding_phase_2` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `selfie_compression_size` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `image_inappropriate_message` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `use_presigned_url` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `attempts_left` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `your_story_form_url` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `video_information_urls` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `display_watch_clip` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `selfie_verification_message` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `selfie_verification_allowed` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `enable_instagram_connection` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_update_app` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `use_firebase_face_recognition` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `zendesk_url` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_concierge_icon` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_concierge_subscription` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `can_send_competitor_data` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_boost_available` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_boost_active` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_mobile_number` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_intro_question` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `verification_status` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `profile_complete_without_selfie` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `percentage_profile_complete` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `profile_state` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `review_warning` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_likely_to_pay` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `popular_profile` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `age` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `about` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `invalid_account` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `mandatory` · seen on staging 2026-10-25
 
 <a id="api-088"></a>
 
@@ -3106,15 +1995,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 **Request**
 
 Request fields: none
-
-```bash
-curl -i --request GET "https://testa2.aisle.co/V1/user/verify_user" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}"
-```
 
 **Response fields** (top level; type not stated unless shown)
 
@@ -3180,15 +2060,9 @@ curl -i --request GET "https://testa2.aisle.co/V1/user/verify_user" \
 
 _Code path — First name_
 
-1. `verify_user`
-2. `fetch_app_launch_info`
-3. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`verify_user` → `fetch_app_launch_info` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -3202,65 +2076,11 @@ _Code path — First name_
 
 - **Observed on staging:** Observed 2026-10-23: GET /V1/user/verify_user with a NEW (onboarding-stage) user’s token → 200 incl. application_stage, application_stage_v2 (list of stages), selfie_compression_size.
 
-**What changed**
+**What changed** (latest 3 of 57; all on the website)
 
 - 2026-10-25 — Response field added: `is_spark_enabled` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `intro_offer_timer` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `enable_multi_comment` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_discounted_pricing` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `store_kit_2_enabled` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `send_integrity_token` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `personalised_comment_popup_text` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_personalised_comment_popup` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `last_ios_constant_file_update` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `last_android_constant_file_update` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `display_watch_clip` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_partial_work` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `pubnub_origin_link` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `can_import_contact` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `success_stories` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `active_algorithms` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_liveness_verified` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `use_liveliness_check` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_complete_profile_popup` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `pre_discover_screen_text` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `image_inappropriate_message` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `message` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `invalid_account` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `mandatory` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `selfie_gesture` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `age` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `your_story_form_url` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `video_information_urls` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `use_presigned_url` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_onboarding_phase_2` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_boost_available` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `profile_state` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `gender` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `ref` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `avatar` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `first_name` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `can_send_competitor_data` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_weekly` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_boost_active` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `active_plan_type` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `attempts_left` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `move_image_upload_to_last_page` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `meta_trigger_event_list` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_likely_to_pay` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `popular_profile` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `selfie_compression_size` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `auth_token` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `profile_complete_without_selfie` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `percentage_profile_complete` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `selfie_verification_message` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `selfie_verification_allowed` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `verification_status` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `zendesk_url` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `application_stage_v2` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `application_stage` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `id` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
 
 <a id="api-119"></a>
 
@@ -3278,14 +2098,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/web/users/profile_info" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --get \
-  --data-urlencode "ref=$OTHER_REF"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `user` (seen on staging 2026-10-25)
@@ -3296,21 +2108,13 @@ curl -i --request GET "https://testa2.aisle.co/web/users/profile_info" \
 
 _Code path — First name_
 
-1. `Profile.fetch_profile_info`
-2. `profile_details cache hydration`
+`Profile.fetch_profile_info` → `profile_details cache hydration`
 
 _Free-text encryption — Free text_
 
-1. `Request with free text` — Free-text encryption (Dev free-text API list (2026-10-23)): Profile info (returns the bio)
-2. `PII service — free-text key` — Aisle creates or fetches an AES-256-GCM key; the text itself never goes to the PII service.
-3. `Aisle encrypts / decrypts the text` — The encrypted text and its key_id are kept in the app database.
+`Request with free text` → `PII service — free-text key` → `Aisle encrypts / decrypts the text`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Free text | `—` | Encrypted by Aisle with a key from the PII service; there is no read switch. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Free text `—` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -3349,12 +2153,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: none
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/web/users/${REF}" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `user` (seen on staging 2026-10-25)
@@ -3363,17 +2161,9 @@ curl -i --request GET "https://testa2.aisle.co/web/users/${REF}" \
 
 _Code path — First name_
 
-1. `show`
-2. `own_profile_web` — The owner’s full profile response.
-3. `own_detailed_web` — The owner’s full profile response.
-4. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-5. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`show` → `own_profile_web` → `own_detailed_web` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -3403,27 +2193,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: none
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/api/profile_data/${USER_ID}" \
-  --header "Authorization: Bearer ${INFOEDGE_PROFILE_API_TOKEN}" \
-  --header "Accept: application/json"
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `profile_data`
-2. `profile_details` — Rebuilds or reads the cached profile response.
-3. `create_cache_response` — Rebuilds or reads the cached profile response.
-4. `hydrate_first_name!` — Fills the first name into a cached profile response.
-5. `get_first_name_for_user` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`profile_data` → `profile_details` → `create_cache_response` → `hydrate_first_name!` → `get_first_name_for_user`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -3443,7 +2219,7 @@ _Code path — First name_
 
 ### Lists & discovery
 
-Return lists of profiles, requests, likes, chats or events, with a first name per row. 21 endpoints.
+Return lists of profiles, requests, likes, chats or events, with a first name per row. 26 endpoints.
 
 | Method | Path | What it is |
 | --- | --- | --- |
@@ -3468,6 +2244,11 @@ Return lists of profiles, requests, likes, chats or events, with a first name pe
 | GET | [`/web/invites/all_requests`](#api-116) | List all requests |
 | GET | [`/web/list_likes_received`](#api-126) | Web list likes received |
 | GET | [`/V1/users/test_profile_list`](#api-191) | Test profile list |
+| GET | [`/V1/users/my_discover_refs`](https://aisleapidocs.netlify.app/#/aisle/code-050) | Discover profile refs _(from code)_ |
+| GET | [`/V1/contact/fetch_contact_list`](https://aisleapidocs.netlify.app/#/aisle/code-051) | List imported contacts _(from code)_ |
+| GET | [`/V1/events`](https://aisleapidocs.netlify.app/#/aisle/code-052) | Fetch badge counts (backup) _(from code)_ |
+| GET | [`/V1/sparks/list_received`](https://aisleapidocs.netlify.app/#/aisle/code-053) | List received Sparks _(from code)_ |
+| GET | [`/web/combined_messages_list`](https://aisleapidocs.netlify.app/#/aisle/code-054) | Web: combined messages list _(from code)_ |
 
 <a id="api-005"></a>
 
@@ -3485,18 +2266,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`, `items_per_page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/V1/invites/all_requests" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --get \
-  --data-urlencode "page=1" \
-  --data-urlencode "items_per_page=10"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `invites` (seen on staging 2026-10-25)
@@ -3509,26 +2278,13 @@ curl -i --request GET "https://testa2.aisle.co/V1/invites/all_requests" \
 
 _Code path — First name_
 
-1. `list_all_requests`
-2. `list_all_invitations`
-3. `create_response`
-4. `get_multiple_cache_data` — Loads many cached profile cards for a list.
-5. `hydrate_first_names!` — Loads first names for many profiles in one go; keeps the cached name if the PII service returns nothing.
-6. `get_first_names_for_users` — Loads first names for many profiles in one go; keeps the cached name if the PII service returns nothing.
+`list_all_requests` → `list_all_invitations` → `create_response` → `get_multiple_cache_data` → `hydrate_first_names!` → `get_first_names_for_users`
 
 _Code path — Phone_
 
-1. `list_all_requests`
-2. `list_all_invitations`
-3. `is_test_user?`
-4. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`list_all_requests` → `list_all_invitations` → `is_test_user?` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -3545,13 +2301,11 @@ _Code path — Phone_
 
 - **Observed on staging:** Observed 2026-10-23: GET /V1/invites/all_requests → 200 for a freshly onboarded synthetic account (male set), before and >60 s after submit.
 
-**What changed**
+**What changed** (latest 3 of 5; all on the website)
 
 - 2026-10-25 — Response field added: `refresh_duration` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `report_options` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `totalPages` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `total_invites` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `invites` · seen on staging 2026-10-25
 
 <a id="api-006"></a>
 
@@ -3569,18 +2323,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`, `items_per_page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/V1/invites/list_comments_with_pagination" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --get \
-  --data-urlencode "page=1" \
-  --data-urlencode "items_per_page=10"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `invites` (seen on staging 2026-10-25)
@@ -3591,27 +2333,13 @@ curl -i --request GET "https://testa2.aisle.co/V1/invites/list_comments_with_pag
 
 _Code path — First name_
 
-1. `list_comments_with_pagination`
-2. `list_all_comments`
-3. `create_response`
-4. `get_multiple_cache_data` — Loads many cached profile cards for a list.
-5. `hydrate_first_names!` — Loads first names for many profiles in one go; keeps the cached name if the PII service returns nothing.
-6. `get_first_names_for_users` — Loads first names for many profiles in one go; keeps the cached name if the PII service returns nothing.
+`list_comments_with_pagination` → `list_all_comments` → `create_response` → `get_multiple_cache_data` → `hydrate_first_names!` → `get_first_names_for_users`
 
 _Code path — Phone_
 
-1. `list_comments_with_pagination`
-2. `list_all_comments`
-3. `fetch_all_comments`
-4. `is_test_user?`
-5. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`list_comments_with_pagination` → `list_all_comments` → `fetch_all_comments` → `is_test_user?` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -3646,18 +2374,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`, `items_per_page`, `opened_from_pn` (optional · from code — confirm with Dev), `sort_by` (optional · from code — confirm with Dev)
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/V1/invites/list_comments_and_likes" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --get \
-  --data-urlencode "page=1" \
-  --data-urlencode "items_per_page=10"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `invites` (seen on staging 2026-10-25)
@@ -3681,27 +2397,13 @@ curl -i --request GET "https://testa2.aisle.co/V1/invites/list_comments_and_like
 
 _Code path — First name_
 
-1. `list_comments_and_likes`
-2. `list_all_comments`
-3. `create_response`
-4. `get_multiple_cache_data` — Loads many cached profile cards for a list.
-5. `hydrate_first_names!` — Loads first names for many profiles in one go; keeps the cached name if the PII service returns nothing.
-6. `get_first_names_for_users` — Loads first names for many profiles in one go; keeps the cached name if the PII service returns nothing.
+`list_comments_and_likes` → `list_all_comments` → `create_response` → `get_multiple_cache_data` → `hydrate_first_names!` → `get_first_names_for_users`
 
 _Code path — Phone_
 
-1. `list_comments_and_likes`
-2. `list_all_comments`
-3. `fetch_all_comments`
-4. `is_test_user?`
-5. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`list_comments_and_likes` → `list_all_comments` → `fetch_all_comments` → `is_test_user?` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -3714,26 +2416,11 @@ _Code path — Phone_
 | Cache | `Profile cache` | read / rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
 
-**What changed**
+**What changed** (latest 3 of 18; all on the website)
 
 - 2026-10-29 — Request field added: `sort_by` · from code — confirm with Dev · `app/controllers/v1/invites_controller.rb:112 @004e72c`
 - 2026-10-29 — Request field added: `opened_from_pn` · from code — confirm with Dev · `app/controllers/v1/invites_controller.rb:119 @004e72c`
 - 2026-10-25 — Response field added: `popup` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_popup` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `previously_recevied_spark` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `sparks` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_my_type_button` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_default_payment_concierge` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `can_see_profile` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `complete_profile_check` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `no_of_tiles_to_display` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `no_likes_message` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `subscribed_likes_display_text` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `nextCursor` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `users` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `report_options` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `comment_next_cursor` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `invites` · seen on staging 2026-10-25
 
 <a id="api-008"></a>
 
@@ -3750,18 +2437,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 **Request**
 
 Request fields: `page`, `items_per_page`, `opened_from_pn` (optional · from code — confirm with Dev), `sort_by` (optional · from code — confirm with Dev)
-
-```bash
-curl -i --request GET "https://testa2.aisle.co/V1/invites/list_request_and_likes" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --get \
-  --data-urlencode "page=1" \
-  --data-urlencode "items_per_page=10"
-```
 
 **Response fields** (top level; type not stated unless shown)
 
@@ -3786,26 +2461,13 @@ curl -i --request GET "https://testa2.aisle.co/V1/invites/list_request_and_likes
 
 _Code path — First name_
 
-1. `list_request_and_likes`
-2. `list_all_invitations`
-3. `create_response`
-4. `get_multiple_cache_data` — Loads many cached profile cards for a list.
-5. `hydrate_first_names!` — Loads first names for many profiles in one go; keeps the cached name if the PII service returns nothing.
-6. `get_first_names_for_users` — Loads first names for many profiles in one go; keeps the cached name if the PII service returns nothing.
+`list_request_and_likes` → `list_all_invitations` → `create_response` → `get_multiple_cache_data` → `hydrate_first_names!` → `get_first_names_for_users`
 
 _Code path — Phone_
 
-1. `list_request_and_likes`
-2. `list_all_invitations`
-3. `is_test_user?`
-4. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`list_request_and_likes` → `list_all_invitations` → `is_test_user?` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -3818,26 +2480,11 @@ _Code path — Phone_
 | Cache | `Profile cache` | read / rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
 
-**What changed**
+**What changed** (latest 3 of 18; all on the website)
 
 - 2026-10-29 — Request field added: `sort_by` · from code — confirm with Dev · `app/controllers/v1/invites_controller.rb:55 @004e72c`
 - 2026-10-29 — Request field added: `opened_from_pn` · from code — confirm with Dev · `app/controllers/v1/invites_controller.rb:62 @004e72c`
 - 2026-10-25 — Response field added: `popup` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_popup` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_my_type_button` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `is_default_payment_concierge` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `can_see_profile` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `complete_profile_check` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `no_of_tiles_to_display` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `no_likes_message` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `subscribed_likes_display_text` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `nextCursor` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `users` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `refresh_duration` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `report_options` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `totalPages` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `total_invites` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `invites` · seen on staging 2026-10-25
 
 <a id="api-014"></a>
 
@@ -3855,18 +2502,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`, `items_per_page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/V1/users/matches_list_v2" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --get \
-  --data-urlencode "page=1" \
-  --data-urlencode "items_per_page=10"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `users_list` (seen on staging 2026-10-25)
@@ -3878,19 +2513,9 @@ curl -i --request GET "https://testa2.aisle.co/V1/users/matches_list_v2" \
 
 _Code path — First name_
 
-1. `matches_list_v2`
-2. `select_algorithm_for_discover_profile_list`
-3. `fetch_discover_profile_list`
-4. `create_home_page_response_v2`
-5. `get_multiple_cache_data` — Loads many cached profile cards for a list.
-6. `hydrate_first_names!` — Loads first names for many profiles in one go; keeps the cached name if the PII service returns nothing.
-7. `get_first_names_for_users` — Loads first names for many profiles in one go; keeps the cached name if the PII service returns nothing.
+`matches_list_v2` → `select_algorithm_for_discover_profile_list` → `fetch_discover_profile_list` → `create_home_page_response_v2` → `get_multiple_cache_data` → `hydrate_first_names!` → `get_first_names_for_users`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -3905,12 +2530,11 @@ _Code path — First name_
 
 - **Observed on staging:** Observed 2026-10-23: GET /V1/users/matches_list_v2 → 200 for a freshly onboarded synthetic account (male set), before and >60 s after submit.
 
-**What changed**
+**What changed** (latest 3 of 4; all on the website)
 
 - 2026-10-25 — Response field added: `suggestions_source` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `show_foryou_tab` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `suggestion_state` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `users_list` · seen on staging 2026-10-25
 
 <a id="api-015"></a>
 
@@ -3928,22 +2552,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`, `items_per_page`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/users/matches_list_v3" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "page": 1,
-  "items_per_page": 10
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `users_list` (seen on staging 2026-10-25)
@@ -3955,19 +2563,9 @@ JSON
 
 _Code path — First name_
 
-1. `matches_list_v2`
-2. `select_algorithm_for_discover_profile_list`
-3. `fetch_discover_profile_list`
-4. `create_home_page_response_v2`
-5. `get_multiple_cache_data` — Loads many cached profile cards for a list.
-6. `hydrate_first_names!` — Loads first names for many profiles in one go; keeps the cached name if the PII service returns nothing.
-7. `get_first_names_for_users` — Loads first names for many profiles in one go; keeps the cached name if the PII service returns nothing.
+`matches_list_v2` → `select_algorithm_for_discover_profile_list` → `fetch_discover_profile_list` → `create_home_page_response_v2` → `get_multiple_cache_data` → `hydrate_first_names!` → `get_first_names_for_users`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -3982,12 +2580,11 @@ _Code path — First name_
 
 - **From the developers:** POST alias of the matches_list_v2 action.
 
-**What changed**
+**What changed** (latest 3 of 4; all on the website)
 
 - 2026-10-25 — Response field added: `suggestions_source` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `show_foryou_tab` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `suggestion_state` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `users_list` · seen on staging 2026-10-25
 
 <a id="api-019"></a>
 
@@ -4004,18 +2601,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 **Request**
 
 Request fields: `page`, `items_per_page`
-
-```bash
-curl -i --request GET "https://testa2.aisle.co/V1/users/fetch_concierge_list" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --get \
-  --data-urlencode "page=1" \
-  --data-urlencode "items_per_page=10"
-```
 
 **Response fields** (top level; type not stated unless shown)
 
@@ -4040,16 +2625,9 @@ curl -i --request GET "https://testa2.aisle.co/V1/users/fetch_concierge_list" \
 
 _Code path — First name_
 
-1. `fetch_concierge_list`
-2. `fetch_concierge_profile_list`
-3. `is_partial?`
-4. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`fetch_concierge_list` → `fetch_concierge_profile_list` → `is_partial?` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -4059,24 +2637,11 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
-**What changed**
+**What changed** (latest 3 of 16; all on the website)
 
 - 2026-10-25 — Response field added: `know_more_message_2` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `know_more_message` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `box_message` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_concierge_subscription` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `show_payment_box` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `can_enter_profile` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `search_filter` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `total_profile_count` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `live_list` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `banners_v2` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `constant_messages` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `own_info` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `report_options` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `nextCursor` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `next_page` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `users` · seen on staging 2026-10-25
 
 <a id="api-020"></a>
 
@@ -4094,18 +2659,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`, `items_per_page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/V1/users/fetch_top_matched_profiles" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --get \
-  --data-urlencode "page=1" \
-  --data-urlencode "items_per_page=10"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `users` (seen on staging 2026-10-25)
@@ -4116,19 +2669,9 @@ curl -i --request GET "https://testa2.aisle.co/V1/users/fetch_top_matched_profil
 
 _Code path — First name_
 
-1. `fetch_top_matched_profiles`
-2. `fetch_top_matched_profiles`
-3. `fetch_profiles_list`
-4. `create_top_matches_response`
-5. `get_multiple_cache_data` — Loads many cached profile cards for a list.
-6. `hydrate_first_names!` — Loads first names for many profiles in one go; keeps the cached name if the PII service returns nothing.
-7. `get_first_names_for_users` — Loads first names for many profiles in one go; keeps the cached name if the PII service returns nothing.
+`fetch_top_matched_profiles` → `fetch_top_matched_profiles` → `fetch_profiles_list` → `create_top_matches_response` → `get_multiple_cache_data` → `hydrate_first_names!` → `get_first_names_for_users`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -4161,18 +2704,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`, `items_per_page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/V1/list_request_sent" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --get \
-  --data-urlencode "page=1" \
-  --data-urlencode "items_per_page=10"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `users` (seen on staging 2026-10-25)
@@ -4185,16 +2716,9 @@ curl -i --request GET "https://testa2.aisle.co/V1/list_request_sent" \
 
 _Code path — First name_
 
-1. `list_request_sent`
-2. `fetch_activity_list`
-3. `fetch_own_info`
-4. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`list_request_sent` → `fetch_activity_list` → `fetch_own_info` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -4204,13 +2728,11 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
-**What changed**
+**What changed** (latest 3 of 5; all on the website)
 
 - 2026-10-25 — Response field added: `own_info` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `report_options` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `nextCursor_2` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `nextCursor_1` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `users` · seen on staging 2026-10-25
 
 <a id="api-048"></a>
 
@@ -4228,18 +2750,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`, `items_per_page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/V1/list_likes_received_v1" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --get \
-  --data-urlencode "page=1" \
-  --data-urlencode "items_per_page=10"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `users` (seen on staging 2026-10-25)
@@ -4256,15 +2766,9 @@ curl -i --request GET "https://testa2.aisle.co/V1/list_likes_received_v1" \
 
 _Code path — First name_
 
-1. `UserLike.list_likes_received_v2`
-2. `create_likes_received_api_response`
-3. `profile cache name hydration`
+`UserLike.list_likes_received_v2` → `create_likes_received_api_response` → `profile cache name hydration`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -4274,17 +2778,11 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
-**What changed**
+**What changed** (latest 3 of 9; all on the website)
 
 - 2026-10-25 — Response field added: `is_default_payment_concierge` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `report_options` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `can_see_profile` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `complete_profile_check` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `no_of_tiles_to_display` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `no_likes_message` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `subscribed_likes_display_text` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `nextCursor` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `users` · seen on staging 2026-10-25
 
 <a id="api-049"></a>
 
@@ -4302,18 +2800,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`, `items_per_page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/V1/list_all_passed" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --get \
-  --data-urlencode "page=1" \
-  --data-urlencode "items_per_page=10"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `users` (seen on staging 2026-10-25)
@@ -4324,16 +2810,9 @@ curl -i --request GET "https://testa2.aisle.co/V1/list_all_passed" \
 
 _Code path — First name_
 
-1. `list_all_passed`
-2. `list_passed_profiles`
-3. `fetch_own_info`
-4. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`list_all_passed` → `list_passed_profiles` → `fetch_own_info` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -4365,22 +2844,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`, `items_per_page`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/like_received" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "page": 1,
-  "items_per_page": 10
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `users` (seen on staging 2026-10-25)
@@ -4394,16 +2857,9 @@ JSON
 
 _Code path — First name_
 
-1. `list_likes_and_requests_received`
-2. `fetch_likes_and_requests_recieved`
-3. `fetch_own_info`
-4. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`list_likes_and_requests_received` → `fetch_likes_and_requests_recieved` → `fetch_own_info` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -4413,14 +2869,11 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
-**What changed**
+**What changed** (latest 3 of 6; all on the website)
 
 - 2026-10-25 — Response field added: `refresh_duration` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `own_info` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `report_options` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `nextCursor_2` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `nextCursor_1` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `users` · seen on staging 2026-10-25
 
 <a id="api-063"></a>
 
@@ -4438,18 +2891,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`, `items_per_page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/V1/list_connected_profiles" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --get \
-  --data-urlencode "page=1" \
-  --data-urlencode "items_per_page=10"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `user_id` (seen on staging 2026-10-25)
@@ -4462,32 +2903,17 @@ curl -i --request GET "https://testa2.aisle.co/V1/list_connected_profiles" \
 
 _Code path — First name_
 
-1. `list_connected_profiles`
-2. `all_active_conversations_v1`
-3. `fetch_cached_conversations` — Rebuilds or reads the chat conversation cache.
-4. `create_cached_response` — Rebuilds or reads the chat conversation cache.
-5. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`list_connected_profiles` → `all_active_conversations_v1` → `fetch_cached_conversations` → `create_cached_response` → `select_first_name`
 
 _Code path — Phone_
 
-1. `list_connected_profiles`
-2. `all_active_conversations_v1`
-3. `is_test_user?`
-4. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`list_connected_profiles` → `all_active_conversations_v1` → `is_test_user?` → `fetch_only_number`
 
 _Free-text encryption — Free text_
 
-1. `Request with free text` — Free-text encryption (Dev free-text API list (2026-10-23)): Connection list (returns chat free text)
-2. `PII service — free-text key` — Aisle creates or fetches an AES-256-GCM key; the text itself never goes to the PII service.
-3. `Aisle encrypts / decrypts the text` — The encrypted text and its key_id are kept in the app database.
+`Request with free text` → `PII service — free-text key` → `Aisle encrypts / decrypts the text`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
-| Free text | `—` | Encrypted by Aisle with a key from the PII service; there is no read switch. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` · Free text `—` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -4507,13 +2933,11 @@ _Free-text encryption — Free text_
 - **From the developers:** Phone impact is the is_test_user? branch; phone is not added to other members' response fields.
 - **Observed on staging:** Observed 2026-10-23: no token → 401 {unauthorized_request}; a freshly onboarded synthetic account (male set) → 200 before and >60 s after submit.
 
-**What changed**
+**What changed** (latest 3 of 5; all on the website)
 
 - 2026-10-25 — Response field added: `feedback_intro_popup` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `refresh_duration` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `total_connections_count` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `conversations` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `user_id` · seen on staging 2026-10-25
 
 <a id="api-068"></a>
 
@@ -4531,18 +2955,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`, `items_per_page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/V1/combined_messages_hidden_list" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --get \
-  --data-urlencode "page=1" \
-  --data-urlencode "items_per_page=10"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `user_id` (seen on staging 2026-10-25)
@@ -4554,25 +2966,13 @@ curl -i --request GET "https://testa2.aisle.co/V1/combined_messages_hidden_list"
 
 _Code path — First name_
 
-1. `combined_messages_hidden_list`
-2. `all_active_conversations`
-3. `fetch_cached_conversations` — Rebuilds or reads the chat conversation cache.
-4. `create_cached_response` — Rebuilds or reads the chat conversation cache.
-5. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`combined_messages_hidden_list` → `all_active_conversations` → `fetch_cached_conversations` → `create_cached_response` → `select_first_name`
 
 _Code path — Phone_
 
-1. `combined_messages_hidden_list`
-2. `all_active_conversations`
-3. `is_test_user?`
-4. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`combined_messages_hidden_list` → `all_active_conversations` → `is_test_user?` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -4589,12 +2989,11 @@ _Code path — Phone_
 
 - **From the developers:** Phone impact is the is_test_user? branch; phone is not added to other members' response fields.
 
-**What changed**
+**What changed** (latest 3 of 4; all on the website)
 
 - 2026-10-25 — Response field added: `feedback_intro_popup` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `hidden_linked_users` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `conversations` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `user_id` · seen on staging 2026-10-25
 
 <a id="api-069"></a>
 
@@ -4612,43 +3011,17 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `conversation_id`, `page`, `created_at`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/chat/chat_messages" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "conversation_id": "$CONVERSATION_ID",
-  "page": 1,
-  "created_at": "2026-10-16T00:00:00Z"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `chat_messages`
-2. `fetch_chat_messages`
-3. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`chat_messages` → `fetch_chat_messages` → `get_first_name`
 
 _Free-text encryption — Free text_
 
-1. `Request with free text` — Free-text encryption (Dev free-text API list (2026-10-23)): Conversation messages (returns chat free text)
-2. `PII service — free-text key` — Aisle creates or fetches an AES-256-GCM key; the text itself never goes to the PII service.
-3. `Aisle encrypts / decrypts the text` — The encrypted text and its key_id are kept in the app database.
+`Request with free text` → `PII service — free-text key` → `Aisle encrypts / decrypts the text`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Free text | `—` | Encrypted by Aisle with a key from the PII service; there is no read switch. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Free text `—` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -4680,34 +3053,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `event_id`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/V1/speed_dating/event_info" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --get \
-  --data-urlencode "event_id=$EVENT_ID"
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `event_info`
-2. `fetch_event_info`
-3. `fetch_user_list`
-4. `get_cache_from_ref`
-5. `create_cache_response` — Rebuilds or reads the cached profile response.
-6. `hydrate_first_name!` — Fills the first name into a cached profile response.
-7. `get_first_name_for_user` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`event_info` → `fetch_event_info` → `fetch_user_list` → `get_cache_from_ref` → `create_cache_response` → `hydrate_first_name!` → `get_first_name_for_user`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -4734,18 +3086,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`, `items_per_page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/V1/advertisement/profiles_voted" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --get \
-  --data-urlencode "page=1" \
-  --data-urlencode "items_per_page=10"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `profiles` (seen on staging 2026-10-25)
@@ -4756,15 +3096,9 @@ curl -i --request GET "https://testa2.aisle.co/V1/advertisement/profiles_voted" 
 
 _Code path — First name_
 
-1. `profiles_voted`
-2. `fetch_own_info`
-3. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`profiles_voted` → `fetch_own_info` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -4796,18 +3130,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`, `app_launch`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/V1/live_audio" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --get \
-  --data-urlencode "page=1" \
-  --data-urlencode "app_launch=false"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `live_list` (seen on staging 2026-10-25)
@@ -4819,16 +3141,9 @@ curl -i --request GET "https://testa2.aisle.co/V1/live_audio" \
 
 _Code path — First name_
 
-1. `index`
-2. `fetch_all_live_audios`
-3. `fill_room_cache!` — Rebuilds the live-audio room cache.
-4. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`index` → `fetch_all_live_audios` → `fill_room_cache!` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -4839,12 +3154,11 @@ _Code path — First name_
 | Cache | `Live-audio room cache` | rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
 
-**What changed**
+**What changed** (latest 3 of 4; all on the website)
 
 - 2026-10-25 — Response field added: `agora_data` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `room_settings` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `live_list_v1` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `live_list` · seen on staging 2026-10-25
 
 <a id="api-116"></a>
 
@@ -4862,15 +3176,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`, `items_per_page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/web/invites/all_requests" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --get \
-  --data-urlencode "page=1" \
-  --data-urlencode "items_per_page=10"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `invites` (seen on staging 2026-10-25)
@@ -4883,26 +3188,13 @@ curl -i --request GET "https://testa2.aisle.co/web/invites/all_requests" \
 
 _Code path — First name_
 
-1. `list_all_requests`
-2. `list_all_invitations`
-3. `create_response`
-4. `get_multiple_cache_data` — Loads many cached profile cards for a list.
-5. `hydrate_first_names!` — Loads first names for many profiles in one go; keeps the cached name if the PII service returns nothing.
-6. `get_first_names_for_users` — Loads first names for many profiles in one go; keeps the cached name if the PII service returns nothing.
+`list_all_requests` → `list_all_invitations` → `create_response` → `get_multiple_cache_data` → `hydrate_first_names!` → `get_first_names_for_users`
 
 _Code path — Phone_
 
-1. `list_all_requests`
-2. `list_all_invitations`
-3. `is_test_user?`
-4. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`list_all_requests` → `list_all_invitations` → `is_test_user?` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -4915,13 +3207,11 @@ _Code path — Phone_
 | Cache | `Profile cache` | read / rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
 
-**What changed**
+**What changed** (latest 3 of 5; all on the website)
 
 - 2026-10-25 — Response field added: `refresh_duration` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `report_options` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `totalPages` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `total_invites` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `invites` · seen on staging 2026-10-25
 
 <a id="api-126"></a>
 
@@ -4939,15 +3229,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`, `items_per_page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/web/list_likes_received" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --get \
-  --data-urlencode "page=1" \
-  --data-urlencode "items_per_page=10"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `users` (seen on staging 2026-10-25)
@@ -4964,15 +3245,9 @@ curl -i --request GET "https://testa2.aisle.co/web/list_likes_received" \
 
 _Code path — First name_
 
-1. `UserLike.list_likes_received_v2`
-2. `create_likes_received_api_response`
-3. `profile cache name hydration`
+`UserLike.list_likes_received_v2` → `create_likes_received_api_response` → `profile cache name hydration`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -4982,17 +3257,11 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
-**What changed**
+**What changed** (latest 3 of 9; all on the website)
 
 - 2026-10-25 — Response field added: `is_default_payment_concierge` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `report_options` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `can_see_profile` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `complete_profile_check` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `no_of_tiles_to_display` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `no_likes_message` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `subscribed_likes_display_text` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `nextCursor` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `users` · seen on staging 2026-10-25
 
 <a id="api-191"></a>
 
@@ -5010,12 +3279,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: none
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/V1/users/test_profile_list" \
-  --header "Authorization: Bearer ${TEST_TOKEN}" \
-  --header "Accept: application/json"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `invites` (seen on staging 2026-10-25)
@@ -5025,13 +3288,9 @@ curl -i --request GET "https://testa2.aisle.co/V1/users/test_profile_list" \
 
 _Code path — First name_
 
-1. `TestApi invites/likes profile cache hydration`
+`TestApi invites/likes profile cache hydration`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -5050,7 +3309,7 @@ _Code path — First name_
 
 ### Interactions, chat & live audio
 
-Likes, invites, accept / pass, reports, messages, calls and live audio. 30 endpoints.
+Likes, invites, accept / pass, reports, messages, calls and live audio. 55 endpoints.
 
 | Method | Path | What it is |
 | --- | --- | --- |
@@ -5084,6 +3343,31 @@ Likes, invites, accept / pass, reports, messages, calls and live audio. 30 endpo
 | POST | [`/web/report`](#api-135) | Web report |
 | POST | [`/V1/messages/send`](#api-187) | Messages send |
 | POST | [`/web/messages/send`](#api-188) | Messages send |
+| POST | [`/V1/events/message`](https://aisleapidocs.netlify.app/#/aisle/code-055) | Publish message-sent event _(from code)_ |
+| POST | [`/V1/invites/like_and_request_seen`](https://aisleapidocs.netlify.app/#/aisle/code-056) | Mark likes and requests seen _(from code)_ |
+| POST | [`/V1/like_multiple_profiles`](https://aisleapidocs.netlify.app/#/aisle/code-057) | Like multiple profiles _(from code)_ |
+| POST | [`/V1/sparks/send`](https://aisleapidocs.netlify.app/#/aisle/code-058) | Send a Spark _(from code)_ |
+| POST | [`/V1/sparks/accept`](https://aisleapidocs.netlify.app/#/aisle/code-059) | Accept a Spark _(from code)_ |
+| POST | [`/V1/sparks/reject`](https://aisleapidocs.netlify.app/#/aisle/code-060) | Reject a Spark _(from code)_ |
+| POST | [`/V1/messages/:ref/read`](https://aisleapidocs.netlify.app/#/aisle/code-061) | Mark conversation read _(from code)_ |
+| POST | [`/V1/messages/seen`](https://aisleapidocs.netlify.app/#/aisle/code-062) | Mark all chats seen _(from code)_ |
+| POST | [`/V1/chat/seen`](https://aisleapidocs.netlify.app/#/aisle/code-063) | Mark all chats seen _(from code)_ |
+| GET | [`/V1/messages/agora_channel_status`](https://aisleapidocs.netlify.app/#/aisle/code-064) | Check video call channel _(from code)_ |
+| POST | [`/V1/messages/mark_video_request_missed`](https://aisleapidocs.netlify.app/#/aisle/code-065) | Mark video call missed _(from code)_ |
+| POST | [`/V1/messages/mark_video_request_declined`](https://aisleapidocs.netlify.app/#/aisle/code-066) | Decline video call _(from code)_ |
+| POST | [`/V1/messages/unmatch_user`](https://aisleapidocs.netlify.app/#/aisle/code-067) | Unmatch a connection _(from code)_ |
+| POST | [`/V1/chat/like_message`](https://aisleapidocs.netlify.app/#/aisle/code-068) | Like a chat message _(from code)_ |
+| POST | [`/V1/chat/unlike_message`](https://aisleapidocs.netlify.app/#/aisle/code-069) | Unlike a chat message _(from code)_ |
+| POST | [`/V1/chat/date_feedback/event`](https://aisleapidocs.netlify.app/#/aisle/code-070) | Post date feedback event _(from code)_ |
+| GET | [`/V1/pubnub/grant_token`](https://aisleapidocs.netlify.app/#/aisle/code-071) | Get PubNub chat token _(from code)_ |
+| POST | [`/V1/sharing/create`](https://aisleapidocs.netlify.app/#/aisle/code-072) | Create profile sharing _(from code)_ |
+| GET | [`/V1/sharing/list`](https://aisleapidocs.netlify.app/#/aisle/code-073) | List profile sharings _(from code)_ |
+| POST | [`/V1/sharing/toggle_checked`](https://aisleapidocs.netlify.app/#/aisle/code-074) | Toggle sharing checked _(from code)_ |
+| GET | [`/V1/live_audio/refresh_agora_token`](https://aisleapidocs.netlify.app/#/aisle/code-075) | Refresh live audio token _(from code)_ |
+| POST | [`/web/invites/seen_v1`](https://aisleapidocs.netlify.app/#/aisle/code-076) | Web: mark invitations seen _(from code)_ |
+| POST | [`/web/messages/:ref/read`](https://aisleapidocs.netlify.app/#/aisle/code-077) | Web: mark conversation read _(from code)_ |
+| POST | [`/web/messages/seen_v1`](https://aisleapidocs.netlify.app/#/aisle/code-078) | Web: mark message seen _(from code)_ |
+| POST | [`/web/messages/seen_all`](https://aisleapidocs.netlify.app/#/aisle/code-079) | Web: mark all chats seen _(from code)_ |
 
 <a id="api-004"></a>
 
@@ -5101,23 +3385,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`, `invitation_type`, `reply_message`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/invites/send_request_to_profile" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$OTHER_REF",
-  "invitation_type": "story",
-  "reply_message": "Hello from the synthetic PII test."
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -5126,17 +3393,9 @@ JSON
 
 _Code path — First name_
 
-1. `send_request_to_profile`
-2. `send_request`
-3. `send_request_notification`
-4. `send_request_push_notification!`
-5. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`send_request_to_profile` → `send_request` → `send_request_notification` → `send_request_push_notification!` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -5166,23 +3425,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `id`, `invitation_type`, `message`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/invites/accept_request" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "id": "$REQUEST_ID",
-  "invitation_type": "story",
-  "message": "Hello"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -5192,16 +3434,9 @@ JSON
 
 _Code path — First name_
 
-1. `accept_request`
-2. `accept_request`
-3. `send_connection_push`
-4. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`accept_request` → `accept_request` → `send_connection_push` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -5234,22 +3469,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `id`, `invitation_type`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/invites/pass_request" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "id": "$REQUEST_ID",
-  "invitation_type": "story"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -5258,21 +3477,9 @@ JSON
 
 _Code path — First name_
 
-1. `pass_request`
-2. `pass_request`
-3. `assign_negative_reaction`
-4. `increment_negative_interaction!`
-5. `assign_official_rating!`
-6. `sync_profile_to_kafka` — Publishes the updated profile to Kafka (only in some states).
-7. `create_profile_response` — Rebuilds or reads the cached profile response.
-8. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-9. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`pass_request` → `pass_request` → `assign_negative_reaction` → `increment_negative_interaction!` → `assign_official_rating!` → `sync_profile_to_kafka` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -5304,21 +3511,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/like" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$OTHER_REF"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -5327,17 +3519,9 @@ JSON
 
 _Code path — First name_
 
-1. `create`
-2. `like_user`
-3. `like_user_back!`
-4. `create_like_entry`
-5. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`create` → `like_user` → `like_user_back!` → `create_like_entry` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -5369,22 +3553,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`, `tab_name`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/pass_user" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$OTHER_REF",
-  "tab_name": "discover"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -5393,21 +3561,9 @@ JSON
 
 _Code path — First name_
 
-1. `pass_user`
-2. `pass_user`
-3. `assign_negative_reaction`
-4. `increment_negative_interaction!`
-5. `assign_official_rating!`
-6. `sync_profile_to_kafka` — Publishes the updated profile to Kafka (only in some states).
-7. `create_profile_response` — Rebuilds or reads the cached profile response.
-8. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-9. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`pass_user` → `pass_user` → `assign_negative_reaction` → `increment_negative_interaction!` → `assign_official_rating!` → `sync_profile_to_kafka` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -5439,22 +3595,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`, `tab_name`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/like_back" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$OTHER_REF",
-  "tab_name": "discover"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -5463,17 +3603,9 @@ JSON
 
 _Code path — First name_
 
-1. `like_back`
-2. `like_user`
-3. `like_user_back!`
-4. `create_like_entry`
-5. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`like_back` → `like_user` → `like_user_back!` → `create_like_entry` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -5503,22 +3635,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`, `tab_name`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/like_without_deduction" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$OTHER_REF",
-  "tab_name": "discover"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -5527,17 +3643,9 @@ JSON
 
 _Code path — First name_
 
-1. `like_without_deduction`
-2. `like_user`
-3. `like_user_back!`
-4. `create_like_entry`
-5. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`like_without_deduction` → `like_user` → `like_user_back!` → `create_like_entry` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -5567,22 +3675,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`, `tab_name`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/like_sent" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$OTHER_REF",
-  "tab_name": "discover"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -5591,18 +3683,9 @@ JSON
 
 _Code path — First name_
 
-1. `send_request_or_like`
-2. `send_request_or_like`
-3. `like_user`
-4. `like_user_back!`
-5. `create_like_entry`
-6. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`send_request_or_like` → `send_request_or_like` → `like_user` → `like_user_back!` → `create_like_entry` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -5632,22 +3715,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`, `tab_name`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/like_accept" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$OTHER_REF",
-  "tab_name": "discover"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -5656,17 +3723,9 @@ JSON
 
 _Code path — First name_
 
-1. `accept_request_or_like`
-2. `accept_request_or_like`
-3. `accept_request`
-4. `send_connection_push`
-5. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`accept_request_or_like` → `accept_request_or_like` → `accept_request` → `send_connection_push` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -5698,22 +3757,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`, `tab_name`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/like_passed" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$OTHER_REF",
-  "tab_name": "likes"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -5722,22 +3765,9 @@ JSON
 
 _Code path — First name_
 
-1. `pass_request_or_like`
-2. `pass_request_or_like`
-3. `pass_user`
-4. `assign_negative_reaction`
-5. `increment_negative_interaction!`
-6. `assign_official_rating!`
-7. `sync_profile_to_kafka` — Publishes the updated profile to Kafka (only in some states).
-8. `create_profile_response` — Rebuilds or reads the cached profile response.
-9. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-10. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`pass_request_or_like` → `pass_request_or_like` → `pass_user` → `assign_negative_reaction` → `increment_negative_interaction!` → `assign_official_rating!` → `sync_profile_to_kafka` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -5769,22 +3799,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`, `conversation_id`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/connect_linked_users" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$OTHER_REF",
-  "conversation_id": "$CONVERSATION_ID"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `conversation_id` (seen on staging 2026-10-25)
@@ -5793,17 +3807,9 @@ JSON
 
 _Code path — First name_
 
-1. `connect_linked_users`
-2. `convert_to_full_connection`
-3. `fill_conversation_cache!` — Rebuilds or reads the chat conversation cache.
-4. `create_cached_response` — Rebuilds or reads the chat conversation cache.
-5. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`connect_linked_users` → `convert_to_full_connection` → `fill_conversation_cache!` → `create_cached_response` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -5834,36 +3840,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/messages/generate_agora_token" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$OTHER_REF"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `generate_agora_token`
-2. `send_request`
-3. `fill_conversation_cache!` — Rebuilds or reads the chat conversation cache.
-4. `create_cached_response` — Rebuilds or reads the chat conversation cache.
-5. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`generate_agora_token` → `send_request` → `fill_conversation_cache!` → `create_cached_response` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -5890,21 +3873,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `conversation_id`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/messages/unlock_video_call" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "conversation_id": "$CONVERSATION_ID"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `can_call` (seen on staging 2026-10-25)
@@ -5915,15 +3883,9 @@ JSON
 
 _Code path — First name_
 
-1. `unlock_video_call`
-2. `can_video_call?`
-3. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`unlock_video_call` → `can_video_call?` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -5955,17 +3917,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `conversation_id`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/V1/messages/can_video_call" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --get \
-  --data-urlencode "conversation_id=$CONVERSATION_ID"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `can_call` (seen on staging 2026-10-25)
@@ -5976,15 +3927,9 @@ curl -i --request GET "https://testa2.aisle.co/V1/messages/can_video_call" \
 
 _Code path — First name_
 
-1. `can_video_call`
-2. `can_video_call?`
-3. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`can_video_call` → `can_video_call?` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -6016,24 +3961,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`, `report_option_id`, `message`, `tab_name`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/report" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$OTHER_REF",
-  "report_option_id": "$REPORT_OPTION_ID",
-  "message": "Synthetic moderation report",
-  "tab_name": "discover"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -6042,19 +3969,9 @@ JSON
 
 _Code path — First name_
 
-1. `create`
-2. `report_user`
-3. `add_entry`
-4. `accept_like_or_invite`
-5. `accept_request`
-6. `send_connection_push`
-7. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`create` → `report_user` → `add_entry` → `accept_like_or_invite` → `accept_request` → `send_connection_push` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -6084,27 +4001,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `event_id`, `feedback_list`, `ref`, `option`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/speed_dating/give_feedback" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "event_id": "$EVENT_ID",
-  "feedback_list": [
-    {
-      "ref": "$OTHER_REF",
-      "option": "like"
-    }
-  ]
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -6113,26 +4009,13 @@ JSON
 
 _Code path — First name_
 
-1. `give_feedback`
-2. `add_feedback`
-3. `connect_users!`
-4. `fill_conversation_cache!` — Rebuilds or reads the chat conversation cache.
-5. `create_cached_response` — Rebuilds or reads the chat conversation cache.
-6. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`give_feedback` → `add_feedback` → `connect_users!` → `fill_conversation_cache!` → `create_cached_response` → `select_first_name`
 
 _Code path — Phone_
 
-1. `give_feedback`
-2. `add_feedback`
-3. `connect_users!`
-4. `fetch_mobile_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`give_feedback` → `add_feedback` → `connect_users!` → `fetch_mobile_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -6169,35 +4052,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `always_online_enable`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/live_audio/go_live" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "always_online_enable": false
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `go_live`
-2. `go_live`
-3. `trigger_room_owner_online_update`
-4. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`go_live` → `go_live` → `trigger_room_owner_online_update` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -6223,35 +4084,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `room_id`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/live_audio/join_room" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "room_id": "$ROOM_ID"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `join_room`
-2. `join_room`
-3. `fetch_current_speaker_info`
-4. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`join_room` → `join_room` → `fetch_current_speaker_info` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -6277,35 +4116,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `room_id`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/live_audio/send_request_to_talk" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "room_id": "$ROOM_ID"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `send_request_to_talk`
-2. `send_request_to_talk`
-3. `fill_room_cache!` — Rebuilds the live-audio room cache.
-4. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`send_request_to_talk` → `send_request_to_talk` → `fill_room_cache!` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -6332,21 +4149,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `room_id`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/live_audio/switch_speaker" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "room_id": "$ROOM_ID"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -6355,16 +4157,9 @@ JSON
 
 _Code path — First name_
 
-1. `switch_speaker`
-2. `pass_speaker`
-3. `create_speaker_passed_message`
-4. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`switch_speaker` → `pass_speaker` → `create_speaker_passed_message` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -6394,35 +4189,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `room_id`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/live_audio/leave_room" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "room_id": "$ROOM_ID"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `leave_room`
-2. `leave_room`
-3. `create_speaker_left_room_message`
-4. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`leave_room` → `leave_room` → `create_speaker_left_room_message` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -6448,20 +4221,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `id`, `invitation_type`, `message`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/web/invites/accept_request_v1" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "id": "$REQUEST_ID",
-  "invitation_type": "story",
-  "message": "Hello"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -6470,16 +4229,9 @@ JSON
 
 _Code path — First name_
 
-1. `accept_request_v1`
-2. `accept_request`
-3. `send_connection_push`
-4. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`accept_request_v1` → `accept_request` → `send_connection_push` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -6511,19 +4263,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `id`, `invitation_type`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/web/invites/pass_request" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "id": "$REQUEST_ID",
-  "invitation_type": "story"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -6532,21 +4271,9 @@ JSON
 
 _Code path — First name_
 
-1. `pass_request`
-2. `pass_request`
-3. `assign_negative_reaction`
-4. `increment_negative_interaction!`
-5. `assign_official_rating!`
-6. `sync_profile_to_kafka` — Publishes the updated profile to Kafka (only in some states).
-7. `create_profile_response` — Rebuilds or reads the cached profile response.
-8. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-9. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`pass_request` → `pass_request` → `assign_negative_reaction` → `increment_negative_interaction!` → `assign_official_rating!` → `sync_profile_to_kafka` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -6578,18 +4305,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/web/like" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$OTHER_REF"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -6598,17 +4313,9 @@ JSON
 
 _Code path — First name_
 
-1. `create`
-2. `like_user`
-3. `like_user_back!`
-4. `create_like_entry`
-5. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`create` → `like_user` → `like_user_back!` → `create_like_entry` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -6640,19 +4347,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`, `tab_name`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/web/pass_user" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$OTHER_REF",
-  "tab_name": "discover"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -6661,21 +4355,9 @@ JSON
 
 _Code path — First name_
 
-1. `pass_user`
-2. `pass_user`
-3. `assign_negative_reaction`
-4. `increment_negative_interaction!`
-5. `assign_official_rating!`
-6. `sync_profile_to_kafka` — Publishes the updated profile to Kafka (only in some states).
-7. `create_profile_response` — Rebuilds or reads the cached profile response.
-8. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-9. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`pass_user` → `pass_user` → `assign_negative_reaction` → `increment_negative_interaction!` → `assign_official_rating!` → `sync_profile_to_kafka` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -6707,19 +4389,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`, `tab_name`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/web/like_back" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$OTHER_REF",
-  "tab_name": "discover"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -6728,17 +4397,9 @@ JSON
 
 _Code path — First name_
 
-1. `like_back`
-2. `like_user`
-3. `like_user_back!`
-4. `create_like_entry`
-5. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`like_back` → `like_user` → `like_user_back!` → `create_like_entry` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -6768,19 +4429,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`, `conversation_id`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/web/connect_linked_users" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$OTHER_REF",
-  "conversation_id": "$CONVERSATION_ID"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `conversation_id` (seen on staging 2026-10-25)
@@ -6789,17 +4437,9 @@ JSON
 
 _Code path — First name_
 
-1. `connect_linked_users`
-2. `convert_to_full_connection`
-3. `fill_conversation_cache!` — Rebuilds or reads the chat conversation cache.
-4. `create_cached_response` — Rebuilds or reads the chat conversation cache.
-5. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`connect_linked_users` → `convert_to_full_connection` → `fill_conversation_cache!` → `create_cached_response` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -6830,21 +4470,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`, `report_option_id`, `message`, `tab_name`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/web/report" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$OTHER_REF",
-  "report_option_id": "$REPORT_OPTION_ID",
-  "message": "Synthetic moderation report",
-  "tab_name": "discover"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -6853,19 +4478,9 @@ JSON
 
 _Code path — First name_
 
-1. `create`
-2. `report_user`
-3. `add_entry`
-4. `accept_like_or_invite`
-5. `accept_request`
-6. `send_connection_push`
-7. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`create` → `report_user` → `add_entry` → `accept_like_or_invite` → `accept_request` → `send_connection_push` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -6897,25 +4512,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`, `text`, `previous_message`, `message_time_token`, `action_time_token`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/messages/send" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$OTHER_REF",
-  "text": "Synthetic PII test message",
-  "previous_message": "",
-  "message_time_token": "$MESSAGE_TIME_TOKEN",
-  "action_time_token": "$ACTION_TIME_TOKEN"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -6924,22 +4520,13 @@ JSON
 
 _Code path — First name_
 
-1. `Chat::Conversation.send_message`
-2. `ChatMessageWorker` — Background job: runs after the request has returned.
-3. `Chat::Message callbacks and sender_name`
+`Chat::Conversation.send_message` → `ChatMessageWorker` → `Chat::Message callbacks and sender_name`
 
 _Free-text encryption — Free text_
 
-1. `Request with free text` — Free-text encryption (Dev free-text API list (2026-10-23)): encrypts text, previous_message — Chat message text and quoted previous message
-2. `PII service — free-text key` — Aisle creates or fetches an AES-256-GCM key; the text itself never goes to the PII service.
-3. `Aisle encrypts / decrypts the text` — The encrypted text and its key_id are kept in the app database.
+`Request with free text` → `PII service — free-text key` → `Aisle encrypts / decrypts the text`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Free text | `—` | Encrypted by Aisle with a key from the PII service; there is no read switch. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Free text `—` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -6980,32 +4567,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`, `text`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/web/messages/send" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$OTHER_REF",
-  "text": "Synthetic PII test message"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `Chat::Conversation.send_message`
-2. `ChatMessageWorker` — Background job: runs after the request has returned.
-3. `Chat::Message callbacks and sender_name`
+`Chat::Conversation.send_message` → `ChatMessageWorker` → `Chat::Message callbacks and sender_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -7024,7 +4592,7 @@ _Code path — First name_
 
 ### Profile updates
 
-Update part of your own profile and return or re-cache it. 39 endpoints.
+Update part of your own profile and return or re-cache it. 53 endpoints.
 
 | Method | Path | What it is |
 | --- | --- | --- |
@@ -7064,9 +4632,23 @@ Update part of your own profile and return or re-cache it. 39 endpoints.
 | POST | [`/web/users/deactivate_user`](#api-123) | Deactivate user |
 | POST | [`/web/users/activate_user`](#api-124) | Activate user |
 | POST | [`/web/user/location`](#api-134) | Update location coordinates |
-| POST | [`/V1/images/upload`](#code-030) | Create |
-| POST | [`/V1/images/detect_face_in_image`](#code-031) | Detect face in image |
-| POST | [`/V1/images/image_modifications`](#code-032) | Image modifications |
+| POST | [`/V1/images/upload`](https://aisleapidocs.netlify.app/#/aisle/code-030) | Upload photo files _(from code)_ |
+| POST | [`/V1/images/detect_face_in_image`](https://aisleapidocs.netlify.app/#/aisle/code-031) | Detect face in image _(from code)_ |
+| POST | [`/V1/images/image_modifications`](https://aisleapidocs.netlify.app/#/aisle/code-032) | Image modifications (broken) _(from code)_ |
+| POST | [`/V1/users/select_survey_option`](https://aisleapidocs.netlify.app/#/aisle/code-080) | Answer survey _(from code)_ |
+| POST | [`/V1/users/upload_audio_url`](https://aisleapidocs.netlify.app/#/aisle/code-081) | Upload audio file _(from code)_ |
+| POST | [`/V1/users/check_user_name`](https://aisleapidocs.netlify.app/#/aisle/code-082) | Check public username _(from code)_ |
+| POST | [`/V1/contact/import_contacts`](https://aisleapidocs.netlify.app/#/aisle/code-083) | Import phone contacts _(from code)_ |
+| POST | [`/V1/contact/delete_imported_contacts`](https://aisleapidocs.netlify.app/#/aisle/code-084) | Delete imported contacts _(from code)_ |
+| POST | [`/V1/contact/hide_contacts`](https://aisleapidocs.netlify.app/#/aisle/code-085) | Hide contacts _(from code)_ |
+| POST | [`/V1/contact/unhide_contacts`](https://aisleapidocs.netlify.app/#/aisle/code-086) | Unhide contacts _(from code)_ |
+| GET | [`/V1/images/fetch_images`](https://aisleapidocs.netlify.app/#/aisle/code-087) | Photos for re-upload _(from code)_ |
+| GET | [`/V1/images/fetch_presigned_url`](https://aisleapidocs.netlify.app/#/aisle/code-088) | Get photo upload URLs _(from code)_ |
+| POST | [`/V1/images`](https://aisleapidocs.netlify.app/#/aisle/code-089) | Upload photo files _(from code)_ |
+| POST | [`/V1/live_audio/update_room_settings`](https://aisleapidocs.netlify.app/#/aisle/code-090) | Update live audio settings _(from code)_ |
+| POST | [`/web/images`](https://aisleapidocs.netlify.app/#/aisle/code-091) | Web: upload images _(from code)_ |
+| POST | [`/web/review/mark_read`](https://aisleapidocs.netlify.app/#/aisle/code-092) | Web: mark review warning read _(from code)_ |
+| POST | [`/web/introduction`](https://aisleapidocs.netlify.app/#/aisle/code-093) | Web: create introduction _(from code)_ |
 
 <a id="api-022"></a>
 
@@ -7084,21 +4666,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `about`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/users/about" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "about": "Synthetic profile story for PII regression testing."
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `user` (seen on staging 2026-10-25)
@@ -7108,32 +4675,17 @@ JSON
 
 _Code path — First name_
 
-1. `about`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`about` → `own_detailed_v1` → `general_information` → `select_first_name`
 
 _Code path — Email_
 
-1. `about`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`about` → `own_detailed_v1` → `own_general_information` → `fetch_email`
 
 _Code path — Phone_
 
-1. `about`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`about` → `own_detailed_v1` → `own_general_information` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -7170,23 +4722,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `restaurant_id`, `restaurant_meal_type_id`, `day`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/users/add_meetup" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "restaurant_id": "$RESTAURANT_ID",
-  "restaurant_meal_type_id": "$MEAL_TYPE_ID",
-  "day": "Saturday"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -7195,18 +4730,9 @@ JSON
 
 _Code path — First name_
 
-1. `add_meetup`
-2. `add`
-3. `fill_cache!` — Rebuilds or reads the cached profile response.
-4. `create_profile_response` — Rebuilds or reads the cached profile response.
-5. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-6. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`add_meetup` → `add` → `fill_cache!` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -7237,26 +4763,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `user_interests`, `interest_id`, `value`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/users/update_interests" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "user_interests": [
-    {
-      "interest_id": "$INTEREST_ID",
-      "value": 1
-    }
-  ]
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `user` (seen on staging 2026-10-25)
@@ -7266,32 +4772,17 @@ JSON
 
 _Code path — First name_
 
-1. `update_interests`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`update_interests` → `own_detailed_v1` → `general_information` → `select_first_name`
 
 _Code path — Email_
 
-1. `update_interests`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`update_interests` → `own_detailed_v1` → `own_general_information` → `fetch_email`
 
 _Code path — Phone_
 
-1. `update_interests`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`update_interests` → `own_detailed_v1` → `own_general_information` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -7326,25 +4817,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `user_interests_v2`, `interest_id`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/users/update_interests_v2" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "user_interests_v2": [
-    {
-      "interest_id": "$INTEREST_V2_ID"
-    }
-  ]
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `user` (seen on staging 2026-10-25)
@@ -7354,32 +4826,17 @@ JSON
 
 _Code path — First name_
 
-1. `update_interests_v2`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`update_interests_v2` → `own_detailed_v1` → `general_information` → `select_first_name`
 
 _Code path — Email_
 
-1. `update_interests_v2`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`update_interests_v2` → `own_detailed_v1` → `own_general_information` → `fetch_email`
 
 _Code path — Phone_
 
-1. `update_interests_v2`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`update_interests_v2` → `own_detailed_v1` → `own_general_information` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -7414,25 +4871,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `user_traits`, `trait_id`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/users/update_traits" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "user_traits": [
-    {
-      "trait_id": "$TRAIT_ID"
-    }
-  ]
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `user` (seen on staging 2026-10-25)
@@ -7442,32 +4880,17 @@ JSON
 
 _Code path — First name_
 
-1. `update_traits`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`update_traits` → `own_detailed_v1` → `general_information` → `select_first_name`
 
 _Code path — Email_
 
-1. `update_traits`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`update_traits` → `own_detailed_v1` → `own_general_information` → `fetch_email`
 
 _Code path — Phone_
 
-1. `update_traits`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`update_traits` → `own_detailed_v1` → `own_general_information` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -7502,19 +4925,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: none
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/users/mail_subscription" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `user` (seen on staging 2026-10-25)
@@ -7524,32 +4934,17 @@ JSON
 
 _Code path — First name_
 
-1. `mail_subscription`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`mail_subscription` → `own_detailed_v1` → `general_information` → `select_first_name`
 
 _Code path — Email_
 
-1. `mail_subscription`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`mail_subscription` → `own_detailed_v1` → `own_general_information` → `fetch_email`
 
 _Code path — Phone_
 
-1. `mail_subscription`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`mail_subscription` → `own_detailed_v1` → `own_general_information` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -7584,19 +4979,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: none
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/users/sms_subscription" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `user` (seen on staging 2026-10-25)
@@ -7605,32 +4987,17 @@ JSON
 
 _Code path — First name_
 
-1. `sms_subscription`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`sms_subscription` → `own_detailed_v1` → `general_information` → `select_first_name`
 
 _Code path — Email_
 
-1. `sms_subscription`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`sms_subscription` → `own_detailed_v1` → `own_general_information` → `fetch_email`
 
 _Code path — Phone_
 
-1. `sms_subscription`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`sms_subscription` → `own_detailed_v1` → `own_general_information` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -7666,19 +5033,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: none
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/users/deactivate_user" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -7688,19 +5042,9 @@ JSON
 
 _Code path — First name_
 
-1. `deactivate_user`
-2. `deactivate_profile`
-3. `deactivated!`
-4. `sync_profile_to_kafka` — Publishes the updated profile to Kafka (only in some states).
-5. `create_profile_response` — Rebuilds or reads the cached profile response.
-6. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-7. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`deactivate_user` → `deactivate_profile` → `deactivated!` → `sync_profile_to_kafka` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -7735,19 +5079,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: none
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/users/activate_user" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -7758,19 +5089,9 @@ JSON
 
 _Code path — First name_
 
-1. `activate_user`
-2. `activate_profile`
-3. `pending!`
-4. `sync_profile_to_kafka` — Publishes the updated profile to Kafka (only in some states).
-5. `create_profile_response` — Rebuilds or reads the cached profile response.
-6. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-7. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`activate_user` → `activate_profile` → `pending!` → `sync_profile_to_kafka` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -7806,21 +5127,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `selfie_url`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/users/verify_selfie_v1" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "selfie_url": "$SELFIE_URL"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `is_backend_error` (from code — confirm with Dev)
@@ -7829,18 +5135,9 @@ JSON
 
 _Code path — First name_
 
-1. `verify_selfie_v1`
-2. `verify_user_selfie_based_on_app_version`
-3. `fill_cache!` — Rebuilds or reads the cached profile response.
-4. `create_profile_response` — Rebuilds or reads the cached profile response.
-5. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-6. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`verify_selfie_v1` → `verify_user_selfie_based_on_app_version` → `fill_cache!` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -7877,19 +5174,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: none
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/users/toggle_profile_sharing" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -7898,18 +5182,9 @@ JSON
 
 _Code path — First name_
 
-1. `toggle_profile_sharing`
-2. `toggle_profile_sharing!`
-3. `fill_cache!` — Rebuilds or reads the cached profile response.
-4. `create_profile_response` — Rebuilds or reads the cached profile response.
-5. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-6. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`toggle_profile_sharing` → `toggle_profile_sharing!` → `fill_cache!` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -7942,19 +5217,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: none
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/users/toggle_profile_incognito" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -7964,18 +5226,9 @@ JSON
 
 _Code path — First name_
 
-1. `toggle_profile_incognito`
-2. `toggle_profile_incognito!`
-3. `sync_profile_to_kafka` — Publishes the updated profile to Kafka (only in some states).
-4. `create_profile_response` — Rebuilds or reads the cached profile response.
-5. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-6. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`toggle_profile_incognito` → `toggle_profile_incognito!` → `sync_profile_to_kafka` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -8010,19 +5263,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: none
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/users/toogle_concierge_badge_display" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -8031,18 +5271,9 @@ JSON
 
 _Code path — First name_
 
-1. `toogle_concierge_badge_display`
-2. `toogle_concierge_badge_display!`
-3. `fill_cache!` — Rebuilds or reads the cached profile response.
-4. `create_profile_response` — Rebuilds or reads the cached profile response.
-5. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-6. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`toogle_concierge_badge_display` → `toogle_concierge_badge_display!` → `fill_cache!` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -8073,21 +5304,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `settle_id`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/users/update_settle_info" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "settle_id": "$SETTLE_ID"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -8097,32 +5313,17 @@ JSON
 
 _Code path — First name_
 
-1. `update_settle_info`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`update_settle_info` → `own_detailed_v1` → `general_information` → `select_first_name`
 
 _Code path — Email_
 
-1. `update_settle_info`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`update_settle_info` → `own_detailed_v1` → `own_general_information` → `fetch_email`
 
 _Code path — Phone_
 
-1. `update_settle_info`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`update_settle_info` → `own_detailed_v1` → `own_general_information` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -8157,24 +5358,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `relationship_goal`, `id`, `optional_relationship_goal_message`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/users/update_relationship_goal_info" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "relationship_goal": {
-    "id": "$RELATIONSHIP_GOAL_ID",
-    "optional_relationship_goal_message": ""
-  }
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -8184,32 +5367,17 @@ JSON
 
 _Code path — First name_
 
-1. `update_relationship_goal_info`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`update_relationship_goal_info` → `own_detailed_v1` → `general_information` → `select_first_name`
 
 _Code path — Email_
 
-1. `update_relationship_goal_info`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`update_relationship_goal_info` → `own_detailed_v1` → `own_general_information` → `fetch_email`
 
 _Code path — Phone_
 
-1. `update_relationship_goal_info`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`update_relationship_goal_info` → `own_detailed_v1` → `own_general_information` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -8244,26 +5412,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `preferences`, `id`, `value`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/users/update_philosophy_info" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "preferences": [
-    {
-      "id": "$PREFERENCE_ID",
-      "value": 0
-    }
-  ]
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -8273,32 +5421,17 @@ JSON
 
 _Code path — First name_
 
-1. `update_philosophy_info`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`update_philosophy_info` → `own_detailed_v1` → `general_information` → `select_first_name`
 
 _Code path — Email_
 
-1. `update_philosophy_info`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`update_philosophy_info` → `own_detailed_v1` → `own_general_information` → `fetch_email`
 
 _Code path — Phone_
 
-1. `update_philosophy_info`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`update_philosophy_info` → `own_detailed_v1` → `own_general_information` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -8333,21 +5466,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `mbti_id`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/users/update_mbti_info" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "mbti_id": "$MBTI_ID"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -8356,15 +5474,9 @@ JSON
 
 _Code path — First name_
 
-1. `update_mbti_info_data`
-2. `update_profile_cache_by_mbti`
-3. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
+`update_mbti_info_data` → `update_profile_cache_by_mbti` → `general_information`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -8394,22 +5506,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `question_id`, `audio_url`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/users/update_audio_prompt" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "question_id": "$AUDIO_QUESTION_ID",
-  "audio_url": "$AUDIO_URL"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `user` (seen on staging 2026-10-25)
@@ -8422,32 +5518,17 @@ JSON
 
 _Code path — First name_
 
-1. `update_audio_prompt`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`update_audio_prompt` → `own_detailed_v1` → `general_information` → `select_first_name`
 
 _Code path — Email_
 
-1. `update_audio_prompt`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`update_audio_prompt` → `own_detailed_v1` → `own_general_information` → `fetch_email`
 
 _Code path — Phone_
 
-1. `update_audio_prompt`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`update_audio_prompt` → `own_detailed_v1` → `own_general_information` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -8461,13 +5542,11 @@ _Code path — Phone_
 | App database | `sms_notification_phone_numbers.number (via users.phone_number_id)` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
-**What changed**
+**What changed** (latest 3 of 5; all on the website)
 
 - 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `profile_complete_without_selfie` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `percentage_profile_complete` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `intro_questions` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `user` · seen on staging 2026-10-25
 
 <a id="api-041"></a>
 
@@ -8487,25 +5566,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `user_traits`, `trait_id`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/users/save_auto_pop_up_info" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "user_traits": [
-    {
-      "trait_id": "$TRAIT_ID"
-    }
-  ]
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `percentage_profile_complete` (seen on staging 2026-10-25)
@@ -8520,17 +5580,9 @@ JSON
 
 _Code path — First name_
 
-1. `save_auto_pop_up_info`
-2. `sync_profile_to_kafka` — Publishes the updated profile to Kafka (only in some states).
-3. `create_profile_response` — Rebuilds or reads the cached profile response.
-4. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-5. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`save_auto_pop_up_info` → `sync_profile_to_kafka` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -8546,15 +5598,11 @@ _Code path — First name_
 
 - **From the developers:** This example exercises the traits branch; interests, work and philosophy are alternative popup branches.
 
-**What changed**
+**What changed** (latest 3 of 7; all on the website)
 
 - 2026-10-25 — Response field added: `has_interests` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `has_philosophy` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `has_traits` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `has_settle` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `profile_complete_without_selfie` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `percentage_profile_complete` · seen on staging 2026-10-25
 
 <a id="api-042"></a>
 
@@ -8574,21 +5622,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `user_name`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/users/user_name" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "user_name": "$PUBLIC_USER_NAME"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -8598,18 +5631,9 @@ JSON
 
 _Code path — First name_
 
-1. `set_public_user_name`
-2. `set_user_name`
-3. `sync_profile_to_kafka` — Publishes the updated profile to Kafka (only in some states).
-4. `create_profile_response` — Rebuilds or reads the cached profile response.
-5. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-6. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`set_public_user_name` → `set_user_name` → `sync_profile_to_kafka` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -8644,19 +5668,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: none
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/users/public_profile" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -8667,17 +5678,9 @@ JSON
 
 _Code path — First name_
 
-1. `set_profile_public`
-2. `sync_profile_to_kafka` — Publishes the updated profile to Kafka (only in some states).
-3. `create_profile_response` — Rebuilds or reads the cached profile response.
-4. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-5. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`set_profile_public` → `sync_profile_to_kafka` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -8713,22 +5716,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `age_from`, `age_to`, `allow_extended_age_range` (optional · from code — confirm with Dev), `allow_extended_distance_range` (optional · from code — confirm with Dev), `diet_ids` (optional · from code — confirm with Dev), `distance_limit` (optional · from code — confirm with Dev), `drinking` (optional · from code — confirm with Dev), `drinking_v1` (optional · from code — confirm with Dev), `drinking_v2` (optional · from code — confirm with Dev), `faith_ids` (optional · from code — confirm with Dev), `marital_statuses` (optional · from code — confirm with Dev), `marital_statuses_v1` (optional · from code — confirm with Dev), `max_height` (optional · from code — confirm with Dev), `mbti_list` (optional · from code — confirm with Dev), `min_height` (optional · from code — confirm with Dev), `mother_tongue_ids` (optional · from code — confirm with Dev), `smoking` (optional · from code — confirm with Dev), `smoking_v1` (optional · from code — confirm with Dev), `smoking_v2` (optional · from code — confirm with Dev), `work_experience` (optional · from code — confirm with Dev), `work_experience_v1` (optional · from code — confirm with Dev), `work_industry` (optional · from code — confirm with Dev), `work_industry_v1` (optional · from code — confirm with Dev), `work_qualification` (optional · from code — confirm with Dev), `work_qualification_v1` (optional · from code — confirm with Dev)
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/setting/update_preferences" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "age_from": 25,
-  "age_to": 35
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -8738,18 +5725,9 @@ JSON
 
 _Code path — First name_
 
-1. `update_preferences`
-2. `update_interested_faiths`
-3. `sync_profile_to_kafka` — Publishes the updated profile to Kafka (only in some states).
-4. `create_profile_response` — Rebuilds or reads the cached profile response.
-5. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-6. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`update_preferences` → `update_interested_faiths` → `sync_profile_to_kafka` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -8761,33 +5739,11 @@ _Code path — First name_
 | Kafka | `Profile sync event` | publish |
 | Audit log | `audit_trails (MongoDB)` | write |
 
-**What changed**
+**What changed** (latest 3 of 25; all on the website)
 
 - 2026-10-29 — Request field added: `work_qualification_v1` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:59 @004e72c`
 - 2026-10-29 — Request field added: `work_qualification` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:56 @004e72c`
 - 2026-10-29 — Request field added: `work_industry_v1` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:53 @004e72c`
-- 2026-10-29 — Request field added: `work_industry` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:50 @004e72c`
-- 2026-10-29 — Request field added: `work_experience_v1` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:65 @004e72c`
-- 2026-10-29 — Request field added: `work_experience` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:62 @004e72c`
-- 2026-10-29 — Request field added: `smoking_v2` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:38 @004e72c`
-- 2026-10-29 — Request field added: `smoking_v1` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:35 @004e72c`
-- 2026-10-29 — Request field added: `smoking` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:32 @004e72c`
-- 2026-10-29 — Request field added: `mother_tongue_ids` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:20 @004e72c`
-- 2026-10-29 — Request field added: `min_height` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:29 @004e72c`
-- 2026-10-29 — Request field added: `mbti_list` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:68 @004e72c`
-- 2026-10-29 — Request field added: `max_height` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:29 @004e72c`
-- 2026-10-29 — Request field added: `marital_statuses_v1` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:26 @004e72c`
-- 2026-10-29 — Request field added: `marital_statuses` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:23 @004e72c`
-- 2026-10-29 — Request field added: `faith_ids` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:14 @004e72c`
-- 2026-10-29 — Request field added: `drinking_v2` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:47 @004e72c`
-- 2026-10-29 — Request field added: `drinking_v1` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:44 @004e72c`
-- 2026-10-29 — Request field added: `drinking` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:41 @004e72c`
-- 2026-10-29 — Request field added: `distance_limit` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:17 @004e72c`
-- 2026-10-29 — Request field added: `diet_ids` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:85 @004e72c`
-- 2026-10-29 — Request field added: `allow_extended_distance_range` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:76 @004e72c`
-- 2026-10-29 — Request field added: `allow_extended_age_range` · from code — confirm with Dev · `app/controllers/v1/setting_controller.rb:72 @004e72c`
-- 2026-10-25 — Response field added: `settings` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
 
 <a id="api-045"></a>
 
@@ -8805,34 +5761,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `only_reset` (optional · from code — confirm with Dev)
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/setting/reset_preferences" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `reset_preferences`
-2. `select_algorithm_for_discover_tab`
-3. `fetch_discover_tab_tester_response`
-4. `fetch_own_info`
-5. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`reset_preferences` → `select_algorithm_for_discover_tab` → `fetch_discover_tab_tester_response` → `fetch_own_info` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -8864,23 +5799,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `latitude`, `longitude`, `is_location_spoofed`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/user/location" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "latitude": 12.9716,
-  "longitude": 77.5946,
-  "is_location_spoofed": false
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -8890,19 +5808,9 @@ JSON
 
 _Code path — First name_
 
-1. `update_location_coordinates`
-2. `update_location`
-3. `update_residence_info`
-4. `fill_cache!` — Rebuilds or reads the cached profile response.
-5. `create_profile_response` — Rebuilds or reads the cached profile response.
-6. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-7. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`update_location_coordinates` → `update_location` → `update_residence_info` → `fill_cache!` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -8936,19 +5844,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: none
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/user/app_launch" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -8958,28 +5853,13 @@ JSON
 
 _Code path — First name_
 
-1. `app_launch`
-2. `record_app_launch_info`
-3. `sync_profile_to_kafka` — Publishes the updated profile to Kafka (only in some states).
-4. `create_profile_response` — Rebuilds or reads the cached profile response.
-5. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-6. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`app_launch` → `record_app_launch_info` → `sync_profile_to_kafka` → `create_profile_response` → `general_information` → `select_first_name`
 
 _Code path — Email_
 
-1. `app_launch`
-2. `record_app_launch_info`
-3. `update_last_seen_window`
-4. `send_for_aws_moderation` — Content moderation and scammer check (only in some states).
-5. `check_for_scammer_before_moderation!` — Content moderation and scammer check (only in some states).
-6. `fetch_email_domain` — Reads the email domain for the scammer check during moderation.
+`app_launch` → `record_app_launch_info` → `update_last_seen_window` → `send_for_aws_moderation` → `check_for_scammer_before_moderation!` → `fetch_email_domain`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -9020,56 +5900,17 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `images`, `photo`, `photo_id`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/images/upload_images_v2" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "images": [
-    {
-      "photo": "$PHOTO_URL_1",
-      "photo_id": "$PHOTO_ID_1"
-    },
-    {
-      "photo": "$PHOTO_URL_2",
-      "photo_id": "$PHOTO_ID_2"
-    }
-  ]
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `upload_images_v2`
-2. `aws_moderation_for_images_by_inappropriate_profile`
-3. `pending!`
-4. `sync_profile_to_kafka` — Publishes the updated profile to Kafka (only in some states).
-5. `create_profile_response` — Rebuilds or reads the cached profile response.
-6. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-7. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`upload_images_v2` → `aws_moderation_for_images_by_inappropriate_profile` → `pending!` → `sync_profile_to_kafka` → `create_profile_response` → `general_information` → `select_first_name`
 
 _Code path — Email_
 
-1. `upload_images_v2`
-2. `aws_moderation_for_images_by_inappropriate_profile`
-3. `send_for_aws_moderation` — Content moderation and scammer check (only in some states).
-4. `check_for_scammer_before_moderation!` — Content moderation and scammer check (only in some states).
-5. `fetch_email_domain` — Reads the email domain for the scammer check during moderation.
+`upload_images_v2` → `aws_moderation_for_images_by_inappropriate_profile` → `send_for_aws_moderation` → `check_for_scammer_before_moderation!` → `fetch_email_domain`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -9103,31 +5944,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `photos`, `photo`, `photo_id`, `status`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/images/edit_images" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "photos": [
-    {
-      "photo": "$PHOTO_URL_1",
-      "photo_id": "$PHOTO_ID_1",
-      "status": "avatar"
-    },
-    {
-      "photo": "$PHOTO_URL_2",
-      "photo_id": "$PHOTO_ID_2"
-    }
-  ]
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `user` (seen on staging 2026-10-25)
@@ -9137,32 +5953,17 @@ JSON
 
 _Code path — First name_
 
-1. `edit_images`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`edit_images` → `own_detailed_v1` → `general_information` → `select_first_name`
 
 _Code path — Email_
 
-1. `edit_images`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`edit_images` → `own_detailed_v1` → `own_general_information` → `fetch_email`
 
 _Code path — Phone_
 
-1. `edit_images`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`edit_images` → `own_detailed_v1` → `own_general_information` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -9199,19 +6000,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: none
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/subscription/boost_profile" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -9220,19 +6008,9 @@ JSON
 
 _Code path — First name_
 
-1. `boost_profile`
-2. `activate_boost`
-3. `boost_rating!`
-4. `sync_profile_to_kafka` — Publishes the updated profile to Kafka (only in some states).
-5. `create_profile_response` — Rebuilds or reads the cached profile response.
-6. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-7. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`boost_profile` → `activate_boost` → `boost_rating!` → `sync_profile_to_kafka` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -9264,26 +6042,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `icebreakers`, `question_id`, `answer`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/introduction/edit_icebreaker" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "icebreakers": [
-    {
-      "question_id": "$QUESTION_ID",
-      "answer": "Synthetic answer"
-    }
-  ]
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -9295,18 +6053,9 @@ JSON
 
 _Code path — First name_
 
-1. `edit_icebreaker`
-2. `percentage_profile_complete`
-3. `profile_details` — Rebuilds or reads the cached profile response.
-4. `create_cache_response` — Rebuilds or reads the cached profile response.
-5. `hydrate_first_name!` — Fills the first name into a cached profile response.
-6. `get_first_name_for_user` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`edit_icebreaker` → `percentage_profile_complete` → `profile_details` → `create_cache_response` → `hydrate_first_name!` → `get_first_name_for_user`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -9317,12 +6066,11 @@ _Code path — First name_
 | Cache | `Profile cache` | read / rebuild |
 | Audit log | `audit_trails (MongoDB)` | write |
 
-**What changed**
+**What changed** (latest 3 of 4; all on the website)
 
 - 2026-10-25 — Response field added: `icebreakers` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `profile_complete_without_selfie` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `percentage_profile_complete` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
 
 <a id="api-100"></a>
 
@@ -9340,22 +6088,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `question_id`, `answer`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/introduction/edit_icebreaker_v1" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "question_id": "$QUESTION_ID",
-  "answer": "Synthetic answer"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -9370,32 +6102,17 @@ JSON
 
 _Code path — First name_
 
-1. `edit_icebreaker_v1`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`edit_icebreaker_v1` → `own_detailed_v1` → `general_information` → `select_first_name`
 
 _Code path — Email_
 
-1. `edit_icebreaker_v1`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`edit_icebreaker_v1` → `own_detailed_v1` → `own_general_information` → `fetch_email`
 
 _Code path — Phone_
 
-1. `edit_icebreaker_v1`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`edit_icebreaker_v1` → `own_detailed_v1` → `own_general_information` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -9409,15 +6126,11 @@ _Code path — Phone_
 | App database | `sms_notification_phone_numbers.number (via users.phone_number_id)` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
-**What changed**
+**What changed** (latest 3 of 7; all on the website)
 
 - 2026-10-25 — Response field added: `ref` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `user` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `intro_questions` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `icebreakers` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `profile_complete_without_selfie` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `percentage_profile_complete` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
 
 <a id="api-105"></a>
 
@@ -9437,21 +6150,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `option_id`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/advertisement/vote" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "option_id": "$POLL_OPTION_ID"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -9460,18 +6158,9 @@ JSON
 
 _Code path — First name_
 
-1. `vote`
-2. `vote!`
-3. `fill_cache!` — Rebuilds or reads the cached profile response.
-4. `create_profile_response` — Rebuilds or reads the cached profile response.
-5. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-6. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`vote` → `vote!` → `fill_cache!` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -9502,18 +6191,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `about`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/web/users/about" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "about": "Synthetic profile story for PII regression testing."
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `user` (seen on staging 2026-10-25)
@@ -9523,39 +6200,21 @@ JSON
 
 _Code path — First name_
 
-1. `about`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`about` → `own_detailed_v1` → `general_information` → `select_first_name`
 
 _Code path — Email_
 
-1. `about`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`about` → `own_detailed_v1` → `own_general_information` → `fetch_email`
 
 _Code path — Phone_
 
-1. `about`
-2. `own_detailed_v1` — The owner’s full profile response.
-3. `own_general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-4. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`about` → `own_detailed_v1` → `own_general_information` → `fetch_only_number`
 
 _Free-text encryption — Free text_
 
-1. `Request with free text` — Free-text encryption (Dev free-text API list (2026-10-23)): encrypts about — Profile bio ("about")
-2. `PII service — free-text key` — Aisle creates or fetches an AES-256-GCM key; the text itself never goes to the PII service.
-3. `Aisle encrypts / decrypts the text` — The encrypted text and its key_id are kept in the app database.
+`Request with free text` → `PII service — free-text key` → `Aisle encrypts / decrypts the text`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
-| Free text | `—` | Encrypted by Aisle with a key from the PII service; there is no read switch. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` · Free text `—` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -9598,19 +6257,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `age_from`, `age_to`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/web/users/update_settings" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "age_from": 25,
-  "age_to": 35
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -9619,18 +6265,9 @@ JSON
 
 _Code path — First name_
 
-1. `update_settings`
-2. `update_age`
-3. `sync_profile_to_kafka` — Publishes the updated profile to Kafka (only in some states).
-4. `create_profile_response` — Rebuilds or reads the cached profile response.
-5. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-6. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`update_settings` → `update_age` → `sync_profile_to_kafka` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -9664,16 +6301,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: none
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/web/users/deactivate_user" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -9682,19 +6309,9 @@ JSON
 
 _Code path — First name_
 
-1. `deactivate_user`
-2. `deactivate_profile`
-3. `deactivated!`
-4. `sync_profile_to_kafka` — Publishes the updated profile to Kafka (only in some states).
-5. `create_profile_response` — Rebuilds or reads the cached profile response.
-6. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-7. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`deactivate_user` → `deactivate_profile` → `deactivated!` → `sync_profile_to_kafka` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -9728,16 +6345,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: none
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/web/users/activate_user" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -9746,19 +6353,9 @@ JSON
 
 _Code path — First name_
 
-1. `activate_user`
-2. `activate_profile`
-3. `pending!`
-4. `sync_profile_to_kafka` — Publishes the updated profile to Kafka (only in some states).
-5. `create_profile_response` — Rebuilds or reads the cached profile response.
-6. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-7. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`activate_user` → `activate_profile` → `pending!` → `sync_profile_to_kafka` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -9792,20 +6389,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `latitude`, `longitude`, `is_location_spoofed`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/web/user/location" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "latitude": 12.9716,
-  "longitude": 77.5946,
-  "is_location_spoofed": false
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -9815,19 +6398,9 @@ JSON
 
 _Code path — First name_
 
-1. `update_location_coordinates`
-2. `update_location`
-3. `update_residence_info`
-4. `fill_cache!` — Rebuilds or reads the cached profile response.
-5. `create_profile_response` — Rebuilds or reads the cached profile response.
-6. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-7. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`update_location_coordinates` → `update_location` → `update_residence_info` → `fill_cache!` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -9843,110 +6416,11 @@ _Code path — First name_
 - 2026-10-25 — Response field added: `refresh_profile_list` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
 
-<a id="code-030"></a>
-
-#### `POST /V1/images/upload` — Create
-
-**Create.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/images_controller.rb; config/routes.rb#L331`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:331` @004e72c → `v1/images#create` (`app/controllers/v1/images_controller.rb:7 @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** line 8 passes all params to Amazon::Url.upload_image — the fields read there are not determined; line 9 renders response — its full key set is built at run time
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:331 @004e72c`
-
-<a id="code-031"></a>
-
-#### `POST /V1/images/detect_face_in_image` — Detect face in image
-
-**Detect face in image.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/images_controller.rb; config/routes.rb#L333`
-
-**Request**
-
-Request fields: `image_url` (optional · from code — confirm with Dev)
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:333` @004e72c → `v1/images#detect_face_in_image` (`app/controllers/v1/images_controller.rb:43 @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** line 45 renders response — its full key set is built at run time
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:333 @004e72c`
-
-<a id="code-032"></a>
-
-#### `POST /V1/images/image_modifications` — Image modifications
-
-**Image modifications.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/images_controller.rb; config/routes.rb#L334`
-
-**Request**
-
-Request fields: `original_url` (optional · from code — confirm with Dev)
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:334` @004e72c → `v1/images#image_modifications` (`app/controllers/v1/images_controller.rb:48 @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** line 51 passes all params to image_optimizer_obj.image_modifications_api — the fields read there are not determined; line 52 renders response — its full key set is built at run time
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:334 @004e72c`
-
 <a id="area-g7"></a>
 
 ### Payments — checkout
 
-Start a payment: the provider’s customer details (name, email, phone) are built from personal data. 38 endpoints.
+Start a payment: the provider’s customer details (name, email, phone) are built from personal data. 29 endpoints.
 
 | Method | Path | What it is |
 | --- | --- | --- |
@@ -9962,32 +6436,23 @@ Start a payment: the provider’s customer details (name, email, phone) are buil
 | POST | [`/V1/payment/get_cashfree_request_params_web`](#api-189) | Get cashfree request params web |
 | POST | [`/V1/payment/generate_qr_code`](#api-193) | Cashfree get upi qr code |
 | POST | [`/V1/payment/send_web_purchase_link`](#api-194) | Payment send web purchase link |
-| POST | [`/V1/payment/cashfree/subscription/create`](#code-002) | Create cashfree subscription |
-| GET | [`/V1/payment/cashfree/subscription/status`](#code-003) | Cashfree subscription status |
-| POST | [`/V1/payment/cashfree/subscription/cancel`](#code-004) | Cancel cashfree subscription |
-| POST | [`/V1/payment/ms/activateAnySubscriptionWithExpiry`](#code-007) | Activate any subscription with expiry ms |
-| POST | [`/V1/payment/ms/addExtraInvites`](#code-008) | Add extra invites ms |
-| POST | [`/V1/payment/ms/addBoostToProfile`](#code-009) | Add boost to profile ms |
-| POST | [`/V1/payment/ms/activePremiumSubscription`](#code-010) | Active premium subscription ms |
-| POST | [`/V1/payment/ms/activateAnySubscription`](#code-011) | Activate any subscription ms |
-| POST | [`/V1/payment/ms/enableExclusivity`](#code-012) | Enable exclusivity ms |
-| POST | [`/V1/payment/ms/fetchUserIdFromIosIdentifier`](#code-013) | Fetch user id from ios identifier ms |
-| POST | [`/V1/payment/ms/deactivateActiveSubscription`](#code-014) | Deactivate active subscription ms |
-| POST | [`/V1/payment/ms/editUserSubscription`](#code-015) | Edit user subscription ms |
-| POST | [`/V1/payment/ms/addConsumableDataGoogle`](#code-016) | Add consumable data google ms |
-| POST | [`/V1/payment/ms/getAccountSubscription`](#code-017) | Get account subscription ms |
-| POST | [`/V1/payment/ms/removeAccountSubscription`](#code-018) | Remove account subscription ms |
-| POST | [`/V1/payment/ms/getActiveConciergeSubscription`](#code-019) | Get active concierge subscription ms |
-| POST | [`/V1/payment/ms/getActiveAislePlusSubscription`](#code-020) | Get active aisle plus subscription ms |
-| POST | [`/V1/payment/ms/getActivePremiumSubscriptionByGooglePlay`](#code-021) | Get active premium subscription by google play ms |
-| POST | [`/V1/payment/ms/extendSubscription`](#code-022) | Extend subscription ms |
-| POST | [`/V1/payment/ms/reduceSubscription`](#code-023) | Reduce subscription ms |
-| POST | [`/V1/payment/ms/addConsummableDataGoogle`](#code-024) | Add consumable data google ms |
-| POST | [`/V1/payment/ms/validateIosConsumable`](#code-025) | Validate ios consummable response ms |
-| POST | [`/V1/payment/ms/getActiveSubscriptionByPlan`](#code-026) | Get active subscription by plan ms |
-| POST | [`/V1/payment/ms/editUserSubscriptionPostAppleSubscriptions`](#code-027) | Edit user subscription post apple subscriptions ms |
-| POST | [`/V1/payment/ms/saveToS3`](#code-028) | Save to s3 ms |
-| POST | [`/V1/payment/ms/profileExists`](#code-029) | Profile exists ms |
+| POST | [`/V1/payment/cashfree/subscription/create`](https://aisleapidocs.netlify.app/#/aisle/code-002) | Create Cashfree subscription _(from code)_ |
+| GET | [`/V1/payment/get_order_id`](https://aisleapidocs.netlify.app/#/aisle/code-094) | Create Razorpay order _(from code)_ |
+| GET | [`/V1/payment/paytm_payment_initialization`](https://aisleapidocs.netlify.app/#/aisle/code-095) | Start Paytm payment _(from code)_ |
+| GET | [`/V1/payment/fetch_google_play_product_ids_v1`](https://aisleapidocs.netlify.app/#/aisle/code-096) | Android plans (v1, deprecated) _(from code)_ |
+| GET | [`/V1/payment/fetch_web_products_ids`](https://aisleapidocs.netlify.app/#/aisle/code-097) | Web plans _(from code)_ |
+| GET | [`/V1/payment/fetch_google_play_product_ids_v3`](https://aisleapidocs.netlify.app/#/aisle/code-098) | Android plans (v3) _(from code)_ |
+| GET | [`/V1/payment/fetch_google_play_discounted_product_ids`](https://aisleapidocs.netlify.app/#/aisle/code-099) | Android discounted plans _(from code)_ |
+| GET | [`/V1/payment/fetch_app_store_product_ids_v2`](https://aisleapidocs.netlify.app/#/aisle/code-100) | iOS plans (v2) _(from code)_ |
+| POST | [`/V1/payment/intro_offer/start`](https://aisleapidocs.netlify.app/#/aisle/code-101) | Start intro offer timer _(from code)_ |
+| GET | [`/V1/payment/cashfree_checkout`](https://aisleapidocs.netlify.app/#/aisle/code-102) | Cashfree checkout page _(from code)_ |
+| POST | [`/V1/payment/phone_pay/verify_vpa`](https://aisleapidocs.netlify.app/#/aisle/code-103) | Verify UPI id (PhonePe) _(from code)_ |
+| POST | [`/V1/payment/phone_pay/verify_vpa_web`](https://aisleapidocs.netlify.app/#/aisle/code-104) | Verify UPI id (PhonePe, web) _(from code)_ |
+| POST | [`/V1/campaign/claim`](https://aisleapidocs.netlify.app/#/aisle/code-105) | Claim campaign freebie _(from code)_ |
+| GET | [`/V1/sparks/pricing_list`](https://aisleapidocs.netlify.app/#/aisle/code-106) | List Sparks plans _(from code)_ |
+| POST | [`/V1/event/update_personal_details`](https://aisleapidocs.netlify.app/#/aisle/code-107) | Book offline event (create order) _(from code)_ |
+| GET | [`/web/payment/get_order_id`](https://aisleapidocs.netlify.app/#/aisle/code-108) | Web: create Razorpay order _(from code)_ |
+| GET | [`/web/payment/fetch_product_ids`](https://aisleapidocs.netlify.app/#/aisle/code-109) | Web: fetch product ids _(from code)_ |
 
 <a id="api-073"></a>
 
@@ -10005,59 +6470,21 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `plan_id`, `conversation_id`, `external_transaction_token`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/payment/get_cashfree_request_params" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "plan_id": "$PLAN_ID",
-  "conversation_id": "$CONVERSATION_ID",
-  "external_transaction_token": "$TRANSACTION_TOKEN"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `get_cashfree_request_params`
-2. `fetch_order_token`
-3. `new_cashfree_order_response`
-4. `get_payment_session_id`
-5. `fetch_payment_session_id`
-6. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`get_cashfree_request_params` → `fetch_order_token` → `new_cashfree_order_response` → `get_payment_session_id` → `fetch_payment_session_id` → `get_first_name`
 
 _Code path — Email_
 
-1. `get_cashfree_request_params`
-2. `fetch_order_token`
-3. `new_cashfree_order_response`
-4. `get_payment_session_id`
-5. `fetch_payment_session_id`
-6. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`get_cashfree_request_params` → `fetch_order_token` → `new_cashfree_order_response` → `get_payment_session_id` → `fetch_payment_session_id` → `fetch_email`
 
 _Code path — Phone_
 
-1. `get_cashfree_request_params`
-2. `fetch_order_token`
-3. `new_cashfree_order_response`
-4. `get_payment_session_id`
-5. `fetch_payment_session_id`
-6. `fetch_mobile_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`get_cashfree_request_params` → `fetch_order_token` → `new_cashfree_order_response` → `get_payment_session_id` → `fetch_payment_session_id` → `fetch_mobile_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -10092,58 +6519,21 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `plan_id`, `return_url`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/payment/get_cashfree_web_request_params" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "plan_id": "$PLAN_ID",
-  "return_url": "https://example.com/payment-return"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `get_cashfree_web_request_params`
-2. `fetch_web_order_token_v2`
-3. `new_cashfree_order_response`
-4. `get_payment_session_id`
-5. `fetch_payment_session_id`
-6. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`get_cashfree_web_request_params` → `fetch_web_order_token_v2` → `new_cashfree_order_response` → `get_payment_session_id` → `fetch_payment_session_id` → `get_first_name`
 
 _Code path — Email_
 
-1. `get_cashfree_web_request_params`
-2. `fetch_web_order_token_v2`
-3. `new_cashfree_order_response`
-4. `get_payment_session_id`
-5. `fetch_payment_session_id`
-6. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`get_cashfree_web_request_params` → `fetch_web_order_token_v2` → `new_cashfree_order_response` → `get_payment_session_id` → `fetch_payment_session_id` → `fetch_email`
 
 _Code path — Phone_
 
-1. `get_cashfree_web_request_params`
-2. `fetch_web_order_token_v2`
-3. `new_cashfree_order_response`
-4. `get_payment_session_id`
-5. `fetch_payment_session_id`
-6. `fetch_mobile_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`get_cashfree_web_request_params` → `fetch_web_order_token_v2` → `new_cashfree_order_response` → `get_payment_session_id` → `fetch_payment_session_id` → `fetch_mobile_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -10174,48 +6564,21 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `id`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/payment/get_payu_request_params" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "id": "$PLAN_ID"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `get_payu_request_params`
-2. `fetch_payment_request_params`
-3. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`get_payu_request_params` → `fetch_payment_request_params` → `get_first_name`
 
 _Code path — Email_
 
-1. `get_payu_request_params`
-2. `fetch_payment_request_params`
-3. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`get_payu_request_params` → `fetch_payment_request_params` → `fetch_email`
 
 _Code path — Phone_
 
-1. `get_payu_request_params`
-2. `fetch_payment_request_params`
-3. `fetch_mobile_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`get_payu_request_params` → `fetch_payment_request_params` → `fetch_mobile_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -10250,61 +6613,21 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `plan_id`, `vpa`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/payment/send_collect_request" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "plan_id": "$PLAN_ID",
-  "vpa": "synthetic@upi"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `send_cashfree_collect_request`
-2. `send_collect_request`
-3. `collect_request`
-4. `get_upi_order_token`
-5. `fetch_upi_order_token`
-6. `create_payment_link_body_for_web`
-7. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`send_cashfree_collect_request` → `send_collect_request` → `collect_request` → `get_upi_order_token` → `fetch_upi_order_token` → `create_payment_link_body_for_web` → `get_first_name`
 
 _Code path — Email_
 
-1. `send_cashfree_collect_request`
-2. `send_collect_request`
-3. `collect_request`
-4. `get_upi_order_token`
-5. `fetch_upi_order_token`
-6. `create_payment_link_body_for_web`
-7. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`send_cashfree_collect_request` → `send_collect_request` → `collect_request` → `get_upi_order_token` → `fetch_upi_order_token` → `create_payment_link_body_for_web` → `fetch_email`
 
 _Code path — Phone_
 
-1. `send_cashfree_collect_request`
-2. `send_collect_request`
-3. `collect_request`
-4. `get_upi_order_token`
-5. `fetch_upi_order_token`
-6. `create_payment_link_body_for_web`
-7. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`send_cashfree_collect_request` → `send_collect_request` → `collect_request` → `get_upi_order_token` → `fetch_upi_order_token` → `create_payment_link_body_for_web` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -10335,55 +6658,21 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `plan_id`, `ruser`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/payment/get_payment_link" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "plan_id": "$PLAN_ID",
-  "ruser": false
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `send_payment_link`
-2. `send_payment_link`
-3. `fetch_payment_link`
-4. `create_payment_link_body_for_web`
-5. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`send_payment_link` → `send_payment_link` → `fetch_payment_link` → `create_payment_link_body_for_web` → `get_first_name`
 
 _Code path — Email_
 
-1. `send_payment_link`
-2. `send_payment_link`
-3. `fetch_payment_link`
-4. `create_payment_link_body_for_web`
-5. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`send_payment_link` → `send_payment_link` → `fetch_payment_link` → `create_payment_link_body_for_web` → `fetch_email`
 
 _Code path — Phone_
 
-1. `send_payment_link`
-2. `send_payment_link`
-3. `fetch_payment_link`
-4. `create_payment_link_body_for_web`
-5. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`send_payment_link` → `send_payment_link` → `fetch_payment_link` → `create_payment_link_body_for_web` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -10413,41 +6702,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `plan_id`, `phone_pe_flow`, `vpa`, `bought_from`, `is_upgrade`, `discount_percentage`, `device_os`, `external_transaction_token`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/payment/phone_pay/create_subscription" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "plan_id": "$PLAN_ID",
-  "phone_pe_flow": "collect",
-  "vpa": "synthetic@upi",
-  "bought_from": "discover",
-  "is_upgrade": false,
-  "discount_percentage": 0,
-  "device_os": "ANDROID",
-  "external_transaction_token": "$TRANSACTION_TOKEN"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — Phone_
 
-1. `create_phone_pay_subscription`
-2. `create_subscription_handler`
-3. `fetch_phone_number_for_user` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`create_phone_pay_subscription` → `create_subscription_handler` → `fetch_phone_number_for_user`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -10474,26 +6735,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `plan_id`, `product_id`, `bought_from`, `vpa`, `discount_percentage`, `conversation_id`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/payment/phone_pay/one_time_payment" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "plan_id": "$PLAN_ID",
-  "product_id": "$PRODUCT_ID",
-  "bought_from": "discover",
-  "vpa": "synthetic@upi",
-  "discount_percentage": 0,
-  "conversation_id": "$CONVERSATION_ID"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -10503,14 +6744,9 @@ JSON
 
 _Code path — Phone_
 
-1. `phone_pay_one_time_payment`
-2. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`phone_pay_one_time_payment` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -10542,41 +6778,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `plan_id`, `phone_pe_flow`, `vpa`, `bought_from`, `is_upgrade`, `discount_percentage`, `device_os`, `external_transaction_token`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/payment/phone_pay/create_phone_pay_subscription_web" \
-  --header "Authorization: Bearer ${WEB_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "plan_id": "$PLAN_ID",
-  "phone_pe_flow": "collect",
-  "vpa": "synthetic@upi",
-  "bought_from": "discover",
-  "is_upgrade": false,
-  "discount_percentage": 0,
-  "device_os": "ANDROID",
-  "external_transaction_token": "$TRANSACTION_TOKEN"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — Phone_
 
-1. `create_phone_pay_subscription_web`
-2. `create_subscription_handler`
-3. `fetch_phone_number_for_user` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`create_phone_pay_subscription_web` → `create_subscription_handler` → `fetch_phone_number_for_user`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -10603,65 +6811,21 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`, `personal_details`, `name`, `email`, `phone_number`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/paint_bar_mixer/update_personal_details" \
-  --header "Authorization: Bearer ${WEB_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$REF",
-  "personal_details": {
-    "name": "Asha",
-    "email": "asha@example.com",
-    "phone_number": "+911012345678"
-  }
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `update_personal_details`
-2. `update_personal_details`
-3. `fetch_web_order_token_v2`
-4. `new_cashfree_order_response`
-5. `get_payment_session_id`
-6. `fetch_payment_session_id`
-7. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`update_personal_details` → `update_personal_details` → `fetch_web_order_token_v2` → `new_cashfree_order_response` → `get_payment_session_id` → `fetch_payment_session_id` → `get_first_name`
 
 _Code path — Email_
 
-1. `update_personal_details`
-2. `update_personal_details`
-3. `fetch_web_order_token_v2`
-4. `new_cashfree_order_response`
-5. `get_payment_session_id`
-6. `fetch_payment_session_id`
-7. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`update_personal_details` → `update_personal_details` → `fetch_web_order_token_v2` → `new_cashfree_order_response` → `get_payment_session_id` → `fetch_payment_session_id` → `fetch_email`
 
 _Code path — Phone_
 
-1. `update_personal_details`
-2. `update_personal_details`
-3. `fetch_web_order_token_v2`
-4. `new_cashfree_order_response`
-5. `get_payment_session_id`
-6. `fetch_payment_session_id`
-7. `fetch_mobile_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`update_personal_details` → `update_personal_details` → `fetch_web_order_token_v2` → `new_cashfree_order_response` → `get_payment_session_id` → `fetch_payment_session_id` → `fetch_mobile_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -10692,37 +6856,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `plan_id`, `return_url`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/payment/get_cashfree_request_params_web" \
-  --header "Authorization: Bearer ${WEB_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "plan_id": "$PLAN_ID",
-  "return_url": "https://example.com/payment-return"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name, Email, Phone_
 
-1. `get_cashfree_request_params_web`
-2. `get_cashfree_web_request_params`
-3. `Cashfree customer fields`
+`get_cashfree_request_params_web` → `get_cashfree_web_request_params` → `Cashfree customer fields`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -10757,37 +6897,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `plan_id`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/payment/generate_qr_code" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "plan_id": "$PLAN_ID"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name, Email, Phone_
 
-1. `Cashfree get_upi_qr_code`
-2. `generate_qr_code`
-3. `get_upi_order_token`
-4. `create_payment_link_body_for_web`
+`Cashfree get_upi_qr_code` → `generate_qr_code` → `get_upi_order_token` → `create_payment_link_body_for_web`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -10820,36 +6936,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `app_store`, `device_type`, `trigger_type`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/payment/send_web_purchase_link" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ios" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "app_store": "India",
-  "device_type": "ios",
-  "trigger_type": "purchase"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — Phone_
 
-1. `Payment.send_web_purchase_link`
-2. `SmsNotifierWorker` — Background job: runs after the request has returned.
-3. `fetch_full_phone_number_for_user` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`Payment.send_web_purchase_link` → `SmsNotifierWorker` → `fetch_full_phone_number_for_user`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -10865,869 +6958,11 @@ _Code path — Phone_
 
 - **From the developers:** Use device_type=ios in the headers too. Requires an eligible male India iOS profile, no active subscription, and remaining SMS cooldown/daily allowance.
 
-<a id="code-002"></a>
-
-#### `POST /V1/payment/cashfree/subscription/create` — Create cashfree subscription
-
-**Create cashfree subscription.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L230`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:230` @004e72c → `v1/payment#create_cashfree_subscription` (`app/controllers/v1/payment_controller.rb:276 @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** line 277 passes all params to Payment::Cashfree.create_cashfree_subscription — the fields read there are not determined; line 278 renders response — its full key set is built at run time
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:230 @004e72c`
-
-<a id="code-003"></a>
-
-#### `GET /V1/payment/cashfree/subscription/status` — Cashfree subscription status
-
-**Cashfree subscription status.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L231`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:231` @004e72c → `v1/payment#cashfree_subscription_status` (`app/controllers/v1/payment_controller.rb:281 @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** line 282 passes all params to Payment::Cashfree.cashfree_subscription_status — the fields read there are not determined; line 283 renders response — its full key set is built at run time
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:231 @004e72c`
-
-<a id="code-004"></a>
-
-#### `POST /V1/payment/cashfree/subscription/cancel` — Cancel cashfree subscription
-
-**Cancel cashfree subscription.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L232`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:232` @004e72c → `v1/payment#cancel_cashfree_subscription` (`app/controllers/v1/payment_controller.rb:286 @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** line 287 passes all params to Payment::Cashfree.cancel_cashfree_subscription — the fields read there are not determined; line 288 renders response — its full key set is built at run time
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:232 @004e72c`
-
-<a id="code-007"></a>
-
-#### `POST /V1/payment/ms/activateAnySubscriptionWithExpiry` — Activate any subscription with expiry ms
-
-**Activate any subscription with expiry ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L285`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:285` @004e72c → `v1/payment#activate_any_subscription_with_expiry_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** action activate_any_subscription_with_expiry_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:285 @004e72c`
-
-<a id="code-008"></a>
-
-#### `POST /V1/payment/ms/addExtraInvites` — Add extra invites ms
-
-**Add extra invites ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L286`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:286` @004e72c → `v1/payment#add_extra_invites_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** action add_extra_invites_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:286 @004e72c`
-
-<a id="code-009"></a>
-
-#### `POST /V1/payment/ms/addBoostToProfile` — Add boost to profile ms
-
-**Add boost to profile ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L287`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:287` @004e72c → `v1/payment#add_boost_to_profile_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** action add_boost_to_profile_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:287 @004e72c`
-
-<a id="code-010"></a>
-
-#### `POST /V1/payment/ms/activePremiumSubscription` — Active premium subscription ms
-
-**Active premium subscription ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L288`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:288` @004e72c → `v1/payment#active_premium_subscription_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** action active_premium_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:288 @004e72c`
-
-<a id="code-011"></a>
-
-#### `POST /V1/payment/ms/activateAnySubscription` — Activate any subscription ms
-
-**Activate any subscription ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L289`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:289` @004e72c → `v1/payment#activate_any_subscription_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** action activate_any_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:289 @004e72c`
-
-<a id="code-012"></a>
-
-#### `POST /V1/payment/ms/enableExclusivity` — Enable exclusivity ms
-
-**Enable exclusivity ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L290`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:290` @004e72c → `v1/payment#enable_exclusivity_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** action enable_exclusivity_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:290 @004e72c`
-
-<a id="code-013"></a>
-
-#### `POST /V1/payment/ms/fetchUserIdFromIosIdentifier` — Fetch user id from ios identifier ms
-
-**Fetch user id from ios identifier ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L291`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:291` @004e72c → `v1/payment#fetch_user_id_from_ios_identifier_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** action fetch_user_id_from_ios_identifier_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:291 @004e72c`
-
-<a id="code-014"></a>
-
-#### `POST /V1/payment/ms/deactivateActiveSubscription` — Deactivate active subscription ms
-
-**Deactivate active subscription ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L292`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:292` @004e72c → `v1/payment#deactivate_active_subscription_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** action deactivate_active_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:292 @004e72c`
-
-<a id="code-015"></a>
-
-#### `POST /V1/payment/ms/editUserSubscription` — Edit user subscription ms
-
-**Edit user subscription ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L293`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:293` @004e72c → `v1/payment#edit_user_subscription_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** action edit_user_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:293 @004e72c`
-
-<a id="code-016"></a>
-
-#### `POST /V1/payment/ms/addConsumableDataGoogle` — Add consumable data google ms
-
-**Add consumable data google ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L294`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:294` @004e72c → `v1/payment#add_consumable_data_google_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** action add_consumable_data_google_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:294 @004e72c`
-
-<a id="code-017"></a>
-
-#### `POST /V1/payment/ms/getAccountSubscription` — Get account subscription ms
-
-**Get account subscription ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L295`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:295` @004e72c → `v1/payment#get_account_subscription_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** action get_account_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:295 @004e72c`
-
-<a id="code-018"></a>
-
-#### `POST /V1/payment/ms/removeAccountSubscription` — Remove account subscription ms
-
-**Remove account subscription ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L296`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:296` @004e72c → `v1/payment#remove_account_subscription_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** action remove_account_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:296 @004e72c`
-
-<a id="code-019"></a>
-
-#### `POST /V1/payment/ms/getActiveConciergeSubscription` — Get active concierge subscription ms
-
-**Get active concierge subscription ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L297`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:297` @004e72c → `v1/payment#get_active_concierge_subscription_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** action get_active_concierge_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:297 @004e72c`
-
-<a id="code-020"></a>
-
-#### `POST /V1/payment/ms/getActiveAislePlusSubscription` — Get active aisle plus subscription ms
-
-**Get active aisle plus subscription ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L298`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:298` @004e72c → `v1/payment#get_active_aisle_plus_subscription_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** action get_active_aisle_plus_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:298 @004e72c`
-
-<a id="code-021"></a>
-
-#### `POST /V1/payment/ms/getActivePremiumSubscriptionByGooglePlay` — Get active premium subscription by google play ms
-
-**Get active premium subscription by google play ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L299`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:299` @004e72c → `v1/payment#get_active_premium_subscription_by_google_play_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** action get_active_premium_subscription_by_google_play_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:299 @004e72c`
-
-<a id="code-022"></a>
-
-#### `POST /V1/payment/ms/extendSubscription` — Extend subscription ms
-
-**Extend subscription ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L300`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:300` @004e72c → `v1/payment#extend_subscription_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** action extend_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:300 @004e72c`
-
-<a id="code-023"></a>
-
-#### `POST /V1/payment/ms/reduceSubscription` — Reduce subscription ms
-
-**Reduce subscription ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L301`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:301` @004e72c → `v1/payment#reduce_subscription_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** action reduce_subscription_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:301 @004e72c`
-
-<a id="code-024"></a>
-
-#### `POST /V1/payment/ms/addConsummableDataGoogle` — Add consumable data google ms
-
-**Add consumable data google ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L302`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:302` @004e72c → `v1/payment#add_consumable_data_google_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** action add_consumable_data_google_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:302 @004e72c`
-
-<a id="code-025"></a>
-
-#### `POST /V1/payment/ms/validateIosConsumable` — Validate ios consummable response ms
-
-**Validate ios consummable response ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L303`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:303` @004e72c → `v1/payment#validate_ios_consummable_response_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** action validate_ios_consummable_response_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:303 @004e72c`
-
-<a id="code-026"></a>
-
-#### `POST /V1/payment/ms/getActiveSubscriptionByPlan` — Get active subscription by plan ms
-
-**Get active subscription by plan ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L304`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:304` @004e72c → `v1/payment#get_active_subscription_by_plan_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** action get_active_subscription_by_plan_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:304 @004e72c`
-
-<a id="code-027"></a>
-
-#### `POST /V1/payment/ms/editUserSubscriptionPostAppleSubscriptions` — Edit user subscription post apple subscriptions ms
-
-**Edit user subscription post apple subscriptions ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L305`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:305` @004e72c → `v1/payment#edit_user_subscription_post_apple_subscriptions_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** action edit_user_subscription_post_apple_subscriptions_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:305 @004e72c`
-
-<a id="code-028"></a>
-
-#### `POST /V1/payment/ms/saveToS3` — Save to s3 ms
-
-**Save to s3 ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L306`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:306` @004e72c → `v1/payment#save_to_s3_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** action save_to_s3_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:306 @004e72c`
-
-<a id="code-029"></a>
-
-#### `POST /V1/payment/ms/profileExists` — Profile exists ms
-
-**Profile exists ms.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L307`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:307` @004e72c → `v1/payment#profile_exists_ms` (`app/controllers/v1/payment_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** action profile_exists_ms is not defined in app/controllers/v1/payment_controller.rb (inherited or generated)
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:307 @004e72c`
-
 <a id="area-g8"></a>
 
 ### Payments — verification
 
-Verify or restore a payment; on success the profile cache is rebuilt. 11 endpoints.
+Verify or restore a payment; on success the profile cache is rebuilt. 49 endpoints.
 
 | Method | Path | What it is |
 | --- | --- | --- |
@@ -11742,6 +6977,44 @@ Verify or restore a payment; on success the profile cache is rebuilt. 11 endpoin
 | POST | [`/V1/freebies/claim`](#api-115) | Claim freebie |
 | POST | [`/web/payment/verify_razorpay_payment`](#api-133) | Verify razorpay payment |
 | POST | [`/V1/payment/verify_cashfree_payments_web`](#api-195) | Verify cashfree payments web |
+| GET | [`/V1/payment/cashfree/subscription/status`](https://aisleapidocs.netlify.app/#/aisle/code-003) | Cashfree subscription status _(from code)_ |
+| POST | [`/V1/payment/cashfree/subscription/cancel`](https://aisleapidocs.netlify.app/#/aisle/code-004) | Cancel Cashfree subscription _(from code)_ |
+| POST | [`/V1/payment/ms/activateAnySubscriptionWithExpiry`](https://aisleapidocs.netlify.app/#/aisle/code-007) | Activate subscription with expiry (not implemented) _(from code)_ |
+| POST | [`/V1/payment/ms/addExtraInvites`](https://aisleapidocs.netlify.app/#/aisle/code-008) | Add extra invites (not implemented) _(from code)_ |
+| POST | [`/V1/payment/ms/addBoostToProfile`](https://aisleapidocs.netlify.app/#/aisle/code-009) | Add boost to profile (not implemented) _(from code)_ |
+| POST | [`/V1/payment/ms/activePremiumSubscription`](https://aisleapidocs.netlify.app/#/aisle/code-010) | Active premium subscription (not implemented) _(from code)_ |
+| POST | [`/V1/payment/ms/activateAnySubscription`](https://aisleapidocs.netlify.app/#/aisle/code-011) | Activate any subscription (not implemented) _(from code)_ |
+| POST | [`/V1/payment/ms/enableExclusivity`](https://aisleapidocs.netlify.app/#/aisle/code-012) | Enable exclusivity (not implemented) _(from code)_ |
+| POST | [`/V1/payment/ms/fetchUserIdFromIosIdentifier`](https://aisleapidocs.netlify.app/#/aisle/code-013) | User id from iOS identifier (not implemented) _(from code)_ |
+| POST | [`/V1/payment/ms/deactivateActiveSubscription`](https://aisleapidocs.netlify.app/#/aisle/code-014) | Deactivate active subscription (not implemented) _(from code)_ |
+| POST | [`/V1/payment/ms/editUserSubscription`](https://aisleapidocs.netlify.app/#/aisle/code-015) | Edit user subscription (not implemented) _(from code)_ |
+| POST | [`/V1/payment/ms/addConsumableDataGoogle`](https://aisleapidocs.netlify.app/#/aisle/code-016) | Add Google consumable data (not implemented) _(from code)_ |
+| POST | [`/V1/payment/ms/getAccountSubscription`](https://aisleapidocs.netlify.app/#/aisle/code-017) | Get account subscription (not implemented) _(from code)_ |
+| POST | [`/V1/payment/ms/removeAccountSubscription`](https://aisleapidocs.netlify.app/#/aisle/code-018) | Remove account subscription (not implemented) _(from code)_ |
+| POST | [`/V1/payment/ms/getActiveConciergeSubscription`](https://aisleapidocs.netlify.app/#/aisle/code-019) | Active concierge subscription (not implemented) _(from code)_ |
+| POST | [`/V1/payment/ms/getActiveAislePlusSubscription`](https://aisleapidocs.netlify.app/#/aisle/code-020) | Active Aisle Plus subscription (not implemented) _(from code)_ |
+| POST | [`/V1/payment/ms/getActivePremiumSubscriptionByGooglePlay`](https://aisleapidocs.netlify.app/#/aisle/code-021) | Active Google Play premium (not implemented) _(from code)_ |
+| POST | [`/V1/payment/ms/extendSubscription`](https://aisleapidocs.netlify.app/#/aisle/code-022) | Extend subscription (not implemented) _(from code)_ |
+| POST | [`/V1/payment/ms/reduceSubscription`](https://aisleapidocs.netlify.app/#/aisle/code-023) | Reduce subscription (not implemented) _(from code)_ |
+| POST | [`/V1/payment/ms/addConsummableDataGoogle`](https://aisleapidocs.netlify.app/#/aisle/code-024) | Add Google consumable data (not implemented) _(from code)_ |
+| POST | [`/V1/payment/ms/validateIosConsumable`](https://aisleapidocs.netlify.app/#/aisle/code-025) | Validate iOS consumable (not implemented) _(from code)_ |
+| POST | [`/V1/payment/ms/getActiveSubscriptionByPlan`](https://aisleapidocs.netlify.app/#/aisle/code-026) | Active subscription by plan (not implemented) _(from code)_ |
+| POST | [`/V1/payment/ms/editUserSubscriptionPostAppleSubscriptions`](https://aisleapidocs.netlify.app/#/aisle/code-027) | Edit subscription after Apple (not implemented) _(from code)_ |
+| POST | [`/V1/payment/ms/saveToS3`](https://aisleapidocs.netlify.app/#/aisle/code-028) | Save to S3 (not implemented) _(from code)_ |
+| POST | [`/V1/payment/ms/profileExists`](https://aisleapidocs.netlify.app/#/aisle/code-029) | Profile exists (not implemented) _(from code)_ |
+| POST | [`/V1/payment/ios_payment_fake_response`](https://aisleapidocs.netlify.app/#/aisle/code-110) | iOS fake restore response _(from code)_ |
+| GET | [`/V1/payment/verify_cashfree_order`](https://aisleapidocs.netlify.app/#/aisle/code-111) | Cashfree order result page _(from code)_ |
+| GET | [`/V1/payment/cashfree_payment_status`](https://aisleapidocs.netlify.app/#/aisle/code-112) | Cashfree payment status _(from code)_ |
+| POST | [`/V1/payment/verify_payu_payment`](https://aisleapidocs.netlify.app/#/aisle/code-113) | PayU verify (no-op) _(from code)_ |
+| GET | [`/V1/payment/payment_success`](https://aisleapidocs.netlify.app/#/aisle/code-114) | Payment success page (broken) _(from code)_ |
+| POST | [`/V1/payment/restore_cashfree_payment`](https://aisleapidocs.netlify.app/#/aisle/code-115) | Restore Cashfree purchase _(from code)_ |
+| POST | [`/V1/payment/phone_pay/one_time_payment_status`](https://aisleapidocs.netlify.app/#/aisle/code-116) | PhonePe one-time payment status _(from code)_ |
+| POST | [`/V1/payment/phone_pay/phone_pay_mandate_status`](https://aisleapidocs.netlify.app/#/aisle/code-117) | PhonePe mandate status _(from code)_ |
+| POST | [`/V1/payment/phone_pay/cancel_subscription`](https://aisleapidocs.netlify.app/#/aisle/code-118) | Cancel PhonePe subscription _(from code)_ |
+| POST | [`/V1/payment/phone_pay/phone_pay_mandate_status_web`](https://aisleapidocs.netlify.app/#/aisle/code-119) | PhonePe mandate status (web) _(from code)_ |
+| POST | [`/V1/payment/phone_pay/cancel_phone_pay_subscription_web`](https://aisleapidocs.netlify.app/#/aisle/code-120) | Cancel PhonePe subscription (web) _(from code)_ |
+| POST | [`/V1/payment/phone_pay/phone_pay_cancel_status_web`](https://aisleapidocs.netlify.app/#/aisle/code-121) | PhonePe cancel status (web) _(from code)_ |
+| GET | [`/V1/event/verify_order_if_paid`](https://aisleapidocs.netlify.app/#/aisle/code-122) | Check event order paid _(from code)_ |
 
 <a id="api-070"></a>
 
@@ -11761,21 +7034,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `payment_id`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/payment/verify_razorpay_payment_v1" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "payment_id": "$PAYMENT_ID"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -11784,21 +7042,9 @@ JSON
 
 _Code path — First name_
 
-1. `verify_razorpay_payment_v1`
-2. `verify_by_payment_id`
-3. `assign_plan_to_profile`
-4. `activate_any_subscription` — Activates a subscription after a successful payment.
-5. `activate_any_subscription_with_expiry` — Activates a subscription after a successful payment.
-6. `fill_cache!` — Rebuilds or reads the cached profile response.
-7. `create_profile_response` — Rebuilds or reads the cached profile response.
-8. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-9. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`verify_razorpay_payment_v1` → `verify_by_payment_id` → `assign_plan_to_profile` → `activate_any_subscription` → `activate_any_subscription_with_expiry` → `fill_cache!` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -11832,43 +7078,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `productId`, `receiptdata`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/payment/verify_ios_payment_v1" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "productId": "$PRODUCT_ID",
-  "receiptdata": "$APPLE_RECEIPT"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `verify_ios_payment_v1`
-2. `verify_payment`
-3. `restore_purchase`
-4. `validate_receipt_data`
-5. `validate_ios_consumable_response`
-6. `activate_any_subscription` — Activates a subscription after a successful payment.
-7. `activate_any_subscription_with_expiry` — Activates a subscription after a successful payment.
-8. `fill_cache!` — Rebuilds or reads the cached profile response.
-9. `create_profile_response` — Rebuilds or reads the cached profile response.
-10. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-11. `select_f…`
+`verify_ios_payment_v1` → `verify_payment` → `restore_purchase` → `validate_receipt_data` → `validate_ios_consumable_response` → `activate_any_subscription` → `activate_any_subscription_with_expiry` → `fill_cache!` → `create_profile_response` → `general_information` → `select_f…`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -11898,25 +7114,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `STATUS`, `ORDERID`, `TXNAMOUNT`, `CHECKSUMHASH`, `RESPMSG`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/payment/verify_paytm_payment_v1" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "STATUS": "TXN_SUCCESS",
-  "ORDERID": "$ORDER_ID",
-  "TXNAMOUNT": "$PAYMENT_AMOUNT",
-  "CHECKSUMHASH": "$PAYTM_CHECKSUM",
-  "RESPMSG": "Txn Success"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -11925,20 +7122,9 @@ JSON
 
 _Code path — First name_
 
-1. `verify_paytm_payment_v1`
-2. `verify_by_order_id`
-3. `assign_plan_to_profile`
-4. `activate_any_subscription_with_expiry` — Activates a subscription after a successful payment.
-5. `fill_cache!` — Rebuilds or reads the cached profile response.
-6. `create_profile_response` — Rebuilds or reads the cached profile response.
-7. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-8. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`verify_paytm_payment_v1` → `verify_by_order_id` → `assign_plan_to_profile` → `activate_any_subscription_with_expiry` → `fill_cache!` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -11972,21 +7158,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `order_id`, `sort_by` (optional · from code — confirm with Dev)
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/payment/verify_cashfree_payment" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "order_id": "$ORDER_ID"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `is_backend_error` (from code — confirm with Dev)
@@ -11996,20 +7167,9 @@ JSON
 
 _Code path — First name_
 
-1. `verify_cashfree_payment`
-2. `verify_transaction`
-3. `assign_plan_to_profile`
-4. `activate_any_subscription_with_expiry` — Activates a subscription after a successful payment.
-5. `fill_cache!` — Rebuilds or reads the cached profile response.
-6. `create_profile_response` — Rebuilds or reads the cached profile response.
-7. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-8. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`verify_cashfree_payment` → `verify_transaction` → `assign_plan_to_profile` → `activate_any_subscription_with_expiry` → `fill_cache!` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -12045,22 +7205,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `product_id`, `purchase_token`, `conversation_id` (optional · from code — confirm with Dev), `sort_by` (optional · from code — confirm with Dev)
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/subscription/verify_android_payments" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "product_id": "$PRODUCT_ID",
-  "purchase_token": "$PURCHASE_TOKEN"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -12075,21 +7219,9 @@ JSON
 
 _Code path — First name_
 
-1. `verify_android_payments`
-2. `verify_android_payment`
-3. `add_consummable_or_subscription`
-4. `add_subscription_data`
-5. `activate_any_subscription_with_expiry` — Activates a subscription after a successful payment.
-6. `fill_cache!` — Rebuilds or reads the cached profile response.
-7. `create_profile_response` — Rebuilds or reads the cached profile response.
-8. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-9. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`verify_android_payments` → `verify_android_payment` → `add_consummable_or_subscription` → `add_subscription_data` → `activate_any_subscription_with_expiry` → `fill_cache!` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -12101,17 +7233,11 @@ _Code path — First name_
 | Outside provider | `Google Play` | called |
 | Audit log | `audit_trails (MongoDB)` | write |
 
-**What changed**
+**What changed** (latest 3 of 9; all on the website)
 
 - 2026-10-29 — Response field added: `amount_in_currency` · from code — confirm with Dev · `app/controllers/v1/subscription_controller.rb:35 @004e72c`
 - 2026-10-29 — Response field added: `currency_code` · from code — confirm with Dev · `app/controllers/v1/subscription_controller.rb:35 @004e72c`
 - 2026-10-29 — Response field added: `extra_invites` · from code — confirm with Dev · `app/controllers/v1/subscription_controller.rb:35 @004e72c`
-- 2026-10-29 — Response field added: `sparks_left` · from code — confirm with Dev · `app/controllers/v1/subscription_controller.rb:35 @004e72c`
-- 2026-10-29 — Response field added: `boost_left` · from code — confirm with Dev · `app/controllers/v1/subscription_controller.rb:35 @004e72c`
-- 2026-10-29 — Response field added: `payment_type` · from code — confirm with Dev · `app/controllers/v1/subscription_controller.rb:35 @004e72c`
-- 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/v1/subscription_controller.rb:35 @004e72c`
-- 2026-10-29 — Request field added: `sort_by` · from code — confirm with Dev · `app/controllers/v1/subscription_controller.rb:26 @004e72c`
-- 2026-10-29 — Request field added: `conversation_id` · from code — confirm with Dev · `app/controllers/v1/subscription_controller.rb:14 @004e72c`
 
 <a id="api-093"></a>
 
@@ -12131,22 +7257,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `product_id`, `purchase_token`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/subscription/restore_android_subscription" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "product_id": "$PRODUCT_ID",
-  "purchase_token": "$PURCHASE_TOKEN"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -12156,20 +7266,9 @@ JSON
 
 _Code path — First name_
 
-1. `restore_android_subscription`
-2. `restore_subscription_from_previous_user`
-3. `transfer_active_subscription`
-4. `activate_any_subscription_with_expiry` — Activates a subscription after a successful payment.
-5. `fill_cache!` — Rebuilds or reads the cached profile response.
-6. `create_profile_response` — Rebuilds or reads the cached profile response.
-7. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-8. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`restore_android_subscription` → `restore_subscription_from_previous_user` → `transfer_active_subscription` → `activate_any_subscription_with_expiry` → `fill_cache!` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -12204,40 +7303,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `productId`, `receiptdata`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/subscription/restore_ios_subscription_v1" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "productId": "$PRODUCT_ID",
-  "receiptdata": "$APPLE_RECEIPT"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `restore_ios_subscription_v1`
-2. `restore_subscription_from_previous_user`
-3. `transfer_active_subscription`
-4. `activate_any_subscription_with_expiry` — Activates a subscription after a successful payment.
-5. `fill_cache!` — Rebuilds or reads the cached profile response.
-6. `create_profile_response` — Rebuilds or reads the cached profile response.
-7. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-8. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`restore_ios_subscription_v1` → `restore_subscription_from_previous_user` → `transfer_active_subscription` → `activate_any_subscription_with_expiry` → `fill_cache!` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -12267,22 +7339,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `event_id`, `payment_id`, `ORDERID` (optional · from code — confirm with Dev)
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/speed_dating/book_event" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "event_id": "$EVENT_ID",
-  "payment_id": "$PAYMENT_ID"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -12291,20 +7347,9 @@ JSON
 
 _Code path — First name_
 
-1. `book_event`
-2. `verify_payment`
-3. `assign_plan_to_profile`
-4. `activate_any_subscription_with_expiry` — Activates a subscription after a successful payment.
-5. `fill_cache!` — Rebuilds or reads the cached profile response.
-6. `create_profile_response` — Rebuilds or reads the cached profile response.
-7. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-8. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`book_event` → `verify_payment` → `assign_plan_to_profile` → `activate_any_subscription_with_expiry` → `fill_cache!` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -12342,21 +7387,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `freebie_type`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/freebies/claim" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "freebie_type": "free_premium_female"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `data` (from code — confirm with Dev)
@@ -12366,21 +7396,9 @@ JSON
 
 _Code path — First name_
 
-1. `claim_freebie`
-2. `create_claim_entry`
-3. `success_text`
-4. `activate_any_subscription` — Activates a subscription after a successful payment.
-5. `activate_any_subscription_with_expiry` — Activates a subscription after a successful payment.
-6. `fill_cache!` — Rebuilds or reads the cached profile response.
-7. `create_profile_response` — Rebuilds or reads the cached profile response.
-8. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-9. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`claim_freebie` → `create_claim_entry` → `success_text` → `activate_any_subscription` → `activate_any_subscription_with_expiry` → `fill_cache!` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -12414,37 +7432,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `payment_id`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/web/payment/verify_razorpay_payment" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "payment_id": "$PAYMENT_ID"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `verify_razorpay_payment`
-2. `verify_payment`
-3. `assign_plan_to_profile`
-4. `activate_any_subscription` — Activates a subscription after a successful payment.
-5. `activate_any_subscription_with_expiry` — Activates a subscription after a successful payment.
-6. `fill_cache!` — Rebuilds or reads the cached profile response.
-7. `create_profile_response` — Rebuilds or reads the cached profile response.
-8. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-9. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`verify_razorpay_payment` → `verify_payment` → `assign_plan_to_profile` → `activate_any_subscription` → `activate_any_subscription_with_expiry` → `fill_cache!` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -12472,21 +7466,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `order_id`, `sort_by` (optional · from code — confirm with Dev)
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/payment/verify_cashfree_payments_web" \
-  --header "Authorization: Bearer ${USER_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "device_type: ${DEVICE_TYPE}" \
-  --header "app_version: ${APP_VERSION}" \
-  --header "unique_identifier: ${DEVICE_ID}" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "order_id": "$ORDER_ID"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `is_backend_error` (from code — confirm with Dev)
@@ -12496,13 +7475,9 @@ JSON
 
 _Code path — First name_
 
-1. `Alias of verify_cashfree_payment; successful subscription assignment can rebuild the profile cache`
+`Alias of verify_cashfree_payment; successful subscription assignment can rebuild the profile cache`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -12523,7 +7498,7 @@ _Code path — First name_
 
 ### Provider callbacks
 
-Called by outside providers (PhonePe, Google Play, Apple, Pusher) — no user login. 10 endpoints.
+Called by outside providers (PhonePe, Google Play, Apple, Pusher) — no user login. 22 endpoints.
 
 | Method | Path | What it is |
 | --- | --- | --- |
@@ -12534,9 +7509,21 @@ Called by outside providers (PhonePe, Google Play, Apple, Pusher) — no user lo
 | POST | [`/V1/payment/apple_webhook_v2`](#api-095) | Apple webhook v2 |
 | POST | [`/V1/pusher_presence_webhook`](#api-113) | Pusher presence webhook |
 | GET | [`/V1/pusher_presence_webhook`](#api-114) | Pusher presence webhook |
-| POST | [`/V1/messages/firebase_webhook`](#code-001) | Firebase webhook |
-| POST | [`/V1/payment/cashfree/subscription/webhook`](#code-005) | Cashfree subscription webhook |
-| POST | [`/V1/payment/cashfree/subscription/authorization_callback`](#code-006) | Cashfree subscription authorization callback |
+| POST | [`/V1/messages/firebase_webhook`](https://aisleapidocs.netlify.app/#/aisle/code-001) | Firebase messages webhook _(from code)_ |
+| POST | [`/V1/payment/cashfree/subscription/webhook`](https://aisleapidocs.netlify.app/#/aisle/code-005) | Cashfree subscription webhook _(from code)_ |
+| POST | [`/V1/payment/cashfree/subscription/authorization_callback`](https://aisleapidocs.netlify.app/#/aisle/code-006) | Cashfree authorization callback _(from code)_ |
+| POST | [`/V1/payment/handle_cashfree_disputes`](https://aisleapidocs.netlify.app/#/aisle/code-123) | Cashfree dispute webhook _(from code)_ |
+| POST | [`/V1/payment/phone_pay/debit_init_callback`](https://aisleapidocs.netlify.app/#/aisle/code-124) | PhonePe debit callback _(from code)_ |
+| POST | [`/V1/payment/phone_pay/cancel_callback`](https://aisleapidocs.netlify.app/#/aisle/code-125) | PhonePe cancel callback _(from code)_ |
+| POST | [`/V1/payment/phone_pay/revoke_subscription`](https://aisleapidocs.netlify.app/#/aisle/code-126) | PhonePe revoke callback (inactive) _(from code)_ |
+| POST | [`/V1/airbrake_webhook`](https://aisleapidocs.netlify.app/#/aisle/code-127) | Airbrake error webhook _(from code)_ |
+| POST | [`/V1/mailer_services/transaction/mailchimp`](https://aisleapidocs.netlify.app/#/aisle/code-128) | Mailchimp (Mandrill) email webhook _(from code)_ |
+| POST | [`/V1/otp/gupshup_webhook`](https://aisleapidocs.netlify.app/#/aisle/code-129) | Gupshup SMS delivery webhook _(from code)_ |
+| GET | [`/V1/otp/gupshup_webhook`](https://aisleapidocs.netlify.app/#/aisle/code-130) | Gupshup SMS delivery webhook _(from code)_ |
+| POST | [`/V1/otp/exotel_webhook`](https://aisleapidocs.netlify.app/#/aisle/code-131) | Exotel SMS delivery webhook _(from code)_ |
+| POST | [`/V1/otp/equence_webhook`](https://aisleapidocs.netlify.app/#/aisle/code-132) | Equence SMS delivery webhook _(from code)_ |
+| POST | [`/V1/tracking/exotel_webhook`](https://aisleapidocs.netlify.app/#/aisle/code-133) | Exotel short-link click webhook _(from code)_ |
+| POST | [`/V1/otp/exotel_whatsapp_webhook`](https://aisleapidocs.netlify.app/#/aisle/code-134) | Exotel WhatsApp SMS delivery webhook _(from code)_ |
 
 <a id="api-080"></a>
 
@@ -12556,18 +7543,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `response`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/payment/phone_pay/mandate_create_callback" \
-  --header "X-VERIFY: ${PHONEPE_X_VERIFY}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "response": "$PHONEPE_RESPONSE_BASE64"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -12576,22 +7551,9 @@ JSON
 
 _Code path — First name_
 
-1. `phone_pay_mandate_create_webhook`
-2. `handle_create_mandate_webhook`
-3. `record_transaction`
-4. `debit_amount`
-5. `activate_any_subscription` — Activates a subscription after a successful payment.
-6. `activate_any_subscription_with_expiry` — Activates a subscription after a successful payment.
-7. `fill_cache!` — Rebuilds or reads the cached profile response.
-8. `create_profile_response` — Rebuilds or reads the cached profile response.
-9. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-10. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`phone_pay_mandate_create_webhook` → `handle_create_mandate_webhook` → `record_transaction` → `debit_amount` → `activate_any_subscription` → `activate_any_subscription_with_expiry` → `fill_cache!` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -12629,35 +7591,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `response`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/payment/phone_pay/refund_callback" \
-  --header "X-VERIFY: ${PHONEPE_X_VERIFY}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "response": "$PHONEPE_RESPONSE_BASE64"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `phone_pay_refund_webhook`
-2. `check_for_duplicate_payments`
-3. `activate_any_subscription_with_expiry` — Activates a subscription after a successful payment.
-4. `fill_cache!` — Rebuilds or reads the cached profile response.
-5. `create_profile_response` — Rebuilds or reads the cached profile response.
-6. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-7. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`phone_pay_refund_webhook` → `check_for_duplicate_payments` → `activate_any_subscription_with_expiry` → `fill_cache!` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -12691,36 +7631,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `response`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/payment/phone_pay/one_time_payment_callback" \
-  --header "X-VERIFY: ${PHONEPE_X_VERIFY}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "response": "$PHONEPE_RESPONSE_BASE64"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `phone_pay_one_time_webhook`
-2. `one_time_payment_done`
-3. `activate_any_subscription` — Activates a subscription after a successful payment.
-4. `activate_any_subscription_with_expiry` — Activates a subscription after a successful payment.
-5. `fill_cache!` — Rebuilds or reads the cached profile response.
-6. `create_profile_response` — Rebuilds or reads the cached profile response.
-7. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-8. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`phone_pay_one_time_webhook` → `one_time_payment_done` → `activate_any_subscription` → `activate_any_subscription_with_expiry` → `fill_cache!` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -12754,22 +7671,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `message`, `data`, `messageId`, `publishTime`, `subscription`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/payment/googleplay_webhook" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "message": {
-    "data": "$GOOGLE_RTDN_BASE64",
-    "messageId": "$PUBSUB_MESSAGE_ID",
-    "publishTime": "2026-10-16T00:00:00Z"
-  },
-  "subscription": "$PUBSUB_SUBSCRIPTION"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -12778,21 +7679,9 @@ JSON
 
 _Code path — First name_
 
-1. `googleplay_webhook`
-2. `verify_googleplay_webhook_payment`
-3. `add_consummable_or_subscription`
-4. `add_subscription_data`
-5. `activate_any_subscription_with_expiry` — Activates a subscription after a successful payment.
-6. `fill_cache!` — Rebuilds or reads the cached profile response.
-7. `create_profile_response` — Rebuilds or reads the cached profile response.
-8. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-9. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`googleplay_webhook` → `verify_googleplay_webhook_payment` → `add_consummable_or_subscription` → `add_subscription_data` → `activate_any_subscription_with_expiry` → `fill_cache!` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -12830,17 +7719,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `signedPayload`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/payment/apple_webhook_v2" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "signedPayload": "$APPLE_SIGNED_PAYLOAD"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -12849,23 +7727,9 @@ JSON
 
 _Code path — First name_
 
-1. `apple_webhook_v2`
-2. `store_and_process_webhook`
-3. `start_processing_notification`
-4. `process_notification`
-5. `renew`
-6. `edit_user_subscription`
-7. `activate_any_subscription_with_expiry` — Activates a subscription after a successful payment.
-8. `fill_cache!` — Rebuilds or reads the cached profile response.
-9. `create_profile_response` — Rebuilds or reads the cached profile response.
-10. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-11. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`apple_webhook_v2` → `store_and_process_webhook` → `start_processing_notification` → `process_notification` → `renew` → `edit_user_subscription` → `activate_any_subscription_with_expiry` → `fill_cache!` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -12901,23 +7765,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `events`, `channel`, `name`, `user_id`, `channel_name` (optional · from code — confirm with Dev), `token` (optional · from code — confirm with Dev)
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/pusher_presence_webhook" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "events": [
-    {
-      "channel": "presence-channel",
-      "name": "member_removed",
-      "user_id": "$USER_ID"
-    }
-  ]
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -12926,15 +7773,9 @@ JSON
 
 _Code path — First name_
 
-1. `pusher_presence_webhook`
-2. `fill_room_cache!` — Rebuilds the live-audio room cache.
-3. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`pusher_presence_webhook` → `fill_room_cache!` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -12972,15 +7813,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `events[0][channel]`, `events[0][name]`, `events[0][user_id]`, `channel_name` (optional · from code — confirm with Dev), `events` (optional, array · from code — confirm with Dev), `token` (optional · from code — confirm with Dev)
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/V1/pusher_presence_webhook" \
-  --header "Accept: application/json" \
-  --get \
-  --data-urlencode "events[0][channel]=presence-channel" \
-  --data-urlencode "events[0][name]=member_removed" \
-  --data-urlencode "events[0][user_id]=$USER_ID"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -12989,15 +7821,9 @@ curl -i --request GET "https://testa2.aisle.co/V1/pusher_presence_webhook" \
 
 _Code path — First name_
 
-1. `pusher_presence_webhook`
-2. `fill_room_cache!` — Rebuilds the live-audio room cache.
-3. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`pusher_presence_webhook` → `fill_room_cache!` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -13013,117 +7839,17 @@ _Code path — First name_
 
 - **From the developers:** Use the presence-event branch without Authorization; adding an app token selects Pusher channel authentication instead. A matching live room is required for the cache-update branch.
 
-**What changed**
+**What changed** (latest 3 of 4; all on the website)
 
 - 2026-10-29 — Response field added: `status` · from code — confirm with Dev · `app/controllers/v1/live_audio_controller.rb:92 @004e72c`
 - 2026-10-29 — Request field added: `token` · from code — confirm with Dev · `app/controllers/v1/live_audio_controller.rb:65 @004e72c`
 - 2026-10-29 — Request field added: `events` · from code — confirm with Dev · `app/controllers/v1/live_audio_controller.rb:71 @004e72c`
-- 2026-10-29 — Request field added: `channel_name` · from code — confirm with Dev · `app/controllers/v1/live_audio_controller.rb:95 @004e72c`
-
-<a id="code-001"></a>
-
-#### `POST /V1/messages/firebase_webhook` — Firebase webhook
-
-**Firebase webhook.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/messages_controller.rb; config/routes.rb#L197`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:197` @004e72c → `v1/messages#firebase_webhook` (`app/controllers/v1/messages_controller.rb @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** action firebase_webhook is not defined in app/controllers/v1/messages_controller.rb (inherited or generated)
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:197 @004e72c`
-
-<a id="code-005"></a>
-
-#### `POST /V1/payment/cashfree/subscription/webhook` — Cashfree subscription webhook
-
-**Cashfree subscription webhook.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L233`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:233` @004e72c → `v1/payment#cashfree_subscription_webhook` (`app/controllers/v1/payment_controller.rb:291 @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** line 294 renders response — its full key set is built at run time
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:233 @004e72c`
-
-<a id="code-006"></a>
-
-#### `POST /V1/payment/cashfree/subscription/authorization_callback` — Cashfree subscription authorization callback
-
-**Cashfree subscription authorization callback.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L234`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:234` @004e72c → `v1/payment#cashfree_subscription_authorization_callback` (`app/controllers/v1/payment_controller.rb:297 @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** line 298 passes all params to Payment::Cashfree.cashfree_subscription_authorization_callback — the fields read there are not determined; line 299 renders response — its full key set is built at run time
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:234 @004e72c`
 
 <a id="area-g10"></a>
 
 ### CMS / admin
 
-Admin views, edits, search, curation, reviews, member activity and exports. 55 endpoints.
+Admin views, edits, search, curation, reviews, member activity and exports. 93 endpoints.
 
 | Method | Path | What it is |
 | --- | --- | --- |
@@ -13179,9 +7905,47 @@ Admin views, edits, search, curation, reviews, member activity and exports. 55 e
 | GET | [`/admin/reports`](#api-185) | Admin reports |
 | GET | [`/bangalore745/irl`](#api-192) | ActiveAdmin IRL content |
 | POST | [`/admin/members/autofeed_update`](#api-209) | Members autofeed update |
-| GET | [`/admin/member/fetch_spark_purchase_history`](#code-033) | Fetch spark purchase history |
-| GET | [`/admin/members/download_account_data`](#code-034) | Download account data |
-| GET | [`/admin/stories/fetch_deleted_reasons`](#code-035) | Fetch deleted reasons |
+| GET | [`/admin/member/fetch_spark_purchase_history`](https://aisleapidocs.netlify.app/#/aisle/code-033) | Get member spark purchase history _(from code)_ |
+| GET | [`/admin/members/download_account_data`](https://aisleapidocs.netlify.app/#/aisle/code-034) | Export member account data _(from code)_ |
+| GET | [`/admin/stories/fetch_deleted_reasons`](https://aisleapidocs.netlify.app/#/aisle/code-035) | List account deletion reasons _(from code)_ |
+| POST | [`/V1/campaign/create`](https://aisleapidocs.netlify.app/#/aisle/code-135) | Create campaign _(from code)_ |
+| POST | [`/admin/login`](https://aisleapidocs.netlify.app/#/aisle/code-136) | CMS admin login _(from code)_ |
+| POST | [`/admin/logout`](https://aisleapidocs.netlify.app/#/aisle/code-137) | CMS admin logout _(from code)_ |
+| POST | [`/admin/authenticate_rotp`](https://aisleapidocs.netlify.app/#/aisle/code-138) | Verify CMS admin TOTP code _(from code)_ |
+| POST | [`/admin/pending/reports_tab_update_state`](https://aisleapidocs.netlify.app/#/aisle/code-139) | Mark reported profiles reviewed _(from code)_ |
+| POST | [`/admin/images`](https://aisleapidocs.netlify.app/#/aisle/code-140) | Upload CMS image _(from code)_ |
+| GET | [`/admin/images/fetch_presigned_url`](https://aisleapidocs.netlify.app/#/aisle/code-141) | Get presigned photo upload URLs _(from code)_ |
+| GET | [`/admin/images/list_multiple_profiles`](https://aisleapidocs.netlify.app/#/aisle/code-142) | List approved members' photo updates _(from code)_ |
+| GET | [`/admin/images/list_multiple_profiles_disapproved`](https://aisleapidocs.netlify.app/#/aisle/code-143) | List disapproved members' photo updates _(from code)_ |
+| POST | [`/admin/reviews/dismiss_multiple`](https://aisleapidocs.netlify.app/#/aisle/code-144) | Dismiss flagged bio reviews _(from code)_ |
+| POST | [`/admin/reviews/dismiss`](https://aisleapidocs.netlify.app/#/aisle/code-145) | Dismiss one flagged bio review _(from code)_ |
+| GET | [`/admin/member/fetch_money_back_guarantee_info`](https://aisleapidocs.netlify.app/#/aisle/code-146) | Get money-back guarantee info _(from code)_ |
+| GET | [`/admin/member/fetch_image_history`](https://aisleapidocs.netlify.app/#/aisle/code-147) | Get member photo upload history _(from code)_ |
+| GET | [`/admin/member/fetch_incognito_history`](https://aisleapidocs.netlify.app/#/aisle/code-148) | Get member incognito history _(from code)_ |
+| GET | [`/admin/member/fetch_boost_history`](https://aisleapidocs.netlify.app/#/aisle/code-149) | Get member boost history _(from code)_ |
+| GET | [`/admin/members/banned_profile_list`](https://aisleapidocs.netlify.app/#/aisle/code-150) | List banned profiles _(from code)_ |
+| POST | [`/admin/members/remove_selfie_verification`](https://aisleapidocs.netlify.app/#/aisle/code-151) | Reset member selfie verification _(from code)_ |
+| POST | [`/admin/members/cancel_subscription`](https://aisleapidocs.netlify.app/#/aisle/code-152) | Cancel member PhonePe autopay _(from code)_ |
+| GET | [`/admin/members/list_subscriptions`](https://aisleapidocs.netlify.app/#/aisle/code-153) | List member subscriptions _(from code)_ |
+| POST | [`/admin/members/update_subscription_end_date`](https://aisleapidocs.netlify.app/#/aisle/code-154) | Change subscription end date _(from code)_ |
+| GET | [`/admin/members/get_dropdown_values`](https://aisleapidocs.netlify.app/#/aisle/code-155) | Get CMS profile dropdown values _(from code)_ |
+| GET | [`/admin/members/fetch_state_history_dropdown_values`](https://aisleapidocs.netlify.app/#/aisle/code-156) | Get ban reason filter options _(from code)_ |
+| POST | [`/admin/members/enable_exclusivity`](https://aisleapidocs.netlify.app/#/aisle/code-157) | Enable chat exclusivity for member _(from code)_ |
+| POST | [`/admin/members/delete_account_by_admin`](https://aisleapidocs.netlify.app/#/aisle/code-158) | Delete member account (CMS) _(from code)_ |
+| POST | [`/admin/members/fetch_curator_logs`](https://aisleapidocs.netlify.app/#/aisle/code-159) | Get CMS actions on member _(from code)_ |
+| GET | [`/admin/members/fetch_curator_logs`](https://aisleapidocs.netlify.app/#/aisle/code-160) | Get CMS actions on member _(from code)_ |
+| GET | [`/admin/scoreboard/curation`](https://aisleapidocs.netlify.app/#/aisle/code-161) | Get curation scoreboard _(from code)_ |
+| GET | [`/admin/scoreboard/today`](https://aisleapidocs.netlify.app/#/aisle/code-162) | Get business scoreboard _(from code)_ |
+| GET | [`/admin/reports/phone_codes`](https://aisleapidocs.netlify.app/#/aisle/code-163) | List phone country codes _(from code)_ |
+| GET | [`/admin/reports/otp_by_phonenumber`](https://aisleapidocs.netlify.app/#/aisle/code-164) | Search OTP SMS logs _(from code)_ |
+| POST | [`/admin/sharing/create`](https://aisleapidocs.netlify.app/#/aisle/code-165) | Share profile ref for review _(from code)_ |
+| POST | [`/admin/sharing/create_bulk`](https://aisleapidocs.netlify.app/#/aisle/code-166) | Share many profile refs _(from code)_ |
+| GET | [`/admin/sharing/list`](https://aisleapidocs.netlify.app/#/aisle/code-167) | List shared profile refs _(from code)_ |
+| POST | [`/admin/sharing/toggle_checked`](https://aisleapidocs.netlify.app/#/aisle/code-168) | Mark shared ref reviewed _(from code)_ |
+| GET | [`/admin/events/cities`](https://aisleapidocs.netlify.app/#/aisle/code-169) | List offline event cities _(from code)_ |
+| POST | [`/admin/events/create_event`](https://aisleapidocs.netlify.app/#/aisle/code-170) | Create or edit offline event _(from code)_ |
+| GET | [`/admin/events/all`](https://aisleapidocs.netlify.app/#/aisle/code-171) | List offline events _(from code)_ |
+| POST | [`/admin/events/update_event_state`](https://aisleapidocs.netlify.app/#/aisle/code-172) | Change offline event state _(from code)_ |
 
 <a id="api-136"></a>
 
@@ -13199,26 +7963,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: none
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/users/${REF}" \
-  --cookie "${ADMIN_SESSION_COOKIE}" \
-  --header "Accept: application/json"
-```
-
 **End-to-end flow**
 
 _Code path — First name, Email, Phone_
 
-1. `Profile.get_specific_user_for_admin` — Admin (CMS) view of a profile.
-2. `detailed_for_admin serializer`
+`Profile.get_specific_user_for_admin` → `detailed_for_admin serializer`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -13248,19 +7999,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/users/send_misuse_email" \
-  --cookie "${ADMIN_SESSION_COOKIE}" \
-  --header "X-CSRF-Token: ${CSRF_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$REF"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -13269,22 +8007,13 @@ JSON
 
 _Code path — First name_
 
-1. `send_misuse_email`
-2. `send_about_warning`
-3. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`send_misuse_email` → `send_about_warning` → `get_first_name`
 
 _Code path — Email_
 
-1. `send_misuse_email`
-2. `send_about_warning`
-3. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`send_misuse_email` → `send_about_warning` → `fetch_email`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -13320,27 +8049,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: none
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/admin/users/${REF}" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json"
-```
-
 **End-to-end flow**
 
 _Code path — First name, Email, Phone_
 
-1. `Profile.get_specific_user_for_admin` — Admin (CMS) view of a profile.
-2. `detailed_for_admin serializer`
+`Profile.get_specific_user_for_admin` → `detailed_for_admin serializer`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -13370,37 +8085,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`, `first_name`, `gender`, `photos`, `photo`, `photo_id`, `can_save`, `date_of_birth`, `phone_code_id`, `fetch_only_number`, `about`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/admin/approve_and_edit" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$REF",
-  "first_name": "Asha",
-  "gender": "Female",
-  "photos": [
-    {
-      "photo": "$PHOTO_URL_1",
-      "photo_id": "$PHOTO_ID_1",
-      "can_save": true
-    },
-    {
-      "photo": "$PHOTO_URL_2",
-      "photo_id": "$PHOTO_ID_2",
-      "can_save": true
-    }
-  ],
-  "date_of_birth": "1996-01-15",
-  "phone_code_id": "$PHONE_CODE_ID",
-  "fetch_only_number": "1012345678",
-  "about": "Synthetic profile story"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -13409,16 +8093,9 @@ JSON
 
 _Code path — First name_
 
-1. `approve_and_edit`
-2. `update_profile_data`
-3. `update_application_by_admin!`
-4. `assign_first_name` — Normalises the name, writes it to the PII service (best effort) and sets the local field.
+`approve_and_edit` → `update_profile_data` → `update_application_by_admin!` → `assign_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -13453,37 +8130,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`, `first_name`, `gender`, `photos`, `photo`, `photo_id`, `can_save`, `date_of_birth`, `phone_code_id`, `fetch_only_number`, `about`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/admin/update_profile" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$REF",
-  "first_name": "Asha",
-  "gender": "Female",
-  "photos": [
-    {
-      "photo": "$PHOTO_URL_1",
-      "photo_id": "$PHOTO_ID_1",
-      "can_save": true
-    },
-    {
-      "photo": "$PHOTO_URL_2",
-      "photo_id": "$PHOTO_ID_2",
-      "can_save": true
-    }
-  ],
-  "date_of_birth": "1996-01-15",
-  "phone_code_id": "$PHONE_CODE_ID",
-  "fetch_only_number": "1012345678",
-  "about": "Synthetic profile story"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -13492,16 +8138,9 @@ JSON
 
 _Code path — First name_
 
-1. `update_profile`
-2. `update_profile_data`
-3. `update_application_by_admin!`
-4. `assign_first_name` — Normalises the name, writes it to the PII service (best effort) and sets the local field.
+`update_profile` → `update_profile_data` → `update_application_by_admin!` → `assign_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -13538,20 +8177,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`, `isSuspicious`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/admin/disapprove" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$REF",
-  "isSuspicious": false
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -13560,18 +8185,9 @@ JSON
 
 _Code path — First name_
 
-1. `disapprove`
-2. `disapprove_profile`
-3. `sync_profile_to_kafka` — Publishes the updated profile to Kafka (only in some states).
-4. `create_profile_response` — Rebuilds or reads the cached profile response.
-5. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-6. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`disapprove` → `disapprove_profile` → `sync_profile_to_kafka` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -13603,30 +8219,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/admin/pending/curation_tab" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --get \
-  --data-urlencode "page=1"
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `curation_tab`
-2. `pending_profile_list`
-3. `curation_tab_pending`
-4. `get_flags_raised`
-5. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`curation_tab` → `pending_profile_list` → `curation_tab_pending` → `get_flags_raised` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -13652,30 +8251,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/admin/pending/vip_tab" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --get \
-  --data-urlencode "page=1"
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `vip_tab`
-2. `fetch_vip_users`
-3. `curation_tab_pending`
-4. `get_flags_raised`
-5. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`vip_tab` → `fetch_vip_users` → `curation_tab_pending` → `get_flags_raised` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -13701,30 +8283,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/admin/pending/people_hni_tab" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --get \
-  --data-urlencode "page=1"
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `people_hni_tab`
-2. `people_hni_tab_list`
-3. `curation_tab_pending`
-4. `get_flags_raised`
-5. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`people_hni_tab` → `people_hni_tab_list` → `curation_tab_pending` → `get_flags_raised` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -13750,41 +8315,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `approve`, `ref`, `first_name`, `gender`, `photos`, `photo`, `photo_id`, `can_save`, `disapprove`, `inappropriate`, `banned`, `page`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/admin/pending/people_hni_tab" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "approve": [
-    {
-      "ref": "$REF",
-      "first_name": "Asha",
-      "gender": "Female",
-      "photos": [
-        {
-          "photo": "$PHOTO_URL_1",
-          "photo_id": "$PHOTO_ID_1",
-          "can_save": true
-        },
-        {
-          "photo": "$PHOTO_URL_2",
-          "photo_id": "$PHOTO_ID_2",
-          "can_save": true
-        }
-      ]
-    }
-  ],
-  "disapprove": [],
-  "inappropriate": [],
-  "banned": [],
-  "page": 1
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -13793,15 +8323,9 @@ JSON
 
 _Code path — First name_
 
-1. `people_hni_tab_update_profiles`
-2. `update_hni_registry`
-3. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`people_hni_tab_update_profiles` → `update_hni_registry` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -13835,57 +8359,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `approve`, `ref`, `first_name`, `gender`, `photos`, `photo`, `photo_id`, `can_save`, `disapprove`, `inappropriate`, `banned`, `page`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/admin/pending/curation_tab_update_profiles_state" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "approve": [
-    {
-      "ref": "$REF",
-      "first_name": "Asha",
-      "gender": "Female",
-      "photos": [
-        {
-          "photo": "$PHOTO_URL_1",
-          "photo_id": "$PHOTO_ID_1",
-          "can_save": true
-        },
-        {
-          "photo": "$PHOTO_URL_2",
-          "photo_id": "$PHOTO_ID_2",
-          "can_save": true
-        }
-      ]
-    }
-  ],
-  "disapprove": [],
-  "inappropriate": [],
-  "banned": [],
-  "page": 1
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `curation_tab_update_profiles_state`
-2. `add_to_list`
-3. `pending_profile_list`
-4. `curation_tab_pending`
-5. `get_flags_raised`
-6. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`curation_tab_update_profiles_state` → `add_to_list` → `pending_profile_list` → `curation_tab_pending` → `get_flags_raised` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -13915,57 +8395,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `approve`, `ref`, `first_name`, `gender`, `photos`, `photo`, `photo_id`, `can_save`, `disapprove`, `inappropriate`, `banned`, `page`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/admin/pending/vip_tab_update_profiles_state" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "approve": [
-    {
-      "ref": "$REF",
-      "first_name": "Asha",
-      "gender": "Female",
-      "photos": [
-        {
-          "photo": "$PHOTO_URL_1",
-          "photo_id": "$PHOTO_ID_1",
-          "can_save": true
-        },
-        {
-          "photo": "$PHOTO_URL_2",
-          "photo_id": "$PHOTO_ID_2",
-          "can_save": true
-        }
-      ]
-    }
-  ],
-  "disapprove": [],
-  "inappropriate": [],
-  "banned": [],
-  "page": 1
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `vip_tab_update_profiles_state`
-2. `add_to_list`
-3. `pending_profile_list`
-4. `curation_tab_pending`
-5. `get_flags_raised`
-6. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`vip_tab_update_profiles_state` → `add_to_list` → `pending_profile_list` → `curation_tab_pending` → `get_flags_raised` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -13995,29 +8431,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/admin/images/list_multiple_profiles_v1" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --get \
-  --data-urlencode "page=1"
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `list_multiple_profiles_v1`
-2. `fetch_pending_image_list`
-3. `pending_image_response_1`
-4. `get_first_name_for_user` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`list_multiple_profiles_v1` → `fetch_pending_image_list` → `pending_image_response_1` → `get_first_name_for_user`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -14043,55 +8463,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `tab`, `approve`, `ref`, `first_name`, `gender`, `updated_images`, `photo`, `photo_id`, `can_save`, `reject`, `banned`, `inappropriate`, `page`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/admin/images/images_updates_tab" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "tab": "updates",
-  "approve": [
-    {
-      "ref": "$REF",
-      "first_name": "Asha",
-      "gender": "Female",
-      "updated_images": [
-        {
-          "photo": "$PHOTO_URL_1",
-          "photo_id": "$PHOTO_ID_1",
-          "can_save": true
-        },
-        {
-          "photo": "$PHOTO_URL_2",
-          "photo_id": "$PHOTO_ID_2",
-          "can_save": true
-        }
-      ]
-    }
-  ],
-  "reject": [],
-  "banned": [],
-  "inappropriate": [],
-  "page": 1
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `images_updates_tab`
-2. `update_profile_images`
-3. `assign_first_name` — Normalises the name, writes it to the PII service (best effort) and sets the local field.
+`images_updates_tab` → `update_profile_images` → `assign_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -14121,29 +8499,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`, `date` (optional · from code — confirm with Dev)
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/admin/images/list_auto_updates_images" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --get \
-  --data-urlencode "page=1"
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `list_auto_updates_images`
-2. `fetch_pending_auto_updates_images`
-3. `pending_image_response_1`
-4. `get_first_name_for_user` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`list_auto_updates_images` → `fetch_pending_auto_updates_images` → `pending_image_response_1` → `get_first_name_for_user`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -14173,55 +8535,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `tab`, `approve`, `ref`, `first_name`, `gender`, `updated_images`, `photo`, `photo_id`, `can_save`, `reject`, `banned`, `inappropriate`, `page`, `date` (optional · from code — confirm with Dev)
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/admin/images/auto_updates_images_update" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "tab": "updates",
-  "approve": [
-    {
-      "ref": "$REF",
-      "first_name": "Asha",
-      "gender": "Female",
-      "updated_images": [
-        {
-          "photo": "$PHOTO_URL_1",
-          "photo_id": "$PHOTO_ID_1",
-          "can_save": true
-        },
-        {
-          "photo": "$PHOTO_URL_2",
-          "photo_id": "$PHOTO_ID_2",
-          "can_save": true
-        }
-      ]
-    }
-  ],
-  "reject": [],
-  "banned": [],
-  "inappropriate": [],
-  "page": 1
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `auto_updates_images_update`
-2. `update_profile_images`
-3. `assign_first_name` — Normalises the name, writes it to the PII service (best effort) and sets the local field.
+`auto_updates_images_update` → `update_profile_images` → `assign_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -14255,29 +8575,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/admin/images/list_multiple_profiles_disapproved_v1" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --get \
-  --data-urlencode "page=1"
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `list_multiple_profiles_disapproved_v1`
-2. `fetch_pending_image_update_disapproved_profile_list_2`
-3. `curation_tab_disapproved`
-4. `get_first_name_for_user` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`list_multiple_profiles_disapproved_v1` → `fetch_pending_image_update_disapproved_profile_list_2` → `curation_tab_disapproved` → `get_first_name_for_user`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -14303,42 +8607,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `tab`, `approve`, `ref`, `first_name`, `gender`, `updated_images`, `photo`, `photo_id`, `can_save`, `reject`, `banned`, `inappropriate`, `page`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/admin/images/approve_reject_multiple_photos_v1" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "tab": "updates",
-  "approve": [
-    {
-      "ref": "$REF",
-      "first_name": "Asha",
-      "gender": "Female",
-      "updated_images": [
-        {
-          "photo": "$PHOTO_URL_1",
-          "photo_id": "$PHOTO_ID_1",
-          "can_save": true
-        },
-        {
-          "photo": "$PHOTO_URL_2",
-          "photo_id": "$PHOTO_ID_2",
-          "can_save": true
-        }
-      ]
-    }
-  ],
-  "reject": [],
-  "banned": [],
-  "inappropriate": [],
-  "page": 1
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -14348,15 +8616,9 @@ JSON
 
 _Code path — First name_
 
-1. `approve_reject_multiple_photos_v1`
-2. `update_profile_images`
-3. `assign_first_name` — Normalises the name, writes it to the PII service (best effort) and sets the local field.
+`approve_reject_multiple_photos_v1` → `update_profile_images` → `assign_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -14391,42 +8653,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `tab`, `approve`, `ref`, `first_name`, `gender`, `updated_images`, `photo`, `photo_id`, `can_save`, `reject`, `banned`, `inappropriate`, `page`, `approve_profile` (optional, array · from code — confirm with Dev)
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/admin/images/approve_reject_multiple_photos_disapproved" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "tab": "updates",
-  "approve": [
-    {
-      "ref": "$REF",
-      "first_name": "Asha",
-      "gender": "Female",
-      "updated_images": [
-        {
-          "photo": "$PHOTO_URL_1",
-          "photo_id": "$PHOTO_ID_1",
-          "can_save": true
-        },
-        {
-          "photo": "$PHOTO_URL_2",
-          "photo_id": "$PHOTO_ID_2",
-          "can_save": true
-        }
-      ]
-    }
-  ],
-  "reject": [],
-  "banned": [],
-  "inappropriate": [],
-  "page": 1
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -14435,14 +8661,9 @@ JSON
 
 _Code path — First name_
 
-1. `approve_reject_multiple_photos_disapproved`
-2. `assign_first_name` — Normalises the name, writes it to the PII service (best effort) and sets the local field.
+`approve_reject_multiple_photos_disapproved` → `assign_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -14479,19 +8700,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/admin/images/mark_selfie_verified" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$REF"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -14500,18 +8708,9 @@ JSON
 
 _Code path — First name_
 
-1. `mark_selfie_verified`
-2. `verify_selfie_admin`
-3. `sync_profile_to_kafka` — Publishes the updated profile to Kafka (only in some states).
-4. `create_profile_response` — Rebuilds or reads the cached profile response.
-5. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-6. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`mark_selfie_verified` → `verify_selfie_admin` → `sync_profile_to_kafka` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -14543,16 +8742,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`, `message_type`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/admin/reviews/list_multiple" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --get \
-  --data-urlencode "page=1" \
-  --data-urlencode "message_type=story"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `reviews` (from code — confirm with Dev)
@@ -14563,14 +8752,9 @@ curl -i --request GET "https://testa2.aisle.co/admin/reviews/list_multiple" \
 
 _Code path — First name_
 
-1. `list_multiple`
-2. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`list_multiple` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -14602,16 +8786,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`, `message_type`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/admin/reviews/fetch_individual" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --get \
-  --data-urlencode "page=1" \
-  --data-urlencode "message_type=story"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `review_data` (from code — confirm with Dev)
@@ -14622,20 +8796,13 @@ curl -i --request GET "https://testa2.aisle.co/admin/reviews/fetch_individual" \
 
 _Code path — First name_
 
-1. `fetch_individual`
-2. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`fetch_individual` → `get_first_name`
 
 _Code path — Phone_
 
-1. `fetch_individual`
-2. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`fetch_individual` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -14669,26 +8836,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `profile_data_update_list`, `review_id`, `text`, `send_email`, `dismissed`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/admin/reviews/update_multiple" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "profile_data_update_list": [
-    {
-      "review_id": "$REVIEW_ID",
-      "text": "Synthetic corrected story",
-      "send_email": true
-    }
-  ],
-  "dismissed": []
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -14697,24 +8844,13 @@ JSON
 
 _Code path — First name_
 
-1. `update_multiple`
-2. `update_individual`
-3. `send_about_warning`
-4. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`update_multiple` → `update_individual` → `send_about_warning` → `get_first_name`
 
 _Code path — Email_
 
-1. `update_multiple`
-2. `update_individual`
-3. `send_about_warning`
-4. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`update_multiple` → `update_individual` → `send_about_warning` → `fetch_email`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -14746,21 +8882,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `review_id`, `text`, `send_email`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/admin/reviews/save" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "review_id": "$REVIEW_ID",
-  "text": "Synthetic corrected story",
-  "send_email": true
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -14769,24 +8890,13 @@ JSON
 
 _Code path — First name_
 
-1. `save`
-2. `update_individual`
-3. `send_about_warning`
-4. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`save` → `update_individual` → `send_about_warning` → `get_first_name`
 
 _Code path — Email_
 
-1. `save`
-2. `update_individual`
-3. `send_about_warning`
-4. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`save` → `update_individual` → `send_about_warning` → `fetch_email`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -14818,18 +8928,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `first_name`, `email`, `phone_number`, `page`, `invoice_id` (optional · from code — confirm with Dev)
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/admin/member/search" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --get \
-  --data-urlencode "first_name=Asha" \
-  --data-urlencode "email=asha@example.com" \
-  --data-urlencode "phone_number=1012345678" \
-  --data-urlencode "page=1"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `profile_list` (from code — confirm with Dev)
@@ -14840,26 +8938,17 @@ curl -i --request GET "https://testa2.aisle.co/admin/member/search" \
 
 _Code path — First name_
 
-1. `search`
-2. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`search` → `get_first_name`
 
 _Code path — Email_
 
-1. `search`
-2. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`search` → `fetch_email`
 
 _Code path — Phone_
 
-1. `search`
-2. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`search` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -14878,12 +8967,11 @@ _Code path — Phone_
 - **From the developers:** Filters combine. First-name and email search use PII service search; phone search still uses local SQL. Run each filter separately as well as combined.
 - **Known limitation:** First-name and email filters use PII-service search even when the read switches are off; phone search still uses the local table.
 
-**What changed**
+**What changed** (latest 3 of 4; all on the website)
 
 - 2026-10-29 — Response field added: `total_pages` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:25 @004e72c`
 - 2026-10-29 — Response field added: `page` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:25 @004e72c`
 - 2026-10-29 — Response field added: `profile_list` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:25 @004e72c`
-- 2026-10-29 — Request field added: `invoice_id` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:5 @004e72c`
 
 <a id="api-161"></a>
 
@@ -14901,15 +8989,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/admin/member/aws_moderated_list" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --get \
-  --data-urlencode "page=1"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `moderation_list` (from code — confirm with Dev)
@@ -14920,14 +8999,9 @@ curl -i --request GET "https://testa2.aisle.co/admin/member/aws_moderated_list" 
 
 _Code path — First name_
 
-1. `aws_moderated_list`
-2. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`aws_moderated_list` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -14959,16 +9033,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`, `type`, `profile_state` (optional · from code — confirm with Dev)
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/admin/member/feed" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --get \
-  --data-urlencode "page=1" \
-  --data-urlencode "type=auto_curate"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `profile_list` (from code — confirm with Dev)
@@ -14980,14 +9044,9 @@ curl -i --request GET "https://testa2.aisle.co/admin/member/feed" \
 
 _Code path — First name_
 
-1. `feed`
-2. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`feed` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -14997,13 +9056,11 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
-**What changed**
+**What changed** (latest 3 of 5; all on the website)
 
 - 2026-10-29 — Response field added: `total_profiles` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:228 @004e72c`
 - 2026-10-29 — Response field added: `total_pages` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:228 @004e72c`
 - 2026-10-29 — Response field added: `page` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:228 @004e72c`
-- 2026-10-29 — Response field added: `profile_list` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:228 @004e72c`
-- 2026-10-29 — Request field added: `profile_state` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:202 @004e72c`
 
 <a id="api-163"></a>
 
@@ -15021,47 +9078,21 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`, `page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/admin/member/fetch_complete_info" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --get \
-  --data-urlencode "ref=$REF" \
-  --data-urlencode "page=1"
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `fetch_complete_info`
-2. `fetch_complete_details`
-3. `fetch_connected_users_info`
-4. `get_first_names_for_users` — Loads first names for many profiles in one go; keeps the cached name if the PII service returns nothing.
+`fetch_complete_info` → `fetch_complete_details` → `fetch_connected_users_info` → `get_first_names_for_users`
 
 _Code path — Email_
 
-1. `fetch_complete_info`
-2. `fetch_complete_details`
-3. `admin_complete_details` — Admin (CMS) view of a profile.
-4. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`fetch_complete_info` → `fetch_complete_details` → `admin_complete_details` → `fetch_email`
 
 _Code path — Phone_
 
-1. `fetch_complete_info`
-2. `fetch_complete_details`
-3. `admin_complete_details` — Admin (CMS) view of a profile.
-4. `fetch_only_number_with_phone_code_name` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
-5. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`fetch_complete_info` → `fetch_complete_details` → `admin_complete_details` → `fetch_only_number_with_phone_code_name` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -15091,50 +9122,21 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `state`, `page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/admin/member/fetch_bait_profile_info" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --get \
-  --data-urlencode "state=pending" \
-  --data-urlencode "page=1"
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `fetch_bait_profile_info`
-2. `fetch_by_latest_interaction`
-3. `fetch_complete_details`
-4. `fetch_connected_users_info`
-5. `get_first_names_for_users` — Loads first names for many profiles in one go; keeps the cached name if the PII service returns nothing.
+`fetch_bait_profile_info` → `fetch_by_latest_interaction` → `fetch_complete_details` → `fetch_connected_users_info` → `get_first_names_for_users`
 
 _Code path — Email_
 
-1. `fetch_bait_profile_info`
-2. `fetch_by_latest_interaction`
-3. `fetch_complete_details`
-4. `admin_complete_details` — Admin (CMS) view of a profile.
-5. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`fetch_bait_profile_info` → `fetch_by_latest_interaction` → `fetch_complete_details` → `admin_complete_details` → `fetch_email`
 
 _Code path — Phone_
 
-1. `fetch_bait_profile_info`
-2. `fetch_by_latest_interaction`
-3. `fetch_complete_details`
-4. `admin_complete_details` — Admin (CMS) view of a profile.
-5. `fetch_only_number_with_phone_code_name` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
-6. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`fetch_bait_profile_info` → `fetch_by_latest_interaction` → `fetch_complete_details` → `admin_complete_details` → `fetch_only_number_with_phone_code_name` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -15168,29 +9170,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`, `page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/admin/member/fetch_connected_profiles" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --get \
-  --data-urlencode "ref=$REF" \
-  --data-urlencode "page=1"
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `fetch_connected_profiles`
-2. `fetch_connected_users_info`
-3. `get_first_names_for_users` — Loads first names for many profiles in one go; keeps the cached name if the PII service returns nothing.
+`fetch_connected_profiles` → `fetch_connected_users_info` → `get_first_names_for_users`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -15216,30 +9202,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`, `filter`, `page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/admin/member/user_activity_v1" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --get \
-  --data-urlencode "ref=$REF" \
-  --data-urlencode "filter=likes_sent" \
-  --data-urlencode "page=1"
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `user_activity_v1`
-2. `user_reported_activity`
-3. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`user_activity_v1` → `user_reported_activity` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -15271,20 +9240,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`, `reason`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/admin/members/ban_profile" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$REF",
-  "reason": "Synthetic moderation test"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -15293,18 +9248,9 @@ JSON
 
 _Code path — First name_
 
-1. `ban_profile`
-2. `ban_user`
-3. `sync_profile_to_kafka` — Publishes the updated profile to Kafka (only in some states).
-4. `create_profile_response` — Rebuilds or reads the cached profile response.
-5. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-6. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`ban_profile` → `ban_user` → `sync_profile_to_kafka` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -15338,19 +9284,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/admin/members/inappropriate_profile" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$REF"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -15359,17 +9292,9 @@ JSON
 
 _Code path — First name_
 
-1. `inappropriate_profile`
-2. `sync_profile_to_kafka` — Publishes the updated profile to Kafka (only in some states).
-3. `create_profile_response` — Rebuilds or reads the cached profile response.
-4. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-5. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`inappropriate_profile` → `sync_profile_to_kafka` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -15403,23 +9328,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `review_failed_refs`, `review_passed_refs`, `image_updates`, `skip_render` (optional · from code — confirm with Dev)
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/admin/members/review_update" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "review_failed_refs": [],
-  "review_passed_refs": [
-    "$REF"
-  ],
-  "image_updates": []
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -15428,18 +9336,9 @@ JSON
 
 _Code path — First name_
 
-1. `review_update`
-2. `approveImages`
-3. `sync_profile_to_kafka` — Publishes the updated profile to Kafka (only in some states).
-4. `create_profile_response` — Rebuilds or reads the cached profile response.
-5. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-6. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`review_update` → `approveImages` → `sync_profile_to_kafka` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -15476,16 +9375,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`, `profile_state`, `bucket` (optional · from code — confirm with Dev), `date` (optional · from code — confirm with Dev)
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/admin/members/autofeed" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --get \
-  --data-urlencode "page=1" \
-  --data-urlencode "profile_state=approved"
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `profiles` (from code — confirm with Dev)
@@ -15498,14 +9387,9 @@ curl -i --request GET "https://testa2.aisle.co/admin/members/autofeed" \
 
 _Code path — First name_
 
-1. `autofeed`
-2. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`autofeed` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -15515,15 +9399,11 @@ _Code path — First name_
 | App database | `profiles.first_name` | read |
 | Audit log | `audit_trails (MongoDB)` | write |
 
-**What changed**
+**What changed** (latest 3 of 7; all on the website)
 
 - 2026-10-29 — Response field added: `total_profiles_all_states` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:348 @004e72c`
 - 2026-10-29 — Response field added: `total_profiles` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:348 @004e72c`
 - 2026-10-29 — Response field added: `total_pages` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:348 @004e72c`
-- 2026-10-29 — Response field added: `page` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:348 @004e72c`
-- 2026-10-29 — Response field added: `profiles` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:348 @004e72c`
-- 2026-10-29 — Request field added: `date` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:308 @004e72c`
-- 2026-10-29 — Request field added: `bucket` · from code — confirm with Dev · `app/controllers/admin/members_controller.rb:307 @004e72c`
 
 <a id="api-171"></a>
 
@@ -15541,30 +9421,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/admin/members/retry_curation_bucket_list" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --get \
-  --data-urlencode "page=1"
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `retry_curation_bucket_list`
-2. `fetch_failed_review_profile_list`
-3. `curation_tab_pending`
-4. `get_flags_raised`
-5. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`retry_curation_bucket_list` → `fetch_failed_review_profile_list` → `curation_tab_pending` → `get_flags_raised` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -15590,31 +9453,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/admin/members/fetch_verified_profile" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --get \
-  --data-urlencode "page=1"
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `fetch_verified_profile`
-2. `fetch_verified_not_admin_approved_profiles_list`
-3. `verified_account`
-4. `curation_tab_pending`
-5. `get_flags_raised`
-6. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`fetch_verified_profile` → `fetch_verified_not_admin_approved_profiles_list` → `verified_account` → `curation_tab_pending` → `get_flags_raised` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -15642,40 +9487,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `approve`, `disapprove`, `ban`, `page`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/admin/members/update_verified_profile" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "approve": [
-    "$REF"
-  ],
-  "disapprove": [],
-  "ban": [],
-  "page": 1
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `update_verified_profile`
-2. `update_verified_profiles_list`
-3. `fill_cache!` — Rebuilds or reads the cached profile response.
-4. `create_profile_response` — Rebuilds or reads the cached profile response.
-5. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-6. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`update_verified_profile` → `update_verified_profiles_list` → `fill_cache!` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -15704,23 +9522,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `otp`, `order_id`, `payment_gateway`, `is_partial_refund`, `refund_reason`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/admin/members/refund_payment" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "otp": "$ADMIN_OTP",
-  "order_id": "$ORDER_ID",
-  "payment_gateway": "$PAYMENT_GATEWAY_ENUM",
-  "is_partial_refund": false,
-  "refund_reason": "Synthetic test refund"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -15730,21 +9531,9 @@ JSON
 
 _Code path — First name_
 
-1. `refund_payment`
-2. `initiate_refund`
-3. `refund_subscription`
-4. `check_for_duplicate_payments`
-5. `activate_any_subscription_with_expiry` — Activates a subscription after a successful payment.
-6. `fill_cache!` — Rebuilds or reads the cached profile response.
-7. `create_profile_response` — Rebuilds or reads the cached profile response.
-8. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-9. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`refund_payment` → `initiate_refund` → `refund_subscription` → `check_for_duplicate_payments` → `activate_any_subscription_with_expiry` → `fill_cache!` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -15778,20 +9567,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `id`, `end_date`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/admin/members/toggle_subscription" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "id": "$SUBSCRIPTION_ID",
-  "end_date": "31/12/2026"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -15801,17 +9576,9 @@ JSON
 
 _Code path — First name_
 
-1. `toggle_subscription`
-2. `fill_cache!` — Rebuilds or reads the cached profile response.
-3. `create_profile_response` — Rebuilds or reads the cached profile response.
-4. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-5. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`toggle_subscription` → `fill_cache!` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -15849,19 +9616,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/admin/members/capture_payment" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$REF"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -15871,23 +9625,9 @@ JSON
 
 _Code path — First name_
 
-1. `capture_payment`
-2. `cms_restore_purchase`
-3. `restore_purchase`
-4. `validate_receipt_data`
-5. `validate_ios_consumable_response`
-6. `activate_any_subscription` — Activates a subscription after a successful payment.
-7. `activate_any_subscription_with_expiry` — Activates a subscription after a successful payment.
-8. `fill_cache!` — Rebuilds or reads the cached profile response.
-9. `create_profile_response` — Rebuilds or reads the cached profile response.
-10. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-11. `select_f…`
+`capture_payment` → `cms_restore_purchase` → `restore_purchase` → `validate_receipt_data` → `validate_ios_consumable_response` → `activate_any_subscription` → `activate_any_subscription_with_expiry` → `fill_cache!` → `create_profile_response` → `general_information` → `select_f…`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -15919,50 +9659,21 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/admin/members/correct_profile_location" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$REF"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `correct_profile_location`
-2. `fetch_complete_details`
-3. `fetch_connected_users_info`
-4. `get_first_names_for_users` — Loads first names for many profiles in one go; keeps the cached name if the PII service returns nothing.
+`correct_profile_location` → `fetch_complete_details` → `fetch_connected_users_info` → `get_first_names_for_users`
 
 _Code path — Email_
 
-1. `correct_profile_location`
-2. `fetch_complete_details`
-3. `admin_complete_details` — Admin (CMS) view of a profile.
-4. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`correct_profile_location` → `fetch_complete_details` → `admin_complete_details` → `fetch_email`
 
 _Code path — Phone_
 
-1. `correct_profile_location`
-2. `fetch_complete_details`
-3. `admin_complete_details` — Admin (CMS) view of a profile.
-4. `fetch_only_number_with_phone_code_name` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
-5. `fetch_only_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`correct_profile_location` → `fetch_complete_details` → `admin_complete_details` → `fetch_only_number_with_phone_code_name` → `fetch_only_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -15996,30 +9707,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `first_name`, `page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/admin/members/search_profiles" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --get \
-  --data-urlencode "first_name=Asha" \
-  --data-urlencode "page=1"
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `search_profiles`
-2. `search_profiles_by_params`
-3. `profile_response_cms` — Admin (CMS) view of a profile.
-4. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`search_profiles` → `search_profiles_by_params` → `profile_response_cms` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -16049,46 +9743,21 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`, `page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/admin/members/download_profile_details" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --get \
-  --data-urlencode "ref=$REF" \
-  --data-urlencode "page=1"
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `download_profile_details`
-2. `fetch_profile_data_cms`
-3. `create_profile_json_for_cyber_cell`
-4. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`download_profile_details` → `fetch_profile_data_cms` → `create_profile_json_for_cyber_cell` → `get_first_name`
 
 _Code path — Email_
 
-1. `download_profile_details`
-2. `fetch_profile_data_cms`
-3. `create_profile_json_for_cyber_cell`
-4. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`download_profile_details` → `fetch_profile_data_cms` → `create_profile_json_for_cyber_cell` → `fetch_email`
 
 _Code path — Phone_
 
-1. `download_profile_details`
-2. `fetch_profile_data_cms`
-3. `create_profile_json_for_cyber_cell`
-4. `fetch_mobile_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`download_profile_details` → `fetch_profile_data_cms` → `create_profile_json_for_cyber_cell` → `fetch_mobile_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -16119,44 +9788,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `type`, `approve`, `ref`, `first_name`, `gender`, `photos`, `photo`, `photo_id`, `can_save`, `disapprove`, `inappropriate`, `editedImages`, `banned`, `visible_refs`, `moveToFeed`, `skip_render` (optional · from code — confirm with Dev)
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/admin/members/approve_disapprove_banned_profiles" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "type": "auto_curate",
-  "approve": [
-    {
-      "ref": "$REF",
-      "first_name": "Asha",
-      "gender": "Female",
-      "photos": [
-        {
-          "photo": "$PHOTO_URL_1",
-          "photo_id": "$PHOTO_ID_1",
-          "can_save": true
-        },
-        {
-          "photo": "$PHOTO_URL_2",
-          "photo_id": "$PHOTO_ID_2",
-          "can_save": true
-        }
-      ]
-    }
-  ],
-  "disapprove": [],
-  "inappropriate": [],
-  "editedImages": [],
-  "banned": [],
-  "visible_refs": [],
-  "moveToFeed": false
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (from code — confirm with Dev)
@@ -16165,15 +9796,9 @@ JSON
 
 _Code path — First name_
 
-1. `approve_disapprove_banned_profiles`
-2. `approve_profile`
-3. `assign_first_name` — Normalises the name, writes it to the PII service (best effort) and sets the local field.
+`approve_disapprove_banned_profiles` → `approve_profile` → `assign_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -16208,30 +9833,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `current_user_ref`, `other_user_ref`, `page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/admin/connections/fetch_messages" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --get \
-  --data-urlencode "current_user_ref=$REF" \
-  --data-urlencode "other_user_ref=$OTHER_REF" \
-  --data-urlencode "page=1"
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `fetch_messages`
-2. `fetch_two_user_connection_details`
-3. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`fetch_messages` → `fetch_two_user_connection_details` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -16259,37 +9867,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `old_user_ref`, `new_user_ref`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/admin/payments/subscription_transfer" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "old_user_ref": "$REF",
-  "new_user_ref": "$OTHER_REF"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `subscription_transfer`
-2. `transfer_active_subscription`
-3. `activate_any_subscription_with_expiry` — Activates a subscription after a successful payment.
-4. `fill_cache!` — Rebuilds or reads the cached profile response.
-5. `create_profile_response` — Rebuilds or reads the cached profile response.
-6. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-7. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`subscription_transfer` → `transfer_active_subscription` → `activate_any_subscription_with_expiry` → `fill_cache!` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -16318,41 +9902,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `ref`, `product_id`, `purchase_token`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/admin/payments/capture_android_payment" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "ref": "$REF",
-  "product_id": "$PRODUCT_ID",
-  "purchase_token": "$PURCHASE_TOKEN"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `capture_android_payment`
-2. `capture_android_payment_cms`
-3. `verify_android_payment`
-4. `add_consummable_or_subscription`
-5. `add_subscription_data`
-6. `activate_any_subscription_with_expiry` — Activates a subscription after a successful payment.
-7. `fill_cache!` — Rebuilds or reads the cached profile response.
-8. `create_profile_response` — Rebuilds or reads the cached profile response.
-9. `general_information` — Builds the “general information” block of a profile (own_ = the owner’s view, which includes email and phone).
-10. `select_first_name` — Picks the first name to show to other people — respects the hide-name setting.
+`capture_android_payment` → `capture_android_payment_cms` → `verify_android_payment` → `add_consummable_or_subscription` → `add_subscription_data` → `activate_any_subscription_with_expiry` → `fill_cache!` → `create_profile_response` → `general_information` → `select_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -16380,42 +9936,21 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/admin/stories" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --get \
-  --data-urlencode "page=1"
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `index`
-2. `fetch_all`
-3. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`index` → `fetch_all` → `get_first_name`
 
 _Code path — Email_
 
-1. `index`
-2. `fetch_all`
-3. `fetch_email` — Reads the email: needs a local email_id, then reads the PII service when ALLOW_PII_EMAIL_READ is on.
+`index` → `fetch_all` → `fetch_email`
 
 _Code path — Phone_
 
-1. `index`
-2. `fetch_all`
-3. `fetch_mobile_number` — Reads the phone: national number from the PII service when ALLOW_PII_PHONE_NUMBER_READ is on; the country code is always local.
+`index` → `fetch_all` → `fetch_mobile_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -16449,29 +9984,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `page`
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/admin/reports" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --get \
-  --data-urlencode "page=1"
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `index`
-2. `fetch_all`
-3. `fetch_by_latest_reported`
-4. `get_first_name` — Reads one first name: from the PII service when ALLOW_PII_FIRST_NAME_READ is on, otherwise the local profile field.
+`index` → `fetch_all` → `fetch_by_latest_reported` → `get_first_name`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -16499,26 +10018,13 @@ Personal data: First name (reads), Email (reads), Phone (reads), through the app
 
 Request fields: none
 
-```bash
-curl -i --request GET "https://testa2.aisle.co/bangalore745/irl" \
-  --cookie "${ADMIN_SESSION_COOKIE}" \
-  --header "Accept: text/html"
-```
-
 **End-to-end flow**
 
 _Code path — First name, Email, Phone_
 
-1. `ActiveAdmin IRL content`
-2. `get_first_name / fetch_email / fetch_mobile_number`
+`ActiveAdmin IRL content` → `get_first_name / fetch_email / fetch_mobile_number`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -16552,53 +10058,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `approve`, `ref`, `first_name`, `gender`, `photos`, `photo`, `photo_id`, `can_save`, `reject`, `inappropriate`, `page`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/admin/members/autofeed_update" \
-  --header "Authorization: Bearer ${ADMIN_TOKEN}" \
-  --header "webcms: true" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "approve": [
-    {
-      "ref": "$REF",
-      "first_name": "Asha",
-      "gender": "Female",
-      "photos": [
-        {
-          "photo": "$PHOTO_URL_1",
-          "photo_id": "$PHOTO_ID_1",
-          "can_save": true
-        },
-        {
-          "photo": "$PHOTO_URL_2",
-          "photo_id": "$PHOTO_ID_2",
-          "can_save": true
-        }
-      ]
-    }
-  ],
-  "reject": [],
-  "inappropriate": [],
-  "page": 1
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `MembersController.autofeed_update`
-2. `auto_curated_profiles`
-3. `assign_first_name; normalized approve/reject/inappropriate arrays`
+`MembersController.autofeed_update` → `auto_curated_profiles` → `assign_first_name; normalized approve/reject/inappropriate arrays`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -16611,113 +10077,6 @@ _Code path — First name_
 **Good to know**
 
 - **From the developers:** The controller normalizes approve/reject/inappropriate and forces type=auto_curate, moveToFeed=true. Repeat with reject and inappropriate decisions on separate profiles.
-
-<a id="code-033"></a>
-
-#### `GET /admin/member/fetch_spark_purchase_history` — Fetch spark purchase history
-
-**Fetch spark purchase history.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L662`
-
-**Request**
-
-Request fields: `ref` (optional · from code — confirm with Dev)
-
-**Response fields** (top level; type not stated unless shown)
-
-- `spark_purchase_history` (from code — confirm with Dev)
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:662` @004e72c → `admin/members#fetch_spark_purchase_history` (`app/controllers/admin/members_controller.rb:83 @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:662 @004e72c`
-
-<a id="code-034"></a>
-
-#### `GET /admin/members/download_account_data` — Download account data
-
-**Download account data.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L686`
-
-**Request**
-
-Request fields: `export_id` (optional · from code — confirm with Dev), `ref` (optional · from code — confirm with Dev)
-
-**Response fields** (top level; type not stated unless shown)
-
-- `status` (from code — confirm with Dev)
-- `export_id` (from code — confirm with Dev)
-- `reused` (from code — confirm with Dev)
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:686` @004e72c → `admin/members#download_account_data` (`app/controllers/admin/members_controller.rb:604 @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:686 @004e72c`
-
-<a id="code-035"></a>
-
-#### `GET /admin/stories/fetch_deleted_reasons` — Fetch deleted reasons
-
-**Fetch deleted reasons.** Found in the Aisle code; not yet in a Dev API document — from code, confirm with Dev.
-
-Purpose and personal data: not stated.
-
-_Last verified 2026-10-29 · code @ 004e72c_
-
-**Called by** not stated · **Auth** not stated · **Operation** not stated · **Code** `app/controllers/admin/stories_controller.rb; config/routes.rb#L704`
-
-**Request**
-
-Request fields: none
-
-**End-to-end flow**
-
-Not stated.
-
-**What it reads and writes**
-
-Not stated.
-
-**Good to know**
-
-- **From code — confirm with Dev:** Found in `config/routes.rb:704` @004e72c → `admin/stories#fetch_deleted_reasons` (`app/controllers/admin/stories_controller.rb:8 @004e72c`). No Dev API document lists this route yet, so its purpose, authentication, caller, personal data, flow and data stores are not stated.
-- **Not determined from the code:** line 10 renders response — its full key set is built at run time
-
-**What changed**
-
-- 2026-10-29 — Endpoint added (found in code) · from code — confirm with Dev · `config/routes.rb:704 @004e72c`
 
 <a id="area-m1"></a>
 
@@ -16757,20 +10116,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `user_id`, `field`, `value`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/api/v1/pii-test" \
-  --header "Authorization: Bearer ${TEST_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "user_id": "$USER_ID",
-  "field": "PHONE",
-  "value": "1012345678"
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -16782,29 +10127,17 @@ JSON
 
 _Code path — First name_
 
-1. `PiiTestController` — PII test-route controller (TEST_TOKEN).
-2. `ProxyClient` — Signs the request and forwards it to the PII service; skips the app’s caches.
-3. `NAME service contract`
+`PiiTestController` → `ProxyClient` → `NAME service contract`
 
 _Code path — Email_
 
-1. `PiiTestController` — PII test-route controller (TEST_TOKEN).
-2. `ProxyClient` — Signs the request and forwards it to the PII service; skips the app’s caches.
-3. `EMAIL service contract`
+`PiiTestController` → `ProxyClient` → `EMAIL service contract`
 
 _Code path — Phone_
 
-1. `PiiTestController` — PII test-route controller (TEST_TOKEN).
-2. `ProxyClient` — Signs the request and forwards it to the PII service; skips the app’s caches.
-3. `PHONE service contract`
+`PiiTestController` → `ProxyClient` → `PHONE service contract`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -16819,12 +10152,11 @@ _Code path — Phone_
 
 - **Tip:** Writes through these routes go straight to the PII service and skip the app’s caches — app screens can keep showing the old value until the cache expires.
 
-**What changed**
+**What changed** (latest 3 of 4; all on the website)
 
 - 2026-10-25 — Response field added: `error` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `data` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `message` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
 
 <a id="api-200"></a>
 
@@ -16842,21 +10174,6 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `user_id`, `field_names`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/api/v1/pii-test/read" \
-  --header "Authorization: Bearer ${TEST_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "user_id": "$USER_ID",
-  "field_names": [
-    "PHONE"
-  ]
-}
-JSON
-```
-
 **Response fields** (top level; type not stated unless shown)
 
 - `status` (seen on staging 2026-10-25)
@@ -16868,29 +10185,17 @@ JSON
 
 _Code path — First name_
 
-1. `PiiTestController` — PII test-route controller (TEST_TOKEN).
-2. `ProxyClient` — Signs the request and forwards it to the PII service; skips the app’s caches.
-3. `NAME service contract`
+`PiiTestController` → `ProxyClient` → `NAME service contract`
 
 _Code path — Email_
 
-1. `PiiTestController` — PII test-route controller (TEST_TOKEN).
-2. `ProxyClient` — Signs the request and forwards it to the PII service; skips the app’s caches.
-3. `EMAIL service contract`
+`PiiTestController` → `ProxyClient` → `EMAIL service contract`
 
 _Code path — Phone_
 
-1. `PiiTestController` — PII test-route controller (TEST_TOKEN).
-2. `ProxyClient` — Signs the request and forwards it to the PII service; skips the app’s caches.
-3. `PHONE service contract`
+`PiiTestController` → `ProxyClient` → `PHONE service contract`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -16905,12 +10210,11 @@ _Code path — Phone_
 
 - **Tip:** Writes through these routes go straight to the PII service and skip the app’s caches — app screens can keep showing the old value until the cache expires.
 
-**What changed**
+**What changed** (latest 3 of 4; all on the website)
 
 - 2026-10-25 — Response field added: `error` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `data` · seen on staging 2026-10-25
 - 2026-10-25 — Response field added: `message` · seen on staging 2026-10-25
-- 2026-10-25 — Response field added: `status` · seen on staging 2026-10-25
 
 <a id="api-201"></a>
 
@@ -16928,51 +10232,21 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `user_ids`, `fields`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/api/v1/pii-test/batch/read" \
-  --header "Authorization: Bearer ${TEST_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "user_ids": [
-    "$USER_ID",
-    "$OTHER_USER_ID"
-  ],
-  "fields": [
-    "PHONE"
-  ]
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `PiiTestController` — PII test-route controller (TEST_TOKEN).
-2. `ProxyClient` — Signs the request and forwards it to the PII service; skips the app’s caches.
-3. `NAME service contract`
+`PiiTestController` → `ProxyClient` → `NAME service contract`
 
 _Code path — Email_
 
-1. `PiiTestController` — PII test-route controller (TEST_TOKEN).
-2. `ProxyClient` — Signs the request and forwards it to the PII service; skips the app’s caches.
-3. `EMAIL service contract`
+`PiiTestController` → `ProxyClient` → `EMAIL service contract`
 
 _Code path — Phone_
 
-1. `PiiTestController` — PII test-route controller (TEST_TOKEN).
-2. `ProxyClient` — Signs the request and forwards it to the PII service; skips the app’s caches.
-3. `PHONE service contract`
+`PiiTestController` → `ProxyClient` → `PHONE service contract`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` · Email `ALLOW_PII_EMAIL_READ` · Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -17003,33 +10277,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `value`, `limit`, `include_values`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/api/v1/pii-test/NAME/search" \
-  --header "Authorization: Bearer ${TEST_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "value": "Asha",
-  "limit": 10,
-  "include_values": false
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — First name_
 
-1. `PiiTestController` — PII test-route controller (TEST_TOKEN).
-2. `ProxyClient` — Signs the request and forwards it to the PII service; skips the app’s caches.
-3. `NAME service contract`
+`PiiTestController` → `ProxyClient` → `NAME service contract`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| First name | `ALLOW_PII_FIRST_NAME_READ` | On: read from the PII service, with no fallback to the local field. Off: the local profile field. Writes go to both. |
+**Read switches:** First name `ALLOW_PII_FIRST_NAME_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -17059,33 +10313,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `value`, `limit`, `include_values`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/api/v1/pii-test/EMAIL/search" \
-  --header "Authorization: Bearer ${TEST_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "value": "asha@example.com",
-  "limit": 10,
-  "include_values": false
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — Email_
 
-1. `PiiTestController` — PII test-route controller (TEST_TOKEN).
-2. `ProxyClient` — Signs the request and forwards it to the PII service; skips the app’s caches.
-3. `EMAIL service contract`
+`PiiTestController` → `ProxyClient` → `EMAIL service contract`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| Email | `ALLOW_PII_EMAIL_READ` | Needs a local email_id first. On: read from the PII service. Onboarding is the only email write. |
+**Read switches:** Email `ALLOW_PII_EMAIL_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -17115,33 +10349,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `value`, `limit`, `include_values`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/api/v1/pii-test/PHONE/search" \
-  --header "Authorization: Bearer ${TEST_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "value": "1012345678",
-  "limit": 10,
-  "include_values": false
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — Phone_
 
-1. `PiiTestController` — PII test-route controller (TEST_TOKEN).
-2. `ProxyClient` — Signs the request and forwards it to the PII service; skips the app’s caches.
-3. `PHONE service contract`
+`PiiTestController` → `ProxyClient` → `PHONE service contract`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -17171,30 +10385,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `phone`, `ttl_seconds`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/api/v1/pii-test/transient/phones" \
-  --header "Authorization: Bearer ${TEST_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "phone": "+911012345678",
-  "ttl_seconds": 300
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — Phone_
 
-1. `PiiTestController transient-phone proxy; separate from normal OTP/login`
+`PiiTestController transient-phone proxy; separate from normal OTP/login`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -17224,29 +10421,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `transient_id`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/api/v1/pii-test/transient/phones/resolve" \
-  --header "Authorization: Bearer ${TEST_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "transient_id": "$TRANSIENT_ID"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — Phone_
 
-1. `PiiTestController transient-phone proxy; separate from normal OTP/login`
+`PiiTestController transient-phone proxy; separate from normal OTP/login`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -17276,30 +10457,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `transient_id`, `user_id`
 
-```bash
-curl -i --request POST "https://testa2.aisle.co/V1/api/v1/pii-test/transient/phones/promote" \
-  --header "Authorization: Bearer ${TEST_TOKEN}" \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "transient_id": "$TRANSIENT_ID",
-  "user_id": "$USER_ID"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Code path — Phone_
 
-1. `PiiTestController transient-phone proxy; separate from normal OTP/login`
+`PiiTestController transient-phone proxy; separate from normal OTP/login`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| Phone | `ALLOW_PII_PHONE_NUMBER_READ` | On: national number from the PII service plus the local country code. Only a new user’s first login writes it. |
+**Read switches:** Phone `ALLOW_PII_PHONE_NUMBER_READ` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -17329,16 +10493,9 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: none
 
-```bash
-curl -i -X GET "https://testa2.aisle.co/V1/api/v1/pii-test/health/ready" \
-  -H "Authorization: Bearer ${AISLE_TEST_TOKEN}"
-```
-
 **End-to-end flow**
 
-1. `Request with free text` — Free-text encryption (Dev free-text API list (2026-10-23)): PII facade readiness (Milestone 1 route)
-2. `PII service — free-text key` — Aisle creates or fetches an AES-256-GCM key; the text itself never goes to the PII service.
-3. `Aisle encrypts / decrypts the text` — The encrypted text and its key_id are kept in the app database.
+`Request with free text` → `PII service — free-text key` → `Aisle encrypts / decrypts the text`
 
 **What it reads and writes**
 
@@ -17366,29 +10523,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: none
 
-```bash
-curl -i -X POST "https://testa2.aisle.co/V1/api/v1/pii-test/free-text/keys" \
-  -H "Authorization: Bearer ${AISLE_TEST_TOKEN}" \
-  -H "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Free-text encryption — Free text_
 
-1. `Request with free text` — Free-text encryption (Dev free-text API list (2026-10-23)): Create a free-text key (Milestone 1 route)
-2. `PII service — free-text key` — Aisle creates or fetches an AES-256-GCM key; the text itself never goes to the PII service.
-3. `Aisle encrypts / decrypts the text` — The encrypted text and its key_id are kept in the app database.
+`Request with free text` → `PII service — free-text key` → `Aisle encrypts / decrypts the text`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| Free text | `—` | Encrypted by Aisle with a key from the PII service; there is no read switch. |
+**Read switches:** Free text `—` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -17417,30 +10558,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `key_id`
 
-```bash
-curl -i -X POST "https://testa2.aisle.co/V1/api/v1/pii-test/free-text/keys/read" \
-  -H "Authorization: Bearer ${AISLE_TEST_TOKEN}" \
-  -H "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "key_id": "${FREE_TEXT_KEY_ID}"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Free-text encryption — Free text_
 
-1. `Request with free text` — Free-text encryption (Dev free-text API list (2026-10-23)): Read a free-text key by key_id (Milestone 1)
-2. `PII service — free-text key` — Aisle creates or fetches an AES-256-GCM key; the text itself never goes to the PII service.
-3. `Aisle encrypts / decrypts the text` — The encrypted text and its key_id are kept in the app database.
+`Request with free text` → `PII service — free-text key` → `Aisle encrypts / decrypts the text`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| Free text | `—` | Encrypted by Aisle with a key from the PII service; there is no read switch. |
+**Read switches:** Free text `—` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -17469,30 +10593,13 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 Request fields: `key_id`
 
-```bash
-curl -i -X POST "https://testa2.aisle.co/V1/api/v1/pii-test/free-text/keys/revoke" \
-  -H "Authorization: Bearer ${AISLE_TEST_TOKEN}" \
-  -H "Content-Type: application/json" \
-  --data-binary @- <<JSON
-{
-  "key_id": "${FREE_TEXT_KEY_ID}"
-}
-JSON
-```
-
 **End-to-end flow**
 
 _Free-text encryption — Free text_
 
-1. `Request with free text` — RevokeFreeTextKey
-2. `PII service — free-text key` — Aisle creates or fetches an AES-256-GCM key; the text itself never goes to the PII service.
-3. `Aisle encrypts / decrypts the text` — The encrypted text and its key_id are kept in the app database.
+`Request with free text` → `PII service — free-text key` → `Aisle encrypts / decrypts the text`
 
-**Read switches**
-
-| Field | Read switch | Behaviour |
-| --- | --- | --- |
-| Free text | `—` | Encrypted by Aisle with a key from the PII service; there is no read switch. |
+**Read switches:** Free text `—` (see [Personal data](#personal-data))
 
 **What it reads and writes**
 
@@ -17500,3 +10607,224 @@ _Free-text encryption — Free text_
 | --- | --- | --- |
 | PII database | `free_text_encryption_key` | read / write |
 | Audit log | `audit_trails (MongoDB)` | write |
+
+<a id="area-g11"></a>
+
+### App config & integrations
+
+Reference lists, app releases, popups, tracking and analytics events, geo lookups and site pages. 68 endpoints.
+
+| Method | Path | What it is |
+| --- | --- | --- |
+| GET | [`/V1/users/safety_tips`](https://aisleapidocs.netlify.app/#/aisle/code-173) | Safety tips _(from code)_ |
+| POST | [`/V1/api/v1/pii-test/:field/search`](https://aisleapidocs.netlify.app/#/aisle/code-174) | PII test proxy: search field _(from code)_ |
+| POST | [`/V1/notifications/get_tokens`](https://aisleapidocs.netlify.app/#/aisle/code-175) | Bulk notification push tokens _(from code)_ |
+| GET | [`/V1/users/active_algorithms`](https://aisleapidocs.netlify.app/#/aisle/code-176) | Active matching algorithms _(from code)_ |
+| GET | [`/V1/users/survey_question_list`](https://aisleapidocs.netlify.app/#/aisle/code-177) | Active survey questions _(from code)_ |
+| GET | [`/V1/user/fetch_data_for_auto_pop_up`](https://aisleapidocs.netlify.app/#/aisle/code-178) | Profile completion auto pop-up _(from code)_ |
+| POST | [`/V1/users/update_curator_feedback_popup`](https://aisleapidocs.netlify.app/#/aisle/code-179) | Mark curator feedback seen _(from code)_ |
+| POST | [`/V1/users/update_popup_action`](https://aisleapidocs.netlify.app/#/aisle/code-180) | Record pop-up action _(from code)_ |
+| GET | [`/V1/sessions/monitor_api`](https://aisleapidocs.netlify.app/#/aisle/code-181) | Health check _(from code)_ |
+| GET | [`/V1/sessions/ipapi_testing`](https://aisleapidocs.netlify.app/#/aisle/code-182) | IP lookup provider test _(from code)_ |
+| POST | [`/V1/device/store_competitor_info`](https://aisleapidocs.netlify.app/#/aisle/code-183) | Store competitor app info _(from code)_ |
+| GET | [`/V1/preferences`](https://aisleapidocs.netlify.app/#/aisle/code-184) | Philosophy preference list _(from code)_ |
+| POST | [`/V1/user/update_adjust_id`](https://aisleapidocs.netlify.app/#/aisle/code-185) | Save Adjust device ids _(from code)_ |
+| POST | [`/V1/users/update_adjust_id`](https://aisleapidocs.netlify.app/#/aisle/code-186) | Save Adjust device ids _(from code)_ |
+| POST | [`/V1/otp/test_exotel_sms`](https://aisleapidocs.netlify.app/#/aisle/code-187) | Send test SMS via Exotel _(from code)_ |
+| GET | [`/V1/user/formatted_address`](https://aisleapidocs.netlify.app/#/aisle/code-188) | Formatted address for coordinates _(from code)_ |
+| GET | [`/V1/user/basic_app_launch`](https://aisleapidocs.netlify.app/#/aisle/code-189) | Basic app launch check _(from code)_ |
+| POST | [`/V1/review/mark_read`](https://aisleapidocs.netlify.app/#/aisle/code-190) | Mark moderation warning read _(from code)_ |
+| GET | [`/V1/introduction`](https://aisleapidocs.netlify.app/#/aisle/code-191) | Unused prompts list _(from code)_ |
+| GET | [`/V1/popup/details`](https://aisleapidocs.netlify.app/#/aisle/code-192) | Fetch popup to display _(from code)_ |
+| POST | [`/V1/event/update_personal_info`](https://aisleapidocs.netlify.app/#/aisle/code-193) | Forward event personal info _(from code)_ |
+| POST | [`/V1/event/update_display_popup_state`](https://aisleapidocs.netlify.app/#/aisle/code-194) | Update event popup state _(from code)_ |
+| GET | [`/V1/event/fetch_event_web_data`](https://aisleapidocs.netlify.app/#/aisle/code-195) | Fetch event web page data _(from code)_ |
+| GET | [`/V1/geo/countries`](https://aisleapidocs.netlify.app/#/aisle/code-196) | List countries _(from code)_ |
+| GET | [`/V1/geo/countries/:id/regions`](https://aisleapidocs.netlify.app/#/aisle/code-197) | List country regions _(from code)_ |
+| POST | [`/V1/events/create_event`](https://aisleapidocs.netlify.app/#/aisle/code-198) | Create analytics event _(from code)_ |
+| GET | [`/V1/events/index`](https://aisleapidocs.netlify.app/#/aisle/code-199) | Analytics events index _(from code)_ |
+| GET | [`/V1/events/fetch_list`](https://aisleapidocs.netlify.app/#/aisle/code-200) | List a member's analytics events _(from code)_ |
+| POST | [`/V1/speed_dating/remove_popup`](https://aisleapidocs.netlify.app/#/aisle/code-201) | Hide speed dating popup _(from code)_ |
+| POST | [`/V1/paint_bar_mixer/update_display_popup_state`](https://aisleapidocs.netlify.app/#/aisle/code-202) | Update mixer popup state _(from code)_ |
+| PUT | [`/V1/asn/whitelist`](https://aisleapidocs.netlify.app/#/aisle/code-203) | Whitelist ASN _(from code)_ |
+| PUT | [`/V1/asn/blacklist`](https://aisleapidocs.netlify.app/#/aisle/code-204) | Blacklist ASN _(from code)_ |
+| POST | [`/V1/track/notification`](https://aisleapidocs.netlify.app/#/aisle/code-205) | Update push notification status _(from code)_ |
+| POST | [`/V1/track/create_notification`](https://aisleapidocs.netlify.app/#/aisle/code-206) | Create push notification record _(from code)_ |
+| GET | [`/V1/track/test_notification`](https://aisleapidocs.netlify.app/#/aisle/code-207) | Run auto-renewal push task _(from code)_ |
+| GET | [`/V1/fields/faiths/:id/casts`](https://aisleapidocs.netlify.app/#/aisle/code-208) | List castes for a faith _(from code)_ |
+| GET | [`/V1/fields/phonecodes`](https://aisleapidocs.netlify.app/#/aisle/code-209) | List phone country codes _(from code)_ |
+| GET | [`/V1/fileds/proxy_image`](https://aisleapidocs.netlify.app/#/aisle/code-210) | Proxy an image by URL _(from code)_ |
+| GET | [`/V1/fields/interests`](https://aisleapidocs.netlify.app/#/aisle/code-211) | List interests _(from code)_ |
+| GET | [`/V1/fields/interests_v2`](https://aisleapidocs.netlify.app/#/aisle/code-212) | List interests (v2) _(from code)_ |
+| GET | [`/V1/fields/traits`](https://aisleapidocs.netlify.app/#/aisle/code-213) | List personality traits _(from code)_ |
+| GET | [`/V1/fields/list_all`](https://aisleapidocs.netlify.app/#/aisle/code-214) | List all profile field options _(from code)_ |
+| GET | [`/V1/fields/incomes`](https://aisleapidocs.netlify.app/#/aisle/code-215) | List income ranges _(from code)_ |
+| GET | [`/V1/fields/advanced_search_list`](https://aisleapidocs.netlify.app/#/aisle/code-216) | Advanced search filter options _(from code)_ |
+| GET | [`/V1/fields/meetup_restaurants`](https://aisleapidocs.netlify.app/#/aisle/code-217) | List meetup restaurants nearby _(from code)_ |
+| GET | [`/V1/fields/fetch_meal_types`](https://aisleapidocs.netlify.app/#/aisle/code-218) | List meal types for restaurant _(from code)_ |
+| GET | [`/V1/fields/settle_down_option_list`](https://aisleapidocs.netlify.app/#/aisle/code-219) | List settle-down options _(from code)_ |
+| GET | [`/V1/fields/mbti_option_list`](https://aisleapidocs.netlify.app/#/aisle/code-220) | List MBTI options _(from code)_ |
+| GET | [`/web/fields/faiths/:id/casts`](https://aisleapidocs.netlify.app/#/aisle/code-221) | Web: list castes for faith _(from code)_ |
+| GET | [`/web/fields/phonecodes`](https://aisleapidocs.netlify.app/#/aisle/code-222) | Web: list phone codes _(from code)_ |
+| GET | [`/web/fields/list_all`](https://aisleapidocs.netlify.app/#/aisle/code-223) | Web: list all field options _(from code)_ |
+| GET | [`/web/events`](https://aisleapidocs.netlify.app/#/aisle/code-224) | Web: fetch event counters _(from code)_ |
+| GET | [`/web/users/firebase_token`](https://aisleapidocs.netlify.app/#/aisle/code-225) | Web: get Firebase token _(from code)_ |
+| GET | [`/web/geo/countries`](https://aisleapidocs.netlify.app/#/aisle/code-226) | Web: list countries _(from code)_ |
+| GET | [`/web/geo/countries/:id/regions`](https://aisleapidocs.netlify.app/#/aisle/code-227) | Web: list country regions _(from code)_ |
+| GET | [`/web/user/formatted_address`](https://aisleapidocs.netlify.app/#/aisle/code-228) | Web: formatted address for coordinates _(from code)_ |
+| GET | [`/web/user/web_info`](https://aisleapidocs.netlify.app/#/aisle/code-229) | Web: fetch web info _(from code)_ |
+| GET | [`/fields/faiths`](https://aisleapidocs.netlify.app/#/aisle/code-230) | Admin: list faiths _(from code)_ |
+| GET | [`/fields/languages`](https://aisleapidocs.netlify.app/#/aisle/code-231) | Admin: list languages _(from code)_ |
+| GET | [`/preferences`](https://aisleapidocs.netlify.app/#/aisle/code-232) | Admin: list preference questions _(from code)_ |
+| GET | [`/query`](https://aisleapidocs.netlify.app/#/aisle/code-233) | Instagram redirect page _(from code)_ |
+| GET | [`/geo/countries`](https://aisleapidocs.netlify.app/#/aisle/code-234) | Admin: list countries _(from code)_ |
+| GET | [`/geo/countries/:id/regions`](https://aisleapidocs.netlify.app/#/aisle/code-235) | Admin: list country regions _(from code)_ |
+| GET | [`/`](https://aisleapidocs.netlify.app/#/aisle/code-236) | Site root _(from code)_ |
+| GET | [`/robots.txt`](https://aisleapidocs.netlify.app/#/aisle/code-237) | robots.txt _(from code)_ |
+| POST | [`/find_page`](https://aisleapidocs.netlify.app/#/aisle/code-238) | Sign out and redirect home _(from code)_ |
+| GET | [`/a`](https://aisleapidocs.netlify.app/#/aisle/code-239) | Sign out and redirect (short) _(from code)_ |
+| GET | [`/cred_submit_page`](https://aisleapidocs.netlify.app/#/aisle/code-240) | CRED submit page redirect _(from code)_ |
+
+<a id="area-g12"></a>
+
+### Internal dashboard
+
+Pages of the internal ActiveAdmin dashboard (`/bangalore745`): reports and operations tools for staff. 135 endpoints.
+
+| Method | Path | What it is |
+| --- | --- | --- |
+| POST | [`/users/discardchanges`](https://aisleapidocs.netlify.app/#/aisle/code-241) | Admin: discard profile photo changes _(from code)_ |
+| POST | [`/get_current_admin`](https://aisleapidocs.netlify.app/#/aisle/code-242) | Get current admin name _(from code)_ |
+| POST | [`/bangalore745/curation`](https://aisleapidocs.netlify.app/#/aisle/code-243) | Curation report _(from code)_ |
+| POST | [`/bangalore745/daily_acquired`](https://aisleapidocs.netlify.app/#/aisle/code-244) | Daily acquired users report _(from code)_ |
+| POST | [`/bangalore745/daily_summary`](https://aisleapidocs.netlify.app/#/aisle/code-245) | Daily summary report _(from code)_ |
+| POST | [`/bangalore745/refresh_daily_summary_data`](https://aisleapidocs.netlify.app/#/aisle/code-246) | Refresh daily summary cache _(from code)_ |
+| POST | [`/bangalore745/onboarding`](https://aisleapidocs.netlify.app/#/aisle/code-247) | Onboarding funnel report _(from code)_ |
+| POST | [`/bangalore745/engagement`](https://aisleapidocs.netlify.app/#/aisle/code-248) | Engagement report _(from code)_ |
+| POST | [`/bangalore745/refresh_engagement_data`](https://aisleapidocs.netlify.app/#/aisle/code-249) | Refresh engagement cache _(from code)_ |
+| POST | [`/bangalore745/refresh_engagement_montly_data`](https://aisleapidocs.netlify.app/#/aisle/code-250) | Refresh monthly engagement cache _(from code)_ |
+| POST | [`/bangalore745/daily_summary1`](https://aisleapidocs.netlify.app/#/aisle/code-251) | Daily summary 1 (no page) _(from code)_ |
+| POST | [`/bangalore745/daily_summary_ios`](https://aisleapidocs.netlify.app/#/aisle/code-252) | Daily iOS summary report _(from code)_ |
+| POST | [`/bangalore745/refresh_daily_summary_ios_data`](https://aisleapidocs.netlify.app/#/aisle/code-253) | Refresh daily iOS summary cache _(from code)_ |
+| POST | [`/bangalore745/daily_summary_android`](https://aisleapidocs.netlify.app/#/aisle/code-254) | Daily Android summary report _(from code)_ |
+| POST | [`/bangalore745/refresh_daily_summary_android_data`](https://aisleapidocs.netlify.app/#/aisle/code-255) | Refresh daily Android summary cache _(from code)_ |
+| POST | [`/bangalore745/daily_summary2`](https://aisleapidocs.netlify.app/#/aisle/code-256) | Daily summary 2 report _(from code)_ |
+| POST | [`/bangalore745/refresh_daily_summary2_data`](https://aisleapidocs.netlify.app/#/aisle/code-257) | Refresh daily summary 2 cache _(from code)_ |
+| POST | [`/bangalore745/bucket_summary`](https://aisleapidocs.netlify.app/#/aisle/code-258) | Profile bucket summary report _(from code)_ |
+| POST | [`/bangalore745/daily_agewise`](https://aisleapidocs.netlify.app/#/aisle/code-259) | Daily age-wise report _(from code)_ |
+| POST | [`/bangalore745/daily_citywise`](https://aisleapidocs.netlify.app/#/aisle/code-260) | Daily city-wise report _(from code)_ |
+| POST | [`/bangalore745/daily_citywise_rev`](https://aisleapidocs.netlify.app/#/aisle/code-261) | Daily city-tier revenue report _(from code)_ |
+| POST | [`/bangalore745/daily_statewise`](https://aisleapidocs.netlify.app/#/aisle/code-262) | Daily state-wise report _(from code)_ |
+| POST | [`/bangalore745/daily_summary3`](https://aisleapidocs.netlify.app/#/aisle/code-263) | Daily summary 3 report _(from code)_ |
+| POST | [`/bangalore745/daily_subs`](https://aisleapidocs.netlify.app/#/aisle/code-264) | Daily subscriptions report _(from code)_ |
+| POST | [`/bangalore745/daily_arpu`](https://aisleapidocs.netlify.app/#/aisle/code-265) | Daily ARPU report _(from code)_ |
+| POST | [`/bangalore745/monthly_arpu`](https://aisleapidocs.netlify.app/#/aisle/code-266) | Monthly ARPU report _(from code)_ |
+| POST | [`/bangalore745/daily_buys`](https://aisleapidocs.netlify.app/#/aisle/code-267) | Daily purchases by source report _(from code)_ |
+| POST | [`/bangalore745/monthly_buys`](https://aisleapidocs.netlify.app/#/aisle/code-268) | Monthly purchases by source report _(from code)_ |
+| POST | [`/bangalore745/monthly_summary`](https://aisleapidocs.netlify.app/#/aisle/code-269) | Monthly summary report _(from code)_ |
+| POST | [`/bangalore745/refresh_monthly_summary_data`](https://aisleapidocs.netlify.app/#/aisle/code-270) | Refresh monthly summary cache _(from code)_ |
+| POST | [`/bangalore745/monthly_summary_android`](https://aisleapidocs.netlify.app/#/aisle/code-271) | Monthly Android summary report _(from code)_ |
+| POST | [`/bangalore745/refresh_monthly_summary_android_data`](https://aisleapidocs.netlify.app/#/aisle/code-272) | Refresh monthly Android summary cache _(from code)_ |
+| POST | [`/bangalore745/monthly_summary_ios`](https://aisleapidocs.netlify.app/#/aisle/code-273) | Monthly iOS summary report _(from code)_ |
+| POST | [`/bangalore745/refresh_monthly_summary_ios_data`](https://aisleapidocs.netlify.app/#/aisle/code-274) | Refresh monthly iOS summary cache _(from code)_ |
+| POST | [`/bangalore745/monthly_summary2`](https://aisleapidocs.netlify.app/#/aisle/code-275) | Monthly summary 2 report _(from code)_ |
+| POST | [`/bangalore745/monthly_summary3`](https://aisleapidocs.netlify.app/#/aisle/code-276) | Monthly summary 3 report _(from code)_ |
+| POST | [`/bangalore745/monthly_agewise`](https://aisleapidocs.netlify.app/#/aisle/code-277) | Monthly age-wise report _(from code)_ |
+| POST | [`/bangalore745/monthly_citywise`](https://aisleapidocs.netlify.app/#/aisle/code-278) | Monthly city-wise report _(from code)_ |
+| POST | [`/bangalore745/monthly_citywise_rev`](https://aisleapidocs.netlify.app/#/aisle/code-279) | Monthly city-tier revenue report _(from code)_ |
+| POST | [`/bangalore745/monthly_statewise`](https://aisleapidocs.netlify.app/#/aisle/code-280) | Monthly state-wise report _(from code)_ |
+| POST | [`/bangalore745/monthly_subs`](https://aisleapidocs.netlify.app/#/aisle/code-281) | Monthly subscriptions report _(from code)_ |
+| POST | [`/bangalore745/yearly_summary`](https://aisleapidocs.netlify.app/#/aisle/code-282) | Yearly summary report _(from code)_ |
+| POST | [`/bangalore745/refresh_yearly_summary_data`](https://aisleapidocs.netlify.app/#/aisle/code-283) | Refresh yearly summary cache _(from code)_ |
+| POST | [`/bangalore745/top_cities`](https://aisleapidocs.netlify.app/#/aisle/code-284) | Top paying cities report _(from code)_ |
+| POST | [`/bangalore745/refresh_top_cities_data`](https://aisleapidocs.netlify.app/#/aisle/code-285) | Refresh top cities cache _(from code)_ |
+| POST | [`/bangalore745/refresh_top_states_data`](https://aisleapidocs.netlify.app/#/aisle/code-286) | Refresh top states cache _(from code)_ |
+| POST | [`/bangalore745/refresh_top_countries_data`](https://aisleapidocs.netlify.app/#/aisle/code-287) | Refresh top countries cache _(from code)_ |
+| POST | [`/bangalore745/top_cities_by_state`](https://aisleapidocs.netlify.app/#/aisle/code-288) | Top cities by state report _(from code)_ |
+| POST | [`/bangalore745/top_states`](https://aisleapidocs.netlify.app/#/aisle/code-289) | Top paying states report _(from code)_ |
+| POST | [`/bangalore745/top_countries`](https://aisleapidocs.netlify.app/#/aisle/code-290) | Top paying countries report _(from code)_ |
+| POST | [`/bangalore745/monthly_cities`](https://aisleapidocs.netlify.app/#/aisle/code-291) | Monthly top paying cities report _(from code)_ |
+| POST | [`/bangalore745/monthly_countries`](https://aisleapidocs.netlify.app/#/aisle/code-292) | Monthly top paying countries report _(from code)_ |
+| POST | [`/bangalore745/monthly_revenue`](https://aisleapidocs.netlify.app/#/aisle/code-293) | Monthly revenue report _(from code)_ |
+| POST | [`/bangalore745/monthly_ages`](https://aisleapidocs.netlify.app/#/aisle/code-294) | Monthly top paying age groups report _(from code)_ |
+| POST | [`/bangalore745/monthly_age_split`](https://aisleapidocs.netlify.app/#/aisle/code-295) | Monthly age split report _(from code)_ |
+| POST | [`/bangalore745/days_to_purchase`](https://aisleapidocs.netlify.app/#/aisle/code-296) | Days to first purchase report _(from code)_ |
+| POST | [`/bangalore745/days_to_purchase_approved`](https://aisleapidocs.netlify.app/#/aisle/code-297) | Days to purchase after approval _(from code)_ |
+| POST | [`/bangalore745/daily_purchases`](https://aisleapidocs.netlify.app/#/aisle/code-298) | Daily VIP purchases report _(from code)_ |
+| POST | [`/bangalore745/daily_onboarding`](https://aisleapidocs.netlify.app/#/aisle/code-299) | Daily onboarding report _(from code)_ |
+| POST | [`/bangalore745/daily_engagement`](https://aisleapidocs.netlify.app/#/aisle/code-300) | Daily ask-out engagement report _(from code)_ |
+| POST | [`/bangalore745/daily_engagement2`](https://aisleapidocs.netlify.app/#/aisle/code-301) | Daily engagement 2 report _(from code)_ |
+| POST | [`/bangalore745/refresh_daily_engagement2`](https://aisleapidocs.netlify.app/#/aisle/code-302) | Refresh daily engagement 2 cache _(from code)_ |
+| POST | [`/bangalore745/daily_engagement23`](https://aisleapidocs.netlify.app/#/aisle/code-303) | Daily engagement 23 report _(from code)_ |
+| POST | [`/bangalore745/refresh_daily_engagement23`](https://aisleapidocs.netlify.app/#/aisle/code-304) | Refresh daily engagement 23 cache _(from code)_ |
+| POST | [`/bangalore745/daily_engagement24`](https://aisleapidocs.netlify.app/#/aisle/code-305) | Daily engagement 24 report _(from code)_ |
+| POST | [`/bangalore745/refresh_daily_engagement24`](https://aisleapidocs.netlify.app/#/aisle/code-306) | Refresh daily engagement 24 cache _(from code)_ |
+| POST | [`/bangalore745/daily_engagement3`](https://aisleapidocs.netlify.app/#/aisle/code-307) | Daily engagement 3 report _(from code)_ |
+| POST | [`/bangalore745/refresh_daily_engagement3`](https://aisleapidocs.netlify.app/#/aisle/code-308) | Refresh daily engagement 3 cache _(from code)_ |
+| POST | [`/bangalore745/daily_engagement_ios`](https://aisleapidocs.netlify.app/#/aisle/code-309) | Daily Engagement iOS _(from code)_ |
+| POST | [`/bangalore745/refresh_daily_engagement_ios`](https://aisleapidocs.netlify.app/#/aisle/code-310) | Refresh Daily Engagement iOS _(from code)_ |
+| POST | [`/bangalore745/daily_engagement_android`](https://aisleapidocs.netlify.app/#/aisle/code-311) | Daily Engagement Android _(from code)_ |
+| POST | [`/bangalore745/refresh_daily_engagement_android`](https://aisleapidocs.netlify.app/#/aisle/code-312) | Refresh Daily Engagement Android _(from code)_ |
+| POST | [`/bangalore745/daily_dates`](https://aisleapidocs.netlify.app/#/aisle/code-313) | Daily Dates _(from code)_ |
+| POST | [`/bangalore745/daily_gateway`](https://aisleapidocs.netlify.app/#/aisle/code-314) | Daily Gateway _(from code)_ |
+| POST | [`/bangalore745/monthly_gateway`](https://aisleapidocs.netlify.app/#/aisle/code-315) | Monthly Gateway _(from code)_ |
+| POST | [`/bangalore745/razorpay_payment_capture`](https://aisleapidocs.netlify.app/#/aisle/code-316) | Razorpay Payment Capture _(from code)_ |
+| POST | [`/bangalore745/paytm_payment_capture`](https://aisleapidocs.netlify.app/#/aisle/code-317) | Paytm Payment Capture _(from code)_ |
+| POST | [`/bangalore745/cashfree_payment_capture`](https://aisleapidocs.netlify.app/#/aisle/code-318) | Cashfree Payment Capture _(from code)_ |
+| POST | [`/bangalore745/cashfree_payment_refund`](https://aisleapidocs.netlify.app/#/aisle/code-319) | Cashfree Payment Refund _(from code)_ |
+| POST | [`/bangalore745/payment_correction_update`](https://aisleapidocs.netlify.app/#/aisle/code-320) | Payment Correction Update _(from code)_ |
+| POST | [`/bangalore745/daily_nri`](https://aisleapidocs.netlify.app/#/aisle/code-321) | Daily NRI _(from code)_ |
+| POST | [`/bangalore745/stats`](https://aisleapidocs.netlify.app/#/aisle/code-322) | Stats _(from code)_ |
+| POST | [`/bangalore745/monthly_platform`](https://aisleapidocs.netlify.app/#/aisle/code-323) | Monthly Platform _(from code)_ |
+| POST | [`/bangalore745/age_range`](https://aisleapidocs.netlify.app/#/aisle/code-324) | Age Range (missing target) _(from code)_ |
+| POST | [`/bangalore745/irl`](https://aisleapidocs.netlify.app/#/aisle/code-325) | IRL Event Booking _(from code)_ |
+| POST | [`/bangalore745/bucket_revenue`](https://aisleapidocs.netlify.app/#/aisle/code-326) | Bucket Revenue _(from code)_ |
+| POST | [`/bangalore745/live_audio`](https://aisleapidocs.netlify.app/#/aisle/code-327) | Live Audio Report _(from code)_ |
+| POST | [`/bangalore745/sales`](https://aisleapidocs.netlify.app/#/aisle/code-328) | Sales _(from code)_ |
+| POST | [`/bangalore745/refresh_sales_data`](https://aisleapidocs.netlify.app/#/aisle/code-329) | Refresh Sales Data _(from code)_ |
+| POST | [`/bangalore745/likes`](https://aisleapidocs.netlify.app/#/aisle/code-330) | Likes _(from code)_ |
+| POST | [`/bangalore745/refresh_likes_data`](https://aisleapidocs.netlify.app/#/aisle/code-331) | Refresh Likes Data _(from code)_ |
+| POST | [`/bangalore745/yearly_engagement`](https://aisleapidocs.netlify.app/#/aisle/code-332) | Yearly Engagement _(from code)_ |
+| POST | [`/bangalore745/refresh_yearly_engagement`](https://aisleapidocs.netlify.app/#/aisle/code-333) | Refresh Yearly Engagement _(from code)_ |
+| POST | [`/bangalore745/bulk_push_notification`](https://aisleapidocs.netlify.app/#/aisle/code-334) | Bulk Push Notification (missing target) _(from code)_ |
+| POST | [`/bangalore745/revenue`](https://aisleapidocs.netlify.app/#/aisle/code-335) | Revenue Analysis _(from code)_ |
+| POST | [`/bangalore745/fields_phonecodes`](https://aisleapidocs.netlify.app/#/aisle/code-336) | Fields Phonecodes (missing target) _(from code)_ |
+| POST | [`/bangalore745/arpu_age`](https://aisleapidocs.netlify.app/#/aisle/code-337) | ARPU by Age _(from code)_ |
+| POST | [`/bangalore745/arpu_country`](https://aisleapidocs.netlify.app/#/aisle/code-338) | ARPU by Country _(from code)_ |
+| POST | [`/bangalore745/arpu_language`](https://aisleapidocs.netlify.app/#/aisle/code-339) | ARPU by Language _(from code)_ |
+| POST | [`/bangalore745/arpu_nri_language`](https://aisleapidocs.netlify.app/#/aisle/code-340) | ARPU NRI by Language _(from code)_ |
+| POST | [`/bangalore745/arpu_state`](https://aisleapidocs.netlify.app/#/aisle/code-341) | ARPU by State _(from code)_ |
+| POST | [`/bangalore745/app_usage`](https://aisleapidocs.netlify.app/#/aisle/code-342) | App Usage _(from code)_ |
+| POST | [`/bangalore745/daily_otps`](https://aisleapidocs.netlify.app/#/aisle/code-343) | Daily OTPs _(from code)_ |
+| POST | [`/bangalore745/:title/notification`](https://aisleapidocs.netlify.app/#/aisle/code-344) | Title Notification (missing target) _(from code)_ |
+| POST | [`/bangalore745/health`](https://aisleapidocs.netlify.app/#/aisle/code-345) | Health _(from code)_ |
+| POST | [`/bangalore745/notification`](https://aisleapidocs.netlify.app/#/aisle/code-346) | Notification (missing target) _(from code)_ |
+| POST | [`/bangalore745/configuration_constants`](https://aisleapidocs.netlify.app/#/aisle/code-347) | Configuration Constants (missing target) _(from code)_ |
+| POST | [`/bangalore745/configuration_constant/edit`](https://aisleapidocs.netlify.app/#/aisle/code-348) | Configuration Constant Edit (missing target) _(from code)_ |
+| POST | [`/bangalore745/common_constants`](https://aisleapidocs.netlify.app/#/aisle/code-349) | Common Constants (missing target) _(from code)_ |
+| POST | [`/bangalore745/common_constant/edit`](https://aisleapidocs.netlify.app/#/aisle/code-350) | Common Constant Edit (missing target) _(from code)_ |
+| POST | [`/bangalore745/engagement_monthly`](https://aisleapidocs.netlify.app/#/aisle/code-351) | Engagement Monthly _(from code)_ |
+| POST | [`/bangalore745/otp_by_country`](https://aisleapidocs.netlify.app/#/aisle/code-352) | OTP by Country _(from code)_ |
+| POST | [`/bangalore745/language_by_country`](https://aisleapidocs.netlify.app/#/aisle/code-353) | Language by Country _(from code)_ |
+| POST | [`/bangalore745/sms_provider_priority`](https://aisleapidocs.netlify.app/#/aisle/code-354) | SMS Provider Priority _(from code)_ |
+| POST | [`/bangalore745/cashfree_price_change`](https://aisleapidocs.netlify.app/#/aisle/code-355) | Cashfree Price Change _(from code)_ |
+| POST | [`/bangalore745/bad_actor`](https://aisleapidocs.netlify.app/#/aisle/code-356) | Bad Actor _(from code)_ |
+| POST | [`/bangalore745/digital_good`](https://aisleapidocs.netlify.app/#/aisle/code-357) | Digital Good _(from code)_ |
+| POST | [`/bangalore745/prematch`](https://aisleapidocs.netlify.app/#/aisle/code-358) | Prematch _(from code)_ |
+| POST | [`/bangalore745/refresh_prematch_data`](https://aisleapidocs.netlify.app/#/aisle/code-359) | Refresh Prematch Data _(from code)_ |
+| POST | [`/bangalore745/postmatch`](https://aisleapidocs.netlify.app/#/aisle/code-360) | Postmatch _(from code)_ |
+| POST | [`/bangalore745/profile_edit`](https://aisleapidocs.netlify.app/#/aisle/code-361) | Profile Edit Report _(from code)_ |
+| POST | [`/bangalore745/refresh_profile_edit`](https://aisleapidocs.netlify.app/#/aisle/code-362) | Refresh Profile Edit Report _(from code)_ |
+| POST | [`/bangalore745/top_campaigns`](https://aisleapidocs.netlify.app/#/aisle/code-363) | Top Campaigns _(from code)_ |
+| POST | [`/bangalore745/upload_csv`](https://aisleapidocs.netlify.app/#/aisle/code-364) | Upload Campaign CSV _(from code)_ |
+| POST | [`/bangalore745/campaign_kpi`](https://aisleapidocs.netlify.app/#/aisle/code-365) | Campaign KPI _(from code)_ |
+| POST | [`/bangalore745/top_source`](https://aisleapidocs.netlify.app/#/aisle/code-366) | Top Source _(from code)_ |
+| POST | [`/bangalore745/save_campaign_end_date`](https://aisleapidocs.netlify.app/#/aisle/code-367) | Save Campaign End Date _(from code)_ |
+| POST | [`/bangalore745/check_image_optimization`](https://aisleapidocs.netlify.app/#/aisle/code-368) | Check Image Optimization (missing target) _(from code)_ |
+| POST | [`/bangalore745/image_optimization_details`](https://aisleapidocs.netlify.app/#/aisle/code-369) | Image Optimization Details _(from code)_ |
+| POST | [`/bangalore745/update_appsflyer_data`](https://aisleapidocs.netlify.app/#/aisle/code-370) | Update AppsFlyer Data _(from code)_ |
+| POST | [`/bangalore745/bulk_notifications`](https://aisleapidocs.netlify.app/#/aisle/code-371) | Bulk Notifications _(from code)_ |
+| POST | [`/bangalore745/test_framework`](https://aisleapidocs.netlify.app/#/aisle/code-372) | Test Framework _(from code)_ |
+| POST | [`/bangalore745/curator_feedback`](https://aisleapidocs.netlify.app/#/aisle/code-373) | Curator Feedback _(from code)_ |
+| POST | [`/bangalore745/revenue_report_l1`](https://aisleapidocs.netlify.app/#/aisle/code-374) | Revenue Report L1 (missing target) _(from code)_ |
+| POST | [`/bangalore745/revenue_report_l2`](https://aisleapidocs.netlify.app/#/aisle/code-375) | Revenue Report L2 _(from code)_ |
