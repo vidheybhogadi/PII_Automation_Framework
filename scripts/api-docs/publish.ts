@@ -8,7 +8,8 @@
  * (content/apps/aisle/api-data.json + content/apps/aisle/API-Documentation.md, plus content/shared-api-docs-prompt.md —
  * the standing documentation prompt from docs/shared-api-docs-prompt.md, offered by the site's "Copy prompt" button;
  * the export writes it, so the two copies never diverge), checks that the site builds there
- * (node build.mjs), then commits and pushes only if that content changed. Other apps' folders, the app registry
+ * (node build.mjs), then commits and pushes only if that content changed. It also refreshes the Env & branch pills
+ * of the shared vernac folder (branches.ts: only the `deploy` fields and the Branch lines there). Other apps' folders, the app registry
  * (content/apps.json) and the website code (src/, build.mjs) are owned by the API_Guide repo and never touched here.
  * API_DOCS_REPO_DIR can also be set in .env.
  */
@@ -16,6 +17,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import dotenv from 'dotenv';
+import { TRACKS } from './branches';
 
 const ROOT = path.resolve(__dirname, '../..');
 dotenv.config({ path: path.join(ROOT, '.env'), quiet: true });
@@ -36,13 +38,27 @@ function main() {
   if (path.resolve(repo) === ROOT) throw new Error('API_DOCS_REPO_DIR points at this automation repository.');
 
   git('pull', '--ff-only');
+  // Branch pills read origin/<branch> of the local backend clones: refresh those refs first (fetch only — the clones
+  // are never checked out, changed or run). A clone that is missing or offline keeps its last fetched refs.
+  for (const t of Object.values(TRACKS))
+    if (existsSync(path.join(t.dir, '.git')))
+      try {
+        execFileSync('git', ['-C', t.dir, 'fetch', '--quiet', 'origin'], { stdio: 'ignore' });
+      } catch {
+        console.log(`API docs: could not fetch ${t.dir} — using its last fetched branches.`);
+      }
   execFileSync('npx', ['tsx', path.join(__dirname, 'export.ts'), '--out', repo], {
+    cwd: ROOT,
+    stdio: 'inherit',
+  });
+  // The shared vernac folder gets the same Env & branch pills (only its `deploy` fields and Branch lines change).
+  execFileSync('npx', ['tsx', path.join(__dirname, 'branches.ts'), '--out', repo], {
     cwd: ROOT,
     stdio: 'inherit',
   });
   execFileSync('node', ['build.mjs'], { cwd: repo, stdio: 'inherit' });
 
-  const paths = ['content/apps/aisle', 'content/shared-api-docs-prompt.md'];
+  const paths = ['content/apps/aisle', 'content/apps/vernac', 'content/shared-api-docs-prompt.md'];
   if (!git('status', '--porcelain', '--', ...paths)) {
     console.log('API docs: no content changes to publish.');
     return;

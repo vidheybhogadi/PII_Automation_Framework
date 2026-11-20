@@ -45,6 +45,7 @@
     "m2fn:docs": "tsx m2-pii-firstname/scripts/generate-m2fn-workbook.ts && npm run docs:api",
     "docs:api": "tsx scripts/api-docs/export.ts",
     "docs:api:publish": "tsx scripts/api-docs/publish.ts",
+    "docs:api:branches": "tsx scripts/api-docs/branches.ts",
     "docs:api:drift": "tsx scripts/api-docs/drift.ts",
     "docs:api:skill": "tsx scripts/api-docs/master-skill.ts",
     "check-env": "tsx scripts/check-env.ts",

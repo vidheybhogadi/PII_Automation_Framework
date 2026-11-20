@@ -26,7 +26,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from
 import path from 'node:path';
 import { ENDPOINTS } from '../../m1/src/clients/endpoints';
 import { activeNames, docState, loadChanges, type ChangeLog, type DocItem, type DocState } from './changes';
-import { CODE_DOCS_JSON, DOC_ONLY_GROUPS, loadCodeDocs, type CodeDoc } from './code-docs';
+import { CODE_DOCS_JSON, DOC_ONLY_GROUPS, loadCodeDocs, loadSuiteDocs, type CodeDoc } from './code-docs';
 import { loadCodeRoutes, type CodeRoute } from './code-routes';
 import { PII_INPUT } from '../../m2/scripts/m2-baseline';
 import {
@@ -43,6 +43,7 @@ import {
   type InventoryApi,
   type PiiField,
 } from '../../m2/scripts/m2-inventory';
+import { deployFor, deployLine, type DeployInfo, type DeployMeta } from './branches';
 
 const ROOT = path.resolve(__dirname, '../..');
 const MD_OUT = path.join(ROOT, 'docs/API-Documentation.md');
@@ -677,7 +678,8 @@ export function build(
   // Code-documented routes (m2/docs/code-documented-routes.json): full entries written from the code. One with the id
   // of a thin code-discovered entry (same method and path) replaces it, keeping that entry's recorded history; the
   // others are added. A build given its own code routes (tests) reads no code docs from disk unless given them too.
-  const codeDocs = opts.codeDocs ?? (opts.codeRoutes ? [] : (loadCodeDocs(ROOT)?.routes ?? []));
+  const codeDocs =
+    opts.codeDocs ?? (opts.codeRoutes ? [] : [...(loadCodeDocs(ROOT)?.routes ?? []), ...loadSuiteDocs(ROOT)]);
   for (const d of codeDocs) {
     const i = apis.findIndex((a) => a.id === d.id && a.method === d.method && a.path === d.path);
     if (i < 0 && apis.some((a) => a.id === d.id))
@@ -689,7 +691,7 @@ export function build(
       responseFields: d.responseFields ?? [],
       history: old?.history.length ? old.history : d.history,
       docsOnly: true,
-      origin: 'code',
+      origin: d.origin ?? 'code',
     } as unknown as Entry;
     if (i >= 0) apis[i] = e;
     else apis.push(e);
@@ -1110,7 +1112,7 @@ function mdHistory(a: Api): string[] {
   ];
 }
 
-export function markdown(data: Built, gs: Guide[]) {
+export function markdown(data: Built, gs: Guide[], deployMeta?: DeployMeta) {
   const { apis, groups } = data;
   const liveCount = (slugs: string[]) => slugs.filter((s) => !apis.find((x) => x.slug === s)?.removed).length;
   const out: string[] = [
@@ -1184,6 +1186,8 @@ export function markdown(data: Built, gs: Guide[]) {
         }`,
         '',
       );
+      const branchLine = deployLine((a as { deploy?: DeployInfo }).deploy, deployMeta);
+      if (branchLine) out.push(branchLine, '');
       out.push('**Request**', '');
       out.push(`Request fields: ${a.params.length ? a.params.map(mdItem).join(', ') : 'none'}`, '');
       if (a.responseFields.length)
@@ -1240,8 +1244,13 @@ export function published(a: Built['apis'][number]) {
 
 function main() {
   const data = build();
+  // Branch / Env pills (scripts/api-docs/branches.ts): which backend branches have each route, read from the local
+  // aisle_new clone; skipped (left out) when the clone is not on this machine.
+  const deploy = deployFor('aisle', data.apis, OBSERVED);
+  if (deploy) for (const a of data.apis) (a as { deploy?: DeployInfo }).deploy = deploy.of.get(a);
+  else console.log('API docs: aisle_new clone not found (AISLE_REPO_DIR) — Branch pills left out.');
   const gs = guides(data);
-  const md = markdown(data, gs);
+  const md = markdown(data, gs, deploy?.meta);
   writeFileSync(MD_OUT, md);
   const i = process.argv.indexOf('--out');
   const out = i > 0 ? process.argv[i + 1] : undefined;
@@ -1255,6 +1264,7 @@ function main() {
         baseUrl: BASE_URL,
         endpoints: data.live.length,
         ...(data.apis.length > data.live.length ? { removed: data.apis.length - data.live.length } : {}),
+        ...(deploy ? { deploy: deploy.meta } : {}),
       },
       fieldLabels: FIELD_LABEL,
       fields: PII_FIELDS,

@@ -136,6 +136,12 @@ For every endpoint, collect:
   topics, Sidekiq/cron jobs, providers)
 - **Good to know:** limits, idempotency, pagination defaults, ordering, caching, known quirks, related endpoints
 - **Source:** the files you took the facts from (for your notes; follow the existing format on whether to publish it)
+- **Env & branch** (the site's pills; optional):
+  - The folder's `meta.deploy` is `{ "source": "code", "label": "from code — confirm with Dev", "branches": [{ "name", "sha", "main" }] }`. It lists every backend branch you read, with its short commit. `main` is true for long-lived branches (master / staging / develop…) and false for feature branches.
+  - Each entry's `deploy` is `{ "branches": [names whose routes file has this route], "seen": { "env": "staging", "host", "date" } }`.
+  - Add `seen` ONLY when you actually saw the endpoint answer on staging.
+  - Never infer which branch an environment runs. Just list the branches.
+  - Reuse the folder's existing `meta.deploy` list. If your branch is not in it, add it there; never remove other teams' branches.
 
 ### 3.4 Facts only — never guess
 

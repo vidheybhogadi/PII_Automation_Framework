@@ -2,7 +2,7 @@
 
 # Aisle API Documentation
 
-Every Aisle API: what it does, how to call it, the path a request takes through the code, and which data it reads and writes. 588 endpoints · staging `https://testa2.aisle.co` · generated 2026-11-03.
+Every Aisle API: what it does, how to call it, the path a request takes through the code, and which data it reads and writes. 590 endpoints · staging `https://testa2.aisle.co` · generated 2026-11-20.
 
 The same content is published as a website from the [API_Guide](https://github.com/vidheybhogadi/API_Guide) repository.
 
@@ -20,7 +20,7 @@ This Markdown is a digest that GitHub can render: example requests (curl), step 
 - [Payments — checkout](#area-g7) — 29 endpoints
 - [Payments — verification](#area-g8) — 49 endpoints
 - [Provider callbacks](#area-g9) — 22 endpoints
-- [CMS / admin](#area-g10) — 93 endpoints
+- [CMS / admin](#area-g10) — 95 endpoints
 - [PII service (direct)](#area-m1) — 13 endpoints
 - [App config & integrations](#area-g11) — 68 endpoints
 - [Internal dashboard](#area-g12) — 135 endpoints
@@ -67,7 +67,7 @@ Every route needs a credential. All examples use staging (`https://testa2.aisle.
 | User token (JWT) | 128 mobile-app endpoints | Log in with a phone number (below); the login response carries the token. |
 | Web token (JWT) | Web endpoints that need it | Web login with the same account. |
 | TEST_TOKEN | PII service routes (`/V1/api/v1/pii-test/*`, `/V1/pii_integration/*`) | Shared test token from the team’s secret store. |
-| CMS admin token + `webcms: true` | 88 CMS endpoints | An OTP-verified admin with permission for the action. |
+| CMS admin token + `webcms: true` | 90 CMS endpoints | An OTP-verified admin with permission for the action. |
 | Admin browser session | Legacy `/users/*` pages and the IRL admin page | Log in to the CMS in a browser. |
 | Provider signature | Payment and Pusher callbacks | Genuine sandbox payloads from the provider. |
 
@@ -239,6 +239,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** Read · **Code** `app/controllers/v1/pii_integration_controller.rb; config/routes.rb#L18`
 
+**Branch** `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `user_id`
@@ -287,6 +289,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** Write / update PII · **Code** `app/controllers/v1/pii_integration_controller.rb; config/routes.rb#L19`
 
+**Branch** `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `user_id`, `first_name`
@@ -331,6 +335,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** Batch read · **Code** `app/controllers/v1/pii_integration_controller.rb; config/routes.rb#L21`
+
+**Branch** `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -382,6 +388,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** Batch read · **Code** `app/controllers/v1/pii_integration_controller.rb; config/routes.rb#L20`
 
+**Branch** `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `user_ids`
@@ -430,6 +438,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** Read (name source diagnostic) · **Code** `app/controllers/v1/pii_integration_controller.rb; config/routes.rb#L22`
+
+**Branch** `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -523,6 +533,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (hide/unhide name) · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L94`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: none
@@ -564,6 +576,8 @@ Personal data: First name (writes), Email (writes), through the app’s PII inte
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Write / update PII · **Code** `app/controllers/v1/sessions_controller.rb; config/routes.rb#L153`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -677,6 +691,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Write / update PII · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L154`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `data`, `general_information`, `first_name`, `photos`, `photo`, `photo_id`, `status`, `user_traits`, `trait_id`, `user_interests_v2`, `interest_id`, `preferences`, `partial_work`, `work_title`, `industry`, `college`, `graduation_year`, `audio_prompt`, `question_id`, `audio_url`
@@ -740,6 +756,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Delete account (reads PII for cleanup) · **Code** `app/controllers/v1/sessions_controller.rb; config/routes.rb#L155`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `reason_id`, `note`
@@ -793,6 +811,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app (before login) · **Auth** None — provider signature · **Operation** Write / update PII · **Code** `app/controllers/v1/sessions_controller.rb; config/routes.rb#L160`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-23) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `phone_code_id`, `mobile_number`, `otp`
@@ -844,6 +864,8 @@ Personal data: First name (writes), Email (writes), through the app’s PII inte
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Write / update PII · **Code** `app/controllers/v1/sessions_controller.rb; config/routes.rb#L161`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -901,6 +923,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app (before login) · **Auth** None — provider signature · **Operation** Login (reads/writes PII) · **Code** `app/controllers/v1/sessions_controller.rb; config/routes.rb#L164`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-23) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `user_id`, `is_new_user`
@@ -945,6 +969,8 @@ Personal data: First name (writes), Email (writes), through the app’s PII inte
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Write / update PII · **Code** `app/controllers/web/sessions_controller.rb; config/routes.rb#L365`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -1057,6 +1083,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Write / update PII · **Code** `app/controllers/web/users_controller.rb; config/routes.rb#L366`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `data`, `general_information`, `first_name`, `photos`, `photo`, `photo_id`, `status`, `user_traits`, `trait_id`, `user_interests_v2`, `interest_id`, `preferences`, `partial_work`, `work_title`, `industry`, `college`, `graduation_year`, `audio_prompt`, `question_id`, `audio_url`, `data.about` (optional · from code — confirm with Dev), `data.user_interests` (optional · from code — confirm with Dev), `device_type` (optional · from code — confirm with Dev)
@@ -1116,6 +1144,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Delete account (reads PII for cleanup) · **Code** `app/controllers/web/sessions_controller.rb; config/routes.rb#L367`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `reason_id`, `note`
@@ -1166,6 +1196,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Delete account (reads PII for cleanup) · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L98`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `ref`
@@ -1208,6 +1240,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Delete account (reads PII for cleanup) · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L99`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `ref`
@@ -1243,6 +1277,8 @@ The personal-data step runs only in some cases — a profile state, a cache miss
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Write / update PII · **Code** `app/controllers/v1/sessions_controller.rb; config/routes.rb#L156`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -1372,6 +1408,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L68`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `ref`, `conversation_id` (optional · from code — confirm with Dev)
@@ -1419,6 +1457,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** None — provider signature · **Operation** Read · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L69`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `user_name`
@@ -1455,6 +1495,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L70`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -1568,6 +1610,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L73`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `page`, `items_per_page`, `ps` (optional · from code — confirm with Dev)
@@ -1622,6 +1666,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L75`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -1726,6 +1772,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L76`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `recommended_profile_ref`
@@ -1767,6 +1815,8 @@ Personal data: First name (reads), Email (reads), Phone (reads), through the app
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L83`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -1827,6 +1877,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/app_releases_controller.rb; config/routes.rb#L275`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -1912,6 +1964,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read (POST) · **Code** `app/controllers/v1/app_releases_controller.rb; config/routes.rb#L276`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: none
@@ -1991,6 +2045,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/app_releases_controller.rb; config/routes.rb#L277`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -2094,6 +2150,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/web/users_controller.rb; config/routes.rb#L350`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `ref`
@@ -2149,6 +2207,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/web/users_controller.rb; config/routes.rb#L351`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: none
@@ -2188,6 +2248,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Partner system (InfoEdge) · **Auth** INFOEDGE_PROFILE_API_TOKEN · **Operation** Read · **Code** `app/controllers/api/external_controller.rb; config/routes.rb#L672`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -2262,6 +2324,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Batch read · **Code** `app/controllers/v1/invites_controller.rb; config/routes.rb#L58`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `page`, `items_per_page`
@@ -2319,6 +2383,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Batch read · **Code** `app/controllers/v1/invites_controller.rb; config/routes.rb#L59`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `page`, `items_per_page`
@@ -2369,6 +2435,8 @@ Personal data: First name (reads), Phone (reads), through the app’s PII integr
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Batch read · **Code** `app/controllers/v1/invites_controller.rb; config/routes.rb#L60`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -2434,6 +2502,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Batch read · **Code** `app/controllers/v1/invites_controller.rb; config/routes.rb#L61`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `page`, `items_per_page`, `opened_from_pn` (optional · from code — confirm with Dev), `sort_by` (optional · from code — confirm with Dev)
@@ -2498,6 +2568,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Batch read · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L71`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `page`, `items_per_page`
@@ -2548,6 +2620,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Batch read · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L72`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `page`, `items_per_page`
@@ -2597,6 +2671,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L77`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -2655,6 +2731,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Batch read · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L78`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `page`, `items_per_page`
@@ -2699,6 +2777,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/like_controller.rb; config/routes.rb#L133`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -2745,6 +2825,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/like_controller.rb; config/routes.rb#L134`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -2796,6 +2878,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/like_controller.rb; config/routes.rb#L135`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `page`, `items_per_page`
@@ -2839,6 +2923,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read (POST) · **Code** `app/controllers/v1/like_controller.rb; config/routes.rb#L141`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -2886,6 +2972,8 @@ Personal data: First name (reads), Phone (reads), Free text (reads), through the
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/messages_controller.rb; config/routes.rb#L173`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -2951,6 +3039,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/messages_controller.rb; config/routes.rb#L184`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `page`, `items_per_page`
@@ -3007,6 +3097,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read (POST) · **Code** `app/controllers/v1/messages_controller.rb; config/routes.rb#L188`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-23) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `conversation_id`, `page`, `created_at`
@@ -3049,6 +3141,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/speed_dating_controller.rb; config/routes.rb#L302`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `event_id`
@@ -3081,6 +3175,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/advertisement_controller.rb; config/routes.rb#L310`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -3125,6 +3221,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/live_audio_controller.rb; config/routes.rb#L312`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -3171,6 +3269,8 @@ Personal data: First name (reads), Phone (reads), through the app’s PII integr
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Batch read · **Code** `app/controllers/web/invites_controller.rb; config/routes.rb#L343`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -3225,6 +3325,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/web/like_controller.rb; config/routes.rb#L359`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `page`, `items_per_page`
@@ -3274,6 +3376,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** Read · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L16`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -3381,6 +3485,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/invites_controller.rb; config/routes.rb#L57`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `ref`, `invitation_type`, `reply_message`
@@ -3420,6 +3526,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/invites_controller.rb; config/routes.rb#L62`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -3465,6 +3573,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/invites_controller.rb; config/routes.rb#L63`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `id`, `invitation_type`
@@ -3506,6 +3616,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/like_controller.rb; config/routes.rb#L132`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -3549,6 +3661,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/like_controller.rb; config/routes.rb#L136`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `ref`, `tab_name`
@@ -3591,6 +3705,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/like_controller.rb; config/routes.rb#L137`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `ref`, `tab_name`
@@ -3630,6 +3746,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/like_controller.rb; config/routes.rb#L138`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -3671,6 +3789,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/like_controller.rb; config/routes.rb#L140`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `ref`, `tab_name`
@@ -3710,6 +3830,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/like_controller.rb; config/routes.rb#L142`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -3753,6 +3875,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/like_controller.rb; config/routes.rb#L143`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `ref`, `tab_name`
@@ -3795,6 +3919,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/messages_controller.rb; config/routes.rb#L176`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `ref`, `conversation_id`
@@ -3836,6 +3962,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/messages_controller.rb; config/routes.rb#L177`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `ref`
@@ -3868,6 +3996,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/messages_controller.rb; config/routes.rb#L181`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -3913,6 +4043,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Read · **Code** `app/controllers/v1/messages_controller.rb; config/routes.rb#L183`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `conversation_id`
@@ -3957,6 +4089,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/report_controller.rb; config/routes.rb#L296`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `ref`, `report_option_id`, `message`, `tab_name`
@@ -3996,6 +4130,8 @@ Personal data: First name (reads), Phone (reads), through the app’s PII integr
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/speed_dating_controller.rb; config/routes.rb#L304`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -4048,6 +4184,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/live_audio_controller.rb; config/routes.rb#L313`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `always_online_enable`
@@ -4079,6 +4217,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/live_audio_controller.rb; config/routes.rb#L314`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -4112,6 +4252,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/live_audio_controller.rb; config/routes.rb#L315`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `room_id`
@@ -4144,6 +4286,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/live_audio_controller.rb; config/routes.rb#L316`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -4185,6 +4329,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/live_audio_controller.rb; config/routes.rb#L317`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `room_id`
@@ -4216,6 +4362,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/web/invites_controller.rb; config/routes.rb#L344`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -4259,6 +4407,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/web/invites_controller.rb; config/routes.rb#L345`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `id`, `invitation_type`
@@ -4300,6 +4450,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/web/like_controller.rb; config/routes.rb#L358`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -4343,6 +4495,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/web/like_controller.rb; config/routes.rb#L360`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `ref`, `tab_name`
@@ -4385,6 +4539,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/web/like_controller.rb; config/routes.rb#L361`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `ref`, `tab_name`
@@ -4424,6 +4580,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/web/messages_controller.rb; config/routes.rb#L377`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -4466,6 +4624,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/web/report_controller.rb; config/routes.rb#L397`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `ref`, `report_option_id`, `message`, `tab_name`
@@ -4507,6 +4667,8 @@ The personal-data step runs only in some cases — a profile state, a cache miss
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/v1/messages_controller.rb; config/routes.rb#L171`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -4562,6 +4724,8 @@ The personal-data step runs only in some cases — a profile state, a cache miss
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Action → reads name · **Code** `app/controllers/web/messages_controller.rb; config/routes.rb#L372`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -4662,6 +4826,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L84`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `about`
@@ -4718,6 +4884,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L85`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `restaurant_id`, `restaurant_meal_type_id`, `day`
@@ -4758,6 +4926,8 @@ Personal data: First name (reads), Email (reads), Phone (reads), through the app
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L86`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -4813,6 +4983,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L87`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `user_interests_v2`, `interest_id`
@@ -4866,6 +5038,8 @@ Personal data: First name (reads), Email (reads), Phone (reads), through the app
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L88`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -4921,6 +5095,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L89`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: none
@@ -4974,6 +5150,8 @@ Personal data: First name (reads), Email (reads), Phone (reads), through the app
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L90`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -5029,6 +5207,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L91`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: none
@@ -5074,6 +5254,8 @@ The personal-data step runs only in some cases — a profile state, a cache miss
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L92`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -5123,6 +5305,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L93`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `selfie_url`
@@ -5170,6 +5354,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L95`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: none
@@ -5212,6 +5398,8 @@ The personal-data step runs only in some cases — a profile state, a cache miss
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L96`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -5259,6 +5447,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L97`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: none
@@ -5299,6 +5489,8 @@ Personal data: First name (reads), Email (reads), Phone (reads), through the app
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L101`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -5354,6 +5546,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L102`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `relationship_goal`, `id`, `optional_relationship_goal_message`
@@ -5407,6 +5601,8 @@ Personal data: First name (reads), Email (reads), Phone (reads), through the app
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L103`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -5462,6 +5658,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L104`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `mbti_id`
@@ -5501,6 +5699,8 @@ Personal data: First name (reads), Email (reads), Phone (reads), through the app
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L106`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -5562,6 +5762,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L108`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `user_traits`, `trait_id`
@@ -5618,6 +5820,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L113`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `user_name`
@@ -5663,6 +5867,8 @@ The personal-data step runs only in some cases — a profile state, a cache miss
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L114`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -5712,6 +5918,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/setting_controller.rb; config/routes.rb#L128`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `age_from`, `age_to`, `allow_extended_age_range` (optional · from code — confirm with Dev), `allow_extended_distance_range` (optional · from code — confirm with Dev), `diet_ids` (optional · from code — confirm with Dev), `distance_limit` (optional · from code — confirm with Dev), `drinking` (optional · from code — confirm with Dev), `drinking_v1` (optional · from code — confirm with Dev), `drinking_v2` (optional · from code — confirm with Dev), `faith_ids` (optional · from code — confirm with Dev), `marital_statuses` (optional · from code — confirm with Dev), `marital_statuses_v1` (optional · from code — confirm with Dev), `max_height` (optional · from code — confirm with Dev), `mbti_list` (optional · from code — confirm with Dev), `min_height` (optional · from code — confirm with Dev), `mother_tongue_ids` (optional · from code — confirm with Dev), `smoking` (optional · from code — confirm with Dev), `smoking_v1` (optional · from code — confirm with Dev), `smoking_v2` (optional · from code — confirm with Dev), `work_experience` (optional · from code — confirm with Dev), `work_experience_v1` (optional · from code — confirm with Dev), `work_industry` (optional · from code — confirm with Dev), `work_industry_v1` (optional · from code — confirm with Dev), `work_qualification` (optional · from code — confirm with Dev), `work_qualification_v1` (optional · from code — confirm with Dev)
@@ -5757,6 +5965,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/setting_controller.rb; config/routes.rb#L129`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `only_reset` (optional · from code — confirm with Dev)
@@ -5794,6 +6004,8 @@ The personal-data step runs only in some cases — a profile state, a cache miss
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/users_controller.rb; config/routes.rb#L272`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -5839,6 +6051,8 @@ The personal-data step runs only in some cases — a profile state, a cache miss
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/app_releases_controller.rb; config/routes.rb#L278`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -5896,6 +6110,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/images_controller.rb; config/routes.rb#L282`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `images`, `photo`, `photo_id`
@@ -5939,6 +6155,8 @@ Personal data: First name (reads), Email (reads), Phone (reads), through the app
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/images_controller.rb; config/routes.rb#L285`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -5996,6 +6214,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/subscription_controller.rb; config/routes.rb#L292`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: none
@@ -6037,6 +6257,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/introduction_controller.rb; config/routes.rb#L299`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -6083,6 +6305,8 @@ Personal data: First name (reads), Email (reads), Phone (reads), through the app
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/introduction_controller.rb; config/routes.rb#L300`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -6146,6 +6370,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/v1/advertisement_controller.rb; config/routes.rb#L309`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `option_id`
@@ -6186,6 +6412,8 @@ Personal data: First name (reads), Email (reads), Phone (reads), Free text (writ
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/web/users_controller.rb; config/routes.rb#L352`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -6253,6 +6481,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/web/users_controller.rb; config/routes.rb#L353`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `age_from`, `age_to`
@@ -6296,6 +6526,8 @@ The personal-data step runs only in some cases — a profile state, a cache miss
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/web/users_controller.rb; config/routes.rb#L354`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -6341,6 +6573,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/web/users_controller.rb; config/routes.rb#L355`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: none
@@ -6384,6 +6618,8 @@ The personal-data step runs only in some cases — a profile state, a cache miss
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Update (non-PII) → profile response · **Code** `app/controllers/web/users_controller.rb; config/routes.rb#L388`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -6466,6 +6702,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Outbound payload (reads PII) · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L211`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `plan_id`, `conversation_id`, `external_transaction_token`
@@ -6515,6 +6753,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Outbound payload (reads PII) · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L213`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `plan_id`, `return_url`
@@ -6559,6 +6799,8 @@ Personal data: First name (reads), Email (reads), Phone (reads), through the app
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Outbound payload (reads PII) · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L220`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -6609,6 +6851,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Outbound payload (reads PII) · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L226`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `plan_id`, `vpa`
@@ -6654,6 +6898,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Outbound payload (reads PII) · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L227`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `plan_id`, `ruser`
@@ -6698,6 +6944,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Outbound payload (reads PII) · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L235`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `plan_id`, `phone_pe_flow`, `vpa`, `bought_from`, `is_upgrade`, `discount_percentage`, `device_os`, `external_transaction_token`
@@ -6730,6 +6978,8 @@ Personal data: Phone (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Outbound payload (reads PII) · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L241`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -6774,6 +7024,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** Web JWT · **Operation** Outbound payload (reads PII) · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L247`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `plan_id`, `phone_pe_flow`, `vpa`, `bought_from`, `is_upgrade`, `discount_percentage`, `device_os`, `external_transaction_token`
@@ -6806,6 +7058,8 @@ Personal data: First name (reads), Email (reads), Phone (reads), through the app
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** Web JWT · **Operation** Outbound payload (reads PII) · **Code** `app/controllers/v1/speed_dating_controller.rb; config/routes.rb#L307`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -6852,6 +7106,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** Web JWT · **Operation** Outbound payload (reads PII) · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L214`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `plan_id`, `return_url`
@@ -6893,6 +7149,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Outbound payload (reads PII) · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L225`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `plan_id`
@@ -6931,6 +7189,8 @@ The personal-data step runs only in some cases — a profile state, a cache miss
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Outbound payload (reads PII) · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L228`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -7030,6 +7290,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Payment verify → cache rebuild · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L199`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `payment_id`
@@ -7074,6 +7336,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Payment verify → cache rebuild · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L208`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `productId`, `receiptdata`
@@ -7109,6 +7373,8 @@ The personal-data step runs only in some cases — a profile state, a cache miss
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Payment verify → cache rebuild · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L210`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -7153,6 +7419,8 @@ The personal-data step runs only in some cases — a profile state, a cache miss
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Payment verify → cache rebuild · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L215`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -7200,6 +7468,8 @@ The personal-data step runs only in some cases — a profile state, a cache miss
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Payment verify → cache rebuild · **Code** `app/controllers/v1/subscription_controller.rb; config/routes.rb#L287`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -7253,6 +7523,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Payment verify → cache rebuild · **Code** `app/controllers/v1/subscription_controller.rb; config/routes.rb#L288`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `product_id`, `purchase_token`
@@ -7299,6 +7571,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Payment verify → cache rebuild · **Code** `app/controllers/v1/subscription_controller.rb; config/routes.rb#L291`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `productId`, `receiptdata`
@@ -7334,6 +7608,8 @@ The personal-data step runs only in some cases — a profile state, a cache miss
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Payment verify → cache rebuild · **Code** `app/controllers/v1/speed_dating_controller.rb; config/routes.rb#L303`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -7383,6 +7659,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Payment verify → cache rebuild · **Code** `app/controllers/v1/freebie_controller.rb; config/routes.rb#L329`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `freebie_type`
@@ -7428,6 +7706,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Web app · **Auth** User JWT (app) · **Operation** Payment verify → cache rebuild · **Code** `app/controllers/web/payment_controller.rb; config/routes.rb#L384`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `payment_id`
@@ -7461,6 +7741,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Mobile app · **Auth** User JWT (app) · **Operation** Payment verify → cache rebuild · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L217`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -7539,6 +7821,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Outside provider (callback) · **Auth** None — provider signature · **Operation** Callback / webhook · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L236`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `response`
@@ -7587,6 +7871,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Outside provider (callback) · **Auth** None — provider signature · **Operation** Callback / webhook · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L239`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `response`
@@ -7627,6 +7913,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Outside provider (callback) · **Auth** None — provider signature · **Operation** Callback / webhook · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L240`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `response`
@@ -7666,6 +7954,8 @@ The personal-data step runs only in some cases — a profile state, a cache miss
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Outside provider (callback) · **Auth** None — provider signature · **Operation** Callback / webhook · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L289`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -7715,6 +8005,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Outside provider (callback) · **Auth** None — provider signature · **Operation** Callback / webhook · **Code** `app/controllers/v1/payment_controller.rb; config/routes.rb#L290`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `signedPayload`
@@ -7760,6 +8052,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Outside provider (callback) · **Auth** None — provider signature · **Operation** Callback / webhook · **Code** `app/controllers/v1/live_audio_controller.rb; config/routes.rb#L320`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -7809,6 +8103,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Outside provider (callback) · **Auth** None — provider signature · **Operation** Callback / webhook · **Code** `app/controllers/v1/live_audio_controller.rb; config/routes.rb#L321`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `events[0][channel]`, `events[0][name]`, `events[0][user_id]`, `channel_name` (optional · from code — confirm with Dev), `events` (optional, array · from code — confirm with Dev), `token` (optional · from code — confirm with Dev)
@@ -7849,7 +8145,7 @@ _Code path — First name_
 
 ### CMS / admin
 
-Admin views, edits, search, curation, reviews, member activity and exports. 93 endpoints.
+Admin views, edits, search, curation, reviews, member activity and exports. 95 endpoints.
 
 | Method | Path | What it is |
 | --- | --- | --- |
@@ -7946,6 +8242,8 @@ Admin views, edits, search, curation, reviews, member activity and exports. 93 e
 | POST | [`/admin/events/create_event`](https://aisleapidocs.netlify.app/#/aisle/code-170) | Create or edit offline event _(from code)_ |
 | GET | [`/admin/events/all`](https://aisleapidocs.netlify.app/#/aisle/code-171) | List offline events _(from code)_ |
 | POST | [`/admin/events/update_event_state`](https://aisleapidocs.netlify.app/#/aisle/code-172) | Change offline event state _(from code)_ |
+| GET | [`/admin/redis-keys`](#api-213) | Read a Redis key |
+| DELETE | [`/admin/redis-keys`](#api-214) | Delete a Redis key |
 
 <a id="api-136"></a>
 
@@ -7958,6 +8256,8 @@ Personal data: First name (reads), Email (reads), Phone (reads), through the app
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS (browser session) · **Auth** Admin browser session cookie · **Operation** Read (admin) · **Code** `app/controllers/users_controller.rb; config/routes.rb#L418`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -7994,6 +8294,8 @@ Personal data: First name (reads), Email (reads), through the app’s PII integr
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS (browser session) · **Auth** Admin browser session cookie · **Operation** Admin action · **Code** `app/controllers/users_controller.rb; config/routes.rb#L420`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -8045,6 +8347,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/pending_controller.rb; config/routes.rb#L569`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: none
@@ -8080,6 +8384,8 @@ Personal data: First name (writes), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Write / update PII · **Code** `app/controllers/admin/pending_controller.rb; config/routes.rb#L570`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -8125,6 +8431,8 @@ Personal data: First name (writes), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Write / update PII · **Code** `app/controllers/admin/updated_controller.rb; config/routes.rb#L571`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -8173,6 +8481,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/pending_controller.rb; config/routes.rb#L572`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `ref`, `isSuspicious`
@@ -8215,6 +8525,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/pending_controller.rb; config/routes.rb#L573`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `page`
@@ -8246,6 +8558,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/pending_controller.rb; config/routes.rb#L574`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -8279,6 +8593,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/pending_controller.rb; config/routes.rb#L575`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `page`
@@ -8310,6 +8626,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/pending_controller.rb; config/routes.rb#L576`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -8355,6 +8673,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/pending_controller.rb; config/routes.rb#L577`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `approve`, `ref`, `first_name`, `gender`, `photos`, `photo`, `photo_id`, `can_save`, `disapprove`, `inappropriate`, `banned`, `page`
@@ -8390,6 +8710,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/pending_controller.rb; config/routes.rb#L580`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -8427,6 +8749,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/images_controller.rb; config/routes.rb#L585`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `page`
@@ -8458,6 +8782,8 @@ Personal data: First name (writes), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Write / update PII · **Code** `app/controllers/admin/images_controller.rb; config/routes.rb#L586`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -8495,6 +8821,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/images_controller.rb; config/routes.rb#L587`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `page`, `date` (optional · from code — confirm with Dev)
@@ -8530,6 +8858,8 @@ Personal data: First name (writes), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Write / update PII · **Code** `app/controllers/admin/images_controller.rb; config/routes.rb#L588`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -8571,6 +8901,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/images_controller.rb; config/routes.rb#L590`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `page`
@@ -8602,6 +8934,8 @@ Personal data: First name (writes), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Write / update PII · **Code** `app/controllers/admin/images_controller.rb; config/routes.rb#L591`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -8648,6 +8982,8 @@ Personal data: First name (writes), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Write / update PII · **Code** `app/controllers/admin/images_controller.rb; config/routes.rb#L592`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -8696,6 +9032,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/images_controller.rb; config/routes.rb#L593`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `ref`
@@ -8737,6 +9075,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/reviews_controller.rb; config/routes.rb#L600`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -8781,6 +9121,8 @@ Personal data: First name (reads), Phone (reads), through the app’s PII integr
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/reviews_controller.rb; config/routes.rb#L601`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -8832,6 +9174,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/reviews_controller.rb; config/routes.rb#L602`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `profile_data_update_list`, `review_id`, `text`, `send_email`, `dismissed`
@@ -8878,6 +9222,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/reviews_controller.rb; config/routes.rb#L605`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `review_id`, `text`, `send_email`
@@ -8923,6 +9269,8 @@ Personal data: First name (reads), Email (reads), Phone (reads), through the app
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Search · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L607`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -8985,6 +9333,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L608`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `page`
@@ -9028,6 +9378,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L609`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -9074,6 +9426,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Batch read · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L610`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `ref`, `page`
@@ -9117,6 +9471,8 @@ Personal data: First name (reads), Email (reads), Phone (reads), through the app
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Batch read · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L615`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -9166,6 +9522,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Batch read · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L616`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `ref`, `page`
@@ -9197,6 +9555,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L617`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -9235,6 +9595,8 @@ The personal-data step runs only in some cases — a profile state, a cache miss
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L619`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -9280,6 +9642,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L620`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `ref`
@@ -9323,6 +9687,8 @@ The personal-data step runs only in some cases — a profile state, a cache miss
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L621`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -9371,6 +9737,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L622`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `page`, `profile_state`, `bucket` (optional · from code — confirm with Dev), `date` (optional · from code — confirm with Dev)
@@ -9417,6 +9785,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L624`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `page`
@@ -9448,6 +9818,8 @@ Personal data: First name (reads), through the app’s PII integration.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L625`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -9483,6 +9855,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L626`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `approve`, `disapprove`, `ban`, `page`
@@ -9517,6 +9891,8 @@ The personal-data step runs only in some cases — a profile state, a cache miss
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L628`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -9562,6 +9938,8 @@ The personal-data step runs only in some cases — a profile state, a cache miss
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L631`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -9612,6 +9990,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L633`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `ref`
@@ -9654,6 +10034,8 @@ Personal data: First name (reads), Email (reads), Phone (reads), through the app
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Batch read · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L634`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -9703,6 +10085,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Search · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L636`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `first_name`, `page`
@@ -9738,6 +10122,8 @@ Personal data: First name (reads), Email (reads), Phone (reads), through the app
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L637`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -9784,6 +10170,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Write / update PII · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L639`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `type`, `approve`, `ref`, `first_name`, `gender`, `photos`, `photo`, `photo_id`, `can_save`, `disapprove`, `inappropriate`, `editedImages`, `banned`, `visible_refs`, `moveToFeed`, `skip_render` (optional · from code — confirm with Dev)
@@ -9829,6 +10217,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/connections_controller.rb; config/routes.rb#L645`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `current_user_ref`, `other_user_ref`, `page`
@@ -9862,6 +10252,8 @@ The personal-data step runs only in some cases — a profile state, a cache miss
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/payments_controller.rb; config/routes.rb#L650`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -9898,6 +10290,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/payments_controller.rb; config/routes.rb#L651`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `ref`, `product_id`, `purchase_token`
@@ -9931,6 +10325,8 @@ Personal data: First name (reads), Email (reads), Phone (reads), through the app
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/stories_controller.rb; config/routes.rb#L661`
+
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -9980,6 +10376,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/reports_controller.rb; config/routes.rb#L662`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `page`
@@ -10013,6 +10411,8 @@ _Code path — First name_
 Personal data: First name (reads), Email (reads), Phone (reads), through the app’s PII integration.
 
 **Called by** CMS (browser session) · **Auth** Admin browser session cookie · **Operation** Read (admin) · **Code** `app/admin/irl.rb`
+
+**Branch** not matched on the tracked branches _(from code — confirm with Dev)_
 
 **Request**
 
@@ -10054,6 +10454,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** CMS admin panel · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Write / update PII · **Code** `app/controllers/admin/members_controller.rb; config/routes.rb#L623`
 
+**Branch** `master` @c7cbf6b, `staging` @f8beee0, `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `jup/pii` @84f32d2, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `approve`, `ref`, `first_name`, `gender`, `photos`, `photo`, `photo_id`, `can_save`, `reject`, `inappropriate`, `page`
@@ -10077,6 +10479,94 @@ _Code path — First name_
 **Good to know**
 
 - **From the developers:** The controller normalizes approve/reject/inappropriate and forces type=auto_curate, moveToFeed=true. Repeat with reject and inappropriate decisions on separate profiles.
+
+<a id="api-213"></a>
+
+#### `GET /admin/redis-keys` — Read a Redis key
+
+**Read one Redis string value.** Returns the value stored under the exact key, unchanged (also JSON strings and empty strings).
+
+Personal data: none by itself — but it returns or removes whatever the key holds, e.g. a user's cached profile or first name.
+
+Same endpoint on the vernacular backend (`testapp.koode.co`); each service uses its own Redis connection and admin token.
+
+_Last verified 2026-11-09 · seen on staging 2026-11-09_
+
+**Called by** Testers (Postman) / CMS admin tooling · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Read (admin) · **Code** `app/controllers/admin/redis_keys_controller.rb (develop_new @ bd85044)`
+
+**Branch** `develop_new` @371d361, `saurabh/pii-changes` @f387765, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-11-09) _(from code — confirm with Dev)_
+
+**Request**
+
+Request fields: `key` (required, string · confirmed by Dev)
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (confirmed by Dev)
+- `key` (confirmed by Dev)
+- `value` (confirmed by Dev)
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+| Store | Object | Access |
+| --- | --- | --- |
+| — | `—` | — |
+
+**Good to know**
+
+- **Source:** Redis key API quick reference (Aisle Engineering, 2026-11-09); code `app/controllers/admin/redis_keys_controller.rb` (develop_new @ bd85044).
+- **Status codes:** **200** `{status:true, key, value}`. · **404** `{status:false, message:"Redis key not found"}`. · **422** Key holds a non-string value. · **400** `{status:false, message:"A non-blank string key is required", details:[{field:"key", …}]}` for a missing or blank key. · **401** Empty body: admin token, permission, device or CMS OTP check failed. · **503** Redis operation unavailable.
+- **Seen on staging 2026-11-09:** testa2: an unknown key gives GET 404 "Redis key not found" and DELETE 200 deleted:false; a missing or blank key gives 400; an associate-level admin gets 401 (permission); an admin who has not passed the CMS OTP gets 401.
+- **Good to know:** Key in the query string, no body; headers Authorization (CMS admin token) + webcms: true. The CMS OTP is a Google Authenticator code (POST /admin/authenticate_rotp); once passed it stays valid for that admin until logout. Wildcards are literal (no pattern delete). The audit log keeps only the SHA-256 of the key.
+- **Security:** Any admin with the Redis permission can read any key (including cached names) and delete any key, e.g. caches or config.
+
+<a id="api-214"></a>
+
+#### `DELETE /admin/redis-keys` — Delete a Redis key
+
+**Delete one exact Redis key.** Works for any Redis data type; an absent key is not an error.
+
+Personal data: none by itself — but it returns or removes whatever the key holds, e.g. a user's cached profile or first name.
+
+Same endpoint on the vernacular backend (`testapp.koode.co`); each service uses its own Redis connection and admin token.
+
+_Last verified 2026-11-09 · seen on staging 2026-11-09_
+
+**Called by** Testers (Postman) / CMS admin tooling · **Auth** CMS admin JWT + webcms + admin OTP · **Operation** Admin action · **Code** `app/controllers/admin/redis_keys_controller.rb (develop_new @ bd85044)`
+
+**Branch** `develop_new` @371d361, `saurabh/pii-changes` @f387765, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-11-09) _(from code — confirm with Dev)_
+
+**Request**
+
+Request fields: `key` (required, string · confirmed by Dev)
+
+**Response fields** (top level; type not stated unless shown)
+
+- `status` (confirmed by Dev)
+- `key` (confirmed by Dev)
+- `deleted` (confirmed by Dev)
+
+**End-to-end flow**
+
+Not stated.
+
+**What it reads and writes**
+
+| Store | Object | Access |
+| --- | --- | --- |
+| — | `—` | — |
+
+**Good to know**
+
+- **Source:** Redis key API quick reference (Aisle Engineering, 2026-11-09); code `app/controllers/admin/redis_keys_controller.rb` (develop_new @ bd85044).
+- **Status codes:** **200** `{status:true, key, deleted:true}`, or `deleted:false` when the key was absent. · **400** `{status:false, message:"A non-blank string key is required", details:[{field:"key", …}]}` for a missing or blank key. · **401** Empty body: admin token, permission, device or CMS OTP check failed. · **503** Redis operation unavailable.
+- **Seen on staging 2026-11-09:** testa2: an unknown key gives GET 404 "Redis key not found" and DELETE 200 deleted:false; a missing or blank key gives 400; an associate-level admin gets 401 (permission); an admin who has not passed the CMS OTP gets 401.
+- **Good to know:** Key in the query string, no body; headers Authorization (CMS admin token) + webcms: true. The CMS OTP is a Google Authenticator code (POST /admin/authenticate_rotp); once passed it stays valid for that admin until logout. Wildcards are literal (no pattern delete). The audit log keeps only the SHA-256 of the key.
+- **Security:** Any admin with the Redis permission can read any key (including cached names) and delete any key, e.g. caches or config.
 
 <a id="area-m1"></a>
 
@@ -10111,6 +10601,8 @@ Personal data: First name (writes), Email (writes), Phone (writes), directly in 
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** PII proxy (direct)
+
+**Branch** `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
 
 **Request**
 
@@ -10170,6 +10662,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** PII proxy (direct)
 
+**Branch** `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `fix-pii-m2-first-name` @016e881 · **Env** Staging (testa2.aisle.co, seen 2026-10-25) _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `user_id`, `field_names`
@@ -10228,6 +10722,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** PII proxy (direct)
 
+**Branch** `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `user_ids`, `fields`
@@ -10273,6 +10769,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** PII proxy (direct) · **Code** `config/routes.rb`
 
+**Branch** `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `value`, `limit`, `include_values`
@@ -10308,6 +10806,8 @@ Personal data: Email (reads), directly in the PII service.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** PII proxy (direct) · **Code** `config/routes.rb`
+
+**Branch** `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -10345,6 +10845,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** PII proxy (direct) · **Code** `config/routes.rb`
 
+**Branch** `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `value`, `limit`, `include_values`
@@ -10380,6 +10882,8 @@ Personal data: Phone (reads), directly in the PII service.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** PII proxy (direct) · **Code** `app/controllers/v1/pii_test_controller.rb; config/routes.rb#L29`
+
+**Branch** `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -10417,6 +10921,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** PII proxy (direct) · **Code** `app/controllers/v1/pii_test_controller.rb; config/routes.rb#L30`
 
+**Branch** `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `transient_id`
@@ -10452,6 +10958,8 @@ Personal data: Phone (reads), directly in the PII service.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** PII proxy (direct) · **Code** `app/controllers/v1/pii_test_controller.rb; config/routes.rb#L31`
+
+**Branch** `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -10489,6 +10997,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** PII proxy (direct) · **Code** `Aisle PII facade (Milestone 1) — see m1/docs/aisle-api.md`
 
+**Branch** `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: none
@@ -10518,6 +11028,8 @@ Personal data: Free text (writes), directly in the PII service.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** PII proxy (direct) · **Code** `Aisle PII facade (Milestone 1) — see m1/docs/aisle-api.md`
+
+**Branch** `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
@@ -10554,6 +11066,8 @@ _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** PII proxy (direct) · **Code** `Aisle PII facade (Milestone 1) — see m1/docs/aisle-api.md`
 
+**Branch** `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
+
 **Request**
 
 Request fields: `key_id`
@@ -10588,6 +11102,8 @@ Personal data: Free text (writes), directly in the PII service.
 _Last verified 2026-10-29 · code @ 004e72c_
 
 **Called by** Internal / test tooling · **Auth** TEST_TOKEN (Bearer) · **Operation** PII service (direct) · **Code** `PII service route (Aisle facade)`
+
+**Branch** `develop_new` @371d361, `saurabh/pii-changes` @f387765, `saurabh/pii-email` @b473513, `saurabh/pii-phone` @403e229, `jup/free_text_pii` @405cbc5, `jup/cms_pii` @9ac944d, `fix-pii-m2-first-name` @016e881 _(from code — confirm with Dev)_
 
 **Request**
 
