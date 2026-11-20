@@ -14,9 +14,15 @@ import path from 'node:path';
 
 export const CODE_DOCS_JSON = 'm2/docs/code-documented-routes.json';
 
+/**
+ * Full entries owned by other suites (same shape; each sets its own `origin`, e.g. 'dev' for a Dev document). Merged
+ * like the code-documented routes, after them.
+ */
+export const SUITE_DOCS_JSON = ['m2-pii-firstname/docs/api-docs-routes.json'];
+
 export interface CodeDocItem {
   name: string;
-  source: 'code';
+  source: 'code' | 'dev' | 'staging';
   label?: string;
   since: string;
   required?: boolean;
@@ -47,8 +53,10 @@ export interface CodeDoc {
   notes: { title: string; text: string; warn?: boolean }[];
   related: string[];
   search: string;
-  lastVerified: { date: string; source: 'code'; label: string };
+  lastVerified: { date: string; source: 'code' | 'dev' | 'staging'; label: string };
   history: Record<string, unknown>[];
+  /** Where the entry's facts come from; code-documented routes leave it out ('code'). */
+  origin?: 'code' | 'dev';
 }
 
 export interface CodeDocsFile {
@@ -62,6 +70,14 @@ export interface CodeDocsFile {
 export function loadCodeDocs(root: string): CodeDocsFile | null {
   const file = path.join(root, CODE_DOCS_JSON);
   return existsSync(file) ? (JSON.parse(readFileSync(file, 'utf8')) as CodeDocsFile) : null;
+}
+
+/** Entries from SUITE_DOCS_JSON that exist on disk. */
+export function loadSuiteDocs(root: string): CodeDoc[] {
+  return SUITE_DOCS_JSON.flatMap((rel) => {
+    const file = path.join(root, rel);
+    return existsSync(file) ? (JSON.parse(readFileSync(file, 'utf8')) as { routes: CodeDoc[] }).routes : [];
+  });
 }
 
 /** Groups used only by code-documented routes (no QA group in the M2 inventory). */

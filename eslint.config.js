@@ -39,6 +39,7 @@ module.exports = tseslint.config(
       'scripts/**',
       'm1/scripts/**',
       'm2/scripts/**',
+      'm2-pii-firstname/scripts/**',
       'reporting/generator/**',
       'reporting/fixtures/**',
     ],
@@ -46,7 +47,12 @@ module.exports = tseslint.config(
   },
   {
     // Playwright fixtures must destructure their first argument even when it is unused: `async ({}, use) => ...`
-    files: ['m1/src/fixtures/**', 'm2/src/fixtures/**'],
+    files: [
+      'm1/src/fixtures/**',
+      'm2/src/fixtures/**',
+      'm2-pii-firstname/src/fixtures.ts',
+      'm2-pii-firstname/src/vn/fixtures.ts',
+    ],
     rules: { 'no-empty-pattern': 'off' },
   },
   {

@@ -1,0 +1,207 @@
+{
+  "about": "API documentation entries owned by the M2 PII First Name suite (not in the Milestone 2 inventory). Read by scripts/api-docs/export.ts.",
+  "routes": [
+    {
+      "slug": "api-213",
+      "id": "API-213",
+      "method": "GET",
+      "path": "/admin/redis-keys",
+      "group": "G10",
+      "name": "Read a Redis key",
+      "fields": [],
+      "auth": "CMS admin JWT + webcms + admin OTP",
+      "caller": "Testers (Postman) / CMS admin tooling",
+      "operation": "Read (admin)",
+      "source": "app/controllers/admin/redis_keys_controller.rb (develop_new @ bd85044)",
+      "summary": [
+        "**Read one Redis string value.** Returns the value stored under the exact key, unchanged (also JSON strings and empty strings).",
+        "Personal data: none by itself — but it returns or removes whatever the key holds, e.g. a user's cached profile or first name.",
+        "Same endpoint on the vernacular backend (`testapp.koode.co`); each service uses its own Redis connection and admin token."
+      ],
+      "headers": [
+        ["Authorization", "Bearer $ADMIN_TOKEN", "The credential this route needs."],
+        ["webcms", "true", "Marks a CMS web request (admin token from an OTP-verified admin)."]
+      ],
+      "keys": ["key"],
+      "curl": [
+        "curl --request GET \"https://testa2.aisle.co/admin/redis-keys?key=$REDIS_KEY\" \\\n  --header \"Authorization: Bearer $ADMIN_TOKEN\" \\\n  --header \"webcms: true\""
+      ],
+      "flows": [],
+      "stores": [
+        {
+          "store": "—",
+          "object": "—",
+          "access": "—",
+          "what": "No data store with personal data is involved."
+        }
+      ],
+      "notes": [
+        {
+          "title": "Source",
+          "text": "Redis key API quick reference (Aisle Engineering, 2026-11-09); code `app/controllers/admin/redis_keys_controller.rb` (develop_new @ bd85044)."
+        },
+        {
+          "title": "Status codes",
+          "text": "**200** `{status:true, key, value}`. · **404** `{status:false, message:\"Redis key not found\"}`. · **422** Key holds a non-string value. · **400** `{status:false, message:\"A non-blank string key is required\", details:[{field:\"key\", …}]}` for a missing or blank key. · **401** Empty body: admin token, permission, device or CMS OTP check failed. · **503** Redis operation unavailable."
+        },
+        {
+          "title": "Seen on staging 2026-11-09",
+          "text": "testa2: an unknown key gives GET 404 \"Redis key not found\" and DELETE 200 deleted:false; a missing or blank key gives 400; an associate-level admin gets 401 (permission); an admin who has not passed the CMS OTP gets 401."
+        },
+        {
+          "title": "Good to know",
+          "text": "Key in the query string, no body; headers Authorization (CMS admin token) + webcms: true. The CMS OTP is a Google Authenticator code (POST /admin/authenticate_rotp); once passed it stays valid for that admin until logout. Wildcards are literal (no pattern delete). The audit log keeps only the SHA-256 of the key."
+        },
+        {
+          "title": "Security",
+          "warn": true,
+          "text": "Any admin with the Redis permission can read any key (including cached names) and delete any key, e.g. caches or config."
+        }
+      ],
+      "related": ["api-214"],
+      "search": "get /admin/redis-keys admin redis-keys admin::rediskeyscontroller#show  cms admin panel",
+      "params": [
+        {
+          "name": "key",
+          "source": "dev",
+          "label": "confirmed by Dev",
+          "since": "2026-11-09",
+          "ref": "Redis key API quick reference (Aisle Engineering, 2026-11-09)",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "responseFields": [
+        {
+          "name": "status",
+          "source": "dev",
+          "label": "confirmed by Dev",
+          "since": "2026-11-09",
+          "ref": "Redis key API quick reference (Aisle Engineering, 2026-11-09)"
+        },
+        {
+          "name": "key",
+          "source": "dev",
+          "label": "confirmed by Dev",
+          "since": "2026-11-09",
+          "ref": "Redis key API quick reference (Aisle Engineering, 2026-11-09)"
+        },
+        {
+          "name": "value",
+          "source": "dev",
+          "label": "confirmed by Dev",
+          "since": "2026-11-09",
+          "ref": "Redis key API quick reference (Aisle Engineering, 2026-11-09)"
+        }
+      ],
+      "lastVerified": {
+        "date": "2026-11-09",
+        "source": "staging",
+        "label": "seen on staging 2026-11-09"
+      },
+      "history": [],
+      "origin": "dev"
+    },
+    {
+      "slug": "api-214",
+      "id": "API-214",
+      "method": "DELETE",
+      "path": "/admin/redis-keys",
+      "group": "G10",
+      "name": "Delete a Redis key",
+      "fields": [],
+      "auth": "CMS admin JWT + webcms + admin OTP",
+      "caller": "Testers (Postman) / CMS admin tooling",
+      "operation": "Admin action",
+      "source": "app/controllers/admin/redis_keys_controller.rb (develop_new @ bd85044)",
+      "summary": [
+        "**Delete one exact Redis key.** Works for any Redis data type; an absent key is not an error.",
+        "Personal data: none by itself — but it returns or removes whatever the key holds, e.g. a user's cached profile or first name.",
+        "Same endpoint on the vernacular backend (`testapp.koode.co`); each service uses its own Redis connection and admin token."
+      ],
+      "headers": [
+        ["Authorization", "Bearer $ADMIN_TOKEN", "The credential this route needs."],
+        ["webcms", "true", "Marks a CMS web request (admin token from an OTP-verified admin)."]
+      ],
+      "keys": ["key"],
+      "curl": [
+        "curl --request DELETE \"https://testa2.aisle.co/admin/redis-keys?key=$REDIS_KEY\" \\\n  --header \"Authorization: Bearer $ADMIN_TOKEN\" \\\n  --header \"webcms: true\""
+      ],
+      "flows": [],
+      "stores": [
+        {
+          "store": "—",
+          "object": "—",
+          "access": "—",
+          "what": "No data store with personal data is involved."
+        }
+      ],
+      "notes": [
+        {
+          "title": "Source",
+          "text": "Redis key API quick reference (Aisle Engineering, 2026-11-09); code `app/controllers/admin/redis_keys_controller.rb` (develop_new @ bd85044)."
+        },
+        {
+          "title": "Status codes",
+          "text": "**200** `{status:true, key, deleted:true}`, or `deleted:false` when the key was absent. · **400** `{status:false, message:\"A non-blank string key is required\", details:[{field:\"key\", …}]}` for a missing or blank key. · **401** Empty body: admin token, permission, device or CMS OTP check failed. · **503** Redis operation unavailable."
+        },
+        {
+          "title": "Seen on staging 2026-11-09",
+          "text": "testa2: an unknown key gives GET 404 \"Redis key not found\" and DELETE 200 deleted:false; a missing or blank key gives 400; an associate-level admin gets 401 (permission); an admin who has not passed the CMS OTP gets 401."
+        },
+        {
+          "title": "Good to know",
+          "text": "Key in the query string, no body; headers Authorization (CMS admin token) + webcms: true. The CMS OTP is a Google Authenticator code (POST /admin/authenticate_rotp); once passed it stays valid for that admin until logout. Wildcards are literal (no pattern delete). The audit log keeps only the SHA-256 of the key."
+        },
+        {
+          "title": "Security",
+          "warn": true,
+          "text": "Any admin with the Redis permission can read any key (including cached names) and delete any key, e.g. caches or config."
+        }
+      ],
+      "related": ["api-213"],
+      "search": "delete /admin/redis-keys admin redis-keys admin::rediskeyscontroller#destroy  cms admin panel",
+      "params": [
+        {
+          "name": "key",
+          "source": "dev",
+          "label": "confirmed by Dev",
+          "since": "2026-11-09",
+          "ref": "Redis key API quick reference (Aisle Engineering, 2026-11-09)",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "responseFields": [
+        {
+          "name": "status",
+          "source": "dev",
+          "label": "confirmed by Dev",
+          "since": "2026-11-09",
+          "ref": "Redis key API quick reference (Aisle Engineering, 2026-11-09)"
+        },
+        {
+          "name": "key",
+          "source": "dev",
+          "label": "confirmed by Dev",
+          "since": "2026-11-09",
+          "ref": "Redis key API quick reference (Aisle Engineering, 2026-11-09)"
+        },
+        {
+          "name": "deleted",
+          "source": "dev",
+          "label": "confirmed by Dev",
+          "since": "2026-11-09",
+          "ref": "Redis key API quick reference (Aisle Engineering, 2026-11-09)"
+        }
+      ],
+      "lastVerified": {
+        "date": "2026-11-09",
+        "source": "staging",
+        "label": "seen on staging 2026-11-09"
+      },
+      "history": [],
+      "origin": "dev"
+    }
+  ]
+}

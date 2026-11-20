@@ -5,14 +5,15 @@
 Everything is organised by milestone. Put new files in the matching folder; never recreate the old root `src/`,
 `tests/`, `config/` or `test-data/` folders.
 
-| Folder       | Holds                                                                                                                                  |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `core/`      | Shared, milestone-agnostic code (`utils/`, `db/` read-only adapter, `config/placeholders.ts`). Never imports from `m1/` or `m2/`.      |
-| `m1/`        | Milestone 1 (Aisle PII facade): `src/`, `tests/` (+ `catalog/`, `unit/`), `config/db-queries*.json`, `scripts/`, `docs/`, `test-data/` |
-| `m2/`        | Milestone 2 (Aisle business APIs): `tests/` (Playwright project `m2-api`), `scripts/`, `docs/`                                         |
-| `reporting/` | Shared report (dashboard, PDF, exports, history)                                                                                       |
-| `scripts/`   | Shared helpers: `test-all.ts`, `check-env.ts`, `sync-ci-env.ts`, report mail                                                           |
-| `docs/`      | Shared guides: setup, execution (commands), architecture, reporting, troubleshooting                                                   |
+| Folder              | Holds                                                                                                                                                                                                           |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `core/`             | Shared, milestone-agnostic code (`utils/`, `db/` read-only adapter, `config/placeholders.ts`). Never imports from `m1/` or `m2/`.                                                                               |
+| `m1/`               | Milestone 1 (Aisle PII facade): `src/`, `tests/` (+ `catalog/`, `unit/`), `config/db-queries*.json`, `scripts/`, `docs/`, `test-data/`                                                                          |
+| `m2/`               | Milestone 2 (Aisle business APIs): `tests/` (Playwright project `m2-api`), `scripts/`, `docs/`                                                                                                                  |
+| `m2-pii-firstname/` | M2 PII First Name white-box suite (kept apart from `m2/`): `docs/` (first-name inventory, Redis key API doc, test-case workbook, API-doc entries), `scripts/`, `src/`, `tests/` (Playwright project `m2fn-api`) |
+| `reporting/`        | Shared report (dashboard, PDF, exports, history)                                                                                                                                                                |
+| `scripts/`          | Shared helpers: `test-all.ts`, `check-env.ts`, `sync-ci-env.ts`, report mail                                                                                                                                    |
+| `docs/`             | Shared guides: setup, execution (commands), architecture, reporting, troubleshooting                                                                                                                            |
 
 - **npm scripts:** milestone commands are prefixed — `m1:test:*`, `m1:docs:*`, `m2:test`, `m2:docs`. Shared tooling
   is unprefixed: `verify`, `typecheck`, `lint`, `format`, `check-env`, `ci:sync-env`, `report:*`.

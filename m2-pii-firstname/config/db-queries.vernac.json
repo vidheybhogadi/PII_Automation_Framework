@@ -1,0 +1,80 @@
+{
+  "$comment": "Read-only SQL of the vernac first-name cases (m2-pii-firstname/src/vn/db.ts). Every query runs in its own BEGIN READ ONLY transaction (core/db). appQueries run on the vernac app DB (M2FN_VN_DB_NAME, default desiapp_production = vernac TEST data, QA lead 2026-11-11); piiQueries on the PII DB (M2FN_VN_PII_DB_NAME, default pii). Rows of the suite's own team users only: 'teamUsers' takes exactly the nine team numbers; every other user query takes the discovered suite user ids as $1 and filters every user column it reads by = ANY($1::bigint[]) (foreign partners are only counted, never selected). Names are compared as booleans (bound values), never read back. Table / column names from desiapp db/schema.rb @ f89046944 — from code, confirm with Dev.",
+  "appQueries": {
+    "teamUsers": {
+      "$comment": "The nine team numbers -> their not-deleted users per app, with profile state, hide flag, selfie state and review status (no names).",
+      "kind": "numbers",
+      "sql": "SELECT pn.number AS number, u.id::text AS user_id, u.app_id::int AS app_id, p.ref AS ref, p.profile_state::int AS profile_state, p.hide_first_name AS hide_first_name, sv.status::int AS selfie_status, p.admin_review_status::int AS admin_review_status FROM sms_notification_phone_numbers pn JOIN account_users u ON u.phone_number_id = pn.id LEFT JOIN account_profiles p ON p.user_id = u.id LEFT JOIN selfie_verifications sv ON sv.profile_id = p.id WHERE pn.number = ANY($1::text[]) AND u.deleted IS NULL ORDER BY u.app_id, pn.number"
+    },
+    "nameFlags": {
+      "$comment": "pii_name_read / pii_name_write per app (configuration, no user data).",
+      "kind": "config",
+      "sql": "SELECT app_id::int AS app_id, feature, enabled FROM app_features WHERE feature IN ('pii_name_read', 'pii_name_write') AND app_id = ANY($1::int[])"
+    },
+    "tenants": {
+      "$comment": "PII tenant per app (configuration, no user data).",
+      "kind": "config",
+      "sql": "SELECT id::int AS app_id, name, pii_tenant_id FROM app_lists WHERE id = ANY($1::int[])"
+    },
+    "teamTestNumbers": {
+      "$comment": "How many of the nine numbers are registered test numbers (fixed OTP); test_phone_numbers stores them as +91<number> (seen 2026-11-11).",
+      "kind": "numbers",
+      "sql": "SELECT count(*)::int AS n FROM test_phone_numbers WHERE phone_number = ANY($1::text[])"
+    },
+    "likesAmongSuite": {
+      "kind": "suite",
+      "sql": "SELECT initiator_id::text AS a, partner_id::text AS b, (partner_liked_back IS NOT NULL) AS liked_back, (partner_pass IS NOT NULL) AS passed FROM action_likes WHERE deleted IS NULL AND initiator_id = ANY($1::bigint[]) AND partner_id = ANY($1::bigint[])"
+    },
+    "passesAmongSuite": {
+      "kind": "suite",
+      "sql": "SELECT initiator_id::text AS a, partner_id::text AS b FROM action_passes WHERE deleted IS NULL AND initiator_id = ANY($1::bigint[]) AND partner_id = ANY($1::bigint[])"
+    },
+    "requestsAmongSuite": {
+      "kind": "suite",
+      "sql": "SELECT sender_id::text AS a, receiver_id::text AS b, status::int AS status FROM chat_requests WHERE deleted IS NULL AND sender_id = ANY($1::bigint[]) AND receiver_id = ANY($1::bigint[])"
+    },
+    "blocksAmongSuite": {
+      "kind": "suite",
+      "sql": "SELECT blocker_id::text AS a, blocked_id::text AS b FROM action_blocks WHERE blocker_id = ANY($1::bigint[]) AND blocked_id = ANY($1::bigint[])"
+    },
+    "conversationsAmongSuite": {
+      "kind": "suite",
+      "sql": "SELECT c.id::text AS conversation_id, c.link_type::int AS link_type, c.is_full_connection AS full_connection, a.user_id::text AS a, b.user_id::text AS b FROM chat_conversations c JOIN chat_members a ON a.conversation_id = c.id JOIN chat_members b ON b.conversation_id = c.id AND b.user_id > a.user_id WHERE c.delete_flag = false AND a.user_id = ANY($1::bigint[]) AND b.user_id = ANY($1::bigint[])"
+    },
+    "foreignRelationCounts": {
+      "$comment": "For one suite user ($2): how many of its own likes / likes received / passes / blocks / invites / conversations involve a NON-suite user (counts only; the partner is never selected). A CMS activity or connection list is called only when the count is 0, so no non-suite member can appear in a reply.",
+      "kind": "suite",
+      "sql": "SELECT (SELECT count(*)::int FROM action_likes l WHERE l.deleted IS NULL AND l.initiator_id = $2::bigint AND NOT (l.partner_id = ANY($1::bigint[]))) AS likes_sent, (SELECT count(*)::int FROM action_likes l WHERE l.deleted IS NULL AND l.partner_id = $2::bigint AND NOT (l.initiator_id = ANY($1::bigint[]))) AS likes_received, (SELECT count(*)::int FROM action_passes s WHERE s.deleted IS NULL AND s.initiator_id = $2::bigint AND NOT (s.partner_id = ANY($1::bigint[]))) AS passes, (SELECT count(*)::int FROM action_blocks k WHERE k.blocker_id = $2::bigint AND NOT (k.blocked_id = ANY($1::bigint[]))) AS blocks, (SELECT count(*)::int FROM chat_requests r WHERE r.deleted IS NULL AND (r.sender_id = $2::bigint OR r.receiver_id = $2::bigint) AND NOT (r.sender_id = ANY($1::bigint[]) AND r.receiver_id = ANY($1::bigint[]))) AS invites, (SELECT count(*)::int FROM chat_members m JOIN chat_members o ON o.conversation_id = m.conversation_id AND o.user_id <> m.user_id WHERE m.user_id = $2::bigint AND NOT (o.user_id = ANY($1::bigint[]))) AS conversations",
+      "userParam": 2
+    },
+    "profileNameIs": {
+      "$comment": "account_profiles.first_name of one suite user equals the bound name (boolean), and whether it holds a double inner space.",
+      "kind": "suite",
+      "sql": "SELECT (p.first_name = $3::text) AS is_value, (p.first_name ~ '\\S\\s{2,}\\S') AS has_double_space FROM account_profiles p WHERE p.user_id = $2::bigint AND p.user_id = ANY($1::bigint[])",
+      "userParam": 2
+    },
+    "profileState": {
+      "kind": "suite",
+      "sql": "SELECT p.profile_state::int AS profile_state, p.hide_first_name AS hide_first_name, (p.hide_first_name_update_time IS NOT NULL) AS hide_time_set FROM account_profiles p WHERE p.user_id = $2::bigint AND p.user_id = ANY($1::bigint[])",
+      "userParam": 2
+    },
+    "selfieStatus": {
+      "kind": "suite",
+      "sql": "SELECT sv.status::int AS selfie_status FROM selfie_verifications sv JOIN account_profiles p ON p.id = sv.profile_id WHERE p.user_id = $2::bigint AND p.user_id = ANY($1::bigint[])",
+      "userParam": 2
+    }
+  },
+  "piiQueries": {
+    "nameRows": {
+      "$comment": "PII NAME rows of suite users in the vernac tenants: who has one, its update time and an md5 of the ciphertext (never the ciphertext or the value).",
+      "kind": "suite",
+      "sql": "SELECT tenant_id, user_id::text AS user_id, md5(ciphertext::text) AS ciphertext_hash, updated_at FROM user_pii_field_value WHERE field_name = 'NAME' AND tenant_id = ANY($2::text[]) AND user_id::text = ANY($1::text[])"
+    },
+    "nameNotPlaintext": {
+      "$comment": "The stored NAME ciphertext of one suite user does not contain the bound plain name (boolean).",
+      "kind": "suite",
+      "sql": "SELECT (strpos(ciphertext::text, $4::text) = 0) AS not_plaintext FROM user_pii_field_value WHERE field_name = 'NAME' AND tenant_id = $3::text AND user_id::text = $2::text AND user_id::text = ANY($1::text[])",
+      "userParam": 2
+    }
+  }
+}

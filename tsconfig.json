@@ -20,6 +20,7 @@
     "core/**/*.ts",
     "m1/**/*.ts",
     "m2/**/*.ts",
+    "m2-pii-firstname/**/*.ts",
     "scripts/**/*.ts",
     "reporting/**/*.ts",
     "playwright.config.ts"

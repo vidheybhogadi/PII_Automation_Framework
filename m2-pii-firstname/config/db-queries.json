@@ -1,0 +1,10 @@
+{
+  "$comment": "Read-only SQL of the M2 PII First Name suite. aislewebQueries run on the Aisle app DB (aisleweb) through m2/src/db/app-db.ts: first parameter suite_user_ids, WHERE user_id = ANY($1::bigint[]) — only the suite's own synthetic accounts; booleans only, values are bound for comparison and never read back. Table / column names from the Aisle code (db/schema.rb) — from code, confirm with Dev.",
+  "aislewebQueries": {
+    "m2fnProfileFirstNameIs": {
+      "$comment": "M2FN-RDK-009: profiles.first_name of a suite account equals the given name.",
+      "sql": "SELECT p.user_id::text AS user_id, (p.first_name IS NOT NULL AND btrim(p.first_name) <> '') AS first_name_filled, (p.first_name = $2::text) AS first_name_is_value FROM profiles p WHERE p.user_id = ANY($1::bigint[])",
+      "params": ["suite_user_ids", "first_name"]
+    }
+  }
+}

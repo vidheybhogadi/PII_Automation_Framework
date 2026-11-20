@@ -83,5 +83,25 @@ export default defineConfig({
       name: 'm2-unit',
       testDir: './m2/tests/unit',
     },
+    // ---- M2 PII First Name white-box suite (m2-pii-firstname/) — tagged @m2fn, kept apart from M2 -------------
+    {
+      // Live first-name white-box + Redis key API tests (npm run m2fn:test, one worker: M2FN-RDK-006 logs the CMS admin out and in).
+      name: 'm2fn-api',
+      testDir: './m2-pii-firstname/tests',
+      testIgnore: ['unit/**', 'vernac/**'],
+      fullyParallel: false,
+    },
+    {
+      // Live vernac first-name tests on testapp.koode.co (npm run m2fn:vn:test, one worker): team accounts only, every
+      // change restored in teardown; writes only with M2FN_VN_RUN=true.
+      name: 'm2fn-vn-api',
+      testDir: './m2-pii-firstname/tests/vernac',
+      fullyParallel: false,
+    },
+    {
+      // M2 PII First Name self-tests: no network, no .env needed (part of npm run verify).
+      name: 'm2fn-unit',
+      testDir: './m2-pii-firstname/tests/unit',
+    },
   ],
 });
