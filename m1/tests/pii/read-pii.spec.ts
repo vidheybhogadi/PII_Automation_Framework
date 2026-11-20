@@ -158,16 +158,17 @@ test.describe('Aisle facade — read PII', () => {
   }) => {
     noteAssumption(
       'BQ-38',
-      'observed 2026-10-01: field_names [""] → 403 (treated as an unknown field), not a 422 format error; Dev to confirm',
+      'observed 2026-10-01 and again 2026-11-19: field_names [""] → 403 (treated as an unknown field), not a 422 format error; Dev to confirm',
     );
     const userId = data.userId('rd9');
     expectValidationError(
       await aisle.call('readPii', { user_id: userId, field_names: [null] }),
-      'field_names.0',
+      'field_names',
     );
     expectValidationError(
       await aisle.call('readPii', { user_id: '', field_names: [PII_FIELDS.NAME] }),
       'user_id',
+      { type: 'string_too_short' },
     );
     const emptyName = await aisle.call('readPii', { user_id: userId, field_names: [''] });
     expectError(emptyName, 403, ERROR_CODES.AUTHORIZATION_DENIED);

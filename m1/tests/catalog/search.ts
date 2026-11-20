@@ -55,7 +55,7 @@ export const SEARCH_CASES: TestCaseCatalog = {
       'Check the number of results and the “truncated” flag (a yes/no that says results were cut off)',
     ],
     expected:
-      '200 OK. Exactly 1 result, and “truncated” is true. Seen on staging on 2026-10-01 (see AISLE-SR-016 for the edge case, question BQ-41).',
+      '200 OK. Exactly 1 result, and “truncated” is true. Seen on staging on 2026-10-01 (see AISLE-SR-016 for the edge case).',
     request:
       'POST /api/v1/pii-test (same fake email for users A and B) · POST /api/v1/pii-test/EMAIL/search {"value":"<that email>","limit":1,"include_values":false}',
     validation: ['Search status is 200', 'Exactly 1 match', '“truncated” is true'],
@@ -68,7 +68,7 @@ export const SEARCH_CASES: TestCaseCatalog = {
     why: 'Unlimited searches could be used to pull out large amounts of personal data.',
     steps: ['Search with limit 0', 'Search with limit 101'],
     expected:
-      'Both get 422 (refused: the request format is invalid), naming the limit as below 1 or above 100. No results are returned. Range seen on staging on 2026-09-29.',
+      'Both get 422 (refused: the request format is invalid) with code REQUEST_VALIDATION_ERROR, naming the limit (body.limit); for 0 the kind of error is “greater_than_equal” (must be 1 or more). No results are returned. Range seen on staging on 2026-09-29; reply format on 2026-11-19.',
     request:
       'POST /api/v1/pii-test/EMAIL/search {"value":"<fake email>","limit":0,"include_values":false} · POST /api/v1/pii-test/EMAIL/search {… "limit":101}',
     validation: ['Limit 0 → 422 naming limit', 'Limit 101 → 422 naming limit'],
@@ -103,17 +103,17 @@ export const SEARCH_CASES: TestCaseCatalog = {
     why: 'If wildcards worked, anyone could list other people’s emails by searching “%”. Search must only find exact matches.',
     steps: [
       'Save a fake email for a new fake user',
-      'Search for %, _, *, .* and “start of the email + %”',
-      'Search for email-shaped patterns such as “%@example.test”',
+      'Search for %, _, *, .*, “start of the email + %” and “.*@example.test”',
+      'Search for valid-looking patterns such as “%@example.test”, “<name>_@example.test” and “<name>*@example.test”',
       'Check the fake user is never found',
     ],
     expected:
-      'Values that are not an email get 400 VALIDATION_ERROR with no data. Email-shaped patterns get 200 OK and never include the fake user. Seen on 2026-10-01.',
+      'Values that are not a valid email (the wildcards on their own, and “.*@…”, because an email cannot start with a dot) get 400 Bad Request, error code VALIDATION_ERROR (“value must be a valid email address”), with no data. Valid-looking emails that contain %, _ or * get 200 OK and never include the fake user (the characters are taken literally; search is exact only). Dev confirmed this is intended (ClickUp 14zmk4dnunc); seen on 2026-11-19.',
     request:
       'POST /api/v1/pii-test/EMAIL/search {"value":"%","limit":100,"include_values":false} · {"value":"%@example.test",…}',
     validation: [
-      'Non-email wildcards → 400 VALIDATION_ERROR, no data',
-      'Email-shaped wildcards → 200 without the fake user',
+      'Not a valid email → 400 VALIDATION_ERROR, no data',
+      'Valid-looking emails with wildcards → 200 without the fake user',
       'No server error (5xx)',
     ],
     type: 'Security',
@@ -125,14 +125,18 @@ export const SEARCH_CASES: TestCaseCatalog = {
     why: 'Partial matching would let someone find people from a fragment of their email. Search must be exact.',
     steps: [
       'Save a fake email for a new fake user',
-      'Search for each part of the email',
+      'Search for the name part, the domain, “@domain” and the first 10 characters',
+      'Search for the email without its first 5 characters (still a valid-looking email)',
       'Check the fake user is never found',
     ],
     expected:
-      'Parts that are not an email get 400 VALIDATION_ERROR. Email-shaped parts (“@domain”, the shortened email) get 200 OK without the fake user. Seen on 2026-10-01.',
+      'The name part, the domain, “@domain” and the first 10 characters are not valid emails: each gets 400 Bad Request, error code VALIDATION_ERROR (“value must be a valid email address”), with no data. The email without its first 5 characters gets 200 OK with no matches (count 0). Dev confirmed this is intended (ClickUp 14zmk4dnunc); seen on 2026-11-19.',
     request:
-      'POST /api/v1/pii-test/EMAIL/search {"value":"<name part only>",…} · {"value":"@example.test",…}',
-    validation: ['Non-email parts → 400 VALIDATION_ERROR', 'Email-shaped parts → 200 without the fake user'],
+      'POST /api/v1/pii-test/EMAIL/search {"value":"<name part only>",…} · {"value":"@example.test",…} · {"value":"<email without its first 5 characters>",…}',
+    validation: [
+      'Name part, domain, “@domain”, first 10 characters → 400 VALIDATION_ERROR, no data',
+      'Email without its first 5 characters → 200, no matches, count 0',
+    ],
     type: 'Security',
     priority: 'Critical',
     preconditions: SEARCH_ACCESS,
@@ -239,19 +243,21 @@ export const SEARCH_CASES: TestCaseCatalog = {
     preconditions: SEARCH_ACCESS,
   },
   'AISLE-SR-015': {
-    what: 'Sends the same fake search to the NAME, PHONE and a made-up field instead of EMAIL.',
-    why: 'Only the EMAIL search is documented. QA records what the other fields do, so nothing is exposed by accident.',
+    what: 'Saves a fake name for a new fake user and searches the NAME field with exactly that name. Then sends a fake search with a never-saved value to the NAME, PHONE and a made-up field.',
+    why: 'NAME, EMAIL and PHONE are all searchable by design, exact value only. Apps that look people up by name rely on an exact name finding the person, while other fields must still refuse values that do not fit.',
     steps: [
-      'Search the NAME field',
-      'Search the PHONE field with an email-like value',
+      'Save a fake name for a new fake user',
+      'Search the NAME field with exactly that name',
+      'Search NAME and PHONE with a never-saved fake email',
       'Search a made-up field',
     ],
     expected:
-      'NAME: 200 OK with field NAME and no matches. PHONE: 400 VALIDATION_ERROR (the value is not a phone) with no data. Made-up field: 403 AUTHORIZATION_DENIED with no data. Seen on 2026-10-01; NAME search is undocumented (question BQ-32).',
+      'Exact name: 200 OK with field NAME, and the fake user is in the results. Never-saved value on NAME: 200 OK with no matches. PHONE: 400 VALIDATION_ERROR (the value is not a phone) with no data. Made-up field: 403 AUTHORIZATION_DENIED (refused: field not allowed) with no data. NAME search is supported by design (Dev / user decision, 2026-11-19).',
     request:
-      'POST /api/v1/pii-test/NAME/search {"value":"<fake email>","limit":10,"include_values":false} · /PHONE/search · /QA_AUTOMATION_UNKNOWN_FIELD/search',
+      'POST /api/v1/pii-test (fake name) · POST /api/v1/pii-test/NAME/search {"value":"<that fake name>","limit":10,"include_values":false} · /NAME/search and /PHONE/search {"value":"<fake email>",…} · /QA_AUTOMATION_UNKNOWN_FIELD/search',
     validation: [
-      'NAME → 200, field NAME, no matches',
+      'Exact NAME → 200, field NAME, the fake user is found',
+      'Never-saved value on NAME → 200, no matches',
       'PHONE → 400 VALIDATION_ERROR, no data',
       'Made-up field → 403, no data',
     ],
@@ -266,13 +272,12 @@ export const SEARCH_CASES: TestCaseCatalog = {
       'Search with limit 2',
       'Check the count and the “truncated” flag',
     ],
-    expected:
-      'Count 2 and “truncated” false (nothing was cut off). Blocked: on 2026-10-01 the reply said truncated true; Dev must confirm what the flag means (question BQ-41).',
+    expected: '200 OK. Count 2 and “truncated” false (nothing was cut off). Seen on staging on 2026-11-19.',
     request:
       'POST /api/v1/pii-test/EMAIL/search {"value":"<shared fake email>","limit":2,"include_values":false}',
     validation: ['Count is 2', '“truncated” is false'],
     type: 'Positive',
     priority: 'Medium',
-    preconditions: 'Blocked until Dev confirms what “truncated” means (question BQ-41).',
+    preconditions: SEARCH_ACCESS,
   },
 };

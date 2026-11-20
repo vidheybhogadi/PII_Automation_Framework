@@ -1,6 +1,6 @@
 /**
  * Shared response models of the Aisle PII facade. The envelope `{status, message, data, error}`, the
- * FastAPI 422 `detail` list and the error codes marked OBSERVED were seen on staging (2026-09-29).
+ * 422 request-validation body and the error codes marked OBSERVED were seen on staging (2026-09-29).
  *
  * TypeScript + Zod pattern used throughout /models:
  *   const fooSchema = z.object({...});      // runtime validator
@@ -37,17 +37,29 @@ export const errorEnvelopeSchema = z.object({
 export type ErrorEnvelope = z.infer<typeof errorEnvelopeSchema>;
 
 /**
- * FastAPI's default 422 body (OBSERVED). Note: each `detail` entry also carries an `input` echo of what was
- * sent — including the value and the internal tenant_id — which is known finding BQ-08 (low priority, no active test).
+ * The facade's 422 body (OBSERVED 2026-11-19, Dev fix ClickUp 14zmk4dnunb):
+ * `{status:false, message:"Request validation failed", data:null, error:{code:"REQUEST_VALIDATION_ERROR",
+ * message, details:[{field:"body.value", type:"string_too_short"}, …]}}`. `field` is "body.<name>" (names outside
+ * Dev's allow-list and list positions appear as "unknown"); `type` is the pydantic error type. Submitted values
+ * and tenant_id never appear. Known finding (19 Nov 2026): every detail entry is listed twice — uniqueness is
+ * deliberately not asserted.
  */
-export const fastApiValidationSchema = z.object({
-  detail: z.array(
-    z.looseObject({
-      loc: z.array(z.union([z.string(), z.number()])),
-      msg: z.string(),
-      type: z.string(),
-    }),
-  ),
+export const requestValidationSchema = z.object({
+  status: z.literal(false),
+  message: z.string(),
+  data: z.null(),
+  error: z.object({
+    code: z.literal('REQUEST_VALIDATION_ERROR'),
+    message: z.string(),
+    details: z
+      .array(
+        z.looseObject({
+          field: z.string().min(1),
+          type: z.string().min(1),
+        }),
+      )
+      .min(1),
+  }),
 });
 
 /**
@@ -58,6 +70,7 @@ export const ERROR_CODES = {
   AUTHORIZATION_DENIED: 'AUTHORIZATION_DENIED',
   PII_NOT_FOUND: 'PII_NOT_FOUND',
   VALIDATION_ERROR: 'VALIDATION_ERROR',
+  REQUEST_VALIDATION_ERROR: 'REQUEST_VALIDATION_ERROR',
   TRANSIENT_PHONE_NOT_FOUND: 'TRANSIENT_PHONE_NOT_FOUND',
   FREE_TEXT_KEY_NOT_FOUND: 'FREE_TEXT_KEY_NOT_FOUND',
 } as const;

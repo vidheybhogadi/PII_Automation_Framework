@@ -42,6 +42,10 @@ export interface FrameworkConfig {
     phones: readonly string[];
     unsupportedField: string;
   };
+  readonly limits: {
+    /** Most user IDs one bulk read may carry; more → 400 VALIDATION_ERROR "batch limit exceeded". */
+    batchReadMax: number;
+  };
   readonly db: {
     engine: RawEnv['DB_ENGINE'];
     host: string | undefined;
@@ -139,6 +143,7 @@ export function loadConfig(
       phones: e.AISLE_TEST_PHONES,
       unsupportedField: e.PII_UNSUPPORTED_FIELD,
     },
+    limits: { batchReadMax: e.AISLE_BATCH_READ_MAX },
     db: {
       engine: e.DB_ENGINE,
       host: e.DB_HOST,

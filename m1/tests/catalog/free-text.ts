@@ -66,25 +66,25 @@ export const FREE_TEXT_CASES: TestCaseCatalog = {
   },
   'AISLE-FT-004': {
     what: 'Creates a fake free-text key (a secret used to encrypt notes), revokes it (switches it off for good), then sends the same revoke request a second time.',
-    why: 'Apps may repeat a revoke, for example after a network error. The reply must be predictable, so a repeat is not mistaken for a failure, or a failure for success.',
+    why: 'Apps may repeat a revoke, for example after a network error. A repeat must not look like a failure, and the key must stay switched off.',
     steps: [
       'Create a fake key',
       'Revoke it and check the reply is 200 with status REVOKED',
       'Revoke the same key again',
-      'Check the reply to the second revoke',
+      'Try to read the key',
     ],
     expected:
-      'Not decided yet. On 2026-10-01 staging answered the second revoke with 200 OK. Dev must say whether that is intended (200: “already revoked, nothing to do”) or whether it should be 404 Not Found. Blocked until Dev answers question BQ-33.',
+      'Both revokes get 200 OK with status REVOKED and the same key ID (a repeated revoke is accepted: “already revoked, nothing to do”). Reading the key afterwards gets 404 Not Found. Dev confirmed this is intended (ClickUp 14zmk4dk7yt); seen on staging since 2026-10-01.',
     request:
-      'POST /api/v1/pii-test/free-text/keys {} · POST /api/v1/pii-test/free-text/keys/revoke {"key_id":"<key ID>"} (twice)',
+      'POST /api/v1/pii-test/free-text/keys {} · POST /api/v1/pii-test/free-text/keys/revoke {"key_id":"<key ID>"} (twice) · POST /api/v1/pii-test/free-text/keys/read {"key_id":"<key ID>"}',
     validation: [
-      'First revoke: status 200 with status REVOKED',
-      'Second revoke: the status agreed with Dev (added once question BQ-33 is answered)',
+      'First revoke: 200 with status REVOKED',
+      'Second revoke: 200 with status REVOKED and the same key ID',
+      'Reading the key afterwards → 404',
     ],
     type: 'Negative',
     priority: 'Medium',
-    preconditions:
-      'Blocked until Dev answers question BQ-33 (should revoking an already-revoked key return 404 or 200?).',
+    preconditions: FREE_TEXT_ACCESS,
   },
   'AISLE-FT-005': {
     what: 'Creates two free-text keys (secrets used to encrypt notes) one after the other and compares them without printing them.',

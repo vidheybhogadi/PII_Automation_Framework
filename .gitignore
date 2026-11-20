@@ -29,3 +29,6 @@ reporting/dashboard/dist/
 .claude/scheduled_tasks.lock
 # Claude Code temporary agent worktrees (full repo copies — never commit, never type-check)
 .claude/worktrees/
+
+# Throwaway probe scripts (never committed)
+.tmp-*

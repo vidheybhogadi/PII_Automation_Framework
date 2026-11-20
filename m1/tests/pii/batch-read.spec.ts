@@ -8,7 +8,6 @@ import {
 import { expectSecretEquals } from '../../src/assertions/security.assertions';
 import { BLOCKERS, seedField } from '../../src/fixtures/steps';
 import {
-  blockedBy,
   blockIfAccessDenied,
   expect,
   noteAssumption,
@@ -79,9 +78,9 @@ test.describe('Aisle facade — bulk read', () => {
     aisle,
     data,
   }) => {
-    noteAssumption(
-      'BQ-18',
-      'the exact maximum is open: 200 users returned 403 on staging, so it is not asserted',
+    noteObserved(
+      '2026-11-19',
+      '0 users → 422 on body.user_ids; 201 users → 422 body.user_ids too_long (REQUEST_VALIDATION_ERROR)',
     );
     const empty = await aisle.call('batchReadPii', { user_ids: [], fields: [PII_FIELDS.NAME] });
     expectValidationError(empty, 'user_ids');
@@ -90,7 +89,7 @@ test.describe('Aisle facade — bulk read', () => {
       user_ids: data.userIds(LIMITS.batchUserIds.max + 1, 'br3'),
       fields: [PII_FIELDS.NAME],
     });
-    expectValidationError(tooMany, 'user_ids');
+    expectValidationError(tooMany, 'user_ids', { type: 'too_long' });
   });
 
   test('AISLE-BR-004 Bulk read with the same user ID twice returns only that user’s saved name', async ({
@@ -170,17 +169,16 @@ test.describe('Aisle facade — bulk read', () => {
   }) => {
     noteAssumption(
       'BQ-38',
-      'observed 2026-10-01: user_ids [""] → 404 PII_NOT_FOUND (not a 422 format error, unlike the single read); Dev to confirm',
+      'observed 2026-10-01 and again 2026-11-19: user_ids [""] → 404 PII_NOT_FOUND (not a 422 format error, unlike the single read); fields [] → 422 body.fields too_short; Dev to confirm',
     );
     const userId = data.userId('br9');
-    expectValidationError(await aisle.call('batchReadPii', { user_ids: [userId], fields: [] }), 'fields');
-    expectValidationError(
-      await aisle.call('batchReadPii', { user_ids: [userId], fields: [null] }),
-      'fields.0',
-    );
+    expectValidationError(await aisle.call('batchReadPii', { user_ids: [userId], fields: [] }), 'fields', {
+      type: 'too_short',
+    });
+    expectValidationError(await aisle.call('batchReadPii', { user_ids: [userId], fields: [null] }), 'fields');
     expectValidationError(
       await aisle.call('batchReadPii', { user_ids: [null], fields: [PII_FIELDS.NAME] }),
-      'user_ids.0',
+      'user_ids',
     );
     const emptyUser = await aisle.call('batchReadPii', { user_ids: [''], fields: [PII_FIELDS.NAME] });
     expectError(emptyUser, 404, ERROR_CODES.PII_NOT_FOUND);
@@ -284,10 +282,43 @@ test.describe('Aisle facade — bulk read', () => {
     }
   });
 
-  test('AISLE-BR-013 A bulk read of 199 users works, and exactly 200 users (the stated maximum) works too', async () => {
-    blockedBy(
-      'BQ-18',
-      'exactly 200 users returned 403 on staging (2026-09-29); the real maximum must be confirmed before 200 records are created',
+  test('AISLE-BR-013 Bulk reads of up to 50 users work; 51 users are refused with “batch limit exceeded”', async ({
+    aisle,
+    data,
+    cleanup,
+    config,
+  }) => {
+    test.setTimeout(180_000);
+    const limit = config.limits.batchReadMax;
+    noteObserved(
+      '2026-11-19',
+      `bulk-read limit ${limit} (configurable, Dev ClickUp 14zmk4dk7z1): 1 and ${limit} users → 200 with all items; ${limit + 1} → 400 VALIDATION_ERROR "batch limit exceeded"`,
     );
+    const users = data.userIds(limit + 1, 'br13');
+    for (let i = 0; i < users.length; i += 10)
+      await Promise.all(
+        users
+          .slice(i, i + 10)
+          .map((userId) => seedField(aisle, cleanup, { userId, field: PII_FIELDS.NAME, value: data.name() })),
+      );
+
+    for (const count of [1, limit]) {
+      const wanted = users.slice(0, count);
+      const bulk = expectSuccess(
+        await aisle.batchRead({ user_ids: wanted, fields: [PII_FIELDS.NAME] }),
+        200,
+        batchReadDataSchema,
+      );
+      expect(bulk.count, `${count} users → one item each`).toBe(count);
+      expect(new Set(bulk.items.map((i) => i.user_id)), `${count} users all returned`).toEqual(
+        new Set(wanted),
+      );
+    }
+
+    const over = await aisle.batchRead({ user_ids: users, fields: [PII_FIELDS.NAME] });
+    expectError(over, 400, ERROR_CODES.VALIDATION_ERROR);
+    const reason = (over.json() as { error?: { reason?: unknown } }).error?.reason;
+    expect(reason, 'refusal reason').toBe('batch limit exceeded');
+    expectNoData(over);
   });
 });

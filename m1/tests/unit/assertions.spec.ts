@@ -8,6 +8,7 @@ import {
   expectRejected,
   expectRequestValidationError,
   expectSuccess,
+  expectValidationError,
 } from '../../src/assertions/response.assertions';
 import {
   containsPlaintext,
@@ -109,11 +110,39 @@ test.describe('UNIT assertions', () => {
   });
 
   test('UT-AST-005 A 422 response is accepted in either documented format, and nothing else', () => {
-    expect(
-      expectRequestValidationError(
-        response(422, { detail: [{ loc: ['body', 'value'], msg: 'x', type: 'missing' }] }),
-      ),
-    ).toBe('fastapi-detail');
+    const validation = {
+      status: false,
+      message: 'Request validation failed',
+      data: null,
+      error: {
+        code: 'REQUEST_VALIDATION_ERROR',
+        message: 'Request validation failed',
+        details: [{ field: 'body.value', type: 'string_too_short' }],
+      },
+    };
+    expect(expectRequestValidationError(response(422, validation))).toBe('request-validation');
+    expectValidationError(response(422, validation), 'value', { type: 'string_too_short' });
+    expect(() => expectValidationError(response(422, validation), 'user_id')).toThrow();
+    expect(() => expectValidationError(response(422, validation), 'value', { type: 'missing' })).toThrow();
+    // The old FastAPI "detail" list is no longer accepted.
+    const oldDetail = { detail: [{ loc: ['body', 'value'], msg: 'x', type: 'missing' }] };
+    expect(() => expectRequestValidationError(response(422, oldDetail))).toThrow();
+    expect(() => expectValidationError(response(422, oldDetail))).toThrow();
+    // Privacy: a tenant_id or an echoed value fails, and the message never repeats the value.
+    const echo = structuredClone(validation) as typeof validation & { error: { input?: unknown } };
+    echo.error.input = { tenant_id: 'aisle', value: SECRET_EMAIL };
+    const echoMessage = failureMessage(() =>
+      expectValidationError(response(422, echo), 'value', { notEchoed: [SECRET_EMAIL] }),
+    );
+    expect(echoMessage).toContain('tenant_id');
+    expect(echoMessage).not.toContain(SECRET_EMAIL);
+    const markerOnly = structuredClone(validation);
+    markerOnly.message = `bad ${SECRET_EMAIL}`;
+    const markerMessage = failureMessage(() =>
+      expectValidationError(response(422, markerOnly), 'value', { notEchoed: [SECRET_EMAIL] }),
+    );
+    expect(markerMessage).toContain('must not repeat submitted value #1');
+    expect(markerMessage).not.toContain(SECRET_EMAIL);
     expect(
       expectRequestValidationError(
         response(422, {

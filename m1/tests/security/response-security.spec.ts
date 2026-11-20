@@ -1,15 +1,22 @@
 /**
  * Security checks: no leaks into our own logs/reports, no internal details in PII-service errors, and no-store on
- * PII replies. The 422 echo of submitted values is known finding BQ-08 (no active test). Facade-only checks
+ * PII replies, and no echo of submitted values or the tenant in 422 replies. Facade-only checks
  * (token, tenant injection, token scope) were removed on 2026-10-01. Assertion messages never contain the values.
  */
-import { expectStatus } from '../../src/assertions/response.assertions';
-import { expectNoSecretsIn } from '../../src/assertions/security.assertions';
+import { randomUUID } from 'node:crypto';
+import { expectStatus, expectValidationError } from '../../src/assertions/response.assertions';
+import { expectNoSecretsIn, expectNoStore } from '../../src/assertions/security.assertions';
 import type { ApiResponse } from '../../src/clients/api-response';
 import { requireToken } from '../../src/config/config';
-import { seedField } from '../../src/fixtures/steps';
-import { blockedBy, expect, noteAssumption, test } from '../../src/fixtures/test-fixtures';
-import { PII_FIELDS } from '../../src/models/pii.models';
+import { BLOCKERS, seedField } from '../../src/fixtures/steps';
+import {
+  blockIfAccessDenied,
+  expect,
+  noteAssumption,
+  noteObserved,
+  test,
+} from '../../src/fixtures/test-fixtures';
+import { LIMITS, PII_FIELDS } from '../../src/models/pii.models';
 
 test.describe('Aisle facade — response and data security', { tag: ['@security'] }, () => {
   test(
@@ -88,11 +95,78 @@ test.describe('Aisle facade — response and data security', { tag: ['@security'
     expect(leaks, 'error replies expose internal service details').toEqual([]);
   });
 
-  test('AISLE-SEC-006 Replies that contain personal data (read, bulk read, search with values) tell browsers and proxies not to keep a copy (“no-store”)', async () => {
-    blockedBy(
-      'BQ-39',
-      'on 2026-10-01 these replies carried "Cache-Control: max-age=0, private, must-revalidate" (no "no-store"), while free-text-key replies carry "no-store"; it is not known whether the PII service or the facade sets this header',
+  test('AISLE-SEC-006 Replies that contain personal data (read, bulk read, search with values) tell browsers and proxies not to keep a copy (“no-store”)', async ({
+    aisle,
+    data,
+    cleanup,
+  }) => {
+    noteObserved(
+      '2026-11-19',
+      'read, bulk read and search replies carry "Cache-Control: no-store, no-cache, must-revalidate, max-age=0" (facade fix of 16 Nov)',
     );
+    const userId = data.userId('sec6');
+    const email = data.email('sec6');
+    await seedField(aisle, cleanup, { userId, field: PII_FIELDS.NAME, value: data.name() });
+    await seedField(aisle, cleanup, {
+      userId,
+      field: PII_FIELDS.EMAIL,
+      value: email,
+      blocker: BLOCKERS.email,
+    });
+
+    const read = await aisle.readPii({ user_id: userId, field_names: [PII_FIELDS.NAME] });
+    expectStatus(read, 200, 'read');
+    expectNoStore(read);
+
+    const bulk = await aisle.batchRead({ user_ids: [userId], fields: [PII_FIELDS.NAME] });
+    expectStatus(bulk, 200, 'bulk read');
+    expectNoStore(bulk);
+
+    for (const includeValues of [true, false]) {
+      const search = await aisle.searchPii(PII_FIELDS.EMAIL, {
+        value: email,
+        limit: 10,
+        include_values: includeValues,
+      });
+      blockIfAccessDenied(search, BLOCKERS.search.id, BLOCKERS.search.reason);
+      expectStatus(search, 200, `search (include_values ${includeValues})`);
+      expectNoStore(search);
+    }
+  });
+
+  test('AISLE-SEC-007 A refused request (422) never repeats the submitted value or the tenant', async ({
+    aisle,
+    data,
+  }) => {
+    noteObserved(
+      '2026-11-19',
+      '422 replies list only field locations and error types — no submitted values, no tenant_id (Dev fix ClickUp 14zmk4dnunb)',
+    );
+    const marker = () => `QaMarker${randomUUID().replace(/-/g, '')}`;
+
+    const longName = marker();
+    const save = await aisle.call('writePii', {
+      user_id: data.userId('sec7'),
+      field: PII_FIELDS.NAME,
+      value: `${longName} ${'x'.repeat(LIMITS.value.max)}`,
+    });
+    expectValidationError(save, 'value', { type: 'string_too_long', notEchoed: [longName] });
+
+    const extra = marker();
+    const read = await aisle.call('readPii', {
+      user_id: data.userId('sec7'),
+      field_names: [PII_FIELDS.NAME],
+      qa_extra_key: extra,
+    });
+    expectValidationError(read, 'unknown', { type: 'extra_forbidden', notEchoed: [extra] });
+
+    const users = data.userIds(LIMITS.batchUserIds.max, 'sec7');
+    const markedUser = marker();
+    const bulk = await aisle.call('batchReadPii', {
+      user_ids: [markedUser, ...users],
+      fields: [PII_FIELDS.NAME],
+    });
+    expectValidationError(bulk, 'user_ids', { type: 'too_long', notEchoed: [markedUser, users[0]!] });
   });
 });
 

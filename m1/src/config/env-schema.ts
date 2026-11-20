@@ -101,6 +101,8 @@ export const envSchema = z.object({
     blankToUndefined,
     z.string().min(1).max(64).default('QA_AUTOMATION_UNKNOWN_FIELD'),
   ),
+  /** Bulk-read limit (users per request) set by Dev — configurable on the service, 50 on 2026-11-19 (ClickUp 14zmk4dk7z1). */
+  AISLE_BATCH_READ_MAX: intWithDefault(50, 1, 200),
 
   // ---- Database (read-only validation; schema supplied by Dev — see m1/docs/database-setup.md) --------
   DB_ENGINE: z.preprocess(blankToUndefined, z.enum(['none', 'postgres', 'mysql']).default('none')),

@@ -118,19 +118,27 @@ test.describe('UNIT Aisle client wire behaviour', () => {
     expect(raw?.body.toString('utf8')).toBe('{"user_id":');
   });
 
-  test('UT-ACL-008 The search field is URL-encoded into the path; 422 issues are read without the echoed input', async () => {
+  test('UT-ACL-008 The search field is URL-encoded into the path; 422 issues are read as field and type only', async () => {
     await client().searchPii('EMAIL', { value: 'x', limit: 1, include_values: false });
     expect(server.requests[0]?.url).toBe('/api/v1/pii-test/EMAIL/search');
 
     const body = {
-      detail: [
-        { type: 'missing', loc: ['body', 'user_id'], msg: 'Field required', input: { value: 'Echoed Name' } },
-      ],
+      status: false,
+      message: 'Request validation failed',
+      data: null,
+      error: {
+        code: 'REQUEST_VALIDATION_ERROR',
+        message: 'Request validation failed',
+        details: [
+          { field: 'body.user_id', type: 'missing' },
+          { field: 'body.user_id', type: 'missing' },
+        ],
+      },
     };
     server.enqueue({ status: 422, body: JSON.stringify(body) });
     const res = await client().writePii({ user_id: '', field: 'NAME', value: 'Echoed Name' });
-    expectValidationError(res, 'user_id');
-    expect(res.validationIssues).toEqual(['body.user_id:missing']);
+    expectValidationError(res, 'user_id', { type: 'missing', notEchoed: ['Echoed Name'] });
+    expect(res.validationIssues).toEqual(['body.user_id:missing', 'body.user_id:missing']);
     expect(res.validationIssues.join(' ')).not.toContain('Echoed Name');
   });
 

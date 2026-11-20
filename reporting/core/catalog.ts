@@ -232,11 +232,12 @@ const ENDPOINT_OVERRIDES: Record<string, string[]> = {
   'AISLE-TR-004': [T.r],
   'AISLE-FT-002': [K.r, K.c],
   'AISLE-FT-003': [K.r, K.v],
-  'AISLE-FT-004': [K.v],
+  'AISLE-FT-004': [K.v, K.r],
   'AISLE-FT-006': [K.r, K.v],
   'AISLE-FT-007': [K.v],
   'AISLE-FT-008': [K.r, K.c],
   'AISLE-SEC-003': ['writePii', 'readPii'],
+  'AISLE-SEC-007': ['writePii', 'readPii', 'batchReadPii'],
   'AISLE-DB-001': ['writePii'],
   'AISLE-DB-002': ['writePii'],
   'AISLE-DB-004': ['writePii'],
@@ -381,6 +382,7 @@ const req = (
  */
 const OBS = 'Staging, observed 2026-09-29';
 const OBS2 = 'Staging, observed 2026-10-01';
+const OBS3 = 'Staging, observed 2026-11-19, and Dev answers in ClickUp';
 const ALL_FACADE = ['healthReady', ...ALL_AUTHENTICATED];
 const TR = [T.c, T.r, T.p];
 const FT = [K.c, K.r, K.v];
@@ -556,12 +558,12 @@ export const REQUIREMENTS: Requirement[] = [
   req(
     'FR-BR-03',
     'Bulk read',
-    'The user list must hold 1–200 real IDs and the field list at least one real field (422 outside)',
+    'The user list must hold 1–200 real IDs and the field list at least one real field (422 outside); a bulk read carries at most the configured limit of users (50 today; more → 400 “batch limit exceeded”)',
     'Derived',
-    OBS,
+    OBS3,
     ['batchReadPii'],
     ['AISLE-BR-003', 'AISLE-BR-009', 'AISLE-BR-013'],
-    'BQ-18',
+    'BQ-38',
   ),
   req(
     'FR-BR-04',
@@ -575,12 +577,11 @@ export const REQUIREMENTS: Requirement[] = [
   req(
     'FR-NRM-01',
     'Normalization',
-    'Names are trimmed and runs of spaces collapsed (tabs and line breaks become spaces); capitals are kept',
+    'Names are trimmed and runs of spaces collapsed (tabs and line breaks become spaces); capitals are kept; otherwise values are stored and searched exactly as sent (no Unicode conversion)',
     'Derived',
     OBS,
     ['writePii', 'readPii'],
     ['AISLE-NRM-001', 'AISLE-NRM-004', 'AISLE-NRM-005', 'POC-002'],
-    'BQ-36',
   ),
   req(
     'FR-NRM-02',
@@ -603,9 +604,9 @@ export const REQUIREMENTS: Requirement[] = [
   req(
     'FR-EML-01',
     'Email flow',
-    'An email can be saved, replaced and read back cleaned up; badly formed or over-long emails are refused',
+    'An email can be saved, replaced and read back cleaned up; badly formed emails, and emails over 254 characters or with more than 64 before “@”, are refused',
     'Derived',
-    OBS2,
+    OBS3,
     ['writePii', 'readPii'],
     [
       'AISLE-WR-009',
@@ -616,7 +617,6 @@ export const REQUIREMENTS: Requirement[] = [
       'AISLE-WR-025',
       'AISLE-WR-026',
     ],
-    'BQ-37',
   ),
   req(
     'FR-SR-01',
@@ -634,7 +634,6 @@ export const REQUIREMENTS: Requirement[] = [
       'AISLE-SR-010',
       'AISLE-SR-016',
     ],
-    'BQ-41',
   ),
   req(
     'FR-SR-02',
@@ -649,21 +648,20 @@ export const REQUIREMENTS: Requirement[] = [
   req(
     'FR-SR-03',
     'Search',
-    'Search only finds exact matches in the EMAIL field: wildcards, partial values and other fields never find a user',
+    'Search only finds exact matches: values that are not a valid email are refused (400), and wildcards or partial values never find a user',
     'Derived',
-    OBS2,
+    OBS3,
     ['searchPii'],
     ['AISLE-SR-006', 'AISLE-SR-007', 'AISLE-SR-009'],
   ),
   req(
     'FR-SR-04',
     'Search',
-    'Search on fields other than EMAIL (NAME, PHONE, unknown) behaves predictably',
+    'NAME, EMAIL and PHONE are searchable by exact value (Dev / user decision 2026-11-19): an exact name finds its user; PHONE refuses non-phone values; unknown fields are refused',
     'Derived',
-    OBS2,
+    OBS3,
     ['searchPii'],
     ['AISLE-SR-015'],
-    'BQ-32',
   ),
   req(
     'FR-TR-01',
@@ -678,12 +676,11 @@ export const REQUIREMENTS: Requirement[] = [
   req(
     'FR-FT-01',
     'Free-text keys',
-    'A free-text key can be created, read and revoked; a key read back decrypts text encrypted with it; every key is unique; revoked or unknown keys are gone; bad key IDs are refused',
+    'A free-text key can be created, read and revoked (a repeated revoke is accepted); a key read back decrypts text encrypted with it; every key is unique; revoked or unknown keys are gone; bad key IDs are refused',
     'Derived',
     OBS2,
     FT,
     ['AISLE-FT-*'],
-    'BQ-33',
   ),
   req(
     'FR-CON-01',
@@ -697,12 +694,11 @@ export const REQUIREMENTS: Requirement[] = [
   req(
     'FR-SEC-01',
     'Security',
-    'Error replies do not repeat the submitted personal value or internal details (known finding BQ-08, low priority, no active test)',
+    'Refused requests (422) do not repeat the submitted values or the tenant; they name only the field and the kind of error',
     'Policy',
-    'BQ-08',
-    ['writePii'],
-    [],
-    'BQ-08',
+    'Dev fix ClickUp 14zmk4dnunb, observed 2026-11-19',
+    ['writePii', 'readPii', 'batchReadPii'],
+    ['AISLE-SEC-007', 'AISLE-CON-002'],
   ),
   req(
     'FR-SEC-02',
@@ -726,12 +722,11 @@ export const REQUIREMENTS: Requirement[] = [
   req(
     'FR-SEC-04',
     'Security',
-    'Replies with personal data tell browsers and proxies not to keep a copy (no-store) (blocked)',
+    'Replies with personal data tell browsers and proxies not to keep a copy (no-store)',
     'Policy',
-    'BQ-39',
+    'Facade fix of 16 Nov 2026, observed 2026-11-19',
     ['readPii', 'batchReadPii', 'searchPii'],
     ['AISLE-SEC-006'],
-    'BQ-39',
   ),
   req(
     'FR-DB-01',
@@ -746,7 +741,7 @@ export const REQUIREMENTS: Requirement[] = [
   req(
     'FR-DB-02',
     'Storage',
-    'Stored values follow the designed encrypted layout (12-byte nonce, 16-byte tamper seal, valid key version); every save is freshly encrypted; only EMAIL and PHONE have a search fingerprint; promoted phones are stored the same way; every record points to an existing, active key; reads change nothing (blocked)',
+    'Stored values follow the designed encrypted layout (12-byte nonce, 16-byte tamper seal, valid key version); every save is freshly encrypted; NAME, EMAIL and PHONE have a search fingerprint (all searchable by exact value — Dev / user decision 2026-11-19); promoted phones are stored the same way; every record points to an existing, active key; reads change nothing (blocked)',
     'Policy',
     'PII-service design v3 (tech_doc_v3_detailed.md), to be confirmed by Dev — BQ-04',
     ['writePii', 'promoteTransientPhone', 'readPii', 'batchReadPii', 'searchPii'],

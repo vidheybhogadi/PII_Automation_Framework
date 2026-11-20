@@ -11,10 +11,14 @@ import { z } from 'zod';
 export const PII_FIELDS = { EMAIL: 'EMAIL', PHONE: 'PHONE', NAME: 'NAME' } as const;
 export type PiiFieldName = (typeof PII_FIELDS)[keyof typeof PII_FIELDS];
 
-// ---- Request limits OBSERVED on staging (FastAPI 422 "min_length"/"max_length") -----------------------
+// ---- Request limits OBSERVED on staging (422 string_too_short / string_too_long / too_long) ------------
+// `email`: Dev's rule (ClickUp 14zmk4dnunk), observed 2026-11-19 — longer emails → 400 VALIDATION_ERROR.
+// `batchUserIds.max` is the 422 format limit; the (lower, configurable) bulk-read limit that answers
+// 400 "batch limit exceeded" is `config.limits.batchReadMax` (AISLE_BATCH_READ_MAX, default 50).
 export const LIMITS = {
   userId: { min: 1, max: 128 },
   value: { min: 1, max: 1024 },
+  email: { max: 254, localMax: 64 },
   fieldNames: { min: 1 },
   batchUserIds: { min: 1, max: 200 },
   batchFields: { min: 1 },

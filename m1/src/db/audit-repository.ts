@@ -16,7 +16,7 @@ import { z } from 'zod';
 export const AUDIT_BLOCKER = {
   id: 'BQ-30',
   reason:
-    'No read-only access to the PII audit trail (MongoDB audit_trails) yet, and its format is not confirmed',
+    'QA has no read-only access to the PII audit trail (MongoDB audit_trails). Dev ran the QA audit script on 17 and 19 Nov 2026 (manual evidence in m1/docs/backend-open-questions.md, BQ-30) — not an automated pass',
 } as const;
 
 const timestamp = z.union([z.date(), z.string()]);

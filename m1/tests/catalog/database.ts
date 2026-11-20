@@ -7,7 +7,7 @@ const DESIGN_BLOCKED =
   'Blocked until QA gets read-only access to the PII service’s own database (not the Aisle app database) and Dev confirms the table layout (question BQ-04). The QA database user must be able to read the encrypted-value, nonce and auth-tag columns. Only look-up (SELECT) queries are ever run.';
 
 const AUDIT_BLOCKED =
-  'Blocked until QA gets read-only access to the PII service’s audit trail (MongoDB “audit_trails”) and Dev confirms what it records and how to find a request’s entry (question BQ-30). Only look-ups are ever run.';
+  'Blocked until QA gets read-only access to the PII service’s audit trail (MongoDB “audit_trails”, question BQ-30). Dev ran QA’s audit script for QA on 17 and 19 Nov 2026; those results are manual evidence (recorded under BQ-30), not an automated pass. Only look-ups are ever run.';
 
 export const DATABASE_CASES: TestCaseCatalog = {
   'AISLE-DB-001': {
@@ -161,23 +161,23 @@ export const DATABASE_CASES: TestCaseCatalog = {
     preconditions: `${DESIGN_BLOCKED} Also needs the approved test phones in AISLE_TEST_PHONES; without them the test is marked Blocked (CONFIG).`,
   },
   'AISLE-DB-009': {
-    what: 'Saves the same fake email for fake users A and B (B types it in capitals), a different fake email for user C, and a fake name for user A. Then reads the search fingerprint of each record. The fingerprint (lookup token) is a one-way code made from the cleaned-up value, so users can be found by email without decrypting anything.',
-    why: 'Search relies on this fingerprint. Equal emails must give equal fingerprints, otherwise search misses people. Different emails must differ, otherwise search returns the wrong person. Names are not searchable, so they must have no fingerprint at all.',
+    what: 'Saves the same fake email for fake users A and B (B types it in capitals) and a different fake email for user C. Also saves the same fake name for A and B and a different fake name for C. Then reads the search fingerprint of each record. The fingerprint (lookup token) is a one-way code made from the cleaned-up value, so users can be found by an exact value without decrypting anything.',
+    why: 'Search relies on this fingerprint. NAME, EMAIL and PHONE are all searchable by design (exact value only). Equal values must give equal fingerprints, otherwise search misses people. Different values must differ, otherwise search returns the wrong person.',
     steps: [
-      'Save fake email E for user A, and the same email in capitals for user B',
-      'Save a different fake email for user C',
-      'Save a fake name for user A',
-      'Look up the four records and compare their fingerprints without printing them',
+      'Save fake email E for user A, the same email in capitals for user B, and a different fake email for user C',
+      'Save the same fake name for users A and B, and a different fake name for user C',
+      'Look up the six records in the database (read-only)',
+      'Compare their fingerprints without printing them',
     ],
     expected:
-      'All saves get 201 Created. A’s and B’s EMAIL fingerprints are present and equal (the fingerprint is taken after the email is cleaned up to lower case, as seen in AISLE-SR-001). C’s fingerprint is present and different. A’s NAME record has no fingerprint (empty). Per the PII-service design; to be confirmed by Dev (question BQ-04). This fits the staging observation that a shared email finds both owners (AISLE-SR-010).',
+      'All saves get 201 Created. Every record has a 32-byte fingerprint. A’s and B’s EMAIL fingerprints are equal (the fingerprint is taken after the email is cleaned up to lower case, as seen in AISLE-SR-001); C’s is different. A’s and B’s NAME fingerprints are equal; C’s is different. NAME, EMAIL and PHONE are searchable by design (Dev / user decision, 2026-11-19; on staging the field list marks NAME as searchable). ClickUp 14zmk4dkn3q was closed as not a bug.',
     request:
-      'POST /api/v1/pii-test (EMAIL for users A, B and C; NAME for user A) · read-only database query for each record',
+      'POST /api/v1/pii-test (EMAIL and NAME for users A, B and C) · read-only database query for each record',
     validation: [
       'All saves are 201',
-      'A and B have the same fingerprint',
-      'C has a different fingerprint',
-      'A’s NAME record has no fingerprint',
+      'Every record has a 32-byte fingerprint',
+      'Same email (A, B) → same fingerprint; different email (C) → different',
+      'Same name (A, B) → same fingerprint; different name (C) → different',
     ],
     type: 'Database',
     priority: 'High',

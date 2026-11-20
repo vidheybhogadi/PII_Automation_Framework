@@ -48,20 +48,46 @@ export const RESPONSE_SECURITY_CASES: TestCaseCatalog = {
     endpoint: 'crossEndpoint',
   },
   'AISLE-SEC-006': {
-    what: 'Checks that replies containing personal data (read, bulk read, search with values) carry the header “Cache-Control: no-store” (tells browsers and proxies not to keep a copy).',
-    why: 'A cached copy of personal data can be read later by someone else using the same computer or proxy. Note: it is not confirmed whether the PII service or the facade sets this header (question BQ-39).',
+    what: 'Saves a fake name and a fake email for a new fake user, then reads it, bulk reads it (one request for several users) and searches the email with and without values. Checks the “Cache-Control” header (the instruction to browsers and proxies about keeping copies) of each reply.',
+    why: 'A cached copy of personal data can be read later by someone else using the same computer or proxy (a server that passes traffic on and may keep copies).',
     steps: [
-      'Read a fake user’s data',
-      'Bulk read and search with values',
+      'Save a fake name and a fake email for a new fake user',
+      'Read the name and bulk read it',
+      'Search the email with values and without values',
       'Check the Cache-Control header of each reply',
     ],
     expected:
-      'Each reply carries “no-store”. Blocked: on 2026-10-01 these replies carried “max-age=0, private, must-revalidate” (no “no-store”), while free-text-key replies do carry it. It is not known whether the PII service or the facade sets this header (question BQ-39).',
-    request: 'POST /api/v1/pii-test/read · …/batch/read · …/EMAIL/search {"include_values":true}',
-    validation: ['Blocked until Dev says which layer sets the header'],
+      'Every reply is 200 OK and its Cache-Control header contains “no-store” (do not keep any copy). Seen on staging on 2026-11-19: “no-store, no-cache, must-revalidate, max-age=0”, after the facade fix of 16 Nov.',
+    request:
+      'POST /api/v1/pii-test/read · POST /api/v1/pii-test/batch/read · POST /api/v1/pii-test/EMAIL/search {"include_values":true} and {"include_values":false}',
+    validation: [
+      'Read, bulk read and both searches are 200',
+      'Each reply’s Cache-Control header contains “no-store”',
+    ],
     type: 'Security',
     priority: 'Medium',
-    preconditions: 'Blocked until Dev answers question BQ-39.',
+    endpoint: 'crossEndpoint',
+  },
+  'AISLE-SEC-007': {
+    what: 'Sends three bad requests, each carrying a unique fake marker text: a save with a fake name that is too long, a read with an extra unknown key, and a bulk read with 201 fake users. Then checks that none of the refusals repeats the marker or the tenant (the customer account the data belongs to — always “aisle” here).',
+    why: 'Error replies end up in the caller’s logs. If they repeated what was sent, personal data would leak into places no one protects.',
+    steps: [
+      'Send a save with a too-long fake name that starts with a unique marker',
+      'Send a read with an extra unknown key holding a marker, and a bulk read of 201 fake users with a marker user ID',
+      'Check each reply is 422 REQUEST_VALIDATION_ERROR naming the right field',
+      'Check no reply contains its marker, “tenant_id” or “input”',
+    ],
+    expected:
+      '422 Unprocessable Entity (refused: the request format is invalid) each time, with code REQUEST_VALIDATION_ERROR: the save names body.value as string_too_long, the read names body.unknown as extra_forbidden (a key that is not allowed), and the bulk read names body.user_ids as too_long. No reply contains the marker, a tenant_id or an “input” echo. Seen on staging on 2026-11-19, after Dev’s fix (ClickUp 14zmk4dnunb).',
+    request:
+      'POST /api/v1/pii-test {"user_id":"<fake user>","field":"NAME","value":"<marker> xxx…(1,024+)"} · POST /api/v1/pii-test/read {…,"qa_extra_key":"<marker>"} · POST /api/v1/pii-test/batch/read {"user_ids":["<marker>", "<200 fake users>"],"fields":["NAME"]}',
+    validation: [
+      'Each reply is 422 REQUEST_VALIDATION_ERROR naming the expected field and error type',
+      'No reply contains its marker value',
+      'No reply contains tenant_id or an input echo',
+    ],
+    type: 'Security',
+    priority: 'Medium',
     endpoint: 'crossEndpoint',
   },
 };

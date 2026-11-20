@@ -14,7 +14,6 @@ import { expectSecretEquals } from '../../src/assertions/security.assertions';
 import { messyEmail } from '../../src/data/test-data-factory';
 import { BLOCKERS, seedField } from '../../src/fixtures/steps';
 import {
-  blockedBy,
   blockIfAccessDenied,
   expect,
   noteAssumption,
@@ -110,7 +109,7 @@ test.describe('Aisle facade — search PII', () => {
 
     noteObserved('2026-09-29', 'limit 0 → 422 greater_than_equal (ge 1), 101 → 422 less_than_equal (le 100)');
     const zero = await aisle.searchPii(PII_FIELDS.EMAIL, { value, limit: 0, include_values: false });
-    expectValidationError(zero, 'limit');
+    expectValidationError(zero, 'limit', { type: 'greater_than_equal' });
 
     const tooMany = await aisle.searchPii(PII_FIELDS.EMAIL, { value, limit: 101, include_values: false });
     expectValidationError(tooMany, 'limit');
@@ -140,8 +139,8 @@ test.describe('Aisle facade — search PII', () => {
     cleanup,
   }) => {
     noteObserved(
-      '2026-10-01',
-      'non-email wildcards → 400 VALIDATION_ERROR; email-shaped wildcard patterns → 200 without the user',
+      '2026-11-19',
+      'not a valid email (wildcards alone, or a leading dot) → 400 "value must be a valid email address"; valid-looking emails with % _ * → 200 without the user (Dev: ClickUp 14zmk4dnunc, exact match only)',
     );
     const userId = data.userId('sr6');
     const email = data.email('sr6');
@@ -153,18 +152,13 @@ test.describe('Aisle facade — search PII', () => {
     });
     const [local, domain] = email.split('@') as [string, string];
 
-    for (const value of ['%', '_', '*', '.*', `${local.slice(0, 5)}%`]) {
+    for (const value of ['%', '_', '*', '.*', `${local.slice(0, 5)}%`, `.*@${domain}`]) {
       const res = await aisle.searchPii(PII_FIELDS.EMAIL, { value, limit: 100, include_values: false });
       blockIfAccessDenied(res, BLOCKERS.search.id, BLOCKERS.search.reason);
       expectError(res, 400, ERROR_CODES.VALIDATION_ERROR);
       expectNoData(res);
     }
-    for (const value of [
-      `%@${domain}`,
-      `${local.slice(0, -1)}_@${domain}`,
-      `${local}*@${domain}`,
-      `.*@${domain}`,
-    ]) {
+    for (const value of [`%@${domain}`, `${local.slice(0, -1)}_@${domain}`, `${local}*@${domain}`]) {
       const res = await aisle.searchPii(PII_FIELDS.EMAIL, { value, limit: 100, include_values: false });
       const found = expectSuccess(res, 200, searchIdsOnlyDataSchema);
       expect(
@@ -180,8 +174,8 @@ test.describe('Aisle facade — search PII', () => {
     cleanup,
   }) => {
     noteObserved(
-      '2026-10-01',
-      'non-email parts → 400 VALIDATION_ERROR; email-shaped parts → 200 without the user (exact match only)',
+      '2026-11-19',
+      'name part, domain, "@domain" and the first 10 characters → 400 "value must be a valid email address"; the email without its first 5 characters → 200, matches [], count 0 (Dev: ClickUp 14zmk4dnunc)',
     );
     const userId = data.userId('sr7');
     const email = data.email('sr7');
@@ -193,22 +187,19 @@ test.describe('Aisle facade — search PII', () => {
     });
     const [local, domain] = email.split('@') as [string, string];
 
-    for (const value of [local, domain, email.slice(0, 10)]) {
+    for (const value of [local, domain, `@${domain}`, email.slice(0, 10)]) {
       const res = await aisle.searchPii(PII_FIELDS.EMAIL, { value, limit: 100, include_values: false });
       blockIfAccessDenied(res, BLOCKERS.search.id, BLOCKERS.search.reason);
       expectError(res, 400, ERROR_CODES.VALIDATION_ERROR);
+      expectNoData(res);
     }
-    for (const value of [`@${domain}`, email.slice(5)]) {
-      const found = expectSuccess(
-        await aisle.searchPii(PII_FIELDS.EMAIL, { value, limit: 100, include_values: false }),
-        200,
-        searchIdsOnlyDataSchema,
-      );
-      expect(
-        found.matches.map((m) => m.user_id),
-        'a partial email must not find the user',
-      ).not.toContain(userId);
-    }
+    const found = expectSuccess(
+      await aisle.searchPii(PII_FIELDS.EMAIL, { value: email.slice(5), limit: 100, include_values: false }),
+      200,
+      searchIdsOnlyDataSchema,
+    );
+    expect(found.matches, 'the end of an email must not find anyone').toEqual([]);
+    expect(found.count).toBe(0);
   });
 
   test('AISLE-SR-008 After a user’s email is replaced, searching the old email no longer finds them and the new email does', async ({
@@ -335,7 +326,7 @@ test.describe('Aisle facade — search PII', () => {
   }) => {
     noteAssumption(
       'BQ-40',
-      'observed 2026-10-01: limit 10.5 → 422; limit "10" and 10.0 accepted; include_values "true", "yes" and 1 mean true',
+      'observed 2026-10-01 and again 2026-11-19: limit 10.5 → 422 (body.limit, type value_error); limit "10" and 10.0 accepted; include_values "true", "yes" and 1 mean true',
     );
     const userId = data.userId('sr13');
     const email = data.email('sr13');
@@ -350,7 +341,7 @@ test.describe('Aisle facade — search PII', () => {
 
     const decimal = await search({ limit: 10.5, include_values: false });
     blockIfAccessDenied(decimal, BLOCKERS.search.id, BLOCKERS.search.reason);
-    expectValidationError(decimal, 'limit');
+    expectValidationError(decimal, 'limit', { type: 'value_error' });
 
     for (const limit of ['10', 10.0]) {
       const found = expectSuccess(
@@ -386,21 +377,40 @@ test.describe('Aisle facade — search PII', () => {
     expectNoData(notEmail);
   });
 
-  test('AISLE-SR-015 Search on other fields: NAME search answers, PHONE checks the value is a phone (400), an unknown field is refused (403)', async ({
+  test('AISLE-SR-015 Search on other fields: a NAME search with the exact saved name finds the user, PHONE checks the value is a phone (400), an unknown field is refused (403)', async ({
     aisle,
     data,
+    cleanup,
     config,
   }) => {
-    noteAssumption(
-      'BQ-32',
-      'observed 2026-10-01: /NAME/search → 200, /PHONE/search with a non-phone value → 400 VALIDATION_ERROR, /<unknown>/search → 403; NAME search is undocumented',
+    noteObserved(
+      '2026-11-19',
+      'NAME, EMAIL and PHONE are searchable by design, exact value only (Dev / user decision); /PHONE/search with a non-phone value → 400 VALIDATION_ERROR, /<unknown>/search → 403',
     );
-    const body = { value: data.email('sr15-no-match'), limit: 10, include_values: false };
+    const userId = data.userId('sr15');
+    const name = data.name();
+    await seedField(aisle, cleanup, { userId, field: PII_FIELDS.NAME, value: name });
 
-    const name = await aisle.call('searchPii', body, { pathParams: { field: PII_FIELDS.NAME } });
-    const nameData = expectSuccess(name, 200, searchIdsOnlyDataSchema);
-    expect(nameData.field).toBe(PII_FIELDS.NAME);
-    expect(nameData.matches).toEqual([]);
+    const nameSearch = (value: string) =>
+      aisle.call(
+        'searchPii',
+        { value, limit: 10, include_values: false },
+        { pathParams: { field: PII_FIELDS.NAME } },
+      );
+    const exact = expectSuccess(await nameSearch(name), 200, searchIdsOnlyDataSchema);
+    expect(exact.field).toBe(PII_FIELDS.NAME);
+    expect(
+      exact.matches.map((m) => m.user_id),
+      'exact NAME search finds the user',
+    ).toContain(userId);
+
+    const body = { value: data.email('sr15-no-match'), limit: 10, include_values: false };
+    const noMatch = expectSuccess(
+      await aisle.call('searchPii', body, { pathParams: { field: PII_FIELDS.NAME } }),
+      200,
+      searchIdsOnlyDataSchema,
+    );
+    expect(noMatch.matches).toEqual([]);
 
     const phone = await aisle.call('searchPii', body, { pathParams: { field: PII_FIELDS.PHONE } });
     expectError(phone, 400, ERROR_CODES.VALIDATION_ERROR);
@@ -418,9 +428,9 @@ test.describe('Aisle facade — search PII', () => {
     data,
     cleanup,
   }) => {
-    blockedBy(
-      'BQ-41',
-      'on 2026-10-01 two matches with limit 2 came back with truncated: true; whether "truncated" means "more exist" is Dev’s answer',
+    noteObserved(
+      '2026-11-19',
+      '2 users with the same email, limit 2 → 200, count 2, truncated false (next_cursor null)',
     );
     const email = data.email('sr16');
     for (const userId of [data.userId('sr16a'), data.userId('sr16b')])

@@ -1,18 +1,17 @@
 /** Value clean-up (normalization) through the Aisle facade: save a messy value, read the clean one back. */
-import { expectError, expectNoData } from '../../src/assertions/response.assertions';
+import { expectError, expectNoData, expectSuccess } from '../../src/assertions/response.assertions';
 import { expectSecretEquals } from '../../src/assertions/security.assertions';
 import { formattedPhone, messyText } from '../../src/data/test-data-factory';
 import { expectNotPersisted, readValue, seedField } from '../../src/fixtures/steps';
 import {
-  blockedBy,
-  noteAssumption,
+  expect,
   noteObserved,
   onlyIfInScope,
   requireApprovedPhones,
   test,
 } from '../../src/fixtures/test-fixtures';
 import { ERROR_CODES } from '../../src/models/common.models';
-import { PII_FIELDS } from '../../src/models/pii.models';
+import { PII_FIELDS, searchIdsOnlyDataSchema } from '../../src/models/pii.models';
 
 test.describe('Aisle facade — normalization', () => {
   onlyIfInScope('writePii', 'readPii');
@@ -69,9 +68,9 @@ test.describe('Aisle facade — normalization', () => {
     data,
     cleanup,
   }) => {
-    noteAssumption(
-      'BQ-36',
-      'observed 2026-10-01: \t \n \r and U+00A0 → space; U+200B (zero-width) kept unchanged; Dev to confirm the rule',
+    noteObserved(
+      '2026-10-01',
+      '\t \n \r and U+00A0 → space; U+200B (zero-width) kept unchanged (no Unicode normalisation — Dev / user decision 2026-11-19)',
     );
     const cases: [string, 'space' | 'kept'][] = [
       ['\t', 'space'],
@@ -94,10 +93,39 @@ test.describe('Aisle facade — normalization', () => {
     }
   });
 
-  test('AISLE-NRM-005 The same accented letter written in two Unicode forms (é as one character, or e + accent mark) is stored and searched as the same text', async () => {
-    blockedBy(
-      'BQ-36',
-      'on 2026-10-01 names were stored as sent (no Unicode normalization) and an email saved with é (one character) was NOT found when searched with e + accent mark; whether they must match is Dev’s decision',
+  test('AISLE-NRM-005 Names are stored and searched exactly as sent: é as one character and e + accent mark are different text', async ({
+    aisle,
+    data,
+    cleanup,
+  }) => {
+    noteObserved(
+      '2026-11-19',
+      'no Unicode normalisation (Dev / user decision, not a bug): NAME with U+00E9 → exact search with U+00E9 finds the user (count 1); search with U+0065 U+0301 → 200, count 0; read back returns the one-character form unchanged',
     );
+    const userId = data.userId('nrm5');
+    const base = data.name();
+    const composed = `${base} Jos\u00e9`;
+    const decomposed = `${base} Jose\u0301`;
+    expect(composed === decomposed, 'the two forms are different strings').toBe(false);
+    await seedField(aisle, cleanup, { userId, field: PII_FIELDS.NAME, value: composed });
+
+    expectSecretEquals(
+      await readValue(aisle, { userId, field: PII_FIELDS.NAME }),
+      composed,
+      'NAME read back in the one-character form',
+    );
+    const search = (value: string) =>
+      aisle.call(
+        'searchPii',
+        { value, limit: 10, include_values: false },
+        { pathParams: { field: PII_FIELDS.NAME } },
+      );
+    const same = expectSuccess(await search(composed), 200, searchIdsOnlyDataSchema);
+    expect(same.count, 'exact search with the same form').toBe(1);
+    expect(same.matches.map((m) => m.user_id)).toEqual([userId]);
+
+    const other = expectSuccess(await search(decomposed), 200, searchIdsOnlyDataSchema);
+    expect(other.count, 'search with e + accent mark finds nothing').toBe(0);
+    expect(other.matches).toEqual([]);
   });
 });

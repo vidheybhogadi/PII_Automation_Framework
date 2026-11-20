@@ -75,7 +75,7 @@ erDiagram
 | `nonce`                     | BYTEA, **exactly 12 bytes**       | A random number used once per encryption. Saving the same value twice gives different ciphertext.                                          |
 | `auth_tag`                  | BYTEA, **exactly 16 bytes**       | A tamper seal. If the ciphertext is changed, decryption fails.                                                                             |
 | `key_version`               | INTEGER ≥ 1 → `pii_key_registry`  | Which key encrypted this row (needed to decrypt it later)                                                                                  |
-| `lookup_token`              | BYTEA (32), nullable              | A fingerprint of the normalized value, used by **search**. Only set for searchable fields (EMAIL, PHONE).                                  |
+| `lookup_token`              | BYTEA (32), nullable              | A fingerprint of the normalized value, used by **search**. Set for searchable fields: NAME, EMAIL and PHONE (exact value only).            |
 | `created_at` / `updated_at` | TIMESTAMPTZ                       | When the row was created / last replaced                                                                                                   |
 
 - **Primary key `(user_id, field_name)`.** A write is `INSERT … ON CONFLICT (user_id, field_name) DO UPDATE`. That is why saving EMAIL twice
@@ -89,7 +89,7 @@ erDiagram
 `field_name` (PK), `field_type`, `is_searchable` (default false), `is_active` (default true), timestamps.
 
 - Fields in the design: `FIRST_NAME`, `LAST_NAME`, `EMAIL`, `PHONE`. Staging uses `NAME`.
-- **Searchable: EMAIL and PHONE. Names are not searchable.**
+- **Searchable: NAME, EMAIL and PHONE — exact value only (no partial or wildcard search).** The design doc listed EMAIL/PHONE only as examples; staging `pii_field_catalog` has NAME `is_searchable=true` (source: Dev / user decision, 19 Nov 2026).
 - When a field is unknown or inactive, the request is refused (`UNKNOWN_FIELD`).
 
 ### 2.3 `pii_calling_service`: who may call
@@ -232,7 +232,7 @@ current active key). It then decrypts with the same AAD and returns the value.
 
 **Other limits in the design:**
 
-- Batch: up to 1,000 `user_ids` and 50 `fields` per request, with a per-caller cap (default 50, max 500) that returns 400 `BATCH_TOO_LARGE`. Staging behaves differently (BQ-18).
+- Batch: up to 1,000 `user_ids` and 50 `fields` per request, with a per-caller cap (default 50, max 500) that returns 400 `BATCH_TOO_LARGE`. Staging behaves differently: 1–200 `user_ids` (422 outside) and a configurable limit, 50 on 2026-11-19 (more → 400 VALIDATION_ERROR “batch limit exceeded”).
 - Search: returns at most 20 results by default (max 100). A larger `limit` is silently clamped and `truncated` is set.
 - Rate limits: 10 searches/s and 500 requests/s per caller (429).
 

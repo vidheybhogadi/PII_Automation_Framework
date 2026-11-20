@@ -67,15 +67,16 @@ export class ApiResponse<TData = unknown> {
   }
 
   /**
-   * Field locations of a FastAPI 422 body (`{"detail":[{"loc":["body","value"],"type":...}]}`), e.g.
-   * ["body.value:string_too_short"]. Safe to log: locations and error types only, never the echoed input.
+   * Problems listed in a 422 request-validation body
+   * (`{"error":{"code":"REQUEST_VALIDATION_ERROR","details":[{"field":"body.value","type":"string_too_short"}]}}`),
+   * e.g. ["body.value:string_too_short"]. Safe to log: field locations and error types only, never values.
    */
   get validationIssues(): string[] {
-    const detail = (this.#json as { detail?: unknown } | undefined)?.detail;
-    if (!Array.isArray(detail)) return [];
-    return detail.map((d) => {
-      const item = d as { loc?: unknown[]; type?: unknown };
-      return `${(item.loc ?? []).join('.')}:${String(item.type ?? '?')}`;
+    const details = (this.#json as { error?: { details?: unknown } } | undefined)?.error?.details;
+    if (!Array.isArray(details)) return [];
+    return details.map((d) => {
+      const item = (d ?? {}) as { field?: unknown; type?: unknown };
+      return `${typeof item.field === 'string' ? item.field : '?'}:${typeof item.type === 'string' ? item.type : '?'}`;
     });
   }
 

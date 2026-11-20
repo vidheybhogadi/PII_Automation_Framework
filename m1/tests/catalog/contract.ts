@@ -21,20 +21,21 @@ export const CONTRACT_CASES: TestCaseCatalog = {
     endpoint: 'crossEndpoint',
   },
   'AISLE-CON-002': {
-    what: 'Sends a save of a fake name with an empty value, which the PII service refuses, and checks the shape of the refusal.',
+    what: 'Sends a save of a fake name with an empty value, which the facade (Aisle’s front door to the PII service) refuses, and checks the shape of the refusal.',
     why: 'Apps read the list of problems to tell the user what to fix. If the format changed, error handling in every app would break.',
     steps: [
       'Send a save with an empty value for a new fake user',
       'Check the reply is 422',
-      'Check the shape of the list of problems',
+      'Check the shape of the reply and of its list of problems',
     ],
     expected:
-      '422 Unprocessable Entity (refused: the request format is invalid). The body has exactly one part, “detail”: a list of problems, and each problem names its location (loc), a message (msg) and an error type (type). Seen on staging on 2026-10-01.',
+      '422 Unprocessable Entity (refused: the request format is invalid). The reply has exactly the four standard parts: status (false), message, data (empty) and error. The error part has exactly a code (REQUEST_VALIDATION_ERROR), a message and “details”: a list of problems. Each problem names the field it is about (here “body.value”, meaning the value inside the request body) and the kind of error (here “string_too_short”: the text is too short). Seen on staging on 2026-11-19, after Dev’s fix (ClickUp 14zmk4dnunb). Today every problem is listed twice; that is recorded as a note and is not checked.',
     request: 'POST /api/v1/pii-test {"user_id":"<new fake user>","field":"NAME","value":""}',
     validation: [
-      'Status is 422 naming body.value',
-      'The body has exactly the key “detail”',
-      'Every problem has loc, msg and type',
+      'Status is 422 with code REQUEST_VALIDATION_ERROR, naming body.value as string_too_short',
+      'The reply has exactly status, message, data and error; the error part has exactly code, message and details',
+      'Every problem has a text field and a text type',
+      'No tenant and no submitted value appear in the reply',
     ],
     type: 'Contract',
     priority: 'Medium',

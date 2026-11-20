@@ -1,0 +1,2902 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>For You Passed-Profiles Bug</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap"
+    />
+    <style>
+      /* Layout: a left table of contents + one reading column (≈800px); diagrams break out wider. */
+      :root {
+        --bg: #fbf8f8;
+        --surface: #ffffff;
+        --sunk: #f3eded;
+        --fg: #221c1e;
+        --muted: #6b5f63;
+        --line: #e3d8da;
+        --accent: #c2264b;
+        --accent-soft: #fbe3e9;
+        --ok: #1e7a4f;
+        --ok-soft: #dcf1e6;
+        --warn: #a15c00;
+        --warn-soft: #fbecd4;
+        --info: #2d5b9a;
+        --info-soft: #e0eaf7;
+        --dj: #6a3fa0;
+        --dj-soft: #ece3f7;
+        --f-display: 'Familjen Grotesk', 'Helvetica Neue', Arial, sans-serif;
+        --f-body: 'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif;
+        --f-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+          --bg: #171214;
+          --surface: #211a1d;
+          --sunk: #2a2225;
+          --fg: #f2eaec;
+          --muted: #b3a5aa;
+          --line: #3a3034;
+          --accent: #ff6f8f;
+          --accent-soft: #4a1f2b;
+          --ok: #5fd19a;
+          --ok-soft: #173a2a;
+          --warn: #f0b357;
+          --warn-soft: #3d2c12;
+          --info: #8db6f0;
+          --info-soft: #1c2c45;
+          --dj: #c3a2f0;
+          --dj-soft: #2e2142;
+          color-scheme: dark;
+        }
+      }
+      :root[data-theme='dark'] {
+        --bg: #171214;
+        --surface: #211a1d;
+        --sunk: #2a2225;
+        --fg: #f2eaec;
+        --muted: #b3a5aa;
+        --line: #3a3034;
+        --accent: #ff6f8f;
+        --accent-soft: #4a1f2b;
+        --ok: #5fd19a;
+        --ok-soft: #173a2a;
+        --warn: #f0b357;
+        --warn-soft: #3d2c12;
+        --info: #8db6f0;
+        --info-soft: #1c2c45;
+        --dj: #c3a2f0;
+        --dj-soft: #2e2142;
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: var(--f-body);
+        font-size: 17px;
+        line-height: 1.6;
+        padding-left: max(16px, env(safe-area-inset-left, 0px));
+        padding-right: max(16px, env(safe-area-inset-right, 0px));
+        padding-block: 40px 90px;
+      }
+      .layout {
+        max-width: 1180px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 260px minmax(0, 1fr);
+        gap: 44px;
+        align-items: start;
+      }
+      nav.toc {
+        position: sticky;
+        top: 20px;
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px 12px;
+        font-size: 14.5px;
+        line-height: 1.35;
+      }
+      nav.toc summary {
+        font-family: var(--f-display);
+        font-weight: 700;
+        font-size: 16px;
+        cursor: pointer;
+        list-style: none;
+        padding: 2px 6px 10px;
+        border-bottom: 1px solid var(--line);
+        margin-bottom: 8px;
+      }
+      nav.toc summary::-webkit-details-marker {
+        display: none;
+      }
+      .toc-list {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .grp {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+      }
+      .gh {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-family: var(--f-display);
+        font-weight: 700;
+        font-size: 14px;
+        padding: 2px 6px 4px;
+      }
+      .gn {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        font-family: var(--f-mono);
+        font-size: 11px;
+        background: var(--sunk);
+        border: 1px solid var(--line);
+        flex: 0 0 auto;
+      }
+      .gn.r {
+        background: var(--info-soft);
+        color: var(--info);
+        border-color: transparent;
+      }
+      .gn.d {
+        background: var(--dj-soft);
+        color: var(--dj);
+        border-color: transparent;
+      }
+      .gn.n {
+        background: var(--accent-soft);
+        color: var(--accent);
+        border-color: transparent;
+      }
+      nav.toc a {
+        color: var(--muted);
+        text-decoration: none;
+        padding: 5px 8px 5px 34px;
+        border-radius: 6px;
+        border-left: 3px solid transparent;
+      }
+      nav.toc a:hover,
+      nav.toc a:focus-visible {
+        background: var(--sunk);
+        color: var(--fg);
+        outline: none;
+      }
+      nav.toc a.on {
+        color: var(--accent);
+        background: var(--accent-soft);
+        border-left-color: var(--accent);
+        font-weight: 700;
+      }
+      main {
+        display: flex;
+        flex-direction: column;
+        gap: 64px;
+        min-width: 0;
+      }
+      @media (max-width: 900px) {
+        .layout {
+          grid-template-columns: 1fr;
+          gap: 24px;
+        }
+        nav.toc {
+          position: sticky;
+          top: env(safe-area-inset-top, 0px);
+          z-index: 5;
+          max-height: 70vh;
+          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+        }
+        nav.toc summary {
+          border-bottom: none;
+          margin-bottom: 0;
+          padding-bottom: 2px;
+          display: flex;
+          justify-content: space-between;
+        }
+        nav.toc summary::after {
+          content: '▾';
+          color: var(--muted);
+        }
+        nav.toc details[open] summary {
+          border-bottom: 1px solid var(--line);
+          margin-bottom: 8px;
+          padding-bottom: 10px;
+        }
+        nav.toc details[open] summary::after {
+          content: '▴';
+        }
+      }
+      @media (min-width: 901px) {
+        nav.toc summary {
+          pointer-events: none;
+        }
+      }
+      h1,
+      h2,
+      h3 {
+        font-family: var(--f-display);
+        text-wrap: balance;
+        line-height: 1.15;
+        margin: 0;
+      }
+      h1 {
+        font-size: clamp(34px, 6vw, 52px);
+        letter-spacing: -0.02em;
+      }
+      h2 {
+        font-size: clamp(24px, 3.6vw, 32px);
+        letter-spacing: -0.01em;
+      }
+      h3 {
+        font-size: 20px;
+      }
+      p {
+        margin: 0;
+        max-width: 72ch;
+      }
+      section {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        scroll-margin-top: 20px;
+      }
+      .part {
+        font-family: var(--f-mono);
+        font-size: 12px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--accent);
+        border-top: 2px solid var(--accent);
+        padding-top: 10px;
+      }
+      .eyebrow {
+        font-family: var(--f-mono);
+        font-size: 12px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .lede {
+        font-size: 20px;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      code {
+        font-family: var(--f-mono);
+        font-size: 0.84em;
+        background: var(--sunk);
+        padding: 1px 5px;
+        border-radius: 4px;
+        overflow-wrap: anywhere;
+      }
+      .mono {
+        font-family: var(--f-mono);
+        font-size: 0.86em;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .chip {
+        font-family: var(--f-mono);
+        font-size: 12.5px;
+        padding: 5px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: var(--surface);
+      }
+      .chip.ok {
+        background: var(--ok-soft);
+        color: var(--ok);
+        border-color: transparent;
+      }
+      .chip.warn {
+        background: var(--warn-soft);
+        color: var(--warn);
+        border-color: transparent;
+      }
+      .chip.bad {
+        background: var(--accent-soft);
+        color: var(--accent);
+        border-color: transparent;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 12px;
+      }
+      .two {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 16px;
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 16px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+      }
+      .card b.t {
+        font-family: var(--f-display);
+        font-size: 18px;
+      }
+      .card.rails {
+        border-top: 4px solid var(--info);
+      }
+      .card.dj {
+        border-top: 4px solid var(--dj);
+      }
+      .card.bad {
+        border-top: 4px solid var(--accent);
+      }
+      .card.ok {
+        border-top: 4px solid var(--ok);
+      }
+      .fig {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-width: 0;
+      }
+      .scroll {
+        overflow-x: auto;
+      }
+      .fig svg {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+      .cap {
+        font-size: 14px;
+        color: var(--muted);
+      }
+      svg text {
+        font-family: var(--f-body);
+        fill: var(--fg);
+      }
+      .code {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        min-width: 0;
+      }
+      .code .file {
+        font-family: var(--f-mono);
+        font-size: 12px;
+        color: var(--muted);
+        background: var(--sunk);
+        border: 1px solid var(--line);
+        border-bottom: none;
+        border-radius: 8px 8px 0 0;
+        padding: 6px 12px;
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .code .file span.lang {
+        color: var(--fg);
+      }
+      pre {
+        margin: 0;
+        background: var(--sunk);
+        border: 1px solid var(--line);
+        border-radius: 0 0 8px 8px;
+        padding: 12px 14px;
+        overflow-x: auto;
+        font-family: var(--f-mono);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      pre.solo {
+        border-radius: 8px;
+      }
+      .hl {
+        background: var(--warn-soft);
+        display: inline-block;
+        width: 100%;
+      }
+      .hlr {
+        background: var(--accent-soft);
+        display: inline-block;
+        width: 100%;
+      }
+      .hlg {
+        background: var(--ok-soft);
+        display: inline-block;
+        width: 100%;
+      }
+      .c {
+        color: var(--muted);
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 15px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+      }
+      th {
+        font-family: var(--f-mono);
+        font-size: 11.5px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted);
+        font-weight: 600;
+        background: var(--sunk);
+      }
+      tr:last-child td {
+        border-bottom: none;
+      }
+      .tbl {
+        overflow-x: auto;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+      }
+      .pill {
+        display: inline-block;
+        font-family: var(--f-mono);
+        font-size: 11.5px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        white-space: nowrap;
+      }
+      .r {
+        background: var(--info-soft);
+        color: var(--info);
+      }
+      .d {
+        background: var(--dj-soft);
+        color: var(--dj);
+      }
+      .y {
+        background: var(--ok-soft);
+        color: var(--ok);
+      }
+      .q {
+        background: var(--warn-soft);
+        color: var(--warn);
+      }
+      .n {
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+      .p0 {
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+      .callout {
+        border-left: 4px solid var(--warn);
+        background: var(--warn-soft);
+        padding: 14px 16px;
+        border-radius: 0 8px 8px 0;
+      }
+      .callout.red {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+      }
+      .callout.blue {
+        border-color: var(--info);
+        background: var(--info-soft);
+      }
+      .steps {
+        counter-reset: s;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .steps > li {
+        counter-increment: s;
+        display: grid;
+        grid-template-columns: 34px minmax(0, 1fr);
+        gap: 12px;
+        align-items: start;
+      }
+      .steps > li::before {
+        content: counter(s);
+        font-family: var(--f-display);
+        font-weight: 700;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: var(--sunk);
+        border: 1px solid var(--line);
+        font-size: 14px;
+      }
+      .steps > li > div {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+      }
+      .q-block {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .q-block h3 {
+        display: flex;
+        gap: 10px;
+        align-items: baseline;
+        flex-wrap: wrap;
+      }
+      .q-block h3 .num {
+        font-family: var(--f-mono);
+        font-size: 13px;
+        color: var(--accent);
+      }
+      .ask {
+        background: var(--sunk);
+        border-radius: 8px;
+        padding: 12px 14px;
+        font-size: 15px;
+      }
+      .ask b {
+        font-family: var(--f-mono);
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--muted);
+        display: block;
+        margin-bottom: 4px;
+      }
+      .bars {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .bar {
+        display: grid;
+        grid-template-columns: minmax(120px, 210px) 1fr 34px;
+        gap: 10px;
+        align-items: center;
+        font-size: 14px;
+      }
+      .bar .track {
+        background: var(--sunk);
+        height: 14px;
+        border-radius: 7px;
+        overflow: hidden;
+      }
+      .bar .fill {
+        height: 100%;
+        background: var(--accent);
+        border-radius: 7px;
+      }
+      .bar .v {
+        font-family: var(--f-mono);
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+      @media (max-width: 480px) {
+        body {
+          font-size: 16px;
+        }
+        .bar {
+          grid-template-columns: 110px 1fr 28px;
+        }
+      }
+      a {
+        color: var(--accent);
+      }
+      footer {
+        font-size: 14px;
+        color: var(--muted);
+      }
+      /* scenario flows */
+      .scen {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+      .sc {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 16px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .sc-head {
+        display: flex;
+        gap: 10px;
+        align-items: baseline;
+        flex-wrap: wrap;
+      }
+      .sc-head .id {
+        font-family: var(--f-mono);
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .sc-head h3 {
+        font-size: 18px;
+      }
+      .flow {
+        display: flex;
+        align-items: stretch;
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+      }
+      .stp {
+        flex: 0 0 150px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        align-items: center;
+        text-align: center;
+      }
+      .stp .when {
+        font-family: var(--f-mono);
+        font-size: 11px;
+        color: var(--muted);
+        letter-spacing: 0.04em;
+      }
+      .stp .what {
+        font-size: 13px;
+        line-height: 1.35;
+      }
+      .arrow {
+        flex: 0 0 18px;
+        align-self: center;
+        color: var(--muted);
+        font-size: 18px;
+        text-align: center;
+      }
+      .phone {
+        width: 112px;
+        height: 150px;
+        border: 2px solid var(--fg);
+        border-radius: 16px;
+        padding: 8px 7px;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        background: var(--bg);
+      }
+      .phone .pt {
+        font-family: var(--f-mono);
+        font-size: 9px;
+        color: var(--muted);
+        text-align: center;
+      }
+      .mini {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        padding: 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        flex: 1;
+      }
+      .mini .ph {
+        height: 34px;
+        border-radius: 5px;
+        background: var(--sunk);
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        font-size: 13px;
+      }
+      .mini .lbl {
+        font-family: var(--f-mono);
+        font-size: 9.5px;
+        border-radius: 999px;
+        padding: 1px 6px;
+        align-self: center;
+      }
+      .lbl.pas {
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+      .lbl.none {
+        background: var(--ok-soft);
+        color: var(--ok);
+      }
+      .lbl.rep {
+        background: var(--warn-soft);
+        color: var(--warn);
+      }
+      .mini .btns {
+        display: flex;
+        gap: 4px;
+        justify-content: center;
+        font-size: 10px;
+      }
+      .mini .btns span {
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        padding: 1px 5px;
+      }
+      .mini .btns span.off {
+        opacity: 0.35;
+        text-decoration: line-through;
+      }
+      .mini.gone {
+        border-style: dashed;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted);
+        font-size: 10.5px;
+        text-align: center;
+      }
+      .icon {
+        width: 112px;
+        height: 150px;
+        border: 1px dashed var(--line);
+        border-radius: 16px;
+        display: grid;
+        place-items: center;
+        font-size: 12px;
+        color: var(--muted);
+        padding: 8px;
+        text-align: center;
+        background: var(--sunk);
+      }
+      .icon b {
+        display: block;
+        font-family: var(--f-display);
+        font-size: 15px;
+        color: var(--fg);
+      }
+      .verdict {
+        font-size: 14.5px;
+        display: flex;
+        gap: 10px;
+        align-items: baseline;
+        flex-wrap: wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <nav class="toc" aria-label="Contents">
+        <details id="tocd" open>
+          <summary>Contents</summary>
+          <div class="toc-list">
+            <div class="grp">
+              <span class="gh"><span class="gn">0</span>Start</span>
+              <a href="#top">The bug in one line</a>
+              <a href="#terms">Words you need</a>
+            </div>
+            <div class="grp">
+              <span class="gh"><span class="gn">1</span>The system</span>
+              <a href="#map">System map</a>
+              <a href="#stores">Data stores</a>
+            </div>
+            <div class="grp">
+              <span class="gh"><span class="gn r">2</span>Rails</span>
+              <a href="#rails-pass">What a pass does</a>
+              <a href="#rails-fy">How For You is built</a>
+              <a href="#rails-label">How the label is chosen</a>
+            </div>
+            <div class="grp">
+              <span class="gh"><span class="gn d">3</span>Django</span>
+              <a href="#dj-bitmap">The blocked bitmap</a>
+              <a href="#dj-trigger">When a reset fires</a>
+              <a href="#dj-reset">What a reset does</a>
+            </div>
+            <div class="grp">
+              <span class="gh"><span class="gn">4</span>End to end</span>
+              <a href="#seq">Full sequence</a>
+              <a href="#bug">The bug and the fix</a>
+              <a href="#scenarios">Every scenario in the app</a>
+            </div>
+            <div class="grp">
+              <span class="gh"><span class="gn n">5</span>Q5 deep-dive</span>
+              <a href="#q5">The “if bitmap exists” gap</a>
+            </div>
+            <div class="grp">
+              <span class="gh"><span class="gn">6</span>Testing</span>
+              <a href="#questions">All questions explained</a>
+              <a href="#plan">What we will test</a>
+            </div>
+          </div>
+        </details>
+      </nav>
+
+      <main>
+        <header id="top" style="display: flex; flex-direction: column; gap: 18px">
+          <span class="eyebrow">ClickUp 14zmk4dkx0v · For You passed profiles issue</span>
+          <h1>Why For You still says “Passed”</h1>
+          <p class="lede">
+            When a user runs low on new profiles, Aisle gives profiles they passed long ago a second chance.
+            Those profiles come back, but in For You they still carried the old <b>“Passed”</b> label, so the
+            user could not comment or like them.
+          </p>
+          <div class="chips">
+            <span class="chip bad">Bug: re-shown profile labelled “Passed”</span>
+            <span class="chip ok">Django part (cache clear) · live on prod</span>
+            <span class="chip warn">Rails part (label) · only on develop_new</span>
+            <span class="chip">Backend-only → Android and iOS</span>
+          </div>
+          <p class="muted" style="font-size: 15px">
+            This page teaches the whole feature from scratch: what Rails does, what Django does, which
+            databases they share, and where the bug and the open questions sit. All code shown is quoted from
+            <code>aisle_new@develop_new</code> and <code>django_algorithm@django_master</code>; behaviour read
+            from code is to be confirmed with Dev.
+          </p>
+        </header>
+
+        <section id="terms">
+          <span class="eyebrow">Start · Words you need</span>
+          <h2>Eight terms</h2>
+          <div class="grid">
+            <div class="card">
+              <b class="t">U, P1</b
+              ><span class="muted"
+                >U is the user we test with. P1, P2… are the profiles U sees and acts on.</span
+              >
+            </div>
+            <div class="card">
+              <b class="t">Pass</b
+              ><span class="muted">U taps ✕ on P1. Saved as a row in Postgres <code>user_passes</code>.</span>
+            </div>
+            <div class="card">
+              <b class="t">Hidden list</b
+              ><span class="muted"
+                >Postgres <code>action_hiddens_partition_N</code>. “Never show P1 to U again.” Every pass adds
+                a row.</span
+              >
+            </div>
+            <div class="card">
+              <b class="t">Blocked bitmap</b
+              ><span class="muted"
+                >Django’s own copy of the hidden list, stored as a file
+                <code>blocklists/&lt;ref&gt;.rbm</code>. Used to filter Discover.</span
+              >
+            </div>
+            <div class="card">
+              <b class="t">Pass reset</b
+              ><span class="muted"
+                >Called “repeat pass” in code. Django takes some old passes out of the bitmap so they show
+                again.</span
+              >
+            </div>
+            <div class="card">
+              <b class="t">For You (FY)</b
+              ><span class="muted"
+                >Daily list of 6 (men) / 8 (women) cards, built by Rails and cached in Redis.</span
+              >
+            </div>
+            <div class="card">
+              <b class="t">Card label</b
+              ><span class="muted"
+                ><code>display_message</code>: Reported, Blocked, Comment Sent or Passed. Any label sets
+                <code>can_send_comment=false</code>.</span
+              >
+            </div>
+            <div class="card">
+              <b class="t">Kafka</b
+              ><span class="muted"
+                >Message queue. Rails and Django talk to each other through it instead of calling each other
+                directly.</span
+              >
+            </div>
+          </div>
+        </section>
+
+        <!-- ======================= PART 1 ======================= -->
+        <section id="map">
+          <span class="part">Part 1 · The system</span>
+          <h2>Two backends, five data stores</h2>
+          <p>
+            <b>Rails</b> (<code>aisle_new</code>) is the main Aisle API that the app calls. It owns passes,
+            the hidden list and For You. <b>Django</b> (<code>django_algorithm</code>) is the matching engine.
+            It builds Discover, keeps the blocked bitmap and runs the pass reset.
+          </p>
+          <div class="fig">
+            <div class="scroll">
+              <svg
+                viewBox="0 0 960 470"
+                role="img"
+                aria-label="System map of app, Rails, Django, Kafka and data stores"
+              >
+                <defs>
+                  <marker
+                    id="m1"
+                    viewBox="0 0 10 10"
+                    refX="9"
+                    refY="5"
+                    markerWidth="7"
+                    markerHeight="7"
+                    orient="auto-start-reverse"
+                  >
+                    <path d="M0,0L10,5L0,10z" style="fill: var(--muted)" />
+                  </marker>
+                  <marker
+                    id="m2"
+                    viewBox="0 0 10 10"
+                    refX="9"
+                    refY="5"
+                    markerWidth="7"
+                    markerHeight="7"
+                    orient="auto-start-reverse"
+                  >
+                    <path d="M0,0L10,5L0,10z" style="fill: var(--dj)" />
+                  </marker>
+                  <marker
+                    id="m3"
+                    viewBox="0 0 10 10"
+                    refX="9"
+                    refY="5"
+                    markerWidth="7"
+                    markerHeight="7"
+                    orient="auto-start-reverse"
+                  >
+                    <path d="M0,0L10,5L0,10z" style="fill: var(--info)" />
+                  </marker>
+                </defs>
+                <rect
+                  x="20"
+                  y="195"
+                  width="130"
+                  height="80"
+                  rx="10"
+                  style="fill: var(--sunk); stroke: var(--line)"
+                />
+                <text x="85" y="230" text-anchor="middle" font-weight="700">Aisle app</text>
+                <text x="85" y="252" text-anchor="middle" font-size="13" style="fill: var(--muted)">
+                  Android / iOS
+                </text>
+
+                <rect
+                  x="210"
+                  y="40"
+                  width="260"
+                  height="170"
+                  rx="10"
+                  style="fill: var(--info-soft); stroke: var(--info)"
+                />
+                <text x="340" y="68" text-anchor="middle" font-weight="700" style="fill: var(--info)">
+                  Rails · aisle_new
+                </text>
+                <text x="230" y="98" font-size="13">• POST /V1/pass_user</text>
+                <text x="230" y="120" font-size="13">• GET /V1/users/fetch_top_matched_profiles</text>
+                <text x="230" y="142" font-size="13">• builds For You + the label</text>
+                <text x="230" y="164" font-size="13">• writes passes, hidden list</text>
+                <text x="230" y="186" font-size="13">• reads last reset time (fix)</text>
+
+                <rect
+                  x="210"
+                  y="300"
+                  width="260"
+                  height="140"
+                  rx="10"
+                  style="fill: var(--dj-soft); stroke: var(--dj)"
+                />
+                <text x="340" y="328" text-anchor="middle" font-weight="700" style="fill: var(--dj)">
+                  Django · django_algorithm
+                </text>
+                <text x="230" y="358" font-size="13">• builds Discover / Concierge</text>
+                <text x="230" y="380" font-size="13">• keeps the blocked bitmap</text>
+                <text x="230" y="402" font-size="13">• fires and runs the pass reset</text>
+                <text x="230" y="424" font-size="13">• clears FY cache on reset (fix)</text>
+
+                <rect
+                  x="530"
+                  y="200"
+                  width="120"
+                  height="70"
+                  rx="35"
+                  style="fill: var(--surface); stroke: var(--muted)"
+                />
+                <text x="590" y="230" text-anchor="middle" font-weight="700">Kafka</text>
+                <text x="590" y="250" text-anchor="middle" font-size="11.5" style="fill: var(--muted)">
+                  messages
+                </text>
+
+                <g font-size="13">
+                  <rect
+                    x="720"
+                    y="20"
+                    width="220"
+                    height="62"
+                    rx="8"
+                    style="fill: var(--surface); stroke: var(--line)"
+                  />
+                  <text x="830" y="45" text-anchor="middle" font-weight="700">Postgres</text>
+                  <text x="830" y="66" text-anchor="middle" font-size="11.5" style="fill: var(--muted)">
+                    user_passes · action_hiddens
+                  </text>
+                  <rect
+                    x="720"
+                    y="105"
+                    width="220"
+                    height="62"
+                    rx="8"
+                    style="fill: var(--surface); stroke: var(--line)"
+                  />
+                  <text x="830" y="130" text-anchor="middle" font-weight="700">Redis</text>
+                  <text x="830" y="151" text-anchor="middle" font-size="11.5" style="fill: var(--muted)">
+                    For You cache
+                  </text>
+                  <rect
+                    x="720"
+                    y="190"
+                    width="220"
+                    height="62"
+                    rx="8"
+                    style="fill: var(--surface); stroke: var(--line)"
+                  />
+                  <text x="830" y="215" text-anchor="middle" font-weight="700">Mongo</text>
+                  <text x="830" y="236" text-anchor="middle" font-size="11.5" style="fill: var(--muted)">
+                    repeat_pass_shown · debug_logs
+                  </text>
+                  <rect
+                    x="720"
+                    y="300"
+                    width="220"
+                    height="62"
+                    rx="8"
+                    style="fill: var(--surface); stroke: var(--dj)"
+                    stroke-dasharray="5 4"
+                  />
+                  <text x="830" y="325" text-anchor="middle" font-weight="700">Bitmap files</text>
+                  <text x="830" y="346" text-anchor="middle" font-size="11.5" style="fill: var(--muted)">
+                    Django disk · blocklists/*.rbm
+                  </text>
+                  <rect
+                    x="720"
+                    y="385"
+                    width="220"
+                    height="62"
+                    rx="8"
+                    style="fill: var(--surface); stroke: var(--dj)"
+                    stroke-dasharray="5 4"
+                  />
+                  <text x="830" y="410" text-anchor="middle" font-weight="700">Neo4j graph</text>
+                  <text x="830" y="431" text-anchor="middle" font-size="11.5" style="fill: var(--muted)">
+                    profiles for Discover
+                  </text>
+                </g>
+
+                <line
+                  x1="150"
+                  y1="225"
+                  x2="208"
+                  y2="150"
+                  style="stroke: var(--muted)"
+                  stroke-width="1.6"
+                  marker-end="url(#m1)"
+                />
+                <line
+                  x1="150"
+                  y1="250"
+                  x2="208"
+                  y2="340"
+                  style="stroke: var(--muted)"
+                  stroke-width="1.6"
+                  marker-end="url(#m1)"
+                  stroke-dasharray="4 4"
+                />
+                <text x="150" y="315" font-size="11" style="fill: var(--muted)">Discover</text>
+                <line
+                  x1="470"
+                  y1="170"
+                  x2="535"
+                  y2="215"
+                  style="stroke: var(--info)"
+                  stroke-width="1.6"
+                  marker-end="url(#m3)"
+                />
+                <text x="470" y="210" font-size="11" style="fill: var(--info)">hidden entry</text>
+                <line
+                  x1="560"
+                  y1="268"
+                  x2="470"
+                  y2="330"
+                  style="stroke: var(--dj)"
+                  stroke-width="1.6"
+                  marker-end="url(#m2)"
+                />
+                <line
+                  x1="470"
+                  y1="355"
+                  x2="560"
+                  y2="272"
+                  style="stroke: var(--dj)"
+                  stroke-width="1.6"
+                  marker-end="url(#m2)"
+                />
+                <text x="520" y="330" font-size="11" style="fill: var(--dj)">reset trigger</text>
+                <line
+                  x1="470"
+                  y1="70"
+                  x2="718"
+                  y2="50"
+                  style="stroke: var(--info)"
+                  stroke-width="1.6"
+                  marker-end="url(#m3)"
+                />
+                <line
+                  x1="470"
+                  y1="110"
+                  x2="718"
+                  y2="136"
+                  style="stroke: var(--info)"
+                  stroke-width="1.6"
+                  marker-end="url(#m3)"
+                />
+                <line
+                  x1="470"
+                  y1="185"
+                  x2="718"
+                  y2="215"
+                  style="stroke: var(--info)"
+                  stroke-width="1.6"
+                  marker-end="url(#m3)"
+                />
+                <line
+                  x1="470"
+                  y1="320"
+                  x2="718"
+                  y2="60"
+                  style="stroke: var(--dj)"
+                  stroke-width="1.4"
+                  marker-end="url(#m2)"
+                  stroke-dasharray="3 3"
+                />
+                <line
+                  x1="470"
+                  y1="335"
+                  x2="718"
+                  y2="150"
+                  style="stroke: var(--dj)"
+                  stroke-width="1.4"
+                  marker-end="url(#m2)"
+                  stroke-dasharray="3 3"
+                />
+                <line
+                  x1="470"
+                  y1="350"
+                  x2="718"
+                  y2="232"
+                  style="stroke: var(--dj)"
+                  stroke-width="1.4"
+                  marker-end="url(#m2)"
+                  stroke-dasharray="3 3"
+                />
+                <line
+                  x1="470"
+                  y1="380"
+                  x2="718"
+                  y2="330"
+                  style="stroke: var(--dj)"
+                  stroke-width="1.6"
+                  marker-end="url(#m2)"
+                />
+                <line
+                  x1="470"
+                  y1="410"
+                  x2="718"
+                  y2="415"
+                  style="stroke: var(--dj)"
+                  stroke-width="1.6"
+                  marker-end="url(#m2)"
+                />
+              </svg>
+            </div>
+            <p class="cap">
+              Blue = Rails. Purple = Django. Dashed purple = what Django touches during a reset (reads passes,
+              clears the Redis cache, writes Mongo). Dashed boxes are Django-only stores.
+            </p>
+          </div>
+        </section>
+
+        <section id="stores">
+          <span class="eyebrow">Part 1 · Data stores</span>
+          <h2>Where every piece of data lives</h2>
+          <div class="tbl">
+            <table>
+              <thead>
+                <tr>
+                  <th>Store</th>
+                  <th>Name / key</th>
+                  <th>What’s in it</th>
+                  <th>Written by</th>
+                  <th>Read by</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><b>Postgres</b></td>
+                  <td><code>user_passes</code></td>
+                  <td>
+                    One row per pass: <code>initiator_id</code> (U), <code>partner_id</code> (P1),
+                    <code>created_at</code>, <code>can_show_in_recent_passes</code>,
+                    <code>tags.tab_name</code>. Passing P1 again adds a <i>new</i> row.
+                  </td>
+                  <td><span class="pill r">Rails</span></td>
+                  <td><span class="pill r">Rails</span> label · <span class="pill d">Django</span> reset</td>
+                </tr>
+                <tr>
+                  <td><b>Postgres</b></td>
+                  <td><code>action_hiddens_partition_&lt;U÷1000&gt;</code></td>
+                  <td>“Don’t show P1 to U”. Status: created → enqueued_kafka → consumed_django → synced.</td>
+                  <td><span class="pill r">Rails</span></td>
+                  <td>
+                    <span class="pill r">Rails</span> For You · <span class="pill d">Django</span> to build
+                    bitmap
+                  </td>
+                </tr>
+                <tr>
+                  <td><b>Redis</b></td>
+                  <td><code>&lt;PRODUCT&gt;_&lt;env&gt;_closest_matched_profile_&lt;ref&gt;</code></td>
+                  <td>
+                    U’s For You: <code>refs</code> (pool), <code>todays_list</code>, <code>pass_list</code>,
+                    <code>start_date</code>… Expires one week after it was built.
+                  </td>
+                  <td><span class="pill r">Rails</span></td>
+                  <td>
+                    <span class="pill r">Rails</span> · deleted by <span class="pill d">Django</span> on reset
+                  </td>
+                </tr>
+                <tr>
+                  <td><b>Django disk</b></td>
+                  <td><code>blocklists/&lt;ref&gt;.rbm</code></td>
+                  <td>Blocked bitmap: everyone U must not see in Discover.</td>
+                  <td><span class="pill d">Django</span></td>
+                  <td><span class="pill d">Django</span> Discover</td>
+                </tr>
+                <tr>
+                  <td><b>Django disk</b></td>
+                  <td><code>blocklists/&lt;ref&gt;_passed.rbm</code></td>
+                  <td>Profiles given a second chance by a reset. Treated as “don’t block”.</td>
+                  <td><span class="pill d">Django</span></td>
+                  <td><span class="pill d">Django</span></td>
+                </tr>
+                <tr>
+                  <td><b>Mongo</b></td>
+                  <td><code>repeat_pass_shown_partner_ids</code></td>
+                  <td>
+                    One doc per user: <code>user_id</code>, <code>shown_partner_ids</code> (all ever
+                    re-shown), <code>created_at</code>, <code>updated_at</code> =
+                    <b>last reset time</b> (UTC).
+                  </td>
+                  <td><span class="pill d">Django</span></td>
+                  <td>
+                    <span class="pill r">Rails</span> label (fix) ·
+                    <span class="pill d">Django</span> eligibility
+                  </td>
+                </tr>
+                <tr>
+                  <td><b>Mongo</b></td>
+                  <td><code>debug_logs</code></td>
+                  <td>
+                    Event <code>repeat_pass_bitmap_created</code> per reset, with the partner IDs and time.
+                  </td>
+                  <td><span class="pill d">Django</span></td>
+                  <td><span class="pill d">Django</span> 30-minute throttle</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="callout blue">
+            The For You Redis key is built the same way on both sides: Rails
+            <code>Cache::Key.create_key</code> uses <code>PRODUCT_NAME + "_" + Rails.env</code>, Django
+            <code>create_key</code> uses the <code>PRODUCT_NAME</code> and <code>RAILS_ENV</code> environment
+            variables. If those differ on a server, Django deletes a key Rails never reads. That is worth one
+            question to Dev.
+          </div>
+        </section>
+
+        <!-- ======================= PART 2 ======================= -->
+        <section id="rails-pass">
+          <span class="part">Part 2 · Rails (aisle_new)</span>
+          <h2>What happens when U passes P1</h2>
+          <p>
+            The app calls <code>POST /V1/pass_user</code> with P1’s <code>ref</code> and the
+            <code>tab_name</code> (for_you, discover, concierge). Rails does four things.
+          </p>
+          <ol class="steps">
+            <li>
+              <div>
+                <b>Add P1 to U’s hidden list</b> (Postgres).
+                <div class="code">
+                  <div class="file">
+                    <span>app/models/action/hidden.rb</span><span class="lang">Ruby</span>
+                  </div>
+                  <pre>def fetch_table_name initiator_id
+  "action_hiddens_partition_#{initiator_id / 1000}"   <span class="c"># U=12345 → partition_12</span>
+end
+
+def add_entry initiator_id, partner_id
+  if not_exists?(initiator_id, partner_id)
+    create!(initiator_id: initiator_id, partner_id: partner_id)
+<span class="hl">    <span class="c"># after_commit :graph_entry → sends it to Django via Kafka (step 4)</span></span>
+  end
+end</pre>
+                </div>
+              </div>
+            </li>
+            <li>
+              <div>
+                <b>Save the pass</b> (Postgres <code>user_passes</code>). There is no “already passed” check,
+                so a second pass makes a second row.
+                <div class="code">
+                  <div class="file">
+                    <span>app/models/user_pass.rb · pass_user / create_entry</span
+                    ><span class="lang">Ruby</span>
+                  </div>
+                  <pre>
+can_show_in_recent_passes = tab_name == 'for_you' ? false : true
+create!(initiator_id: initiator_id, partner_id: partner_id,
+        can_show_in_recent_passes: can_show_in_recent_passes,
+        tags: { 'tab_name' => params['tab_name'], 'ref' => params['ref'] })</pre>
+                </div>
+              </div>
+            </li>
+            <li>
+              <div>
+                <b>Update U’s For You cache</b> (Redis). From For You: P1 goes into <code>pass_list</code> and
+                leaves the pool. From Discover/Concierge: P1 is removed from today’s list and a replacement is
+                sampled.
+                <div class="code">
+                  <div class="file"><span>app/models/user_pass.rb</span><span class="lang">Ruby</span></div>
+                  <pre>
+if %w[discover concierge].include?(tab_name)
+  Algorithm::TopMatch.update_for_you_cache current_profile, other_user.ref
+else
+  Algorithm::TopMatch.add_to_pass_list current_profile.ref, other_user.ref
+end</pre>
+                </div>
+              </div>
+            </li>
+            <li>
+              <div>
+                <b>Tell Django</b> through Kafka, so Django adds P1 to U’s blocked bitmap.
+                <div class="code">
+                  <div class="file">
+                    <span>app/models/action/hidden.rb · graph_entry</span><span class="lang">Ruby</span>
+                  </div>
+                  <pre>data_for_redis = { user_id: initiator_id, blocked_user_id: partner_id, ref_id: profile.ref }
+KafkaProducer.produce('test_graph_sync', { data: data_for_redis, action_hidden: true })
+<span class="c"># then: UPDATE action_hiddens_partition_N SET status = enqueued_kafka</span></pre>
+                </div>
+                <p class="muted" style="font-size: 15px">
+                  This only runs when the config flag <code>Configuration::Constant.fetch_sync_graph</code> is
+                  on. Keep this in mind for Q5.
+                </p>
+              </div>
+            </li>
+          </ol>
+        </section>
+
+        <section id="rails-fy">
+          <span class="eyebrow">Part 2 · Rails</span>
+          <h2>How For You is built</h2>
+          <p>
+            The app calls <code>GET /V1/users/fetch_top_matched_profiles</code>. Rails first looks in Redis.
+            Only if the cache is missing (or the user changed preferences) does it rebuild from Postgres.
+          </p>
+          <div class="fig">
+            <div class="scroll">
+              <svg
+                viewBox="0 0 900 300"
+                role="img"
+                aria-label="For You build flow: check Redis, rebuild from Postgres if missing, rotate after 5 AM, build cards"
+              >
+                <defs>
+                  <marker
+                    id="f1"
+                    viewBox="0 0 10 10"
+                    refX="9"
+                    refY="5"
+                    markerWidth="7"
+                    markerHeight="7"
+                    orient="auto"
+                  >
+                    <path d="M0,0L10,5L0,10z" style="fill: var(--muted)" />
+                  </marker>
+                </defs>
+                <rect
+                  x="10"
+                  y="120"
+                  width="150"
+                  height="60"
+                  rx="8"
+                  style="fill: var(--sunk); stroke: var(--line)"
+                />
+                <text x="85" y="146" text-anchor="middle" font-weight="700" font-size="14">App opens FY</text>
+                <text x="85" y="166" text-anchor="middle" font-size="11.5" style="fill: var(--muted)">
+                  fetch_top_matched_profiles
+                </text>
+                <polygon
+                  points="290,100 370,150 290,200 210,150"
+                  style="fill: var(--surface); stroke: var(--info)"
+                />
+                <text x="290" y="146" text-anchor="middle" font-size="13" font-weight="700">Redis cache</text>
+                <text x="290" y="164" text-anchor="middle" font-size="13">exists?</text>
+                <rect
+                  x="420"
+                  y="20"
+                  width="200"
+                  height="70"
+                  rx="8"
+                  style="fill: var(--info-soft); stroke: var(--info)"
+                />
+                <text x="520" y="46" text-anchor="middle" font-weight="700" font-size="14">
+                  Rebuild from Postgres
+                </text>
+                <text x="520" y="66" text-anchor="middle" font-size="11.5">
+                  Strategy_3 · skips hidden list
+                </text>
+                <text x="520" y="82" text-anchor="middle" font-size="11.5">
+                  city → state → country → global
+                </text>
+                <rect
+                  x="420"
+                  y="210"
+                  width="200"
+                  height="70"
+                  rx="8"
+                  style="fill: var(--surface); stroke: var(--line)"
+                />
+                <text x="520" y="236" text-anchor="middle" font-weight="700" font-size="14">
+                  Use cached list
+                </text>
+                <text x="520" y="256" text-anchor="middle" font-size="11.5">new day after 5 AM IST →</text>
+                <text x="520" y="272" text-anchor="middle" font-size="11.5">
+                  clear pass_list, new todays_list
+                </text>
+                <rect
+                  x="690"
+                  y="120"
+                  width="200"
+                  height="60"
+                  rx="8"
+                  style="fill: var(--info-soft); stroke: var(--info)"
+                />
+                <text x="790" y="146" text-anchor="middle" font-weight="700" font-size="14">
+                  Build cards + label
+                </text>
+                <text x="790" y="166" text-anchor="middle" font-size="11.5">create_top_matches_response</text>
+                <line
+                  x1="160"
+                  y1="150"
+                  x2="208"
+                  y2="150"
+                  style="stroke: var(--muted)"
+                  stroke-width="1.6"
+                  marker-end="url(#f1)"
+                />
+                <line
+                  x1="290"
+                  y1="100"
+                  x2="418"
+                  y2="56"
+                  style="stroke: var(--muted)"
+                  stroke-width="1.6"
+                  marker-end="url(#f1)"
+                />
+                <text x="330" y="70" font-size="12" style="fill: var(--accent)">no</text>
+                <line
+                  x1="290"
+                  y1="200"
+                  x2="418"
+                  y2="244"
+                  style="stroke: var(--muted)"
+                  stroke-width="1.6"
+                  marker-end="url(#f1)"
+                />
+                <text x="330" y="236" font-size="12" style="fill: var(--ok)">yes</text>
+                <line
+                  x1="620"
+                  y1="56"
+                  x2="690"
+                  y2="135"
+                  style="stroke: var(--muted)"
+                  stroke-width="1.6"
+                  marker-end="url(#f1)"
+                />
+                <line
+                  x1="620"
+                  y1="244"
+                  x2="690"
+                  y2="165"
+                  style="stroke: var(--muted)"
+                  stroke-width="1.6"
+                  marker-end="url(#f1)"
+                />
+              </svg>
+            </div>
+            <p class="cap">
+              The rebuild path (top) is the one a reset forces, because Django deletes the cache.
+            </p>
+          </div>
+          <div class="two">
+            <div class="code">
+              <div class="file">
+                <span>app/models/algorithm/top_match.rb</span><span class="lang">Ruby</span>
+              </div>
+              <pre>def fetch_profiles_list profile, params = {}
+  refs = fetch_cached_refs profile          <span class="c"># Redis</span>
+  if !refs.present?
+<span class="hl">    refs = Strategy_3.fill_cache_from_db profile   <span class="c"># rebuild</span></span>
+  end
+  results, liked_by = profile.filter_top_matches_list refs
+  profile.create_top_matches_response results, liked_by, params
+end</pre>
+            </div>
+            <div class="code">
+              <div class="file">
+                <span>app/models/profile.rb · used by Strategy_3</span><span class="lang">Ruby</span>
+              </div>
+              <pre>scope :not_from_hidden_list, ->(user_id) {
+  table_name = Action::Hidden.fetch_table_name user_id
+  joins("LEFT JOIN #{table_name}
+         ON #{table_name}.partner_id = profiles.user_id
+        AND #{table_name}.initiator_id = #{user_id}")
+<span class="hlr">  .where("#{table_name}.partner_id IS NULL")  <span class="c"># P1 excluded</span></span>
+}</pre>
+            </div>
+          </div>
+        </section>
+
+        <section id="rails-label">
+          <span class="eyebrow">Part 2 · Rails</span>
+          <h2>How the card label is chosen</h2>
+          <p>
+            For each profile in today’s list, Rails checks four things in order. The first match wins and
+            disables comment.
+          </p>
+          <div class="tbl">
+            <table>
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Check</th>
+                  <th>Label (<code>display_message</code>)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>1</td>
+                  <td>U reported P1</td>
+                  <td>Reported</td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td>U blocked P1</td>
+                  <td>Blocked</td>
+                </tr>
+                <tr>
+                  <td>3</td>
+                  <td>U commented on P1</td>
+                  <td>Comment Sent</td>
+                </tr>
+                <tr>
+                  <td>4</td>
+                  <td>U passed P1 <b>(this is where the bug was)</b></td>
+                  <td>Passed</td>
+                </tr>
+                <tr>
+                  <td>–</td>
+                  <td>none of the above</td>
+                  <td><code>null</code>, <code>can_send_comment: true</code></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="two">
+            <div class="card bad">
+              <b class="t">Before the fix</b>
+              <div class="code">
+                <div class="file"><span>user_pass.rb</span><span class="lang">Ruby</span></div>
+                <pre><span class="hlr">def has_passed_profile? initiator_id, partner_id</span>
+  by_initiator(initiator_id).by_partner(partner_id)
+    .first.present?      <span class="c"># EVER passed?</span>
+end</pre>
+              </div>
+            </div>
+            <div class="card ok">
+              <b class="t">After the fix (Rails 70e220f)</b>
+              <div class="code">
+                <div class="file"><span>user_pass.rb + profile.rb</span><span class="lang">Ruby</span></div>
+                <pre>last_pass_reset_at = MongoRepeatPassShown.last_reset_at(user_id)
+<span class="hlg">def has_passed_profile?(initiator_id, partner_id, after: nil)</span>
+  passes = by_initiator(initiator_id).by_partner(partner_id)
+<span class="hlg">  passes = passes.where('user_passes.created_at > ?', after) if after.present?</span>
+  passes.first.present?  <span class="c"># passed SINCE last reset?</span>
+end</pre>
+              </div>
+            </div>
+          </div>
+          <div class="code">
+            <div class="file">
+              <span>app/models/mongo_repeat_pass_shown.rb (Rails reads what Django writes)</span
+              ><span class="lang">Ruby</span>
+            </div>
+            <pre>store_in collection: 'repeat_pass_shown_partner_ids'
+def self.last_reset_at(user_id)
+  where(user_id: user_id).only(:updated_at).first&amp;.updated_at   <span class="c"># nil if no doc → old behaviour</span>
+end</pre>
+          </div>
+          <div class="callout red">
+            <b>Key point for Q5:</b> the fix depends completely on Django writing <code>updated_at</code> into
+            Mongo. No Mongo doc means <code>after: nil</code>, and Rails falls back to “ever passed”, which is
+            the bug.
+          </div>
+        </section>
+
+        <!-- ======================= PART 3 ======================= -->
+        <section id="dj-bitmap">
+          <span class="part">Part 3 · Django (django_algorithm)</span>
+          <h2>The blocked bitmap</h2>
+          <p>
+            Django filters Discover with a compact file of user IDs per user: a <b>bitmap</b> (“roaring
+            bitmap”, <code>.rbm</code>). It is fed by the Kafka messages Rails sends on every hidden-list
+            entry.
+          </p>
+          <div class="code">
+            <div class="file">
+              <span>profiles/kafka_consumer_v2.py → neo4j_model.py · add_blocked</span
+              ><span class="lang">Python</span>
+            </div>
+            <pre>if action_hidden == True:
+    return self.process_action_hidden(decoded)      <span class="c"># → profile_model.add_blocked(user_id, blocked_user_id, False, ref_id)</span>
+
+def add_blocked(self, user_id, blocked_user_id, coming_from_redis_stream=False, ref_id=None):
+<span class="hl">    is_bitmap = bitmap_file_exists(ref_id)          <span class="c"># blocklists/&lt;ref&gt;.rbm on disk?</span></span>
+    if is_bitmap:
+        add_single_blocked(ref_id, blocked_user_id)  <span class="c"># add one ID</span>
+        remove_from_passed_bitmap(ref_id, blocked_user_id)
+    else:
+<span class="hlg">        all_blocked = get_blocked_profiles_postgres_user_id(ref_id)   <span class="c"># first time: copy whole hidden list</span></span>
+        all_blocked.add(blocked_user_id)
+        add_all_blocked(ref_id, all_blocked)         <span class="c"># creates the file (skips IDs in &lt;ref&gt;_passed.rbm)</span>
+        remove_from_passed_bitmap(ref_id, blocked_user_id)</pre>
+          </div>
+          <div class="code">
+            <div class="file"><span>profiles/blocklist_manager.py</span><span class="lang">Python</span></div>
+            <pre>STORAGE_DIR = "blocklists"
+def get_bitmap_path(user_id):
+    return os.path.join(STORAGE_DIR, f"{user_id}.rbm")   <span class="c"># called with the ref → blocklists/&lt;ref&gt;.rbm</span>
+def bitmap_file_exists(user_id):
+    return os.path.isfile(get_bitmap_path(user_id))</pre>
+          </div>
+          <div class="callout blue">
+            So the bitmap file is <b>created the first time Django processes a hidden-list message for U</b>.
+            If Django never got one (sync flag off, Kafka or consumer failure, file lost or not on that
+            server), U has no bitmap file. This is the condition behind Q5.
+          </div>
+        </section>
+
+        <section id="dj-trigger">
+          <span class="eyebrow">Part 3 · Django</span>
+          <h2>When a reset fires</h2>
+          <p>
+            While building U’s Discover feed, Django counts profiles in the “last seen 30–90 days” bucket. If
+            fewer than 50 remain, it sends a reset message to itself through Kafka.
+          </p>
+          <div class="code">
+            <div class="file">
+              <span>profiles/algorithms/discover_repeat_passes_utils.py</span><span class="lang">Python</span>
+            </div>
+            <pre>REPEAT_PASS_TRIGGER_BUCKET = "30_90_days"
+REPEAT_PASS_LOW_PROFILE_THRESHOLD = 50
+
+if not should_trigger_repeat_pass_event(current_bucket_name):   <span class="c"># only the 30–90 day bucket</span>
+    return False
+profile_count = count_profiles_in_bucket(...)
+<span class="hl">if profile_count &gt;= 0 and profile_count &lt; REPEAT_PASS_LOW_PROFILE_THRESHOLD:</span>
+    send_repeat_pass_trigger_event(user_id=user_id, ref=ref_id, bucket=..., scope=...)
+    <span class="c"># Kafka topic 'graph_sync' with {"repeat_pass": true, "data": {user_id, ref, timestamp, ...}}</span></pre>
+          </div>
+          <div class="fig">
+            <div class="bars">
+              <div class="bar">
+                <span>Pass age needed (days)</span>
+                <div class="track"><div class="fill" style="width: 15.6%"></div></div>
+                <span class="v">14</span>
+              </div>
+              <div class="bar">
+                <span>Partner active within (days)</span>
+                <div class="track"><div class="fill" style="width: 100%"></div></div>
+                <span class="v">90</span>
+              </div>
+              <div class="bar">
+                <span>Pool below (profiles)</span>
+                <div class="track"><div class="fill" style="width: 55.6%"></div></div>
+                <span class="v">50</span>
+              </div>
+              <div class="bar">
+                <span>Gap between resets (min)</span>
+                <div class="track"><div class="fill" style="width: 33.3%"></div></div>
+                <span class="v">30</span>
+              </div>
+            </div>
+            <p class="cap">The four numbers that control a reset, drawn on one 0–90 scale.</p>
+          </div>
+        </section>
+
+        <section id="dj-reset">
+          <span class="eyebrow">Part 3 · Django</span>
+          <h2>What a reset does, line by line</h2>
+          <p>
+            Django’s Kafka consumer sees <code>repeat_pass: true</code> and calls
+            <code>handle_repeat_pass_trigger</code>. This is the function behind Q5.
+          </p>
+          <div class="code">
+            <div class="file">
+              <span>profiles/neo4j_model.py · handle_repeat_pass_trigger (trimmed)</span
+              ><span class="lang">Python</span>
+            </div>
+            <pre><span class="c"># A. throttle: skip if a reset ran in the last 30 minutes (reads Mongo debug_logs)</span>
+mins = DebugLogMiddleware.get_minutes_since_latest_event(user_id, "repeat_pass_bitmap_created")
+if mins is not None and mins &lt;= 30: return
+
+<span class="c"># B. which old passes get a second chance</span>
+partner_ids = get_recent_passes_with_activity_check_optimized(user_id)
+if not partner_ids: return
+
+<span class="c"># C. remember them in a separate "passed" bitmap + write the log event</span>
+add_all_blocked(f"{ref}_passed", set(partner_ids))
+DebugLogMiddleware.log(event_type="repeat_pass_bitmap_created", user_id=user_id, entries=partner_ids)
+
+<span class="c"># D. ONLY IF the main bitmap file exists:</span>
+<span class="hlr">if bitmap_file_exists(ref):</span>
+    set_all_blocked(ref, set(get_blocked(ref)) - set(partner_ids))  <span class="c"># D1 unblock in Discover</span>
+    MongoRepeatPassShown.add_shown_partner_ids(user_id, partner_ids) <span class="c"># D2 Mongo: updated_at = now</span>
+    delete_closest_matched_profile_data(ref)                         <span class="c"># D3 delete FY cache (fix PR #117)</span></pre>
+          </div>
+          <div class="code">
+            <div class="file">
+              <span>profiles/profile_data_access.py · step B query</span><span class="lang">SQL</span>
+            </div>
+            <pre>SELECT up.partner_id
+FROM user_passes up
+JOIN profiles p ON p.user_id = up.partner_id
+WHERE up.initiator_id = :user_id
+  AND p.last_seen_window &gt;= NOW() - INTERVAL '90 days'   <span class="c">-- partner active</span>
+GROUP BY up.partner_id
+HAVING COUNT(*) = 1                                       <span class="c">-- passed exactly once</span>
+   AND MAX(up.created_at) &lt;= NOW() - INTERVAL '14 days'  <span class="c">-- at least 14 days ago</span>
+<span class="c">-- then in Python: drop IDs already in Mongo shown_partner_ids (one second chance only)</span></pre>
+          </div>
+          <div class="code">
+            <div class="file">
+              <span>profiles/mongo_repeat_pass_shown.py · step D2</span><span class="lang">Python</span>
+            </div>
+            <pre>cls._get_collection().update_one(
+    {"user_id": int(user_id)},
+    {"$addToSet": {"shown_partner_ids": {"$each": normalized_partner_ids}},
+<span class="hl">     "$set": {"updated_at": now},            <span class="c"># ← the reset time Rails reads (UTC)</span></span>
+     "$setOnInsert": {"created_at": now}},
+    upsert=True)</pre>
+          </div>
+        </section>
+
+        <!-- ======================= PART 4 ======================= -->
+        <section id="seq">
+          <span class="part">Part 4 · End to end</span>
+          <h2>The full sequence, from pass to card</h2>
+          <p>
+            Read top to bottom. Each arrow is one call or write. The red steps D1–D3 run only when the bitmap
+            file exists.
+          </p>
+          <div class="fig">
+            <div class="scroll">
+              <svg id="seqsvg" role="img" aria-label="Sequence diagram from pass to For You card"></svg>
+            </div>
+            <p class="cap">
+              Lanes: App, Rails, Postgres, Kafka, Django (with its bitmap files), Mongo, Redis.
+            </p>
+          </div>
+        </section>
+
+        <section id="bug">
+          <span class="eyebrow">Part 4 · The bug and the fix</span>
+          <h2>Putting it together</h2>
+          <div class="tbl">
+            <table>
+              <thead>
+                <tr>
+                  <th>Moment</th>
+                  <th>Before any fix</th>
+                  <th>With both fixes</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Day 0: U passes P1</td>
+                  <td colspan="2">
+                    Hidden list row, <code>user_passes</code> row, P1 in bitmap. FY card says “Passed” today.
+                  </td>
+                </tr>
+                <tr>
+                  <td>Day 14+: reset</td>
+                  <td>P1 unblocked in Discover. FY cache left as is.</td>
+                  <td>P1 unblocked, Mongo <code>updated_at</code> = reset, <b>FY cache deleted</b>.</td>
+                </tr>
+                <tr>
+                  <td>P1 appears again</td>
+                  <td><span class="pill n">“Passed”</span>, comment disabled: <b>the bug</b></td>
+                  <td><span class="pill y">no label</span>, comment enabled</td>
+                </tr>
+                <tr>
+                  <td>U passes P1 again</td>
+                  <td>“Passed”</td>
+                  <td>“Passed” (new row after the reset). P1 never comes back again (passed twice).</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tbl">
+            <table>
+              <thead>
+                <tr>
+                  <th>Part of the fix</th>
+                  <th>Repo · branch</th>
+                  <th>On prod?</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Delete FY cache on reset (step D3)</td>
+                  <td class="mono">django_algorithm · django_master · PR #117 (6 Nov)</td>
+                  <td><span class="pill y">Yes (Amogh)</span></td>
+                </tr>
+                <tr>
+                  <td>Label uses last reset time</td>
+                  <td class="mono">aisle_new · develop_new · 70e220f</td>
+                  <td><span class="pill q">Confirm</span> not on master / stable_master / staging</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="callout red">
+            Django never sets <code>display_message</code>. Only Rails does. If prod Rails still has the old
+            <code>has_passed_profile?</code>, the label stays “Passed” even with the Django fix live. On prod
+            we test the behaviour: no label on a re-shown profile is a Pass, whichever repo made it happen.
+          </div>
+        </section>
+
+        <section id="scenarios">
+          <span class="eyebrow">Part 4 · Simple examples</span>
+          <h2>Every scenario, as the user sees it</h2>
+          <p>
+            Each row is one story in the app. Read left to right: what U does or what happens in the backend,
+            then what the For You card looks like. P1 is the same profile throughout. The “Expected” line is
+            what we mark in the sheet.
+          </p>
+          <div class="chips">
+            <span class="chip bad">Passed = label shown, comment off</span>
+            <span class="chip ok">No label = comment on</span>
+            <span class="chip">Dashed card = P1 not in the list</span>
+          </div>
+          <div class="scen" id="scenlist"></div>
+        </section>
+
+        <!-- ======================= PART 5 ======================= -->
+        <section id="q5">
+          <span class="part">Part 5 · Q5 deep-dive</span>
+          <h2>“The Mongo update and cache clear only run if a blocked list exists”</h2>
+          <p class="lede">Here is what that sentence means, step by step.</p>
+
+          <h3>1. The line in question</h3>
+          <div class="code">
+            <div class="file">
+              <span>profiles/neo4j_model.py · end of handle_repeat_pass_trigger</span
+              ><span class="lang">Python</span>
+            </div>
+            <pre><span class="c"># C always runs:</span>
+add_all_blocked(f"{ref}_passed", set(partner_ids))
+DebugLogMiddleware.log(event_type="repeat_pass_bitmap_created", ...)
+
+<span class="hlr">if bitmap_file_exists(ref):          <span class="c"># is blocklists/&lt;ref&gt;.rbm on this server's disk?</span></span>
+    set_all_blocked(ref, ...)                    <span class="c"># D1</span>
+    MongoRepeatPassShown.add_shown_partner_ids() <span class="c"># D2</span>
+    delete_closest_matched_profile_data(ref)     <span class="c"># D3</span>
+<span class="c"># no else → if the file is missing, D1–D3 are skipped and nothing is logged about it</span></pre>
+          </div>
+
+          <h3>2. The two paths as a flow</h3>
+          <div class="fig">
+            <div class="scroll">
+              <svg
+                viewBox="0 0 920 430"
+                role="img"
+                aria-label="Flowchart: if bitmap file exists, Mongo updated and cache cleared; otherwise skipped and the bug remains"
+              >
+                <defs>
+                  <marker
+                    id="q1"
+                    viewBox="0 0 10 10"
+                    refX="9"
+                    refY="5"
+                    markerWidth="7"
+                    markerHeight="7"
+                    orient="auto"
+                  >
+                    <path d="M0,0L10,5L0,10z" style="fill: var(--muted)" />
+                  </marker>
+                </defs>
+                <rect
+                  x="330"
+                  y="10"
+                  width="260"
+                  height="50"
+                  rx="8"
+                  style="fill: var(--dj-soft); stroke: var(--dj)"
+                />
+                <text x="460" y="41" text-anchor="middle" font-weight="700" font-size="14">
+                  Reset message arrives
+                </text>
+                <rect
+                  x="330"
+                  y="85"
+                  width="260"
+                  height="56"
+                  rx="8"
+                  style="fill: var(--surface); stroke: var(--line)"
+                />
+                <text x="460" y="108" text-anchor="middle" font-size="13">
+                  A throttle · B find old passes
+                </text>
+                <text x="460" y="128" text-anchor="middle" font-size="13">C passed bitmap + log event</text>
+                <polygon
+                  points="460,165 580,215 460,265 340,215"
+                  style="fill: var(--surface); stroke: var(--accent)"
+                  stroke-width="2"
+                />
+                <text x="460" y="210" text-anchor="middle" font-weight="700" font-size="14">
+                  &lt;ref&gt;.rbm
+                </text>
+                <text x="460" y="229" text-anchor="middle" font-size="13">exists?</text>
+                <rect
+                  x="20"
+                  y="300"
+                  width="380"
+                  height="120"
+                  rx="10"
+                  style="fill: var(--ok-soft); stroke: var(--ok)"
+                />
+                <text x="210" y="326" text-anchor="middle" font-weight="700" style="fill: var(--ok)">
+                  YES: normal path
+                </text>
+                <text x="40" y="352" font-size="13">D1 P1 unblocked in Discover</text>
+                <text x="40" y="374" font-size="13">D2 Mongo updated_at = reset time</text>
+                <text x="40" y="396" font-size="13">D3 FY cache deleted → Rails label fix works</text>
+                <rect
+                  x="520"
+                  y="300"
+                  width="380"
+                  height="120"
+                  rx="10"
+                  style="fill: var(--accent-soft); stroke: var(--accent)"
+                />
+                <text x="710" y="326" text-anchor="middle" font-weight="700" style="fill: var(--accent)">
+                  NO: silent skip
+                </text>
+                <text x="540" y="352" font-size="13">No Mongo updated_at → Rails: after = nil</text>
+                <text x="540" y="374" font-size="13">
+                  → “ever passed” →
+                  <tspan font-weight="700">“Passed” label stays</tspan>
+                </text>
+                <text x="540" y="396" font-size="13">FY cache not cleared · IDs not recorded</text>
+                <line
+                  x1="460"
+                  y1="60"
+                  x2="460"
+                  y2="83"
+                  style="stroke: var(--muted)"
+                  stroke-width="1.6"
+                  marker-end="url(#q1)"
+                />
+                <line
+                  x1="460"
+                  y1="141"
+                  x2="460"
+                  y2="163"
+                  style="stroke: var(--muted)"
+                  stroke-width="1.6"
+                  marker-end="url(#q1)"
+                />
+                <line
+                  x1="340"
+                  y1="215"
+                  x2="210"
+                  y2="298"
+                  style="stroke: var(--muted)"
+                  stroke-width="1.6"
+                  marker-end="url(#q1)"
+                />
+                <line
+                  x1="580"
+                  y1="215"
+                  x2="710"
+                  y2="298"
+                  style="stroke: var(--muted)"
+                  stroke-width="1.6"
+                  marker-end="url(#q1)"
+                />
+                <text x="255" y="250" font-size="13" font-weight="700" style="fill: var(--ok)">yes</text>
+                <text x="650" y="250" font-size="13" font-weight="700" style="fill: var(--accent)">no</text>
+              </svg>
+            </div>
+          </div>
+
+          <h3>3. What each skipped step costs</h3>
+          <div class="tbl">
+            <table>
+              <thead>
+                <tr>
+                  <th>Step</th>
+                  <th>What it should do</th>
+                  <th>If skipped</th>
+                  <th>What a tester sees</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>D1</td>
+                  <td>Remove P1 from <code>&lt;ref&gt;.rbm</code></td>
+                  <td>
+                    Nothing to remove (no file). The <code>&lt;ref&gt;_passed.rbm</code> from step C already
+                    marks P1 as “don’t block”, so <b>when the file is built later</b>,
+                    <code>add_all_blocked</code> leaves P1 out.
+                  </td>
+                  <td>P1 may show again in Discover, later than expected</td>
+                </tr>
+                <tr>
+                  <td>D2</td>
+                  <td>Write <code>updated_at</code> and <code>shown_partner_ids</code> in Mongo</td>
+                  <td>No reset time for Rails. P1 not recorded as “already given a second chance”.</td>
+                  <td><b>P1 shows with “Passed”</b> (the bug). A later reset may bring P1 back again.</td>
+                </tr>
+                <tr>
+                  <td>D3</td>
+                  <td>Delete the FY Redis cache</td>
+                  <td>Old cached list stays for up to a week (daily rotation still happens after 5 AM)</td>
+                  <td>For You doesn’t change after the reset</td>
+                </tr>
+                <tr>
+                  <td>(log)</td>
+                  <td>Step C already wrote <code>repeat_pass_bitmap_created</code></td>
+                  <td>The 30-minute throttle starts anyway</td>
+                  <td>No new reset for 30 min</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3>4. The worst case, as a timeline</h3>
+          <div class="fig">
+            <div class="scroll">
+              <svg
+                viewBox="0 0 920 200"
+                role="img"
+                aria-label="Worst case timeline when the bitmap file is missing"
+              >
+                <line x1="40" y1="80" x2="890" y2="80" style="stroke: var(--line)" stroke-width="3" />
+                <circle cx="80" cy="80" r="10" style="fill: var(--info)" />
+                <text x="80" y="50" text-anchor="middle" font-weight="700" font-size="14">Day 0</text>
+                <text x="80" y="112" text-anchor="middle" font-size="12.5">U passes P1</text>
+                <text x="80" y="130" text-anchor="middle" font-size="12" style="fill: var(--muted)">
+                  Kafka msg lost / sync off
+                </text>
+                <circle cx="290" cy="80" r="10" style="fill: var(--accent)" />
+                <text x="290" y="50" text-anchor="middle" font-weight="700" font-size="14">Day 20</text>
+                <text x="290" y="112" text-anchor="middle" font-size="12.5">reset runs</text>
+                <text x="290" y="130" text-anchor="middle" font-size="12" style="fill: var(--muted)">
+                  no &lt;ref&gt;.rbm → D1–D3 skipped
+                </text>
+                <circle cx="510" cy="80" r="10" style="fill: var(--dj)" />
+                <text x="510" y="50" text-anchor="middle" font-weight="700" font-size="14">Later</text>
+                <text x="510" y="112" text-anchor="middle" font-size="12.5">U hides someone else</text>
+                <text x="510" y="130" text-anchor="middle" font-size="12" style="fill: var(--muted)">
+                  bitmap built, P1 left out
+                </text>
+                <circle cx="740" cy="80" r="12" style="fill: var(--accent)" />
+                <text x="740" y="50" text-anchor="middle" font-weight="700" font-size="14">
+                  P1 shown again
+                </text>
+                <text
+                  x="740"
+                  y="112"
+                  text-anchor="middle"
+                  font-size="12.5"
+                  font-weight="700"
+                  style="fill: var(--accent)"
+                >
+                  card says “Passed”
+                </text>
+                <text x="740" y="130" text-anchor="middle" font-size="12" style="fill: var(--muted)">
+                  Mongo has no reset time
+                </text>
+              </svg>
+            </div>
+            <p class="cap">
+              From code reading. The order of “later” events is an example; Dev should confirm whether this
+              can happen on prod.
+            </p>
+          </div>
+
+          <h3>5. When can the bitmap file be missing?</h3>
+          <div class="grid">
+            <div class="card">
+              <b class="t">Sync switched off</b
+              ><span class="muted"
+                >Rails only sends hidden entries to Kafka when <code>fetch_sync_graph</code> is on.</span
+              >
+            </div>
+            <div class="card">
+              <b class="t">Message not processed</b
+              ><span class="muted"
+                >Kafka or consumer failure: the <code>action_hiddens</code> row stays at
+                <code>created</code> / <code>enqueued_kafka</code>, never <code>synced</code>.</span
+              >
+            </div>
+            <div class="card">
+              <b class="t">File not on that server</b
+              ><span class="muted"
+                >Files sit in a local <code>blocklists/</code> folder. If several Django servers each have
+                their own disk, the one handling the reset may not have U’s file.</span
+              >
+            </div>
+            <div class="card">
+              <b class="t">File removed</b
+              ><span class="muted"
+                >Disk cleanup, redeploy to a new machine, or a reconcile script that hasn’t run yet.</span
+              >
+            </div>
+          </div>
+
+          <h3>6. How we would spot it while testing</h3>
+          <div class="tbl">
+            <table>
+              <thead>
+                <tr>
+                  <th>Check (Dev runs it)</th>
+                  <th>Healthy reset</th>
+                  <th>Skipped (Q5 case)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Mongo <code>debug_logs</code>: <code>repeat_pass_bitmap_created</code> for U</td>
+                  <td>Present</td>
+                  <td>Present</td>
+                </tr>
+                <tr>
+                  <td>Mongo <code>repeat_pass_shown_partner_ids</code>: <code>updated_at</code> for U</td>
+                  <td>= log time</td>
+                  <td><b>Missing or older</b></td>
+                </tr>
+                <tr>
+                  <td>Django disk <code>blocklists/&lt;ref&gt;.rbm</code></td>
+                  <td>Exists</td>
+                  <td><b>Missing</b></td>
+                </tr>
+                <tr>
+                  <td>Postgres <code>action_hiddens_partition_N.status</code> for U’s rows</td>
+                  <td><code>synced</code> / <code>consumed_django</code></td>
+                  <td><code>created</code> / <code>enqueued_kafka</code></td>
+                </tr>
+                <tr>
+                  <td>App: re-shown P1 in For You</td>
+                  <td>No label</td>
+                  <td><b>“Passed”</b></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="callout">
+            <b>Rule of thumb:</b> a log event without a matching Mongo <code>updated_at</code> means the reset
+            skipped D1–D3. Before marking a core case Fail, ask Dev to check this, so we report the right root
+            cause.
+          </div>
+
+          <div class="ask">
+            <b>What we ask Dev (Q5)</b>Is it intended that a reset without
+            <code>blocklists/&lt;ref&gt;.rbm</code> still logs and writes <code>&lt;ref&gt;_passed.rbm</code>,
+            but skips the Mongo update and the For You cache delete? Should Mongo and the cache be updated
+            outside that <code>if</code>? Is the bitmap folder shared across all Django servers? For our prod
+            test account, can you confirm the file exists before the reset?
+          </div>
+        </section>
+
+        <!-- ======================= PART 6 ======================= -->
+        <section id="questions">
+          <span class="part">Part 6 · Testing</span>
+          <h2>All questions for Dev, explained</h2>
+
+          <div class="q-block">
+            <h3><span class="num">Q1</span>Is the Rails label change live on prod?</h3>
+            <p>
+              Only Rails sets “Passed” (Part 2). The Django fix only clears the cache. Without
+              <code>70e220f</code> on prod, Rails still checks “ever passed”.
+            </p>
+            <div class="ask">
+              <b>Ask</b>Is 70e220f deployed to prod Rails? If not, how does the Django cache delete alone
+              remove the label?
+            </div>
+          </div>
+
+          <div class="q-block">
+            <h3><span class="num">Q2</span>Can you force a reset?</h3>
+            <p>
+              A reset fires only when Discover’s 30–90-day bucket has fewer than 50 profiles, at most once per
+              30 minutes (Part 3). A normal test account may never reach that.
+            </p>
+            <div class="ask">
+              <b>Ask</b>Can you trigger <code>handle_repeat_pass_trigger</code> for our test user (there is a
+              script, <code>verify_repeat_pass_mongo_exclusion.py</code>, that calls it), or set up an account
+              with a small pool?
+            </div>
+          </div>
+
+          <div class="q-block">
+            <h3><span class="num">Q3</span>Which profiles come back?</h3>
+            <p>
+              Only profiles passed once, at least 14 days ago, by partners active in the last 90 days, and not
+              shown by an earlier reset (the SQL in Part 3).
+            </p>
+            <div class="ask">
+              <b>Ask</b>Is that the intended rule? Can we get a test account whose passes on internal test
+              profiles are 14+ days old?
+            </div>
+          </div>
+
+          <div class="q-block">
+            <h3><span class="num">Q4</span>How does a reset profile get back into For You?</h3>
+            <p>
+              The reset changes Django’s bitmap, not the Postgres hidden list. When Rails rebuilds For You it
+              uses <code>not_from_hidden_list</code>, and P1 is still in that list. By the code, P1 should
+              return in Discover but not in For You.
+            </p>
+            <div class="ask">
+              <b>Ask</b>What path brings a reset profile into For You on prod? Otherwise we may wait for a
+              card that can never appear.
+            </div>
+          </div>
+
+          <div class="q-block">
+            <h3><span class="num">Q5</span>Mongo update and cache clear only if the bitmap exists</h3>
+            <p>
+              See Part 5. If <code>blocklists/&lt;ref&gt;.rbm</code> is missing, the reset skips the Mongo
+              time and the cache delete. Rails then shows “Passed” again.
+            </p>
+            <div class="ask">
+              <b>Ask</b>Is this intended? Does the file exist for our test account? Is the folder shared
+              across Django servers?
+            </div>
+          </div>
+
+          <div class="q-block">
+            <h3><span class="num">Q6</span>Prod test accounts</h3>
+            <p>
+              On prod, a pass, like or comment reaches a real person. We need internal accounts on both sides.
+            </p>
+            <div class="ask">
+              <b>Ask</b>One tester plus 3–4 internal partner accounts with matching preferences, and how to
+              log in on prod.
+            </div>
+          </div>
+
+          <div class="q-block">
+            <h3><span class="num">Q7</span>Reset time and re-shown list</h3>
+            <p>
+              A reset is invisible in the app. We need the time (to compare with pass times) and the profile
+              IDs (to know which cards to look for).
+            </p>
+            <div class="ask">
+              <b>Ask</b>After each reset, share <code>debug_logs</code> →
+              <code>repeat_pass_bitmap_created</code> (time + entries) and Mongo
+              <code>repeat_pass_shown_partner_ids.updated_at</code> for U (UTC; IST = +5:30).
+            </div>
+          </div>
+
+          <div class="q-block">
+            <h3><span class="num">Q8</span>Same Redis key on both sides?</h3>
+            <p>
+              Django deletes
+              <code>&lt;PRODUCT_NAME&gt;_&lt;RAILS_ENV&gt;_closest_matched_profile_&lt;ref&gt;</code>. Rails
+              reads <code>&lt;PRODUCT_NAME&gt;_&lt;Rails.env&gt;_…</code>.
+            </p>
+            <div class="ask">
+              <b>Ask</b>Do <code>PRODUCT_NAME</code> and <code>RAILS_ENV</code> on prod Django match prod
+              Rails?
+            </div>
+          </div>
+        </section>
+
+        <section id="plan">
+          <span class="eyebrow">Part 6 · Testing</span>
+          <h2>What we will test</h2>
+          <p>
+            Sheet <b>“For You Bug Sanity”</b> in <code>docs/Test cases.xlsx</code> (36 cases, plus 4
+            reset-rule cases to add). Android first, key iOS checks, with API and DB evidence from Dev on
+            prod.
+          </p>
+          <div class="tbl">
+            <table>
+              <thead>
+                <tr>
+                  <th>Group</th>
+                  <th>What we check</th>
+                  <th>Needs from Dev</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><b>Core fix</b> <span class="pill p0">P0</span></td>
+                  <td>
+                    Old pass comes back with no label and comment works · pass again → “Passed” · mixed list
+                  </td>
+                  <td>Q1, Q2, Q3, Q7</td>
+                </tr>
+                <tr>
+                  <td><b>Reset &amp; cache</b></td>
+                  <td>FY list rebuilt after reset · Amogh’s two-reset case · 30-minute throttle</td>
+                  <td>Q2, Q5, Q8</td>
+                </tr>
+                <tr>
+                  <td><b>Reset rules (new)</b></td>
+                  <td>
+                    Pass under 14 days old not back · passed twice never back · inactive partner (no activity
+                    in 90 days) not back · only one second chance
+                  </td>
+                  <td>Q3</td>
+                </tr>
+                <tr>
+                  <td><b>Q5 health check</b></td>
+                  <td>Each reset has a log event <i>and</i> a Mongo <code>updated_at</code></td>
+                  <td>Q5, Q7</td>
+                </tr>
+                <tr>
+                  <td><b>Label precedence</b></td>
+                  <td>Reported / Blocked / Comment Sent beat the reset</td>
+                  <td>Q6</td>
+                </tr>
+                <tr>
+                  <td><b>Related screens</b> <span class="pill p0">P0</span></td>
+                  <td>
+                    Full profile view buttons · Discover · Concierge · batched pass saved · like notification
+                  </td>
+                  <td>Q4, Q6</td>
+                </tr>
+                <tr>
+                  <td><b>Regression</b></td>
+                  <td>Normal pass / like / comment · 5 AM refresh · load time · old app version</td>
+                  <td>Q6</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <footer>
+          Sources: ClickUp 14zmk4dkx0v; aisle_new@develop_new (user_pass.rb, action/hidden.rb, profile.rb,
+          algorithm/top_match.rb, for_you/strategy_3.rb, cache/key.rb, mongo_repeat_pass_shown.rb);
+          django_algorithm@django_master (neo4j_model.py, kafka_consumer_v2.py, blocklist_manager.py,
+          discover_repeat_passes_utils.py, profile_data_access.py, mongo_repeat_pass_shown.py, redis_keys.py).
+          Behaviour read from code is to be confirmed with Dev; staging and prod observations win where they
+          differ.
+        </footer>
+      </main>
+    </div>
+
+    <script>
+      (function () {
+        var lanes = ['App', 'Rails', 'Postgres', 'Kafka', 'Django + bitmap', 'Mongo', 'Redis'];
+        var col = {
+          App: '--muted',
+          Rails: '--info',
+          Postgres: '--muted',
+          Kafka: '--muted',
+          'Django + bitmap': '--dj',
+          Mongo: '--muted',
+          Redis: '--muted',
+        };
+        var msgs = [
+          { ph: 'Day 0 · U passes P1' },
+          { f: 0, t: 1, l: 'POST /V1/pass_user (ref=P1)' },
+          { f: 1, t: 2, l: 'INSERT action_hiddens (U→P1)' },
+          { f: 1, t: 2, l: 'INSERT user_passes (U, P1, created_at)' },
+          { f: 1, t: 6, l: 'FY cache: P1 → pass_list' },
+          { f: 1, t: 3, l: 'test_graph_sync {action_hidden}' },
+          { f: 3, t: 4, l: 'add_blocked → P1 into <ref>.rbm' },
+          { ph: 'Day 14+ · U runs low on profiles' },
+          { f: 0, t: 4, l: 'Discover feed (built by Django)' },
+          { f: 4, t: 3, l: 'pool < 50 → graph_sync {repeat_pass}' },
+          { f: 3, t: 4, l: 'handle_repeat_pass_trigger' },
+          { f: 4, t: 2, l: 'SELECT eligible user_passes' },
+          { f: 4, t: 5, l: 'log repeat_pass_bitmap_created' },
+          { f: 4, t: 4, l: '<ref>_passed.rbm ← P1', self: true },
+          { ph: 'Only if <ref>.rbm exists (Q5)', warn: true },
+          { f: 4, t: 4, l: 'D1 remove P1 from <ref>.rbm', self: true, cond: true },
+          { f: 4, t: 5, l: 'D2 updated_at = reset time', cond: true },
+          { f: 4, t: 6, l: 'D3 DEL For You cache', cond: true },
+          { ph: 'U opens For You' },
+          { f: 0, t: 1, l: 'GET fetch_top_matched_profiles' },
+          { f: 1, t: 6, l: 'cache missing → rebuild' },
+          { f: 1, t: 5, l: 'last_reset_at(U)' },
+          { f: 1, t: 2, l: 'passes after reset?' },
+          { f: 1, t: 0, l: 'cards: display_message / can_send_comment' },
+        ];
+        var W = 1040,
+          laneW = W / lanes.length,
+          top = 60,
+          row = 34,
+          H = top + msgs.length * row + 30;
+        var ns = 'http://www.w3.org/2000/svg',
+          svg = document.getElementById('seqsvg');
+        svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+        function el(n, a, txt) {
+          var e = document.createElementNS(ns, n);
+          for (var k in a) e.setAttribute(k, a[k]);
+          if (txt != null) e.textContent = txt;
+          svg.appendChild(e);
+          return e;
+        }
+        var defs = document.createElementNS(ns, 'defs');
+        defs.innerHTML =
+          '<marker id="sq" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0L10,5L0,10z" style="fill:var(--fg)"/></marker>';
+        svg.appendChild(defs);
+        var x = function (i) {
+          return laneW * i + laneW / 2;
+        };
+        lanes.forEach(function (n, i) {
+          el('rect', {
+            x: x(i) - 62,
+            y: 10,
+            width: 124,
+            height: 32,
+            rx: 6,
+            style: 'fill:var(--sunk);stroke:var(' + col[n] + ')',
+          });
+          el(
+            'text',
+            {
+              x: x(i),
+              y: 31,
+              'text-anchor': 'middle',
+              'font-size': '13',
+              'font-weight': '700',
+              style: 'fill:var(' + col[n] + ')',
+            },
+            n,
+          );
+          el('line', {
+            x1: x(i),
+            y1: 42,
+            x2: x(i),
+            y2: H - 10,
+            style: 'stroke:var(--line)',
+            'stroke-dasharray': '4 4',
+          });
+        });
+        msgs.forEach(function (m, k) {
+          var y = top + k * row + 16;
+          if (m.ph) {
+            el('rect', {
+              x: 4,
+              y: y - 14,
+              width: W - 8,
+              height: 24,
+              rx: 4,
+              style: 'fill:var(' + (m.warn ? '--accent-soft' : '--sunk') + ')',
+            });
+            el(
+              'text',
+              {
+                x: 12,
+                y: y + 3,
+                'font-size': '12.5',
+                'font-weight': '700',
+                style: 'fill:var(' + (m.warn ? '--accent' : '--muted') + ')',
+              },
+              m.ph,
+            );
+            return;
+          }
+          var stroke = m.cond ? 'var(--accent)' : 'var(--fg)';
+          if (m.self) {
+            var sx = x(m.f);
+            el('path', {
+              d: 'M' + sx + ',' + (y - 8) + ' h40 v14 h-36',
+              fill: 'none',
+              style: 'stroke:' + stroke,
+              'stroke-width': '1.4',
+              'marker-end': 'url(#sq)',
+            });
+            el('text', { x: sx + 48, y: y + 3, 'font-size': '12' }, m.l);
+            return;
+          }
+          var x1 = x(m.f),
+            x2 = x(m.t),
+            dir = x2 > x1 ? 1 : -1;
+          el('line', {
+            x1: x1,
+            y1: y,
+            x2: x2 - dir * 4,
+            y2: y,
+            style: 'stroke:' + stroke,
+            'stroke-width': '1.4',
+            'marker-end': 'url(#sq)',
+            'stroke-dasharray': m.cond ? '5 3' : '',
+          });
+          var tx = (x1 + x2) / 2;
+          el(
+            'text',
+            {
+              x: tx,
+              y: y - 5,
+              'text-anchor': 'middle',
+              'font-size': '11.5',
+              style: 'fill:var(--fg);paint-order:stroke;stroke:var(--surface);stroke-width:4px',
+            },
+            m.l,
+          );
+        });
+      })();
+
+      /* ---------- Contents: highlight current section, collapse on phones ---------- */
+      (function () {
+        var d = document.getElementById('tocd'),
+          small = window.matchMedia('(max-width:900px)');
+        if (small.matches) d.open = false;
+        var links = [].slice.call(document.querySelectorAll('nav.toc a'));
+        links.forEach(function (a) {
+          a.addEventListener('click', function () {
+            if (small.matches) d.open = false;
+          });
+        });
+        var map = {};
+        links.forEach(function (a) {
+          map[a.getAttribute('href').slice(1)] = a;
+        });
+        var secs = Object.keys(map)
+          .map(function (id) {
+            return document.getElementById(id);
+          })
+          .filter(Boolean);
+        function update() {
+          var cur = secs[0];
+          secs.forEach(function (s) {
+            if (s.getBoundingClientRect().top <= 120) cur = s;
+          });
+          links.forEach(function (a) {
+            a.classList.remove('on');
+          });
+          var a = map[cur.id];
+          if (a) {
+            a.classList.add('on');
+            if (!small.matches && a.scrollIntoView) {
+              var n = a.closest('nav');
+              var r = a.getBoundingClientRect(),
+                nr = n.getBoundingClientRect();
+              if (r.top < nr.top || r.bottom > nr.bottom) n.scrollTop += r.top - nr.top - 60;
+            }
+          }
+        }
+        window.addEventListener('scroll', update, { passive: true });
+        update();
+      })();
+
+      /* ---------- Scenario flows (simple app examples) ---------- */
+      (function () {
+        // a = action/backend box, c = card in the app
+        function A(when, word, what) {
+          return { k: 'a', when: when, word: word, what: what };
+        }
+        function C(when, label, what, o) {
+          o = o || {};
+          return {
+            k: 'c',
+            when: when,
+            label: label,
+            what: what,
+            screen: o.screen || 'For You',
+            like: o.like,
+            pass: o.pass,
+          };
+        }
+        var S = [
+          {
+            id: 'S1',
+            title: 'No reset: normal pass',
+            tag: 'Baseline',
+            steps: [
+              A('Day 0', 'Pass ✕', 'U passes P1 in For You'),
+              C('Day 0', 'Passed', 'Card stays today with “Passed”'),
+              C('Day 1 · after 5 AM', 'gone', 'New daily list, P1 not in it'),
+            ],
+            exp: '“Passed” today, P1 gone next day. Same as before the fix.',
+            ok: true,
+          },
+          {
+            id: 'S2',
+            title: 'The bug (before the fix)',
+            tag: 'Bug',
+            steps: [
+              A('Day 0', 'Pass ✕', 'U passes P1'),
+              A('Day 20', 'Reset', 'Django gives P1 a second chance'),
+              C('Day 20', 'Passed', 'P1 back, but labelled “Passed”, comment off'),
+            ],
+            exp: 'This is what the ticket reports. With the fix it must not happen.',
+            ok: false,
+          },
+          {
+            id: 'S3',
+            title: 'The fix working',
+            tag: 'Core · P0',
+            steps: [
+              A('Day 0', 'Pass ✕', 'U passes P1'),
+              A('Day 20', 'Reset', 'Mongo gets reset time, FY cache deleted'),
+              C('Day 20', 'none', 'P1 back, no label, comment on'),
+              A('Day 20', 'Comment', 'U comments on P1'),
+              C('Day 20', 'Comment Sent', 'Card now says “Comment Sent”'),
+            ],
+            exp: 'No label after reset; comment is delivered.',
+            ok: true,
+          },
+          {
+            id: 'S4',
+            title: 'Pass again after the reset',
+            tag: 'Core · P0',
+            steps: [
+              C('Day 20 · after reset', 'none', 'P1 back, no label'),
+              A('Day 20', 'Pass ✕', 'U passes P1 again'),
+              C('Day 20', 'Passed', '“Passed” again (new pass is after the reset)'),
+              A('Day 40', 'Reset', 'Another reset'),
+              C('Day 40', 'gone', 'P1 never comes back (passed twice)'),
+            ],
+            exp: '“Passed” after the second pass; no third chance.',
+            ok: true,
+          },
+          {
+            id: 'S5',
+            title: 'Pass too recent',
+            tag: 'Reset rule',
+            steps: [
+              A('Day 0', 'Pass ✕', 'U passes P1'),
+              A('Day 5', 'Reset', 'Reset happens early'),
+              C('Day 5', 'gone', 'P1 not brought back (needs 14+ days)'),
+            ],
+            exp: 'P1 stays hidden until its pass is 14 days old.',
+            ok: true,
+          },
+          {
+            id: 'S6',
+            title: 'Passed twice before the reset',
+            tag: 'Reset rule',
+            steps: [
+              A('Day 0 and Day 3', 'Pass ✕ ✕', 'U passes P1 two times'),
+              A('Day 20', 'Reset', 'Reset happens'),
+              C('Day 20', 'gone', 'P1 not brought back (needs exactly 1 pass)'),
+            ],
+            exp: 'P1 stays hidden.',
+            ok: true,
+          },
+          {
+            id: 'S7',
+            title: 'Partner inactive',
+            tag: 'Reset rule',
+            steps: [
+              A('Day 0', 'Pass ✕', 'U passes P1'),
+              A('…', 'Inactive', 'P1 not seen for 120 days'),
+              A('Later', 'Reset', 'Reset happens'),
+              C('Later', 'gone', 'P1 not brought back (must be active in 90 days)'),
+            ],
+            exp: 'Inactive partners are never re-shown.',
+            ok: true,
+          },
+          {
+            id: 'S8',
+            title: 'Only one second chance',
+            tag: 'Reset rule',
+            steps: [
+              A('Day 20', 'Reset #1', 'P1 re-shown, recorded in Mongo'),
+              A('Day 50', 'Reset #2', 'Another reset'),
+              C('Day 50', 'gone', 'P1 not added again (already in shown list)'),
+            ],
+            exp: 'A profile is re-shown at most once ever.',
+            ok: true,
+          },
+          {
+            id: 'S9',
+            title: 'Resets too close together',
+            tag: 'Reset rule',
+            steps: [
+              A('10:00', 'Reset', 'Reset runs'),
+              A('10:20', 'Trigger', 'Pool is low again'),
+              A('10:20', 'Skipped', 'Nothing happens (30-minute gap)'),
+              A('10:31+', 'Reset', 'Next reset allowed'),
+            ],
+            exp: 'No second reset within 30 minutes.',
+            ok: true,
+          },
+          {
+            id: 'S10',
+            title: 'Q5: reset without the bitmap file',
+            tag: 'Q5 · gap',
+            steps: [
+              A('Day 0', 'Pass ✕', 'U passes P1, Django never gets the message'),
+              A('Day 20', 'Reset', 'No <ref>.rbm: Mongo and cache skipped'),
+              C('Later', 'Passed', 'P1 shows again with “Passed”'),
+            ],
+            exp: 'Should not happen. If seen: mark Fail and ask Dev to check Q5 (log present, Mongo time missing).',
+            ok: false,
+          },
+          {
+            id: 'S11',
+            title: 'Amogh’s two-reset case',
+            tag: 'Reset & cache · P0',
+            steps: [
+              A('09:00', 'Reset #1', 'First reset'),
+              A('10:00', 'Pass ✕', 'U passes A in For You'),
+              A('11:00', 'Reset #2', 'Second reset, FY cache deleted'),
+              C('11:00', 'gone', 'For You list rebuilt; A not back with a wrong label'),
+            ],
+            exp: 'New list after each reset (accepted by Product).',
+            ok: true,
+          },
+          {
+            id: 'S12',
+            title: 'Reported or blocked before the reset',
+            tag: 'Precedence',
+            steps: [
+              A('Day 0', 'Report', 'U reports P1'),
+              A('Day 20', 'Reset', 'Reset happens'),
+              C('Day 20', 'Reported', 'Still “Reported” or not shown; never actionable'),
+            ],
+            exp: 'Report and block always beat the reset.',
+            ok: true,
+          },
+          {
+            id: 'S13',
+            title: 'Card clean, profile view not',
+            tag: 'Related · P0 · likely gap',
+            steps: [
+              C('Day 20 · after reset', 'none', 'Card has no label'),
+              A('Day 20', 'Tap card', 'U opens P1’s full profile'),
+              C('Day 20', 'none', 'Like / Pass hidden (profile_info still checks “ever passed”)', {
+                screen: 'Profile',
+                like: false,
+                pass: false,
+              }),
+            ],
+            exp: 'Like and Pass should show. From code this may Fail; confirm with Dev.',
+            ok: false,
+          },
+          {
+            id: 'S14',
+            title: 'Discover after the reset',
+            tag: 'Related',
+            steps: [
+              A('Day 0', 'Pass ✕', 'U passes P1 in Discover'),
+              A('Day 20', 'Reset', 'Reset happens'),
+              C('Day 20', 'none', 'P1 back in Discover, actions work', { screen: 'Discover' }),
+            ],
+            exp: 'P1 is actionable in Discover.',
+            ok: true,
+          },
+        ];
+        function esc(s) {
+          return String(s).replace(/[&<>"]/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+          });
+        }
+        function card(s) {
+          if (s.label === 'gone')
+            return (
+              '<div class="phone"><span class="pt">' +
+              esc(s.screen) +
+              '</span><div class="mini gone">P1 not in<br>the list</div></div>'
+            );
+          var cls = s.label === 'none' ? 'none' : s.label === 'Passed' ? 'pas' : 'rep';
+          var txt = s.label === 'none' ? 'no label' : s.label;
+          var off = s.label !== 'none';
+          var like = s.like === false ? 'off' : off ? 'off' : '',
+            pass = s.pass === false ? 'off' : '';
+          var b =
+            s.screen === 'Profile'
+              ? '<span class="' + like + '">Like</span><span class="' + pass + '">Pass</span>'
+              : '<span class="' +
+                (off ? 'off' : '') +
+                '">Comment</span><span class="' +
+                (off ? 'off' : '') +
+                '">Like</span>';
+          return (
+            '<div class="phone"><span class="pt">' +
+            esc(s.screen) +
+            '</span><div class="mini"><div class="ph">P1</div><span class="lbl ' +
+            cls +
+            '">' +
+            esc(txt) +
+            '</span><div class="btns">' +
+            b +
+            '</div></div></div>'
+          );
+        }
+        var html = S.map(function (sc) {
+          var flow = sc.steps
+            .map(function (s, i) {
+              var box =
+                s.k === 'a' ? '<div class="icon"><span><b>' + esc(s.word) + '</b></span></div>' : card(s);
+              return (
+                (i ? '<span class="arrow" aria-hidden="true">→</span>' : '') +
+                '<div class="stp"><span class="when">' +
+                esc(s.when) +
+                '</span>' +
+                box +
+                '<span class="what">' +
+                esc(s.what) +
+                '</span></div>'
+              );
+            })
+            .join('');
+          return (
+            '<div class="sc"><div class="sc-head"><span class="id">' +
+            sc.id +
+            '</span><h3>' +
+            esc(sc.title) +
+            '</h3><span class="pill ' +
+            (sc.ok ? 'y' : 'n') +
+            '">' +
+            esc(sc.tag) +
+            '</span></div>' +
+            '<div class="flow">' +
+            flow +
+            '</div><div class="verdict"><span class="pill ' +
+            (sc.ok ? 'y' : 'n') +
+            '">Expected</span><span>' +
+            esc(sc.exp) +
+            '</span></div></div>'
+          );
+        }).join('');
+        document.getElementById('scenlist').innerHTML = html;
+      })();
+    </script>
+  </body>
+</html>

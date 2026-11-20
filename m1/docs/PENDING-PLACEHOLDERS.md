@@ -17,18 +17,18 @@ environment), then run `npm run check-env`.
 1. [ ] Temporary-phone access confirmed for the Aisle caller (BQ-02)
 2. [ ] Approved test phone numbers in AISLE_TEST_PHONES (provided 2026-10-01; keep them in .env) — section 1
 3. [ ] Read-only DB access and the PII table/column layout (BQ-04) — sections 1–2 (19 DB placeholders)
-4. [ ] Answers to the open questions behind 41 blockable tests — sections 3–4
+4. [ ] Answers to the open questions behind 31 blockable tests — sections 3–4
 
 ## 1. Settings (`.env.example`)
 
 | Setting | Placeholder | Where | From | Unblocks |
 |---|---|---|---|---|
 | `AISLE_TEST_PHONES` | `PENDING_APPROVED_TEST_PHONES` | `.env.example:35` | QA lead / Aisle backend (team-approved test numbers only) | Phone normalization and temporary-phone tests (approved numbers only) |
-| `DB_HOST` | `PENDING_DB_HOST` | `.env.example:70` | Aisle backend / DBA (BQ-04) | All @db tests and POC-003 |
-| `DB_PORT` | `PENDING_DB_PORT` | `.env.example:71` | Aisle backend / DBA (BQ-04) | All @db tests and POC-003 |
-| `DB_NAME` | `PENDING_DB_NAME` | `.env.example:72` | Aisle backend / DBA (BQ-04) | All @db tests and POC-003 |
-| `DB_USER` | `PENDING_DB_READONLY_USER` | `.env.example:74` | Aisle backend / DBA (BQ-04, read-only user) | All @db tests and POC-003 |
-| `DB_PASSWORD` | `PENDING_DB_READONLY_PASSWORD` | `.env.example:75` | Aisle backend / DBA (BQ-04, read-only user) | All @db tests and POC-003 |
+| `DB_HOST` | `PENDING_DB_HOST` | `.env.example:108` | Aisle backend / DBA (BQ-04) | All @db tests and POC-003 |
+| `DB_PORT` | `PENDING_DB_PORT` | `.env.example:109` | Aisle backend / DBA (BQ-04) | All @db tests and POC-003 |
+| `DB_NAME` | `PENDING_DB_NAME` | `.env.example:110` | Aisle backend / DBA (BQ-04) | All @db tests and POC-003 |
+| `DB_USER` | `PENDING_DB_READONLY_USER` | `.env.example:112` | Aisle backend / DBA (BQ-04, read-only user) | All @db tests and POC-003 |
+| `DB_PASSWORD` | `PENDING_DB_READONLY_PASSWORD` | `.env.example:113` | Aisle backend / DBA (BQ-04, read-only user) | All @db tests and POC-003 |
 
 ## 2. Database query template (`m1/config/db-queries.example.json`)
 
@@ -64,10 +64,8 @@ Blocked only if staging still denies access (403) or the setting is missing — 
 
 | Test | Waits on | Kind | Where |
 |---|---|---|---|
-| AISLE-BR-003 | BQ-18 | runtime | `m1/tests/pii/batch-read.spec.ts:78` |
-| AISLE-BR-009 | BQ-38 | runtime | `m1/tests/pii/batch-read.spec.ts:167` |
-| AISLE-BR-011 | BQ-42 | runtime | `m1/tests/pii/batch-read.spec.ts:216` |
-| AISLE-BR-013 | BQ-18 | static | `m1/tests/pii/batch-read.spec.ts:287` |
+| AISLE-BR-009 | BQ-38 | runtime | `m1/tests/pii/batch-read.spec.ts:166` |
+| AISLE-BR-011 | BQ-42 | runtime | `m1/tests/pii/batch-read.spec.ts:214` |
 | AISLE-DB-001 | BQ-04 | runtime | `m1/tests/db/db-persistence.spec.ts:141` |
 | AISLE-DB-002 | BQ-04 | runtime | `m1/tests/db/db-persistence.spec.ts:166` |
 | AISLE-DB-004 | BQ-04 | runtime | `m1/tests/db/db-persistence.spec.ts:190` |
@@ -76,22 +74,16 @@ Blocked only if staging still denies access (403) or the setting is missing — 
 | AISLE-DB-007 | BQ-04 | runtime | `m1/tests/db/db-persistence.spec.ts:245` |
 | AISLE-DB-008 | BQ-04 | runtime | `m1/tests/db/db-persistence.spec.ts:275` |
 | AISLE-DB-009 | BQ-04 | runtime | `m1/tests/db/db-persistence.spec.ts:304` |
-| AISLE-DB-010 | BQ-02, BQ-04 | runtime | `m1/tests/db/db-persistence.spec.ts:338` |
-| AISLE-DB-011 | BQ-04 | runtime | `m1/tests/db/db-persistence.spec.ts:363` |
-| AISLE-DB-012 | BQ-04 | runtime | `m1/tests/db/db-persistence.spec.ts:394` |
-| AISLE-DB-013 | BQ-04, BQ-45 | runtime | `m1/tests/db/db-persistence.spec.ts:439` |
-| AISLE-DB-014 | BQ-30 | runtime | `m1/tests/db/db-persistence.spec.ts:466` |
-| AISLE-DB-015 | BQ-30 | runtime | `m1/tests/db/db-persistence.spec.ts:526` |
-| AISLE-FT-003 | BQ-47 | runtime | `m1/tests/free-text/free-text-keys.spec.ts:68` |
-| AISLE-FT-004 | BQ-33 | static | `m1/tests/free-text/free-text-keys.spec.ts:87` |
-| AISLE-NRM-004 | BQ-36 | runtime | `m1/tests/pii/normalization.spec.ts:67` |
-| AISLE-NRM-005 | BQ-36 | static | `m1/tests/pii/normalization.spec.ts:97` |
+| AISLE-DB-010 | BQ-02, BQ-04 | runtime | `m1/tests/db/db-persistence.spec.ts:350` |
+| AISLE-DB-011 | BQ-04 | runtime | `m1/tests/db/db-persistence.spec.ts:375` |
+| AISLE-DB-012 | BQ-04 | runtime | `m1/tests/db/db-persistence.spec.ts:406` |
+| AISLE-DB-013 | BQ-04, BQ-45 | runtime | `m1/tests/db/db-persistence.spec.ts:451` |
+| AISLE-DB-014 | BQ-30 | runtime | `m1/tests/db/db-persistence.spec.ts:478` |
+| AISLE-DB-015 | BQ-30 | runtime | `m1/tests/db/db-persistence.spec.ts:538` |
+| AISLE-FT-003 | BQ-47 | runtime | `m1/tests/free-text/free-text-keys.spec.ts:67` |
 | AISLE-RD-009 | BQ-38 | runtime | `m1/tests/pii/read-pii.spec.ts:155` |
-| AISLE-SEC-005 | BQ-29 | runtime | `m1/tests/security/response-security.spec.ts:58` |
-| AISLE-SEC-006 | BQ-39 | static | `m1/tests/security/response-security.spec.ts:91` |
-| AISLE-SR-013 | BQ-40 | runtime | `m1/tests/pii/search-pii.spec.ts:331` |
-| AISLE-SR-015 | BQ-32 | runtime | `m1/tests/pii/search-pii.spec.ts:389` |
-| AISLE-SR-016 | BQ-41 | static | `m1/tests/pii/search-pii.spec.ts:416` |
+| AISLE-SEC-005 | BQ-29 | runtime | `m1/tests/security/response-security.spec.ts:65` |
+| AISLE-SR-013 | BQ-40 | runtime | `m1/tests/pii/search-pii.spec.ts:322` |
 | AISLE-TR-001 | BQ-02 | runtime | `m1/tests/transient/transient-phone.spec.ts:69` |
 | AISLE-TR-002 | BQ-02 | runtime | `m1/tests/transient/transient-phone.spec.ts:90` |
 | AISLE-TR-003 | BQ-02 | runtime | `m1/tests/transient/transient-phone.spec.ts:110` |
@@ -102,8 +94,6 @@ Blocked only if staging still denies access (403) or the setting is missing — 
 | AISLE-WR-012 | BQ-34 | runtime | `m1/tests/pii/write-pii.spec.ts:249` |
 | AISLE-WR-013 | BQ-35 | runtime | `m1/tests/pii/write-pii.spec.ts:288` |
 | AISLE-WR-020 | BQ-29 | runtime | `m1/tests/pii/write-pii.spec.ts:441` |
-| AISLE-WR-024 | BQ-37 | static | `m1/tests/pii/write-pii.spec.ts:533` |
-| AISLE-WR-025 | BQ-37 | runtime | `m1/tests/pii/write-pii.spec.ts:556` |
 | POC-003 | BQ-04 | runtime | `m1/tests/poc/name-poc.spec.ts:61` |
 
 ## 4. Open questions
@@ -112,27 +102,19 @@ Blocked only if staging still denies access (403) or the setting is missing — 
 |---|---|---|
 | BQ-02 | Open | Are temporary phones meant to be used through the facade? Please confirm the response format seen on staging. |
 | BQ-28 | Open | (Q14) Temporary-phone lifetime (`ttl_seconds`): please confirm the limits seen on staging (300 s to 7 days). |
-| BQ-33 | Open | Revoking a free-text key that is already revoked: 404, or 200 (idempotent)? |
-| BQ-18 | Open | Bulk read: what is the real maximum number of user IDs? The 422 rule says 200, but exactly 200 users returned 403. |
 | BQ-34 | Open | User IDs: is the PII service meant to trim spaces around a user ID and treat it as case-sensitive? And which layer does the trimming — the PII serv… |
-| BQ-36 | Open | Text normalization: which hidden characters are cleaned up, and should Unicode forms (é as one character vs e + accent mark) be treated as the same… |
-| BQ-37 | Open | EMAIL rules: which formats must be refused, and should the length limit be 254 characters? |
 | BQ-38 | Open | Empty strings inside lists: should `field_names [""]` and `user_ids [""]` be refused as format errors (422)? |
 | BQ-40 | Open | Search settings: should text values such as `"10"` (limit) or `"yes"` / `1` (include_values) be accepted? |
-| BQ-41 | Open | Search “truncated” flag: should it be false when exactly as many users match as the limit? |
 | BQ-42 | Open | Bulk read: missing fields are skipped when a user has some of the requested fields (200), but a user with none of them fails the whole request (404… |
 | BQ-44 | Open | Which layer turns field names into capitals: the PII service or the facade? “name” and “Email” are accepted and saved as NAME and EMAIL. |
-| BQ-08 | Open | (Q18) Low-priority hygiene fix: please stop echoing request values in 422 error replies (`detail[].input` contains the submitted value and the inte… |
 | BQ-29 | Open | (Q19) Which internal PII-service details must never reach the QA-facing response? Are `tenant_id` and `key_version` in success responses intended? |
 | BQ-35 | Open | Names containing SQL-like or folder-path-like text (e.g. `'); DROP TABLE`, `../../`) are refused by the edge firewall in front of the facade (403 w… |
-| BQ-39 | Open | Should replies with personal data (read, bulk read, search with values) carry `Cache-Control: no-store`, like free-text-key replies? Which layer se… |
 | BQ-43 | Open | Does the PII service limit how many requests one caller may send (HTTP 429)? If so, what is the limit for the QA caller? |
 | BQ-04 | Open | (Q20–Q23) Which DB/table stores the PII? Which columns hold tenant, user, field and stored value (and key version)? What is the encryption / storag… |
 | BQ-30 | Open | (Q24) What DB validation is officially expected from QA (existence, association, protected storage, replacement, audit)? What is recorded in the au… |
 | BQ-45 | Open | Free-text keys: which PII-DB table stores them (key_id, tenant, status, created/revoked time), and is the key stored wrapped (encrypted) like the P… |
 | BQ-46 | Open | Free-text flow: does Aisle encrypt the text itself with the returned key and store the ciphertext plus `key_id` in its own DB (aisleweb)? Which tab… |
 | BQ-47 | Open | Is revoking a free-text key the planned way to erase free text (crypto-shredding: ciphertext stays in aisleweb but can never be decrypted)? |
-| BQ-32 | Open | (Q27, Q28) Is NAME search supported? The only documented search endpoint is `/api/v1/pii-test/EMAIL/search`; QA keeps the EMAIL search tests separa… |
 | BQ-10 | Open | Is there an approved way to purge run-prefixed synthetic test data (`qa-auto-…`) on staging? There is no delete API. Is a delete API (right to eras… |
 
 ## 5. CI settings (GitHub environment)

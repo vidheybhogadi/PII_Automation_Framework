@@ -5,6 +5,7 @@
  */
 import {
   expectError,
+  expectNoData,
   expectNoServerError,
   expectStatus,
   expectSuccess,
@@ -14,7 +15,6 @@ import { expectResponseDoesNotEcho, expectSecretEquals } from '../../src/asserti
 import { messyEmail } from '../../src/data/test-data-factory';
 import { BLOCKERS, expectNotPersisted, readValue, seedField } from '../../src/fixtures/steps';
 import {
-  blockedBy,
   blockIfAccessDenied,
   expect,
   noteAssumption,
@@ -116,7 +116,7 @@ test.describe('Aisle facade — save PII', () => {
     await seedField(aisle, cleanup, { userId, field: PII_FIELDS.NAME, value: original });
 
     const res = await aisle.call('writePii', { user_id: userId, field: PII_FIELDS.NAME, value: '' });
-    expectValidationError(res, 'value');
+    expectValidationError(res, 'value', { type: 'string_too_short' });
 
     expectSecretEquals(
       await readValue(aisle, { userId, field: PII_FIELDS.NAME }),
@@ -162,7 +162,7 @@ test.describe('Aisle facade — save PII', () => {
       field: PII_FIELDS.NAME,
       value: data.name(),
     });
-    expectValidationError(longUser, 'user_id');
+    expectValidationError(longUser, 'user_id', { type: 'string_too_long' });
 
     const longValue = await aisle.call('writePii', {
       user_id: userId,
@@ -534,9 +534,9 @@ test.describe('Aisle facade — save PII', () => {
     aisle,
     data,
   }) => {
-    blockedBy(
-      'BQ-37',
-      'EMAIL format rules not defined: on 2026-10-01 all these badly formed emails were saved (201); only a missing "@" is refused',
+    noteObserved(
+      '2026-11-19',
+      'each badly formed email → 400 VALIDATION_ERROR "value must be a valid email address" (Dev: ClickUp 14zmk4dnunk)',
     );
     const [local, domain] = data.email('wr25').split('@') as [string, string];
     for (const bad of [
@@ -548,28 +548,48 @@ test.describe('Aisle facade — save PII', () => {
     ]) {
       const userId = data.userId('wr25');
       const res = await aisle.writePii({ user_id: userId, field: PII_FIELDS.EMAIL, value: bad });
+      blockIfAccessDenied(res, BLOCKERS.email.id, BLOCKERS.email.reason);
       expectError(res, 400, ERROR_CODES.VALIDATION_ERROR);
+      expectNoData(res);
       await expectNotPersisted(aisle, { userId, field: PII_FIELDS.EMAIL });
     }
   });
 
-  test('AISLE-WR-025 Long emails of 254, 255 and 1,024 characters are accepted: EMAIL uses the general 1,024-character limit', async ({
+  test('AISLE-WR-025 Emails are limited to 254 characters in total and 64 before the “@”', async ({
     aisle,
     data,
     cleanup,
   }) => {
-    noteAssumption(
-      'BQ-37',
-      'observed 2026-10-01: EMAIL has no 254-character limit, only the general 1,024; Dev to confirm',
+    noteObserved(
+      '2026-11-19',
+      'EMAIL max 254 total and 64 before "@" (Dev: ClickUp 14zmk4dnunk): 254 total and 64 local → 201; 65 local, 255, 320 and 1,024 total → 400 VALIDATION_ERROR',
     );
-    for (const length of [254, 255, LIMITS.value.max]) {
+    const accepted: [string, number, number?][] = [
+      ['254 characters in total', LIMITS.email.max],
+      ['64 characters before “@”', 0, LIMITS.email.localMax],
+    ];
+    for (const [label, total, localLength] of accepted) {
       const userId = data.userId('wr26');
-      const email = longEmail(data.email('wr26'), length);
-      expect(email).toHaveLength(length);
+      const email = emailOfLength(data.email('wr26'), total, localLength);
       const res = await aisle.writePii({ user_id: userId, field: PII_FIELDS.EMAIL, value: email });
       blockIfAccessDenied(res, BLOCKERS.email.id, BLOCKERS.email.reason);
       cleanup.leaveBehind('PII EMAIL', userId);
       expectSuccess(res, 201, writePiiDataSchema);
+      expectSecretEquals(await readValue(aisle, { userId, field: PII_FIELDS.EMAIL }), email, label);
+    }
+    const refused: [number, number?][] = [
+      [0, LIMITS.email.localMax + 1],
+      [LIMITS.email.max + 1],
+      [320],
+      [LIMITS.value.max],
+    ];
+    for (const [total, localLength] of refused) {
+      const userId = data.userId('wr26');
+      const email = emailOfLength(data.email('wr26'), total, localLength);
+      const res = await aisle.writePii({ user_id: userId, field: PII_FIELDS.EMAIL, value: email });
+      blockIfAccessDenied(res, BLOCKERS.email.id, BLOCKERS.email.reason);
+      expectError(res, 400, ERROR_CODES.VALIDATION_ERROR);
+      await expectNotPersisted(aisle, { userId, field: PII_FIELDS.EMAIL });
     }
   });
 
@@ -577,14 +597,14 @@ test.describe('Aisle facade — save PII', () => {
     aisle,
     data,
   }) => {
-    noteObserved('2026-10-01', '1,025-character EMAIL → 422 string_too_long');
+    noteObserved('2026-11-19', '1,025-character EMAIL → 422 REQUEST_VALIDATION_ERROR on body.value');
     const userId = data.userId('wr27');
     const res = await aisle.call('writePii', {
       user_id: userId,
       field: PII_FIELDS.EMAIL,
-      value: longEmail(data.email('wr27'), LIMITS.value.max + 1),
+      value: emailOfLength(data.email('wr27'), LIMITS.value.max + 1),
     });
-    expectValidationError(res, 'value');
+    expectValidationError(res, 'value', { type: 'string_too_long' });
     await expectNotPersisted(aisle, { userId, field: PII_FIELDS.EMAIL });
   });
 
@@ -698,8 +718,27 @@ test.describe('Aisle facade — save PII', () => {
 });
 
 /** A fake email of exactly `length` characters: the domain part is padded (still under the test domain). */
-function longEmail(seed: string, length: number): string {
-  const [local, domain] = seed.split('@') as [string, string];
-  const padding = length - local.length - 1 - domain.length - 1;
-  return `${local}@${'d'.repeat(Math.max(1, padding))}.${domain}`;
+/**
+ * Builds a fake email from `seed`. `localLength` pads the part before "@" with letters (default: the seed's own
+ * local part). `total` (0 = no padding) pads the domain with letter labels of at most 63 characters each, so only
+ * the total length — never a single over-long domain label — decides whether it is refused.
+ */
+function emailOfLength(seed: string, total: number, localLength?: number): string {
+  const [seedLocal, domain] = seed.split('@') as [string, string];
+  const local =
+    localLength === undefined ? seedLocal : seedLocal.padEnd(localLength, 'x').slice(0, localLength);
+  if (local.length !== (localLength ?? seedLocal.length)) throw new Error('seed local part is too long');
+  if (total === 0) return `${local}@${domain}`;
+  let remaining = total - local.length - 1 - domain.length - 1;
+  if (remaining < 1) throw new Error('requested email length is too short for the seed');
+  const labels: string[] = [];
+  while (remaining > 63) {
+    const size = remaining - 64 >= 1 ? 63 : 61;
+    labels.push('d'.repeat(size));
+    remaining -= size + 1;
+  }
+  labels.push('d'.repeat(remaining));
+  const email = `${local}@${labels.join('.')}.${domain}`;
+  if (email.length !== total) throw new Error('email length helper is wrong');
+  return email;
 }

@@ -2,7 +2,7 @@
  * Free-text encryption keys through the Aisle facade: create → read → revoke.
  * Access granted 2026-10-01; a 403 would still mark a test BLOCKED at runtime. Response shapes, "no-store" and
  * 404 behaviour are observed on staging (recorded as notes).
- * The second-revoke reply is open (BQ-33). Keys are never logged or printed.
+ * A second revoke is idempotent (200 REVOKED — Dev, ClickUp 14zmk4dk7yt). Keys are never logged or printed.
  */
 import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from 'node:crypto';
 import {
@@ -18,7 +18,6 @@ import {
 } from '../../src/assertions/security.assertions';
 import { BLOCKERS, createKey } from '../../src/fixtures/steps';
 import {
-  blockedBy,
   blockIfAccessDenied,
   expect,
   noteAssumption,
@@ -84,24 +83,29 @@ test.describe('Aisle facade — free-text keys', () => {
     expectStatus(await aisle.readFreeTextKey({ key_id: randomUUID() }), 404, 'unknown key ID');
   });
 
-  test('AISLE-FT-004 Revoking a free-text key that is already revoked: expected reply waiting on Dev (404 or 200)', async ({
+  test('AISLE-FT-004 Revoking a free-text key that is already revoked succeeds again (200 REVOKED)', async ({
     aisle,
     cleanup,
   }) => {
-    blockedBy(
-      'BQ-33',
-      'second revoke: 404 or 200 (idempotent)? Staging returned 200 on 2026-10-01 — expected reply not decided',
+    noteObserved(
+      '2026-11-19',
+      'second revoke → 200 with status REVOKED (idempotent, Dev: ClickUp 14zmk4dk7yt); read after revoke → 404',
     );
     const key = await createKey(aisle, cleanup);
 
     const first = await aisle.revokeFreeTextKey({ key_id: key.key_id });
     blockIfAccessDenied(first, BLOCKERS.freeText.id, BLOCKERS.freeText.reason);
-    expectSuccess(first, 200, revokeFreeTextKeyDataSchema);
+    expect(expectSuccess(first, 200, revokeFreeTextKeyDataSchema).status).toBe('REVOKED');
 
-    const second = await aisle.revokeFreeTextKey({ key_id: key.key_id });
-    // No expected status is guessed: the assertion for the second revoke is added once Dev answers BQ-33.
-    // Until then this test is BLOCKED (its body does not run).
-    noteAssumption('BQ-33', `second revoke answered HTTP ${second.status}`);
+    const second = expectSuccess(
+      await aisle.revokeFreeTextKey({ key_id: key.key_id }),
+      200,
+      revokeFreeTextKeyDataSchema,
+    );
+    expect(second.key_id).toBe(key.key_id);
+    expect(second.status).toBe('REVOKED');
+
+    expectStatus(await aisle.readFreeTextKey({ key_id: key.key_id }), 404, 'read after the second revoke');
   });
 
   test('AISLE-FT-005 Two keys created one after the other get different key IDs and different keys', async ({

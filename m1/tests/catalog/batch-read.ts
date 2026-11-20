@@ -44,9 +44,9 @@ export const BATCH_READ_CASES: TestCaseCatalog = {
     why: 'Very large bulk reads could pull out personal data in bulk or overload the service.',
     steps: ['Send a bulk read with no user IDs', 'Send a bulk read with 201 fake user IDs'],
     expected:
-      'Both get 422 (refused: the request format is invalid), naming the user ID list as too short or too long. Limits observed from the service’s own validation message (2026-09-29). The exact maximum is still open: a bulk read of exactly 200 users returned 403 (access denied) on staging, so it is not checked here (question BQ-18).',
+      'Both get 422 Unprocessable Entity (refused: the request format is invalid) with code REQUEST_VALIDATION_ERROR, naming the user ID list (body.user_ids); for 201 users the kind of error is “too_long”. Seen on 2026-11-19. (The lower bulk-read limit, 50 users today, is checked in AISLE-BR-013.)',
     request: `${BULK} {"user_ids":[],"fields":["NAME"]} · ${BULK} {"user_ids":["<201 fake users>"],"fields":["NAME"]}`,
-    validation: ['Empty user list → 422 naming user_ids', '201 user IDs → 422 naming user_ids'],
+    validation: ['Empty user list → 422 naming user_ids', '201 user IDs → 422 naming user_ids as too_long'],
     type: 'Negative',
     priority: 'Medium',
   },
@@ -111,7 +111,7 @@ export const BATCH_READ_CASES: TestCaseCatalog = {
       'Bulk read with user_ids [""]',
     ],
     expected:
-      'fields [], fields [null] and user_ids [null] get 422 Unprocessable Entity (refused: the request format is invalid). user_ids [""] gets 404 PII_NOT_FOUND with no data. Seen on 2026-10-01; whether "" should be a 422 is open (question BQ-38).',
+      'fields [], fields [null] and user_ids [null] get 422 Unprocessable Entity (refused: the request format is invalid) with code REQUEST_VALIDATION_ERROR naming that list (fields [] as “too_short”). user_ids [""] gets 404 PII_NOT_FOUND with no data. Seen on 2026-10-01 and again on 2026-11-19; whether "" should be a 422 is open (question BQ-38).',
     request: `${BULK} {"user_ids":["<fake user>"],"fields":[]} · {"fields":[null]} · {"user_ids":[null],…} · {"user_ids":[""],"fields":["NAME"]}`,
     validation: [
       '[] and [null] → 422 naming the list',
@@ -161,15 +161,23 @@ export const BATCH_READ_CASES: TestCaseCatalog = {
     priority: 'Low',
   },
   'AISLE-BR-013': {
-    what: 'Bulk reads 199 fake users, then exactly 200 (the stated maximum).',
-    why: 'The maximum must really be usable; today exactly 200 users is refused.',
-    steps: ['Save names for 200 fake users', 'Bulk read 199 of them', 'Bulk read all 200'],
+    what: 'Saves fake names for 51 fake users, then bulk reads (one request for several users) 1 of them, 50 of them (the limit today), and all 51.',
+    why: 'Apps must know how many users one bulk read may carry. The limit also stops anyone from pulling out personal data in bulk.',
+    steps: [
+      'Save fake names for 51 new fake users',
+      'Bulk read 1 user, then 50 users',
+      'Bulk read all 51 users',
+    ],
     expected:
-      'Blocked: on staging exactly 200 users returned 403 (refused). QA does not create 200 records until Dev confirms the real maximum (question BQ-18).',
-    request: `${BULK} {"user_ids":["<199 or 200 fake users>"],"fields":["NAME"]}`,
-    validation: ['Blocked until the maximum is confirmed'],
+      '1 and 50 users: 200 OK, and every requested user comes back once. 51 users: 400 Bad Request with error code VALIDATION_ERROR and reason “batch limit exceeded”, with no data. The limit is set by Dev and can change (50 since 2026-11-19, ClickUp 14zmk4dk7z1); the test reads it from the setting AISLE_BATCH_READ_MAX (default 50). More than 200 users is a format error (422), checked in AISLE-BR-003.',
+    request: `${BULK} {"user_ids":["<1, 50 or 51 fake users>"],"fields":["NAME"]}`,
+    validation: [
+      '1 and 50 users → 200 with one item per user, all users returned',
+      '51 users → 400 VALIDATION_ERROR, reason “batch limit exceeded”, no data',
+    ],
     type: 'Positive',
     priority: 'Low',
-    preconditions: 'Blocked until Dev confirms the bulk-read maximum (question BQ-18).',
+    preconditions:
+      'Creates 51 fake records per run. The limit comes from AISLE_BATCH_READ_MAX (default 50); change it there if Dev changes the limit.',
   },
 };

@@ -10,7 +10,7 @@ import type { z } from 'zod';
 import type { ApiResponse } from '../clients/api-response';
 import {
   errorEnvelopeSchema,
-  fastApiValidationSchema,
+  requestValidationSchema,
   successEnvelope,
   type ErrorEnvelope,
 } from '../models/common.models';
@@ -98,14 +98,18 @@ export function expectError(
   return parsed.data;
 }
 
-/** HTTP 422 in either known shape (FastAPI `detail` list — observed — or the error envelope). */
-export function expectRequestValidationError(res: ApiResponse): 'fastapi-detail' | 'error-envelope' {
+/**
+ * HTTP 422 in either known shape: the facade's request-validation body (observed since 2026-11-19, code
+ * REQUEST_VALIDATION_ERROR with `error.details`) or the plain error envelope. The old FastAPI `detail` list is
+ * no longer accepted.
+ */
+export function expectRequestValidationError(res: ApiResponse): 'request-validation' | 'error-envelope' {
   expectNoServerError(res);
   expectStatus(res, 422);
   const body = res.json();
-  if (fastApiValidationSchema.safeParse(body).success) return 'fastapi-detail';
+  if (requestValidationSchema.safeParse(body).success) return 'request-validation';
   if (errorEnvelopeSchema.safeParse(body).success) return 'error-envelope';
-  throw new Error(`422 body is neither FastAPI "detail" nor the service error envelope: ${res.summary()}`);
+  throw new Error(`422 body is neither the request-validation body nor the error envelope: ${res.summary()}`);
 }
 
 /**
@@ -122,22 +126,69 @@ export function expectUnauthorized(res: ApiResponse, context = ''): void {
   ).toBe(true);
 }
 
+/** Does any object/array anywhere in `value` have the key `key`? */
+function hasKeyDeep(value: unknown, key: string): boolean {
+  if (Array.isArray(value)) return value.some((v) => hasKeyDeep(v, key));
+  if (value !== null && typeof value === 'object')
+    return Object.entries(value).some(([k, v]) => k === key || hasKeyDeep(v, key));
+  return false;
+}
+
+export interface ValidationErrorOptions {
+  /** Expected pydantic error type of the entry naming `field` (e.g. "string_too_short"). */
+  type?: string;
+  /** Submitted values (synthetic markers) that must NOT appear anywhere in the reply. Never printed. */
+  notEchoed?: readonly string[];
+}
+
 /**
- * HTTP 422 request-validation error in FastAPI format, optionally naming the offending body field.
- * Observed on staging: `{"detail":[{"type","loc":["body","<field>"],"msg","input",…}]}`.
+ * HTTP 422 request-validation error (observed 2026-11-19, Dev fix ClickUp 14zmk4dnunb):
+ * `{status:false, data:null, error:{code:"REQUEST_VALIDATION_ERROR", details:[{field:"body.<name>", type}]}}`.
+ * Optionally checks that at least one entry names `body.<field>` (or a position inside it, e.g.
+ * "body.user_ids.unknown") with the given `type`. Entries are currently listed twice (known finding), so
+ * uniqueness is NOT asserted. Privacy checks always run: no `tenant_id` and no `input` echo anywhere in the
+ * body, and none of `notEchoed` in the raw reply. Messages show field locations and booleans only.
  */
-export function expectValidationError(res: ApiResponse, field?: string): void {
+export function expectValidationError(
+  res: ApiResponse,
+  field?: string,
+  options: ValidationErrorOptions = {},
+): void {
   expectNoServerError(res);
   expectStatus(res, 422);
-  expect(
-    fastApiValidationSchema.safeParse(res.json()).success,
-    `422 body should be a FastAPI "detail" list (${res.summary()})`,
-  ).toBe(true);
+  const body = res.json();
+  const parsed = requestValidationSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new Error(
+      `422 body should be the request-validation body (REQUEST_VALIDATION_ERROR with error.details) for ${res.summary()}:\n${formatZodIssues(parsed.error)}`,
+    );
+  }
+  expect(hasKeyDeep(body, 'tenant_id'), `422 body must not contain tenant_id (${res.summary()})`).toBe(false);
+  expect(hasKeyDeep(body, 'input'), `422 body must not echo the submitted input (${res.summary()})`).toBe(
+    false,
+  );
+  if (options.notEchoed?.length) {
+    const raw = res.rawText();
+    options.notEchoed.forEach((marker, i) =>
+      expect(
+        raw.includes(marker),
+        `422 body must not repeat submitted value #${i + 1} (${res.summary()})`,
+      ).toBe(false),
+    );
+  }
   if (field !== undefined) {
-    expect(
-      res.validationIssues.some((i) => i.startsWith(`body.${field}:`)),
-      `422 should name body.${field}; got [${res.validationIssues.join(', ')}] (${res.summary()})`,
-    ).toBe(true);
+    const loc = `body.${field}`;
+    const issues = res.validationIssues;
+    const matching = issues.filter((i) => i.startsWith(`${loc}:`) || i.startsWith(`${loc}.`));
+    expect(matching.length > 0, `422 should name ${loc}; got [${issues.join(', ')}] (${res.summary()})`).toBe(
+      true,
+    );
+    if (options.type !== undefined) {
+      expect(
+        matching.some((i) => i.endsWith(`:${options.type}`)),
+        `422 should name ${loc} with type ${options.type}; got [${issues.join(', ')}] (${res.summary()})`,
+      ).toBe(true);
+    }
   }
 }
 

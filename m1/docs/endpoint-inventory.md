@@ -23,15 +23,16 @@ Source: the Aisle "PII Test API Curl Collection" + staging behaviour observed on
 
 ## Observed response formats
 
-| Case                         | Status | Body                                                                                                  |
-| ---------------------------- | ------ | ----------------------------------------------------------------------------------------------------- |
-| Success                      | 2xx    | `{status: true, message, data, error: null}` — e.g. `"PII write successful"`, `"PII read successful"` |
-| No / wrong / malformed token | 401    | empty body, `text/html`                                                                               |
-| Broken JSON                  | 400    | `{status: false, error: "Invalid JSON", message: "Request body must be valid JSON"}`                  |
-| Access not granted           | 403    | `{status: false, message: "Authorization denied", data: null, error: {code: "AUTHORIZATION_DENIED"}}` |
-| Nothing saved for the user   | 404    | `{status: false, message: "PII value not found", error: {code: "PII_NOT_FOUND"}}`                     |
-| Validation error             | 422    | FastAPI `{detail: [{type, loc, msg, input, ctx}]}` — echoes the input (security finding BQ-08)        |
+| Case                         | Status | Body                                                                                                                                                                                                |
+| ---------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Success                      | 2xx    | `{status: true, message, data, error: null}` — e.g. `"PII write successful"`, `"PII read successful"`                                                                                               |
+| No / wrong / malformed token | 401    | empty body, `text/html`                                                                                                                                                                             |
+| Broken JSON                  | 400    | `{status: false, error: "Invalid JSON", message: "Request body must be valid JSON"}`                                                                                                                |
+| Access not granted           | 403    | `{status: false, message: "Authorization denied", data: null, error: {code: "AUTHORIZATION_DENIED"}}`                                                                                               |
+| Nothing saved for the user   | 404    | `{status: false, message: "PII value not found", error: {code: "PII_NOT_FOUND"}}`                                                                                                                   |
+| Validation error             | 422    | `{status: false, message: "Request validation failed", data: null, error: {code: "REQUEST_VALIDATION_ERROR", details: [{field: "body.value", type}]}}` — no values, no tenant_id (since 2026-11-19) |
 
-Observed limits: `user_id` 1–128 chars, `value` 1–1,024 chars, `field_names` ≥ 1, bulk read `user_ids` 1–200
-(exactly 200 returned 403 — BQ-18), `fields` ≥ 1. Unconfirmed items are listed in
+Observed limits: `user_id` 1–128 chars, `value` 1–1,024 chars (EMAIL: 254 in total, 64 before “@”, else 400),
+`field_names` ≥ 1, bulk read `user_ids` 1–200 (422 outside) and at most the configurable bulk-read limit (50 on
+2026-11-19; more → 400 “batch limit exceeded”), `fields` ≥ 1. Unconfirmed items are listed in
 [backend-open-questions.md](./backend-open-questions.md).

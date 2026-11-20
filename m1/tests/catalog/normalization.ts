@@ -64,7 +64,7 @@ export const NORMALIZATION_CASES: TestCaseCatalog = {
       'Repeat for each of the five hidden characters',
     ],
     expected:
-      'Tab, line break, carriage return and non-breaking space are turned into a normal space. The zero-width space is kept unchanged. Seen on 2026-10-01; Dev still to confirm the rule (question BQ-36).',
+      'Tab, line break, carriage return and non-breaking space are turned into a normal space. The zero-width space is kept unchanged. Seen on 2026-10-01. Apart from this, values are kept exactly as sent (no Unicode conversion — Dev / user decision, 2026-11-19).',
     request:
       'POST /api/v1/pii-test {"user_id":"<new fake user>","field":"NAME","value":"QA\\tAutomation User <letters>"} (one per hidden character)',
     validation: [
@@ -75,21 +75,25 @@ export const NORMALIZATION_CASES: TestCaseCatalog = {
     priority: 'Medium',
   },
   'AISLE-NRM-005': {
-    what: 'Saves an accented letter (é) written in its two Unicode forms (one combined character, or “e” plus a separate accent mark) and checks that saving and searching treat them as the same text.',
-    why: 'Different keyboards and phones produce different forms of the same letter. If they are not treated the same, a person can fail to be found.',
+    what: 'Saves a fake name ending in “José” with é written as one character. Then searches the NAME field with exactly that form, and with é written as “e” plus a separate accent mark (the other Unicode form, which looks the same on screen), and reads the name back.',
+    why: 'Values are stored and searched exactly as sent; there is no Unicode conversion (Dev / user decision, not a bug). Apps that let users type names must send them in the same form they were saved in, or the person will not be found.',
     steps: [
-      'Save a fake name and a fake email with é written as one character',
-      'Read and search them using e + accent mark',
-      'Compare the results',
+      'Save a fake name with é written as one character',
+      'Read the name back',
+      'Search NAME with the same one-character form',
+      'Search NAME with e + accent mark',
     ],
     expected:
-      'Blocked: on 2026-10-01 names were stored exactly as sent (no conversion), and an email saved with é as one character was NOT found when searched with e + accent mark. Dev must decide whether they should match (question BQ-36).',
+      'The save is 201 Created and the read returns the name unchanged, still with é as one character. The search with the same form is 200 OK with count 1 (the fake user). The search with e + accent mark is 200 OK with count 0 (no match: it is different text). Seen on staging on 2026-11-19.',
     request:
-      'POST /api/v1/pii-test {"field":"NAME","value":"QA José …"} · POST /api/v1/pii-test/EMAIL/search {"value":"<email with e + accent mark>"}',
-    validation: ['Blocked until Dev decides the Unicode rule'],
+      'POST /api/v1/pii-test {"field":"NAME","value":"QA Automation User … José"} · POST /api/v1/pii-test/read · POST /api/v1/pii-test/NAME/search {"value":"<same name, é as one character>"} and {"value":"<same name, e + accent mark>"}',
+    validation: [
+      'Read returns the one-character form unchanged',
+      'Search with the same form → 200, count 1, the fake user',
+      'Search with e + accent mark → 200, count 0',
+    ],
     type: 'Positive',
     priority: 'Low',
-    preconditions: 'Blocked until Dev decides whether both Unicode forms must match (question BQ-36).',
     endpoint: 'crossEndpoint',
   },
 };

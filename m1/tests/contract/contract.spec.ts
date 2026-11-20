@@ -10,6 +10,7 @@ import {
 } from '../../src/assertions/response.assertions';
 import { BLOCKERS, createKey, seedField } from '../../src/fixtures/steps';
 import { blockIfAccessDenied, noteObserved, test, expect } from '../../src/fixtures/test-fixtures';
+import { ENVELOPE_KEYS } from '../../src/models/common.models';
 import {
   FREE_TEXT_KEY_DATA_KEYS,
   freeTextKeyDataSchema,
@@ -55,27 +56,33 @@ test.describe('Aisle facade — response contract', () => {
     bulkData.items.forEach((item, i) => expectExactKeys(item, PII_ITEM_KEYS, `bulk-read item #${i}`));
   });
 
-  test('AISLE-CON-002 A validation error (422) is a list of problems, each naming the field, the message and the error type', async ({
+  test('AISLE-CON-002 A refused request (422) lists each problem with the field it is about and the kind of error', async ({
     aisle,
     data,
   }) => {
     noteObserved(
-      '2026-10-01',
-      '422 body is exactly {detail: [{loc, msg, type, …}]} (the PII service’s format)',
+      '2026-11-19',
+      '422 body is {status:false, message, data:null, error:{code:REQUEST_VALIDATION_ERROR, message, details:[{field, type}]}} (Dev fix ClickUp 14zmk4dnunb)',
     );
     const res = await aisle.call('writePii', {
       user_id: data.userId('con2'),
       field: PII_FIELDS.NAME,
       value: '',
     });
-    expectValidationError(res, 'value');
-    expectExactKeys(res.json(), ['detail'], '422 body');
-    const detail = (res.json() as { detail: Record<string, unknown>[] }).detail;
-    expect(detail.length, 'at least one problem listed').toBeGreaterThan(0);
-    for (const [i, problem] of detail.entries()) {
-      for (const key of ['loc', 'msg', 'type'])
-        expect(key in problem, `problem #${i} has "${key}"`).toBe(true);
+    expectValidationError(res, 'value', { type: 'string_too_short' });
+    expectExactKeys(res.json(), ENVELOPE_KEYS, '422 body');
+    const error = (res.json() as { error: Record<string, unknown> }).error;
+    expectExactKeys(error, ['code', 'details', 'message'], '422 error part');
+    const details = error.details as Record<string, unknown>[];
+    expect(details.length, 'at least one problem listed').toBeGreaterThan(0);
+    for (const [i, problem] of details.entries()) {
+      for (const key of ['field', 'type'])
+        expect(typeof problem[key], `problem #${i} has a text "${key}"`).toBe('string');
     }
+    // Known finding (19 Nov 2026, logged in ClickUp by QA): every problem is listed twice. Uniqueness is
+    // deliberately not asserted; the count is recorded.
+    const unique = new Set(details.map((d) => `${String(d.field)}:${String(d.type)}`)).size;
+    noteObserved('2026-11-19', `${details.length} problem entries, ${unique} distinct`);
   });
 
   test('AISLE-CON-003 The data part of EMAIL, search and free-text-key replies contains exactly the agreed fields', async ({

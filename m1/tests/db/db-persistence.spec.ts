@@ -301,7 +301,7 @@ test.describe('Aisle facade — database (read-only)', { tag: ['@db', '@security
     expectPhoneNotReadable(row.encrypted_value, phone);
   });
 
-  test('AISLE-DB-009 Two users with the same fake email share one search fingerprint; a different email gets a different one; a name gets none', async ({
+  test('AISLE-DB-009 Equal fake values share one search fingerprint and different values get different ones, for emails and for names', async ({
     db,
     aisle,
     data,
@@ -309,30 +309,42 @@ test.describe('Aisle facade — database (read-only)', { tag: ['@db', '@security
   }) => {
     noteAssumption('BQ-04', `search fingerprint (lookup token) ${DESIGN_NOTE}`);
     noteObserved(
-      '2026-10-01',
-      'emails are saved in lower case (AISLE-SR-001); a shared email finds both owners (AISLE-SR-010)',
+      '2026-11-19',
+      'NAME, EMAIL and PHONE are searchable by design, exact value only (Dev / user decision; pii_field_catalog NAME is_searchable=true; ClickUp 14zmk4dkn3q closed as not a bug). Emails are saved in lower case (AISLE-SR-001)',
     );
     const [userA, userB, userC] = [data.userId('db9a'), data.userId('db9b'), data.userId('db9c')];
     const email = data.email('db9');
     const otherEmail = data.email('db9x');
+    const sharedName = data.name();
+    const otherName = data.name();
     const opts = { field: PII_FIELDS.EMAIL, status: 201 as const, blocker: BLOCKERS.email };
     const saved = await save(aisle, cleanup, { ...opts, userId: userA, value: email });
     await save(aisle, cleanup, { ...opts, userId: userB, value: email.toUpperCase() });
     await save(aisle, cleanup, { ...opts, userId: userC, value: otherEmail });
-    await save(aisle, cleanup, { userId: userA, field: PII_FIELDS.NAME, value: data.name(), status: 201 });
+    const names = { field: PII_FIELDS.NAME, status: 201 as const };
+    await save(aisle, cleanup, { ...names, userId: userA, value: sharedName });
+    await save(aisle, cleanup, { ...names, userId: userB, value: sharedName });
+    await save(aisle, cleanup, { ...names, userId: userC, value: otherName });
 
     const tenant = saved.tenant_id;
-    const rowA = await onlyRecord(db.findPiiRecords(tenant, userA, PII_FIELDS.EMAIL), 'EMAIL (user A)');
-    const rowB = await onlyRecord(db.findPiiRecords(tenant, userB, PII_FIELDS.EMAIL), 'EMAIL (user B)');
-    const rowC = await onlyRecord(db.findPiiRecords(tenant, userC, PII_FIELDS.EMAIL), 'EMAIL (user C)');
-    const nameA = await onlyRecord(db.findPiiRecords(tenant, userA, PII_FIELDS.NAME), 'NAME (user A)');
+    const record = (userId: string, field: string, what: string) =>
+      onlyRecord(db.findPiiRecords(tenant, userId, field), what);
+    const token = (row: PiiRecordRow, what: string): string => {
+      const bytes = bytesOf(row.lookup_token, 'lookup_token');
+      expect(bytes.length, `${what}: search fingerprint is exactly 32 bytes`).toBe(32);
+      return storedFingerprint(bytes);
+    };
+    const emailA = token(await record(userA, PII_FIELDS.EMAIL, 'EMAIL (user A)'), 'EMAIL A');
+    const emailB = token(await record(userB, PII_FIELDS.EMAIL, 'EMAIL (user B)'), 'EMAIL B');
+    const emailC = token(await record(userC, PII_FIELDS.EMAIL, 'EMAIL (user C)'), 'EMAIL C');
+    expect(emailA === emailB, 'the same email (once in capitals) gives the same fingerprint').toBe(true);
+    expect(emailA === emailC, 'a different email gives a different fingerprint').toBe(false);
 
-    const tokenA = storedFingerprint(bytesOf(rowA.lookup_token, 'lookup_token'));
-    const tokenB = storedFingerprint(bytesOf(rowB.lookup_token, 'lookup_token'));
-    const tokenC = storedFingerprint(bytesOf(rowC.lookup_token, 'lookup_token'));
-    expect(tokenA === tokenB, 'the same email (once in capitals) gives the same fingerprint').toBe(true);
-    expect(tokenA === tokenC, 'a different email gives a different fingerprint').toBe(false);
-    expect(nameA.lookup_token === null, 'a NAME record has no search fingerprint (empty)').toBe(true);
+    const nameA = token(await record(userA, PII_FIELDS.NAME, 'NAME (user A)'), 'NAME A');
+    const nameB = token(await record(userB, PII_FIELDS.NAME, 'NAME (user B)'), 'NAME B');
+    const nameC = token(await record(userC, PII_FIELDS.NAME, 'NAME (user C)'), 'NAME C');
+    expect(nameA === nameB, 'the same name gives the same fingerprint').toBe(true);
+    expect(nameA === nameC, 'a different name gives a different fingerprint').toBe(false);
   });
 
   test('AISLE-DB-010 Promoting a temporary phone stores it as a normal encrypted PHONE record for the user', async ({

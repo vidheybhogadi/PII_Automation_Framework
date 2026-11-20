@@ -4,6 +4,7 @@
  *   npx tsx m2/scripts/manual-db-check.ts <10-digit test number>      e.g. 1012345678
  *   npx tsx m2/scripts/manual-db-check.ts <number> story,chat         + extra sections (or "all"):
  *     story · icebreakers · comments · chat · cms (admin_logs) · selfie
+ *   npx tsx m2/scripts/manual-db-check.ts <106xxxxxxx> --allow-106    tester-approved check of a 106-series team account
  *
  * - Free-text sections show the plaintext column with chars / bytes / non-ASCII (emoji loss shows up), and for the
  *   encrypted copy only present / length / md5 / "plaintext visible inside it". Text that belongs to another account
@@ -203,7 +204,10 @@ async function extraSections(app: DbAdapter, userId: string, sections: Section[]
 }
 
 async function main(): Promise<void> {
-  const arg = (process.argv[3] ?? '').toLowerCase();
+  // --allow-106: tester-approved manual check of a reserved 106-series team account (still read-only).
+  const allow106 = process.argv.includes('--allow-106');
+  const args = process.argv.slice(2).filter((a) => a !== '--allow-106');
+  const arg = (args[1] ?? '').toLowerCase();
   const sections: Section[] =
     arg === 'all'
       ? [...SECTIONS]
@@ -214,8 +218,8 @@ async function main(): Promise<void> {
     );
     process.exit(2);
   }
-  const number = (process.argv[2] ?? '').replace(/^\+?91/, '').trim();
-  if (!isAllowedTestNumber(number)) {
+  const number = (args[0] ?? '').replace(/^\+?91/, '').trim();
+  if (!isAllowedTestNumber(number) && !(allow106 && /^106\d{7}$/.test(number))) {
     console.error('Refused: give a synthetic test number 10xxxxxxxx (never the 106 series).');
     process.exit(2);
   }

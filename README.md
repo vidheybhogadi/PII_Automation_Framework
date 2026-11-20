@@ -68,7 +68,7 @@ PII_Automation_Framework/
 │   └── config/placeholders.ts       PENDING_… placeholder handling
 │
 ├── m1/                            MILESTONE 1 — Aisle PII facade (QA → facade → PII service → PII DB)
-│   ├── tests/                       THE TESTS (109) — one folder per area
+│   ├── tests/                       THE TESTS (110) — one folder per area
 │   │   ├── poc/ health/ pii/ transient/ free-text/ security/ contract/ db/
 │   │   ├── catalog/                   plain-English description of every test (Excel + report read this)
 │   │   └── unit/                      framework self-tests (no network needed)
@@ -210,7 +210,7 @@ Subsets: `npm run m1:test:smoke` · `npm run m1:test:security` · `npm run m1:te
 | Part                 | Tests | Status                                                                                   |
 | -------------------- | :---: | ---------------------------------------------------------------------------------------- |
 | Framework self-tests |  66   | passing (`npm run verify`)                                                               |
-| Aisle facade tests   |  109  | written; see the migration report for the latest staging run and what is Blocked and why |
+| Aisle facade tests   |  110  | written; see the migration report for the latest staging run and what is Blocked and why |
 
 [Backend open questions](./m1/docs/backend-open-questions.md) · [Coverage matrix](./m1/docs/coverage-matrix.md) ·
 [Pending placeholders](./m1/docs/PENDING-PLACEHOLDERS.md) · [Test cases (Excel)](./m1/docs/test-cases.xlsx) ·
